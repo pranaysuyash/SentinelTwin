@@ -86,6 +86,7 @@ function buildSimulationState(
     temporalProfile,
     simulationDirty: false,
     simulationRunning: false,
+    simulationProgress: null,
     lastRunMs: durationMs,
     sceneIntelligenceGraph: buildGraphState(nextScene, result, revisionDepth, snapshotCount, operationalEvidenceEvents),
   };
@@ -131,6 +132,8 @@ export interface SimulationSlice {
   simulationResult: SimulationResult | null;
   simulationDirty: boolean;
   simulationRunning: boolean;
+  /** 0..1 progress of the in-flight simulation run, or null when idle. */
+  simulationProgress: number | null;
   simulationError?: string | null;
   autoRecompute: boolean;
   cameraFailures: string[];
@@ -168,6 +171,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
   simulationResult: null,
   simulationDirty: false,
   simulationRunning: false,
+  simulationProgress: null,
 
   autoRecompute: true,
   cameraFailures: [],
@@ -210,12 +214,16 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
       setTimeout(async () => {
         try {
           const start = performance.now();
-          const { result } = await runStudioSimulation(draftSnapshot, { includeTemporalProfile: false });
+          const { result } = await runStudioSimulation(draftSnapshot, {
+            includeTemporalProfile: false,
+            currentTime: { hour: state.temporalScrubHour, minute: state.temporalScrubMinute },
+          });
           const durationMs = Math.round(performance.now() - start);
           set({
             simulationResult: result,
             simulationDirty: false,
             simulationRunning: false,
+            simulationProgress: null,
             lastRunMs: durationMs,
             fixSandboxDiff: { ...get().fixSandboxDiff, needsRecompute: false },
           });
@@ -239,7 +247,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
             action: "simulate_sandbox",
             path: "/studio",
           });
-          set({ simulationRunning: false });
+          set({ simulationRunning: false, simulationProgress: null });
         }
       }, 30);
       return;
@@ -248,17 +256,23 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
     const sceneVersion = state.scene.updatedAt;
     const sceneSnapshot = cloneSecurityScene(state.scene);
 
-    set({ simulationRunning: true });
+    set({ simulationRunning: true, simulationProgress: 0 });
 
     setTimeout(async () => {
       try {
         const start = performance.now();
-        const { result, temporalProfile, executionPath } = await runStudioSimulation(sceneSnapshot);
+        const { result, temporalProfile, executionPath } = await runStudioSimulation(sceneSnapshot, {
+          currentTime: { hour: state.temporalScrubHour, minute: state.temporalScrubMinute },
+          onProgress: (fraction) => {
+            if (get().scene.updatedAt !== sceneVersion) return;
+            set({ simulationProgress: fraction });
+          },
+        });
         const durationMs = Math.round(performance.now() - start);
 
         if (get().scene.updatedAt !== sceneVersion) {
           console.warn("[simulation] discarded stale result because the scene changed mid-run");
-          set({ simulationRunning: false });
+          set({ simulationRunning: false, simulationProgress: null });
           return;
         }
 
@@ -296,7 +310,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
           action: "simulate",
           path: "/studio",
         });
-        set({ simulationRunning: false });
+        set({ simulationRunning: false, simulationProgress: null });
       }
     }, 30);
   },
@@ -319,7 +333,12 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
 
   setTemporalScrub: (hour, minute) => {
     const envMode = (hour < 6 || hour >= 19) ? "night" : hour >= 17 ? "dusk" : "day";
-    set({ temporalScrubHour: hour, temporalScrubMinute: minute, environmentMode: envMode });
+    set({
+      temporalScrubHour: hour,
+      temporalScrubMinute: minute,
+      environmentMode: envMode,
+      simulationDirty: true,
+    });
   },
 
   computeTemporalProfile: () => {

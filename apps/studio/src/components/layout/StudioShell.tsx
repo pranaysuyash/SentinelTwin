@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { MotionConfig } from "framer-motion";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useSimulation } from "@/hooks/use-simulation";
@@ -211,6 +212,7 @@ export default function StudioShell() {
   }
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">
       <TopBar />
       <AutosaveRecoveryBanner />
@@ -332,5 +334,6 @@ export default function StudioShell() {
         />
       )}
     </div>
+    </MotionConfig>
   );
 }

@@ -37,11 +37,13 @@ import { PathDrawTool } from "./editing/PathDrawTool";
 import { PolygonDrawTool } from "./editing/PolygonDrawTool";
 import { ObjectContextMenu } from "./editing/ObjectContextMenu";
 import {
+  applyContextActionPlan,
   buildContextualMenuModel,
   findContextualNode,
   planContextualAction,
   type ContextActionId,
 } from "./editing/object-context-actions";
+import { SelectionContextBar } from "./SelectionContextBar";
 import { SelectionOverlay } from "./editing/SelectionOverlay";
 import { TransformHandles } from "./editing/TransformHandles";
 import { getSceneSelectionIds, normalizeBounds } from "./editing/selection-geometry";
@@ -307,11 +309,13 @@ function SelectionHighlights() {
               <ringGeometry args={[isPrimary ? 0.18 : 0.14, isPrimary ? 0.28 : 0.22, 20]} />
               <meshBasicMaterial color={isPrimary ? "#93c5fd" : "#60a5fa"} transparent opacity={0.75} />
             </mesh>
-            <SceneHtml position={[anchor[0], anchor[1] + 0.2, anchor[2]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-              <div className="rounded border border-[#2b3a58] bg-[#0b0f17]/90 px-1.5 py-0.5 text-[8px] font-semibold text-[#d2d9e8]">
-                {isPrimary ? "Primary" : `+${index}`}
-              </div>
-            </SceneHtml>
+            {selectedNodeIds.length > 1 ? (
+              <SceneHtml position={[anchor[0], anchor[1] + 0.2, anchor[2]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+                <div className="rounded border border-[#2b3a58] bg-[#0b0f17]/90 px-1.5 py-0.5 text-[8px] font-semibold text-[#d2d9e8]">
+                  {isPrimary ? "Primary" : `+${index}`}
+                </div>
+              </SceneHtml>
+            ) : null}
           </group>
         );
       })}
@@ -588,25 +592,63 @@ function CeilingLightMarkers({
   onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const scene = useStudioStore((s) => s.scene);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  const selectNode = useStudioStore((s) => s.selectNode);
+  const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const selectedNodeIdSet = useMemo(() => new Set(selectedNodeIds), [selectedNodeIds]);
 
   return (
     <group>
-      {scene.securityLights.map((light) => (
-        <group
-          key={light.id}
-          position={light.position}
-          onContextMenu={onContextMenu ? (event) => {
-            event.stopPropagation();
-            event.nativeEvent.preventDefault();
-            onContextMenu(light.id, event);
-          } : undefined}
-        >
-          <mesh>
-            <cylinderGeometry args={[0.18, 0.18, 0.05, 22]} />
-            <meshStandardMaterial color="#eceff7" emissive="#f8f2c0" emissiveIntensity={0.45} roughness={0.2} metalness={0.3} />
-          </mesh>
-        </group>
-      ))}
+      {scene.securityLights.map((light) => {
+        const isHovered = hoveredId === light.id;
+        const isSelected = selectedNodeIdSet.has(light.id);
+        return (
+          <group
+            key={light.id}
+            position={light.position}
+            {...makeWorkspaceNodeHandlers({
+              nodeId: light.id,
+              selectable: true,
+              selectNode,
+              toggleSelectedNode,
+              onSelect: undefined,
+              onContextMenu,
+            })}
+            onPointerOver={() => {
+              setHoveredId(light.id);
+              setWorkspaceCursor("pointer");
+            }}
+            onPointerOut={() => {
+              setHoveredId((current) => (current === light.id ? null : current));
+              setWorkspaceCursor("default");
+            }}
+            scale={isHovered ? 1.08 : 1}
+          >
+            <mesh>
+              <cylinderGeometry args={[0.18, 0.18, 0.05, 22]} />
+              <meshStandardMaterial
+                color="#eceff7"
+                emissive={isSelected ? "#bfdbfe" : "#f8f2c0"}
+                emissiveIntensity={isSelected ? 0.7 : 0.45}
+                roughness={0.2}
+                metalness={0.3}
+              />
+            </mesh>
+            {/* Progressive disclosure: identity chip only on hover/selection */}
+            {(isHovered || isSelected) && (
+              <SceneHtml position={[0, 0.3, 0]} center distanceFactor={12} style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>
+                <MarkerHoverChip
+                  label={light.name ?? "Security Light"}
+                  detail="Light"
+                  color="#facc15"
+                  emphasized={isSelected}
+                />
+              </SceneHtml>
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -679,10 +721,58 @@ function SensorMarkers({
               <ringGeometry args={[0.18, 0.26, 20]} />
               <meshBasicMaterial color={isSelected ? "#93c5fd" : color} transparent opacity={0.25} />
             </mesh>
+            {/* Progressive disclosure: identity chip only on hover/selection */}
+            {(isHovered || isSelected) && (
+              <SceneHtml position={[0, 0.32, 0]} center distanceFactor={12} style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>
+                <MarkerHoverChip
+                  label={sensor.label || (SENSOR_TYPE_LABELS[sensor.sensorType] ?? "Sensor")}
+                  detail={SENSOR_TYPE_LABELS[sensor.sensorType] ?? "Sensor"}
+                  color={color}
+                  emphasized={isSelected}
+                />
+              </SceneHtml>
+            )}
           </group>
         );
       })}
     </group>
+  );
+}
+
+/** Minimal identity chip revealed when a marker is hovered or selected. */
+function MarkerHoverChip({
+  label,
+  detail,
+  color,
+  emphasized,
+}: {
+  label: string;
+  detail?: string;
+  color: string;
+  emphasized?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        background: "rgba(10,13,19,0.9)",
+        border: `1px solid ${emphasized ? "#60a5fa" : color}`,
+        borderRadius: 4,
+        padding: "2px 6px",
+        backdropFilter: "blur(5px)",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span style={{ width: 5, height: 5, borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} aria-hidden="true" />
+      <span style={{ fontSize: 7, fontWeight: 600, letterSpacing: "0.04em", color: emphasized ? "#dbeafe" : "#c4cfe4" }}>
+        {label.toUpperCase()}
+      </span>
+      {detail && detail !== label ? (
+        <span style={{ fontSize: 6, fontWeight: 600, color: "#64748b" }}>{detail}</span>
+      ) : null}
+    </div>
   );
 }
 
@@ -2112,35 +2202,18 @@ export function WorkspaceCanvas() {
 
     const plan = planContextualAction(scene, node, actionId, contextMenu.selectionSnapshot);
 
-    switch (plan.kind) {
-      case "patch":
-        updateNode(node.id, plan.patch);
-        if (plan.message) setEditorFeedbackMessage(plan.message);
-        break;
-      case "duplicate":
-        duplicateNode(node.id);
-        if (plan.message) setEditorFeedbackMessage(plan.message);
-        break;
-      case "delete":
-        removeNode(node.id);
-        if (plan.message) setEditorFeedbackMessage(plan.message);
-        break;
-      case "focus":
-        setFocusScenePointRequest({ point: plan.point, source: "minimap" });
-        if (plan.message) setEditorFeedbackMessage(plan.message);
-        break;
-      case "camera_view":
-        setSelectedCameraId(plan.cameraId);
+    applyContextActionPlan(node.id, plan, {
+      patchNode: (nodeId, patch) => updateNode(nodeId, patch),
+      duplicateNode,
+      removeNode,
+      focusPoint: (point) => setFocusScenePointRequest({ point, source: "minimap" }),
+      openCameraView: (cameraId) => {
+        setSelectedCameraId(cameraId);
         setWorkspacePreset("coverage");
         setViewMode("camera_view");
-        if (plan.message) setEditorFeedbackMessage(plan.message);
-        break;
-      case "none":
-        if (plan.message) setEditorFeedbackMessage(plan.message);
-        break;
-      default:
-        break;
-    }
+      },
+      showMessage: setEditorFeedbackMessage,
+    });
 
     setContextMenu(null);
   }, [
@@ -2228,6 +2301,9 @@ export function WorkspaceCanvas() {
 
       {/* Live "what will this camera see" preview while placing/aiming */}
       <PlacementPreviewPanel />
+
+      {/* Floating contextual task bar for the current selection */}
+      <SelectionContextBar />
 
       <Canvas
         shadows="percentage"

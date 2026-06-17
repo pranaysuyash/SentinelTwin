@@ -1,4 +1,4 @@
-import { simulateStudio } from "@sentineltwin/simulation";
+import { simulateStudioAsync } from "@sentineltwin/simulation";
 
 import {
   computeTemporalProfileForResult,
@@ -13,12 +13,22 @@ import {
  * profile) off the main thread so heavy recomputes never block the R3F canvas
  * or editor interactions. The engine package is worker-safe by design
  * (non-negotiable rule 3: zero React/DOM imports in the simulation layer).
+ *
+ * Uses the async/yielding engine entry point so large scenes report
+ * incremental progress (`{ type: "progress", fraction }`) back to the main
+ * thread instead of blocking until the final result.
  */
 
-self.onmessage = (event: MessageEvent<SimulationRunPayload>) => {
-  const { id, scene, includeTemporalProfile } = event.data;
+self.onmessage = async (event: MessageEvent<SimulationRunPayload>) => {
+  const { id, scene, includeTemporalProfile, currentTime } = event.data;
   try {
-    const result = simulateStudio(scene);
+    const result = await simulateStudioAsync(scene, {
+      currentTime,
+      onProgress: (fraction) => {
+        const progress: SimulationRunResponse = { id, type: "progress", fraction };
+        self.postMessage(progress);
+      },
+    });
     const temporalProfile = includeTemporalProfile ? computeTemporalProfileForResult(scene, result) : null;
     const response: SimulationRunResponse = { id, ok: true, result, temporalProfile };
     self.postMessage(response);

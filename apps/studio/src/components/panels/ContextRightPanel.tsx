@@ -68,7 +68,7 @@ export function ContextRightPanel() {
   const [assumptionsOpen, setAssumptionsOpen] = useState(false);
   const [pathOpen, setPathOpen] = useState(viewMode === "replay");
   const pathOpenEffective = viewMode === "replay" ? true : pathOpen;
-  const assumptionsSummary = `${scene.assumptions.doriStandard === "oodpcvs_2025" ? "IEC 62676-4:2025" : "DORI 2014"} · ${scene.assumptions.timeOfDay} · ${scene.assumptions.interiorLightLevel}`;
+  const assumptionsSummary = `${scene.assumptions.doriStandard === "oodpcvs_2025" ? "Latest image standard (IEC 62676-4:2025)" : "Legacy image standard (DORI 2014)"} · ${scene.assumptions.timeOfDay} · ${scene.assumptions.interiorLightLevel} light`;
 
   return (
     <div className="relative z-[120] flex h-full min-w-0 min-h-0 flex-col overflow-visible bg-[#0c0f16]">

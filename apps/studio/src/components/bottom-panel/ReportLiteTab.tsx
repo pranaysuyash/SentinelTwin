@@ -11,6 +11,8 @@ import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outco
 import { exportTextAsPdf, exportAuditReportPdf } from "@/lib/pdf-export";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import { summarizeOperationalEvidenceTemporalTwin } from "@/lib/operational-evidence";
+import { buildSecurityAnalyticsModel } from "@/lib/security-analytics";
+import { ANALYTICS_REPORT_STYLES, buildAnalyticsReportSection } from "@/lib/report-analytics-export";
 import {
   applyReportVisibility,
   buildCompareReportData,
@@ -381,7 +383,7 @@ export function ReportLiteTab() {
       return;
     }
     if (!singleExportReport || !result) return;
-    const html = buildHtmlReport(scene, result, aiReport, temporalProfile, operationalEvidenceEvents, audienceProfile, visibilityProfile, singleExportReport);
+    const html = buildHtmlReport(scene, result, aiReport, temporalProfile, operationalEvidenceEvents, snapshots, audienceProfile, visibilityProfile, singleExportReport);
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -486,7 +488,7 @@ export function ReportLiteTab() {
       return;
     }
     if (!result) return;
-    const html = buildHtmlReport(scene, result, aiReport, temporalProfile, operationalEvidenceEvents, audienceProfile, visibilityProfile, singleExportReport);
+    const html = buildHtmlReport(scene, result, aiReport, temporalProfile, operationalEvidenceEvents, snapshots, audienceProfile, visibilityProfile, singleExportReport);
     const win = window.open("", "_blank");
     if (win) {
       win.document.write(html);
@@ -1030,6 +1032,7 @@ function buildHtmlReport(
   aiReport: SecurityReport | null,
   temporalProfile: ReturnType<typeof useStudioStore.getState>["temporalProfile"],
   operationalEvidenceEvents: ReturnType<typeof useStudioStore.getState>["operationalEvidenceEvents"],
+  snapshots: ReturnType<typeof useStudioStore.getState>["snapshots"],
   audienceProfile: ReturnType<typeof getReportAudienceProfile>,
   visibilityProfile: ReturnType<typeof getReportVisibilityProfile>,
   reportView?: unknown,
@@ -1039,6 +1042,14 @@ function buildHtmlReport(
   const passing = result.criticalZoneResults.filter((z) => z.status === "pass").length;
   const totalZones = result.criticalZoneResults.length;
   const temporalTwin = summarizeOperationalEvidenceTemporalTwin(operationalEvidenceEvents, scene);
+  const analyticsModel = buildSecurityAnalyticsModel({
+    scene,
+    simulationResult: result,
+    temporalProfile,
+    evidenceEvents: operationalEvidenceEvents,
+    snapshots,
+  });
+  const analyticsSection = buildAnalyticsReportSection(analyticsModel);
   const template = reportView && typeof reportView === "object" && "template" in reportView
     ? (reportView as {
         template: {
@@ -1091,6 +1102,7 @@ function buildHtmlReport(
     .rec { padding: 6px 8px; margin: 4px 0; background: #f0fdf4; border-left: 3px solid #22c55e; font-size: 10pt; }
     footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 8pt; color: #94a3b8; text-align: center; }
     @media print { body { padding: 0; } }
+${ANALYTICS_REPORT_STYLES}
   </style>
 </head>
 <body>
@@ -1116,6 +1128,8 @@ function buildHtmlReport(
   </div>
 
   ${isAi ? buildAiReportHtml(aiReport!) : buildDefaultHtml(result)}
+
+  ${analyticsSection}
 
   <h2>Temporal Operational Twin</h2>
   <table>

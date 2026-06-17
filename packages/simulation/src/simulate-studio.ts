@@ -476,8 +476,9 @@ function simulateStudioInternal(
   includeRecommendations: boolean,
   includeNovelAnalytics = true,
   includeFailureAnalysis = true,
+  currentTime?: { hour: number; minute: number },
 ): SimulationResult {
-  const evaluator = createCoverageEvaluator(scene);
+  const evaluator = createCoverageEvaluator(scene, currentTime ?? {});
   try {
     const {
       coverageCells,
@@ -854,23 +855,36 @@ function buildSimulationResult(
   };
 }
 
-export function simulateStudio(scene: SecurityScene): SimulationResult {
-  return simulateStudioInternal(scene, true);
+export function simulateStudio(
+  scene: SecurityScene,
+  currentTime?: { hour: number; minute: number },
+): SimulationResult {
+  return simulateStudioInternal(scene, true, true, true, currentTime);
 }
 
 export function simulateStudioAsync(
   scene: SecurityScene,
-  options?: { includeRecommendations?: boolean; yieldEvery?: number },
+  options?: {
+    includeRecommendations?: boolean;
+    yieldEvery?: number;
+    onProgress?: (fraction: number) => void;
+    currentTime?: { hour: number; minute: number };
+  },
 ): Promise<SimulationResult> {
   const includeRecommendations = options?.includeRecommendations ?? true;
   const performanceEnvelope = getSimulationCellDensity(scene);
-  const evaluator = createCoverageEvaluator(scene);
+  const evaluator = createCoverageEvaluator(scene, options?.currentTime ?? {});
+  const onProgress = options?.onProgress;
+  // Coverage-cell evaluation is the dominant cost; reserve the tail of the
+  // range for zone evaluation + recommendation/placement-oracle post-processing.
   return evaluator.computeCoverageCellsAsync(
     performanceEnvelope.effectiveCellsPerMeter,
     scene.assumptions.personHeightM,
     options?.yieldEvery,
+    onProgress ? (fraction) => onProgress(fraction * 0.9) : undefined,
   )
     .then((coverageCells) => {
+      onProgress?.(0.9);
       const zoneEvaluations = scene.criticalZones.map((zone) =>
         evaluateZone(scene, evaluator, coverageCells, zone),
       );
@@ -885,6 +899,7 @@ export function simulateStudioAsync(
         performanceEnvelope,
       );
       evaluator.dispose();
+      onProgress?.(1);
       return result;
     })
     .catch((error) => {
@@ -893,6 +908,9 @@ export function simulateStudioAsync(
     });
 }
 
-export function simulateStudioLite(scene: SecurityScene): SimulationResult {
-  return simulateStudioInternal(scene, false, false);
+export function simulateStudioLite(
+  scene: SecurityScene,
+  currentTime?: { hour: number; minute: number },
+): SimulationResult {
+  return simulateStudioInternal(scene, false, false, false, currentTime);
 }

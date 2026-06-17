@@ -6687,3 +6687,557 @@ All relevant decisions and analysis are already captured in:
   2. **Aim-time coverage delta** — while aiming, show the projected coverage gain (placement-oracle-lite for the held pose) in the preview panel footer.
   3. **Drag-to-aim for lights and sensors** — same interaction grammar; light aiming previews illumination footprint at night.
   4. **Object library extension to walls/doors** — parametric presets (double door, roller shutter, glass storefront) through the same picker idiom.
+
+## "Super App for Physical Security" — Vision Expansion (2026-06-12)
+
+**Source:** Direct user feedback that prior "what's next" answers (the 5-item
+analytics roadmap and the 4-item scene-creator roadmap above) were "too small"
+— incremental polish on the existing studio, not platform-level ambition. This
+section documents bolder, durable directions consistent with the moat
+(deterministic, explainable coverage verification — D-003) and the founding
+principle ("AI proposes, simulation verifies, AI explains"). These are
+exploration entries, not commitments: each needs its own decision record and
+scoping pass before implementation (motto_v3 §0.13).
+
+The common thread across all of these: SentinelTwin's deterministic engine is
+a *verification primitive*. Today it verifies one thing (camera coverage of a
+static scene at design time). The platform-level bet is to make that primitive
+the backbone of every moment where physical security decisions get made —
+design, procurement, operation, incident response, audit, and insurance —
+not just the studio screen.
+
+### A. From design tool to continuous verification (operate-time, not just design-time)
+
+1. **Live coverage drift detection.** Cameras get bumped, re-aimed, occluded by
+   new stock/furniture, or go offline. If a site's live camera feeds (or even
+   periodic snapshot uploads / PTZ telemetry) can be compared against the
+   `SecurityScene` model, the engine can answer "is the coverage I designed
+   still the coverage I have?" — and flag drift the moment it happens. This
+   turns the one-time design report into a continuous SLA: "your DORI coverage
+   has degraded from 84% to 61% in Zone 3 because Camera 7 was re-aimed."
+   This is the single highest-leverage idea here: it converts a one-shot
+   design tool into a recurring-revenue monitoring product, using the *same*
+   deterministic engine, just re-run against live-evidence-derived scene deltas
+   instead of design-time edits. The operational evidence ledger already exists
+   (`operational-evidence.ts`) — this is the natural consumer of it.
+
+2. **Incident replay → root-cause coverage audit.** When an incident occurs
+   (theft, breach, near-miss), feed the incident location/time into the
+   temporal twin and ask: "what was our actual DORI coverage at that point,
+   at that time of day, given the scene state at that moment?" Today's
+   adversarial-path/temporal engine already has the pieces (D-009, 06_TEMPORAL).
+   The missing piece is an incident-intake workflow that produces a forensic
+   report: "Camera 4 had Detection-only quality here at 02:00 because Light 2
+   was off (per the 24h profile) — recommendation: add motion-triggered
+   lighting or reposition Camera 4."
+
+3. **Compliance-as-code certification.** The report templates already speak
+   IEC 62676-4 / OODPCVS language (D-305, ReportLiteTab). The bolder version:
+   a continuously-evaluated compliance score against named standards (UK
+   Police Secured by Design, ADA/local fire-code sightline rules, insurer
+   minimum-coverage clauses) with a *signed, timestamped, re-verifiable*
+   certificate — because the engine is deterministic, the certificate is
+   reproducible audit evidence, not a PDF someone can fake. This is a genuine
+   differentiator vs. every competitor: "re-run this scene and you get the
+   identical number" is not true of AI-generated assessments.
+
+### B. From single-site tool to security operations OS
+
+4. **Multi-site portfolio view** (super-set of roadmap item #3, but bigger
+   than "aggregate the analytics model"). For an org with N sites, the
+   platform becomes a portfolio risk register: heatmap of sites by coverage
+   score, k-robustness, open critical issues, last-verified date, and
+   incident history. The "AI explains" layer becomes a portfolio analyst:
+   "your 3 lowest-scoring sites share a pattern — all three rely on a single
+   camera for their loading-dock critical zone (k=1)." This is the natural
+   home for the org/account slice (gap inventory §8) — but the *product*
+   framing should be "security operations OS for multi-site operators"
+   (retail chains, logistics, schools, healthcare campuses), not just
+   "analytics aggregation."
+
+5. **Marketplace / integrator workflow.** Security integrators (the people who
+   actually install camera systems) are an underused distribution channel.
+   A bid/proposal workflow where an integrator imports a floor plan, the AI
+   proposes a camera layout against the client's stated critical zones, the
+   engine verifies it, and the report becomes the *proposal document* —
+   collapses "design + prove + sell" into one artifact. Add a BOM (bill of
+   materials) layer mapping placed cameras to real SKUs (with the Kenney-pack
+   discussion from this session as a cosmetic-only precedent — BOM data is
+   the real value, not 3D models) and this becomes a genuine RFP-response
+   accelerator for integrators, which is a recurring B2B sales motion.
+
+6. **Insurance / risk-transfer data product.** Insurers underwriting physical
+   premises (retail, warehouses, schools) currently rely on self-attestation
+   or manual surveys for "do you have adequate camera coverage of high-value
+   areas?" A deterministic, reproducible coverage score tied to a specific
+   floor plan and camera layout is exactly the kind of structured risk signal
+   underwriters want, and it doesn't exist today in this form. This is a
+   longer-horizon B2B2B play (sell the *score*, not the studio) but it's the
+   kind of thing that turns "nice tool" into "category-defining data layer."
+
+### C. From static scenes to AI-native security design partner
+
+7. **Natural-language scene editing with verification loop, at scale.** The
+   AI command layer (05_AI_AGENT_ARCHITECTURE) already lets users describe
+   changes in language. The bigger version: "redesign this floor plan for a
+   24-hour pharmacy with a $50k budget" → AI proposes a full camera+sensor+
+   lighting layout from scratch, the engine verifies it against critical
+   zones and a cost model, AI explains tradeoffs ("dropping to 6 cameras
+   saves $1,200 but Zone 2 (pharmacy counter) drops to Detection-only
+   overnight — recommend keeping Camera 3"). This is "AI proposes, simulation
+   verifies, AI explains" applied to *whole-scene generation*, not just
+   single-object placement — the natural endpoint of the founding principle.
+
+8. **First-person walk-mode + "what a person actually experiences."**
+   (Already flagged in the interactive-scene-creator section above as
+   highest-leverage novel feature — restated here because it's also a
+   platform-level differentiator, not just a UX nicety.) Walking the space
+   as a guard, an intruder, or a customer, with live DORI overlay and
+   real-time "you are now in a blind spot for 4 seconds" feedback, makes the
+   abstract coverage math viscerally legible to non-technical stakeholders
+   (store managers, school principals) — which is who actually signs off on
+   security budgets. This is a sales/demo weapon as much as a feature.
+
+9. **Adversarial simulation marketplace / "red team in a box."** The
+   adversarial-path engine (D-009, 04_ADVERSARIAL_PATH_SIMULATION) already
+   computes Dijkstra-based paths that minimize detection. The bolder version:
+   a library of named adversary profiles (smash-and-grab, insider threat at
+   closing, after-hours loiterer) each with different speed/risk-tolerance/
+   target parameters, run automatically against every scene edit as a
+   "security regression test" — the "Coverage CI" idea from the existing
+   roadmap (#5), but framed around adversary behavior rather than raw
+   coverage percentage. "This camera move increases the smash-and-grab
+   adversary's undetected dwell time at the register by 8 seconds."
+
+### D. Sequencing note (motto_v3 §0.13)
+
+These are platform bets, not a sprint backlog. The existing 5-item roadmap
+(analytics→report convergence, worker progress, multi-site, live fusion,
+coverage CI) remains the *near-term* execution path because it's directly
+buildable on current code with low risk. Items A1 (live coverage drift) and
+C7 (whole-scene AI generation) are the two with the highest "this changes what
+the product *is*" leverage and the most direct line from current architecture
+(operational evidence ledger; AI agent layer) — they are the natural
+candidates for the next scoped implementation pass once the user confirms
+direction. Items B5/B6/C9 are genuinely new product surfaces (BOM data,
+insurer-facing scoring API, adversary-profile library) and would need their
+own architecture docs before coding starts, per the "schema changes require
+updating types + Zod + engine + prompts + report templates" rule (Non-
+Negotiable Rule 5).
+
+---
+
+## New Exploration Threads — 2026-06-12: Director/Simulator Lens & Adjacent Expansion Surfaces
+
+**Source:** User brainstorm session (2026-06-12), framed as "think like a
+studio/simulator/movie director — real camera movements, character movements
+tracked/simulated, fencing/boundaries, what else can this become?" Per the
+"New Context File Protocol", these are captured here as open exploration
+threads, not decisions. Each links to existing architecture pieces so a future
+scoping pass has a concrete starting point. None of these change
+`Docs/decisions/DECISION_LOG.md` — they are additive research surface only.
+
+### Thread 146: Cinematic Camera-Direction Layer — "shot quality," not just coverage geometry
+
+**Status:** Open. New idea, no code yet.
+
+**The gap:** The engine answers "does this point fall inside this camera's
+FOV/range/quality cone?" — pure geometry. A film/TV director asks a different
+question about the *same* frame: "is the subject's face actually framed well
+enough to be useful?" Two cameras can report identical `identification`-tier
+coverage at a point while one camera's resulting frame has the subject as a
+3-pixel speck at the corner of a wide shot and the other has them centered and
+upright. DORI quality already captures resolution-vs-distance; it does not
+capture *composition* — headroom, horizon line, dead zones at frame edges,
+backlighting/glare direction relative to the lens axis (the engine already
+models glare — `material-behavior.ts` — but as a coverage penalty, not a
+framing concept).
+
+**The idea — "shot quality" score per camera, per critical zone:**
+- For each critical zone, compute where the zone's "action" (entry point,
+  register, door) sits in the camera's projected frame (using the camera's
+  FOV/aspect, exactly like a virtual-camera frustum in a 3D engine).
+- Score it like a cinematographer would: is the subject in the center
+  third or near-edge? Is the camera angle steep enough that faces are
+  foreshortened/occluded by hat brims (a known real-world ID-failure mode —
+  top-down cameras "ID" a person geometrically but the frame shows mostly the
+  top of their head)?
+- Surface this as a per-camera "framing grade" alongside the existing DORI
+  grade — two cameras with the same DORI tier could have very different
+  framing grades, and framing grade is what determines whether a human
+  reviewer (or face-rec system) can actually *use* the footage.
+
+**Why this matters commercially:** This is the #1 complaint security
+consultants hear after an incident — "the camera covered that spot but all we
+got was the top of someone's head" or "they were in frame but right at the
+edge, half cut off." A tool that catches this *at design time*, before
+installation, is a genuinely new differentiator — no competitor scores
+*framing*, only coverage/resolution.
+
+**Relation to existing code:** `vision-collider-mesh.ts` and the camera FOV
+frustum math already exist for rendering; projecting a 3D point into the
+camera's 2D frame is the same math a virtual-camera/previs tool in Unreal or
+Unity would use. `mount-model.ts` already penalizes steep mount angles for
+coverage — a framing score would be a sibling derivation, not a replacement.
+
+**Open questions:** Does this need a new schema field, or is it a pure
+derivation over existing `CameraNode` + zone geometry (likely the latter —
+Rule 5-clean)? Does "framing grade" need its own DORI-like tier vocabulary, or
+can it reuse `clarity`/`reasonCodes`?
+
+---
+
+### Thread 147: Populated Scenes — NPC/Crowd Simulation for Dynamic Occlusion & Baseline Behavior
+
+**Status:** Open. New idea, no code yet. Builds on D-009 (adversarial path) and
+Thread 12 (workspace interaction/blindspot attribution).
+
+**The gap:** Today's coverage model is *static* — it answers "if a person
+stands at point X, what quality of view do the cameras have?" Real spaces are
+full of moving people who occlude each other and the floor/walls dynamically.
+A single adversarial path (D-009) models one intruder's optimal route, but a
+retail floor at 2pm has 30 shoppers, 4 staff, and a stockroom worker — and
+*their* movement is what actually determines whether a given blind spot is
+"empty 99% of the time" or "always has someone standing in it, permanently
+blocking Camera 3's view of the register."
+
+**The idea — populate the scene with simulated "extras":**
+- A small library of agent archetypes (Customer, Staff, Stocking Cart,
+  Loiterer) each with a simple behavior: wander between points of interest
+  (shelves, registers, doors) with dwell times, using the same walkable-area
+  geometry the coverage grid already uses.
+- Run the coverage simulation across a *population* of agents over simulated
+  time (reuses the 06_TEMPORAL 24h profile machinery — agent density by hour
+  is itself a known retail pattern: empty at 8am, crowded at 6pm).
+- Output: "effective coverage" that accounts for occlusion-by-crowd, not just
+  occlusion-by-furniture (`occlusion-blame.ts` already exists for static
+  obstructions — this is the dynamic sibling). Also surfaces "chokepoints":
+  spots where two agent paths cross and a camera's view is *statistically*
+  blocked a meaningful fraction of the time.
+
+**The director-lens framing:** This is exactly what a virtual-production crowd
+simulation does (e.g. Unreal's crowd/MetaHuman population tools, or game-engine
+NPC pathing) — except instead of making a scene look populated for a render,
+the population is the *load* the security design has to survive. "Your camera
+covers the stockroom door geometrically, but a stocking cart is parked in that
+doorway 40% of business hours, per the simulated traffic pattern" is a finding
+no purely-geometric tool can produce.
+
+**Relation to existing code:** `adversarial-path.ts` (Dijkstra over the
+walkable grid) is the per-agent pathing primitive; `temporal.ts` /
+`seasonal-lighting.ts` already model time-of-day variation; `occlusion-blame.ts`
+is the static-obstruction occlusion model this would extend to moving bodies
+(a person is just a cylinder-shaped obstruction that moves).
+
+**Open questions:** Performance — running coverage for N agents x M timesteps
+is combinatorially heavier than the current single-pass grid; likely needs a
+coarser "occlusion probability field" rather than per-agent raycasting at full
+resolution. Schema impact: likely a new `crowdProfile` config on the scene
+(traffic patterns per zone/hour) — would need its own Rule-5 pass.
+
+---
+
+### Thread 148: Incident Replay as Cinematic Sequence — "Director's Cut" Export
+
+**Status:** Open. New idea, no code yet. Builds on D-302 (drag-to-aim + POV
+preview), Path Replay, and the report/export pipeline (D-305).
+
+**The idea:** The studio already has a `PlacementPreviewPanel` that renders
+"what this camera would see" (D-302) and a Path Replay mode. A movie director's
+toolkit adds one more layer: a *multi-camera cut sequence* — given an
+adversarial path or an incident timeline, automatically generate a sequence of
+camera POV shots that follow the subject as they move through the scene,
+switching cameras exactly the way a real SOC operator (or a film editor) would
+cut between angles to keep the subject in frame.
+
+**Concrete outputs this enables:**
+- **Sales demo "trailer":** a 30-second auto-cut sequence showing "here's what
+  your cameras would have captured" for a simulated walkthrough — viscerally
+  more persuasive than a coverage percentage (ties directly to roadmap item C8,
+  first-person walk-mode, but from the *camera's* perspective instead of the
+  walker's).
+- **Forensic report companion:** for the incident-replay idea (item A2 above),
+  the "Director's Cut" is the *visual* artifact that accompanies the written
+  forensic report — "here is the reconstructed multi-camera sequence of the
+  incident, with timestamps and the coverage-quality grade for each shot."
+- **Training material:** a generated sequence showing "blind spot" moments —
+  cuts to black or a "NO COVERAGE" card when the subject exits all camera
+  frustums — is a powerful guard-training tool (see Thread 150).
+
+**Relation to existing code:** `PlacementPreviewPanel` (D-302) is the
+single-camera POV renderer; Path Replay already drives a subject along a path
+deterministically; the "cut" logic is a pure selection function (at time T,
+which camera(s) have this point in frame, with what framing grade per Thread
+146 — prefer the highest-framing-grade camera, cut when it loses the subject).
+No new 3D rendering tech needed — this is an orchestration layer over what
+exists.
+
+**Open questions:** Export format (in-app sequence player vs. actual video
+file via headless render — the latter is a real engineering lift, likely
+out of scope until there's commercial pull). Whether "Director's Cut" belongs
+in the report (D-305 convergence) or as its own view mode.
+
+---
+
+### Thread 149: Perimeter & Outdoor Expansion — Fencing, Gates, Barriers, LPR, CPTED Lighting
+
+**Status:** Open. New idea, revives/sharpens Thread 144 (perimeter tech
+landscape, currently "not exploring now") with a concrete schema-shaped
+proposal.
+
+**The gap:** `SecurityScene` today models an indoor floor plan: walls, zones,
+cameras, obstructions. Physical security for retail/logistics/campuses is
+*also* about the outdoor perimeter: fences, gates, vehicle barriers, parking
+lot lighting, and the cameras/sensors that watch *those*. Thread 144 catalogued
+the sensor landscape (fiber-optic fence detection, microwave barriers, etc.)
+but didn't propose how it fits the data model.
+
+**The idea — perimeter as a first-class scene layer:**
+- New geometry primitives: `FenceSegment` (linestring + height + material:
+  chain-link/palisade/wall — affects camera-vision transmission the same way
+  `ObstructionNode.material` does today), `GateNode` (point + state:
+  open/closed/access-controlled), `BollardLine`/`VehicleBarrier`.
+- Coverage targets already include `vehicle_detection` and `license_plate`
+  (seen in `TopBar.tsx` coverage-target list) — this thread is the natural
+  home for *why* those exist: LPR cameras at gates, with their own DORI-like
+  "plate-legible" quality tier (a function of angle-to-plate, not just
+  distance — another framing-adjacent concept, see Thread 146).
+- CPTED (Crime Prevention Through Environmental Design) lighting: the engine
+  already has `seasonal-lighting.ts` for indoor/ambient light — extending it
+  to perimeter lighting (pole lights, photocell schedules) ties directly into
+  the existing 24h temporal profile and gives a concrete, well-studied
+  framework (CPTED is a real, citable standard) for *why* a given perimeter
+  layout is good or bad, beyond "the camera can see it."
+
+**Why now / why this is high-leverage:** Thread 10 (NDAA replacement market,
+high priority) and Thread 12 (retail loss prevention) both involve outdoor
+perimeters (loading docks, parking lots, fence lines) — this isn't a niche
+add-on, it's table stakes for the verticals already identified as strong
+wedges. It's also where Thread 145 (UGV/robot patrol) naturally lives —
+perimeter patrol routes are exactly the "fence line, periodically" pattern
+robots are good at.
+
+**Open questions:** This is the most schema-impactful idea in this batch —
+`FenceSegment`/`GateNode` are new node types, which is a real Rule-5 pass
+(types + Zod + engine raycasting against fence material + report templates).
+Recommend treating this as its own architecture doc (`Docs/architecture/09_*`
+style) before any code, given the blast radius.
+
+---
+
+### Thread 150: VR/Walkthrough Training Simulator — Same Scene, New Mode
+
+**Status:** Open. New idea. Builds on roadmap item C8 (first-person walk-mode)
+and Thread 21 (3D editor) / R3F rendering pipeline (07_RENDERING_PIPELINE).
+
+**The idea:** Once a scene supports first-person walking with live DORI
+overlay (C8), the same scene + same engine becomes a *guard training
+simulator* with almost no additional core tech: place the trainee at a guard
+post, run a populated scene (Thread 147) plus a scripted incident (an
+adversarial-path agent enters frame), and ask the trainee to spot it /
+respond correctly. The "Director's Cut" (Thread 148) becomes the after-action
+review — "here's what you should have seen, and when."
+
+**Why this is a genuinely different product surface, not a feature:** Guard
+training today is largely classroom/video-based and generic ("watch for
+suspicious behavior"). A trainee walking *their actual assigned site*, in 3D,
+with scenarios generated from *that site's* real blind spots (per the
+deterministic engine — these aren't generic, they're this building's actual
+gaps) is qualitatively different — and it's a recurring-revenue training
+product built on data the platform already computes for the security-design
+product. Two customers (security director buying the design tool, ops/HR
+buying the training tool) from one engine.
+
+**Relation to existing code:** R3F canvas + `WorkspaceCanvas.tsx` already
+render the 3D scene; the camera-rig math for a first-person view is a subset
+of the existing camera-frustum math (Thread 146). VR headset support (WebXR)
+is a separate, larger lift — desktop first-person ("walk mode") is the
+buildable first step and is already roadmap item C8.
+
+**Open questions:** Out of scope until C8 (first-person walk mode) exists.
+Flagging now because the *scenario content* (Thread 147 populated agents +
+Thread 148 incident sequences) should be designed with "this will also be
+training content" in mind, to avoid building it twice.
+
+---
+
+### Thread 151: Audio Layer — PA Coverage, Gunshot/Glass-Break Sensor Simulation
+
+**Status:** Open. New idea, sibling/extension of Thread 25 (multi-sensor
+physical security).
+
+**The idea:** Thread 25 already proposed a `SensorNode` base type for
+non-camera detection layers. Audio is a distinct enough modality to call out
+specifically, for two reasons:
+- **Detection sensors:** gunshot detection, glass-break, raised-voice/
+  aggression analytics — these have *acoustic* coverage cones shaped by room
+  geometry (reflections off hard surfaces, attenuation through walls/doors)
+  very differently from line-of-sight camera FOV. The existing BVH-based
+  raycasting (D-004) could plausibly be repurposed for acoustic line-of-sound
+  vs. reverberant paths, but this needs real research — acoustic propagation
+  is not the same problem as optical visibility.
+- **PA/notification coverage:** "if an alarm sounds, can everyone in this zone
+  actually hear it?" — a basic but commonly-missed compliance question (fire
+  code adjacent, ties to Thread 143 escalation/emergency response).
+
+**Why include it in the director-lens batch:** A film set's sound department
+thinks about mic placement and room acoustics the same way the camera
+department thinks about shot framing — "can we actually capture/convey what's
+happening here" is the audio analog of Thread 146's framing-grade idea.
+
+**Open questions:** This is research-heavy before any implementation —
+acoustic propagation modeling is a different domain than optical raycasting,
+and the team should validate whether a *simplified* model (e.g., distance +
+wall-attenuation lookup table, no real acoustic ray tracing) is good enough
+for the product claims being made, before investing in anything more
+elaborate. Recommend: keep as an open research thread, do not schedule.
+
+---
+
+### Thread 152: Access Control & Flow Simulation — Doors, Turnstiles, Tailgating Risk
+
+**Status:** Open. New idea, extension of Thread 25 (multi-sensor) and Thread
+147 (crowd simulation).
+
+**The idea:** Access-controlled doors/turnstiles are where "who is allowed
+here" meets "who is actually here" — and the gap between those (tailgating,
+propped doors, badge-sharing) is a major real-world vulnerability class that
+pure camera-coverage analysis doesn't address directly, but *can* once
+populated-scene simulation (Thread 147) exists: simulate N people approaching
+a single-person turnstile during a shift-change rush, and ask "what's the
+probability of a tailgate event in this window, and does any camera have a
+framing grade (Thread 146) good enough to *identify* the tailgater
+afterward?" This connects access-control policy (a logical/IT-security
+concern) to physical-camera design (this product's core) in a way no existing
+tool does — it's the literal intersection of physical and access security.
+
+**Open questions:** Depends on Thread 147 (crowd sim) existing first. Schema
+impact: `GateNode`/door access-control state (Thread 149) would need an
+`accessControlled: boolean` + `nominalThroughputPerMin` or similar — modest,
+additive.
+
+---
+
+### Thread 153: Event/Temporary-Site Mode — Stadiums, Concerts, Construction Sites, Pop-Up Perimeters
+
+**Status:** Open. New idea, extension of Thread 98 (no-floor-plan intake) and
+Thread 15 (BIM/pre-construction security).
+
+**The idea:** Every thread so far assumes a relatively fixed building. A large
+adjacent market is *temporary* security: event venues (stadiums, concerts,
+festivals — temporary fencing, mobile camera towers, crowd-flow/egress
+modeling), and active construction sites (perimeter changes weekly, temporary
+power for cameras, theft of materials/equipment is the dominant loss driver,
+not "intrusion into a finished building"). Thread 98 already explores
+no-floor-plan intake (you don't have a CAD file for a field where a festival
+is happening) and Thread 15 covers BIM for *future* buildings — temporary
+sites are the third leg: real, present-tense, but ephemeral and
+fast-changing.
+
+**Why interesting:** This is a genuinely different sales motion (event
+security companies, GC/construction-site security vendors) but reuses
+*everything* — walkable-area + camera coverage + adversarial path all apply
+to "can someone climb this temporary fence and reach the generator compound
+unseen for 90 seconds, the time it takes the roving guard to complete a
+loop?" The "Director's Cut" (Thread 148) framing is also extremely natural
+here — event security briefings are already run like a "shot list" (camera
+positions, coverage zones, blind-spot handoffs between fixed cameras and
+roving guards).
+
+**Open questions:** Mostly a go-to-market/positioning question more than a
+technical one — the engine already supports arbitrary floor plans; "temporary
+site" is more about workflow (fast scene setup from a site sketch or satellite
+image — ties to Thread 98's no-floor-plan intake) than new simulation
+capability. Lowest technical risk of this entire batch; could be a packaging/
+template exercise (a "construction site" / "event" preset scene + report
+template) rather than new engine work.
+
+---
+
+### Sequencing note for this batch (motto_v3 §0.13)
+
+None of Threads 146-153 are scheduled. Rough relative read, for when the user
+is ready to pick:
+
+- **Lowest lift, real differentiation:** Thread 146 (cinematic framing grade)
+  is a pure derivation over existing camera-frustum math — same Rule-5-clean
+  shape as Camera Drift (D-308) and Coverage CI (D-306). Strong candidate for
+  "next scoped pass" alongside or instead of the items already queued.
+- **Highest narrative/sales leverage, moderate lift:** Thread 148 (Director's
+  Cut export) — builds entirely on existing POV-preview + path-replay
+  machinery, no new simulation math, mostly orchestration + UI.
+- **Biggest platform expansions, need their own architecture docs first:**
+  Thread 147 (crowd simulation) and Thread 149 (perimeter/fencing schema) —
+  both are genuinely new simulation domains with real schema impact (Rule 5)
+  and should not be started without a dedicated architecture pass, same as
+  Threads B5/B6/C9 above.
+- **Research-stage, do not schedule yet:** Thread 151 (audio propagation) needs
+  domain validation before any commitment; Thread 150 (VR training) and
+  Thread 152 (access-control flow) are downstream of Threads 147/148 existing
+  first; Thread 153 (event/temporary sites) is lowest technical risk but is a
+  go-to-market decision, not an engineering one.
+
+---
+
+### Thread 154 — Plain-language pass over dashboard/inspector copy ("speak operator, not engineer")
+
+**Source:** Pranay, 2026-06-12, after D-312 (selection-overlay crowding fixes):
+*"theres also still so many technical/jargons and not actual industry/user
+speak."*
+
+**The problem:** The Analytics dashboard, Context Inspector, and
+Simulation Assumptions card are full of internal engineering vocabulary
+presented as primary UI copy — e.g. "OODPCVS 2025" (a DORI-standard revision
+code), "Night Penalty Mode", "K-Robustness / K=0", "DORI quality
+distribution", "Budget blocked" / "Budget guarded" (LLM cost-telemetry
+states), "Truth: Simulated", "transmission" (a material's light-transmission
+coefficient). A security manager, retail loss-prevention lead, or facilities
+director — SentinelTwin's actual buyers — does not think in these terms. They
+think in "can this camera actually identify a face at the till?", "if this
+camera goes down, are we still covered?", "what does this look like at
+night?".
+
+**Proposed direction:**
+- Every primary label gets an operator-language rewrite; the technical term
+  (DORI tier, OODPCVS, k-robustness, etc.) moves to the existing
+  `ExplainBadge` tooltip as the "for the technically curious" detail, not the
+  headline. This is additive — `ExplainBadge` already exists and is used this
+  way in several places (e.g. D-307's Live Operations, the CommandBar's
+  "Guided edits..." explainer).
+- Candidate renames (illustrative, not final — needs a copy audit pass across
+  `AnalyticsDashboardView.tsx`, `BottomRow.tsx`/`AssumptionsTab.tsx`,
+  `ContextRightPanel.tsx`, `ReportLiteTab.tsx`):
+  - "K-Robustness / K=0" → "Single point of failure" / "No single camera
+    failure breaks coverage" (the K-robustness *number* is the detail, the
+    *implication* is the headline)
+  - "DORI Quality Distribution" → "What can you actually see?" with
+    Identification/Recognition/Observation/Detection kept as the segment
+    labels (those are closer to plain language already) but the section title
+    translated
+  - "OODPCVS 2025" / "DORI 2014" → "Image-quality standard: 2025 (latest)" /
+    "...: 2014 (legacy)"
+  - "Night Penalty Mode: Simple/Detailed/None" → "Night-time visibility
+    estimate: Basic / Detailed / Off"
+  - "Transmission" (material property) → "Light passes through (%)"
+  - "Truth: Simulated" → keep (this one is load-bearing for the "AI proposes,
+    simulation verifies" trust story — D-305/D-306 lineage) but pair with a
+    one-line plain explainer on first view
+  - "Budget blocked/guarded/ready" (CommandBar) → these are about the
+    *AI assistant's* cost guardrails, not the security analysis — consider
+    whether they belong in primary chrome at all vs. tucked into the expanded
+    Guided-Edit panel only (D-312 already hid them on narrow viewports)
+- This is a copy/labels change, not a data-model or computation change —
+  Rule 5 stays clean. The risk is *scope*: it touches many small strings
+  across many files, so it should be done as its own pass with a
+  before/after copy table in the decision log (motto_v3 §0.13 — document the
+  rationale per renamed term, since some technical terms like "DORI" and
+  "k-robustness" are also industry-standard terms a *professional* buyer may
+  expect to see, so this needs to be additive/dual-labeled, not a wholesale
+  deletion of technical vocabulary).
+
+**Open questions:** Should technical terms be fully hidden behind tooltips,
+or always shown as a smaller secondary line (so a security professional who
+*does* know "DORI" can verify at a glance, while a non-specialist gets the
+plain-language headline)? Leaning toward the latter — dual-label, not
+hide — but this is a design call worth a quick UI sketch before a large copy
+pass.

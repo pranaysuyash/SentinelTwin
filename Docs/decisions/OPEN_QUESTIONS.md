@@ -472,3 +472,16 @@ The report exports already carry provenance and evidence summaries, but the prod
 - Should we move from time-based staleness (`computedAt + buffer`) to scene-hash exactness checks using `simulationResult.sceneHash` and a canonical scene snapshot fingerprint for strictness?
 - Should report actions remain actionable but labeled `requires_recompute` with reason codes for telemetry, export, and evidence surfaces?
 - What should be the exact UI copy and escalation for stale-but-visible metrics in long sessions where no immediate simulation is expected?
+
+---
+
+### Q-038: Seasonal lighting — Tier 4 browser verification
+
+**Status:** Open (follow-up)
+**Priority:** Medium (blocks final closure of I1 / D-315, but engine layer is fully verified)
+**Context:** D-315 wired `computeSeasonalLightState()` into `coverage.ts` `getLightingContext()`. Unit tests in `packages/simulation/src/__tests__/seasonal-lighting.test.ts` (20/20 pass) verify the engine behaviour. The studio wiring (`apps/studio/src/lib/simulation-runner.ts`, `apps/studio/src/workers/simulation.worker.ts`, `apps/studio/src/store/slices/core/simulation-slice.ts`) is in place. Studio typecheck and build are green.
+
+What remains for full Tier 4:
+- Playwright probe to scrub the temporal snapshot bar (in `TemporalProfileView`) between noon and 02:00 and verify the heatmap differs.
+- The probe scripts `qa-output/I1/probe_v[5-7].py` are preserved as starting points; the click target is the `button[title*="HH:MM —"]` slot in the coverage timeline bar.
+- Once a successful before/after screenshot pair is captured, the contract at `Docs/decisions/I1_SEASONAL_LIGHTING_ACCEPTANCE_CONTRACT.md` can be promoted from Tier 2 to Tier 4.

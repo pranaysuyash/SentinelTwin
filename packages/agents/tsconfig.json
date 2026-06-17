@@ -14,7 +14,9 @@
     "baseUrl": ".",
     "paths": {
       "@sentineltwin/core": ["../core/src/index.ts"],
-      "@sentineltwin/core/*": ["../core/src/*"]
+      "@sentineltwin/core/*": ["../core/src/*"],
+      "@sentineltwin/agents": ["./src/index.ts"],
+      "@sentineltwin/agents/*": ["./src/*"]
     }
   },
   "include": ["src"],

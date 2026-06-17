@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Activity, BarChart3, Camera, Clock3, Crosshair, Layers, ShieldAlert, Sparkles } from "lucide-react";
+import { Activity, BarChart3, Camera, Clock3, Crosshair, Layers, Radio, ShieldAlert, Sparkles, Compass, Clapperboard } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
@@ -11,6 +11,10 @@ import {
   type AnalyticsTone,
   type TemporalSeriesPoint,
 } from "@/lib/security-analytics";
+import { buildCoverageRegressionReport, type RegressionStatus } from "@/lib/coverage-regression";
+import { buildCameraDriftReport, type DriftSeverity } from "@/lib/camera-drift";
+import { buildFramingGradeReport, type FramingGrade } from "@/lib/framing-grade";
+import { buildDirectorsCutSequence, type DirectorsCutGrade } from "@/lib/directors-cut";
 import { useStudioStore, type BottomTab, type ViewMode } from "@/store/studio-store";
 
 const TONE_CARD_CLASSES: Record<AnalyticsTone, string> = {
@@ -28,6 +32,52 @@ const DORI_BAND_COLORS: Record<string, string> = {
   blind: "#475067",
 };
 
+const REGRESSION_STATUS_CLASSES: Record<RegressionStatus, string> = {
+  pass: "border-emerald-400/20 bg-emerald-500/8 text-emerald-100",
+  warn: "border-amber-400/20 bg-amber-500/8 text-amber-100",
+  fail: "border-rose-400/25 bg-rose-500/10 text-rose-100",
+};
+
+const LIVE_HEALTH_STATUS_CLASSES: Record<"degraded" | "fault", string> = {
+  degraded: "border-amber-400/20 bg-amber-500/8 text-amber-100",
+  fault: "border-rose-400/25 bg-rose-500/10 text-rose-100",
+};
+
+const DRIFT_SEVERITY_CLASSES: Record<DriftSeverity, string> = {
+  minor: "border-amber-400/20 bg-amber-500/8 text-amber-100",
+  major: "border-rose-400/25 bg-rose-500/10 text-rose-100",
+};
+
+const FRAMING_GRADE_CLASSES: Record<FramingGrade, string> = {
+  well_framed: "border-emerald-400/20 bg-emerald-500/8 text-emerald-100",
+  edge_of_frame: "border-amber-400/20 bg-amber-500/8 text-amber-100",
+  foreshortened: "border-amber-400/20 bg-amber-500/8 text-amber-100",
+  out_of_frame: "border-rose-400/25 bg-rose-500/10 text-rose-100",
+};
+
+const FRAMING_GRADE_LABELS: Record<FramingGrade, string> = {
+  well_framed: "well framed",
+  edge_of_frame: "edge of frame",
+  foreshortened: "foreshortened",
+  out_of_frame: "out of frame",
+};
+
+const DIRECTORS_CUT_GRADE_LABELS: Record<DirectorsCutGrade, string> = {
+  well_framed: "Well framed",
+  edge_of_frame: "Edge of frame",
+  foreshortened: "Foreshortened",
+  out_of_frame: "Out of frame",
+  no_coverage: "No coverage",
+};
+
+const DIRECTORS_CUT_GRADE_CLASSES: Record<DirectorsCutGrade, string> = {
+  well_framed: "border-emerald-400/20 bg-emerald-500/8 text-emerald-100",
+  edge_of_frame: "border-amber-400/20 bg-amber-500/8 text-amber-100",
+  foreshortened: "border-amber-400/20 bg-amber-500/8 text-amber-100",
+  out_of_frame: "border-rose-400/25 bg-rose-500/10 text-rose-100",
+  no_coverage: "border-rose-400/25 bg-rose-500/10 text-rose-100",
+};
+
 const SEVERITY_COLORS: Record<string, string> = {
   critical: "#f43f5e",
   high: "#fb923c",
@@ -37,11 +87,14 @@ const SEVERITY_COLORS: Record<string, string> = {
 
 function SectionCard({
   title,
+  subtitle,
   icon,
   action,
   children,
 }: {
   title: string;
+  /** Technical/standard term shown as a smaller secondary label next to the plain-language title. */
+  subtitle?: string;
   icon?: React.ReactNode;
   action?: React.ReactNode;
   children: React.ReactNode;
@@ -52,6 +105,7 @@ function SectionCard({
         <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7a86a0]">
           {icon}
           <span>{title}</span>
+          {subtitle ? <span className="font-normal tracking-normal text-[#3a4158]">({subtitle})</span> : null}
         </div>
         {action}
       </header>
@@ -322,6 +376,41 @@ export function AnalyticsDashboardView() {
     [scene, simulationResult, temporalProfile, operationalEvidenceEvents, snapshots],
   );
 
+  const regressionReport = useMemo(() => {
+    if (!simulationResult) return null;
+    const simulatedSnapshots = snapshots
+      .filter((snapshot) => snapshot.simulation)
+      .sort((a, b) => b.createdAt - a.createdAt);
+    const baselineSnapshot = simulatedSnapshots[0] ?? null;
+    if (!baselineSnapshot) return null;
+    return buildCoverageRegressionReport(simulationResult, baselineSnapshot.simulation!, {
+      label: baselineSnapshot.label,
+      timestamp: baselineSnapshot.createdAt,
+    });
+  }, [simulationResult, snapshots]);
+
+  const cameraDriftReport = useMemo(() => {
+    const simulatedSnapshots = snapshots
+      .filter((snapshot) => snapshot.simulation)
+      .sort((a, b) => b.createdAt - a.createdAt);
+    const baselineSnapshot = simulatedSnapshots[0] ?? null;
+    if (!baselineSnapshot) return null;
+    return buildCameraDriftReport(scene.cameras, baselineSnapshot.scene.cameras, {
+      label: baselineSnapshot.label,
+      timestamp: baselineSnapshot.createdAt,
+    });
+  }, [scene.cameras, snapshots]);
+
+  const framingGradeReport = useMemo(() => {
+    if (!simulationResult) return null;
+    return buildFramingGradeReport(scene, simulationResult);
+  }, [scene, simulationResult]);
+
+  const directorsCut = useMemo(() => {
+    if (!simulationResult?.adversarialPath) return null;
+    return buildDirectorsCutSequence(scene, simulationResult.adversarialPath);
+  }, [scene, simulationResult]);
+
   const drillKpi = (kpi: AnalyticsKpi) => {
     if (kpi.drillTarget.kind === "bottom_tab") {
       setBottomTab(kpi.drillTarget.tab as BottomTab);
@@ -432,7 +521,7 @@ export function AnalyticsDashboardView() {
             )}
           </SectionCard>
 
-          <SectionCard title="DORI Quality Distribution" icon={<Layers className="h-3.5 w-3.5" />}>
+          <SectionCard title="What can you actually see?" subtitle="DORI quality distribution" icon={<Layers className="h-3.5 w-3.5" />}>
             <DoriDistributionBar bands={model.doriDistribution} />
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-[#1f2536] bg-[#101627] px-3 py-2">
@@ -600,10 +689,159 @@ export function AnalyticsDashboardView() {
           </SectionCard>
         </div>
 
+        {regressionReport ? (
+          <SectionCard title="Coverage CI" icon={<Activity className="h-3.5 w-3.5" />}>
+            <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
+              vs. baseline: {regressionReport.baselineLabel}
+            </div>
+            <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+              {regressionReport.checks.map((check) => (
+                <div
+                  key={check.id}
+                  className={cn(
+                    "rounded-lg border px-2.5 py-1.5 text-[11px]",
+                    REGRESSION_STATUS_CLASSES[check.status],
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold">{check.label}</span>
+                    <span className="text-[10px] uppercase tracking-[0.1em]">{check.status}</span>
+                  </div>
+                  <div className="mt-0.5 text-[10px] opacity-80">
+                    {check.baselineValue} → {check.currentValue} ({check.deltaLabel})
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        ) : null}
+
+        {cameraDriftReport && cameraDriftReport.entries.length > 0 ? (
+          <SectionCard title="Camera Drift" icon={<Compass className="h-3.5 w-3.5" />}>
+            <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
+              vs. baseline: {cameraDriftReport.baselineLabel}
+            </div>
+            <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+              {cameraDriftReport.entries.map((entry) => (
+                <div
+                  key={`${entry.cameraId}-${entry.kind}`}
+                  className={cn(
+                    "rounded-lg border px-2.5 py-1.5 text-[11px]",
+                    DRIFT_SEVERITY_CLASSES[entry.severity],
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold">{entry.cameraName}</span>
+                    <span className="text-[10px] uppercase tracking-[0.1em]">{entry.severity}</span>
+                  </div>
+                  <div className="mt-0.5 text-[10px] opacity-80">{entry.detail}</div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        ) : null}
+
+        {framingGradeReport && framingGradeReport.zonesNeedingAttention.length > 0 ? (
+          <SectionCard title="Shot Quality" icon={<Clapperboard className="h-3.5 w-3.5" />}>
+            <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
+              Framing of critical zones — beyond pixel density
+            </div>
+            <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+              {framingGradeReport.entries
+                .filter((entry) => entry.grade !== "well_framed")
+                .map((entry) => (
+                  <div
+                    key={`${entry.zoneId}-${entry.cameraId}`}
+                    className={cn(
+                      "rounded-lg border px-2.5 py-1.5 text-[11px]",
+                      FRAMING_GRADE_CLASSES[entry.grade],
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold">{entry.zoneLabel}</span>
+                      <span className="text-[10px] uppercase tracking-[0.1em]">
+                        {FRAMING_GRADE_LABELS[entry.grade]}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 text-[10px] opacity-80">{entry.detail}</div>
+                  </div>
+                ))}
+            </div>
+          </SectionCard>
+        ) : null}
+
+        {directorsCut && directorsCut.segments.length > 0 ? (
+          <SectionCard title="Director's Cut" icon={<Clapperboard className="h-3.5 w-3.5" />}>
+            <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
+              Camera-cut sequence following the adversarial path
+              {directorsCut.totalDurationS > 0
+                ? ` · ${Math.round((directorsCut.noCoverageDurationS / directorsCut.totalDurationS) * 100)}% with no usable shot`
+                : ""}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {directorsCut.segments.map((segment, index) => (
+                <div
+                  key={`${segment.startTimeS}-${index}`}
+                  className={cn(
+                    "rounded-lg border px-2.5 py-1.5 text-[11px]",
+                    DIRECTORS_CUT_GRADE_CLASSES[segment.grade],
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold">{segment.cameraName ?? "No camera"}</span>
+                    <span className="text-[10px] uppercase tracking-[0.1em]">
+                      {DIRECTORS_CUT_GRADE_LABELS[segment.grade]}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 text-[10px] opacity-80">
+                    {segment.startTimeS.toFixed(1)}s – {segment.endTimeS.toFixed(1)}s
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        ) : null}
+
+        {model.liveHealth.trackedSensors + model.liveHealth.trackedCameras > 0 ? (
+          <SectionCard title="Live Operations" icon={<Radio className="h-3.5 w-3.5" />}>
+            <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
+              Simulated vs. Observed
+            </div>
+            <div className="mt-1 text-[11px] text-[#c0cbe4]">
+              {model.liveHealth.trackedSensors} sensor{model.liveHealth.trackedSensors === 1 ? "" : "s"} ·{" "}
+              {model.liveHealth.trackedCameras} camera connection{model.liveHealth.trackedCameras === 1 ? "" : "s"} reporting
+              {model.liveHealth.faultedSensors + model.liveHealth.degradedCameras > 0
+                ? ` · ${model.liveHealth.faultedSensors + model.liveHealth.degradedCameras} need attention`
+                : " · all healthy"}
+            </div>
+            {model.liveHealth.alerts.length > 0 ? (
+              <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                {model.liveHealth.alerts.map((alert) => (
+                  <div
+                    key={alert.nodeId}
+                    className={cn(
+                      "rounded-lg border px-2.5 py-1.5 text-[11px]",
+                      LIVE_HEALTH_STATUS_CLASSES[alert.status === "fault" ? "fault" : "degraded"],
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold">{alert.label}</span>
+                      <span className="text-[10px] uppercase tracking-[0.1em]">{alert.status}</span>
+                    </div>
+                    <div className="mt-0.5 text-[10px] opacity-80">{alert.lastEventTitle}</div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </SectionCard>
+        ) : null}
+
         <SectionCard title="Resilience" icon={<ShieldAlert className="h-3.5 w-3.5" />}>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div className="rounded-xl border border-[#1f2536] bg-[#101627] px-3 py-2">
-              <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">K-Robustness</div>
+              <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
+                Failure tolerance <span className="text-[#3a4158]">(k-robustness)</span>
+              </div>
               <div className="mt-0.5 text-base font-semibold text-[#dde2ef]">
                 {model.resilience.kRobustness === null ? "—" : `K=${model.resilience.kRobustness}`}
               </div>

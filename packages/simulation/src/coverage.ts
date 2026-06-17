@@ -32,6 +32,7 @@ import type {
   DoriQuality,
   SecurityLightNode,
   SecurityScene,
+  TimeSchedule,
 } from "@sentineltwin/core";
 import {
   DORI_THRESHOLDS,
@@ -46,12 +47,113 @@ import { buildCoverageGrid, type GridCell } from "@sentineltwin/core";
 import { computeBlindSpotPenalty, computeMountTiltPenalty } from "./mount-model";
 import { computeOODPCVSQuality } from "./odpcvs";
 import { getCalibration, getNightModeRetentionFactor, getEdgeFalloffFactor } from "./calibration";
+import { computeSeasonalLightState, type SeasonalLightState } from "./seasonal-lighting";
 import {
   buildVisionColliderMesh,
   disposeVisionColliderMesh,
   getVisionColliderSource,
   type VisionColliderMesh,
 } from "./vision-collider-mesh";
+
+/**
+ * Caller-supplied context for a coverage evaluation.
+ *
+ * - `currentTime`: the hour/minute the simulation should evaluate at. When set
+ *   and the scene carries a `timeSchedule.location`, exterior light follows the
+ *   sun's actual position for that location and instant. When omitted, the
+ *   evaluator falls back to the binary `assumptions.timeOfDay` model so existing
+ *   callers and fixtures keep the same behaviour.
+ *
+ * Future extensions (window-transmitted ambient light, per-cell lux attenuation)
+ * are additive fields on this object — no new signatures.
+ */
+export type CoverageContext = {
+  hour?: number;
+  minute?: number;
+};
+
+export type SeasonalLightingContribution = {
+  /** Seasonal state used (null when no `timeSchedule.location` is available). */
+  state: SeasonalLightState | null;
+  /** True if this evaluation honoured the seasonal state. */
+  applied: boolean;
+  /** Daytime exterior light multiplier in [0, 1]. 1 = full sun, 0 = no exterior light. */
+  exteriorDaytimeMultiplier: number;
+  /** Twilight/night-time multiplier in [0, 1]. 1 = civil twilight ambient, 0 = astronomical night. */
+  exteriorTwilightMultiplier: number;
+};
+
+const DEFAULT_COVERAGE_CONTEXT: Required<CoverageContext> = { hour: 12, minute: 0 };
+
+function resolveSeasonalContribution(
+  scene: SecurityScene,
+  context: Required<CoverageContext>,
+): SeasonalLightingContribution {
+  const schedule = scene.timeSchedule as TimeSchedule | undefined;
+  const location = schedule?.location;
+  if (!location) {
+    return {
+      state: null,
+      applied: false,
+      exteriorDaytimeMultiplier: 1,
+      exteriorTwilightMultiplier: 1,
+    };
+  }
+  const state = computeSeasonalLightState(context.hour, context.minute, schedule as TimeSchedule);
+  if (!state) {
+    return {
+      state: null,
+      applied: false,
+      exteriorDaytimeMultiplier: 1,
+      exteriorTwilightMultiplier: 1,
+    };
+  }
+  // Exterior daytime multiplier maps the seasonal light measurement to a
+  // 0..1 multiplier on the "day" branch of getLightingContext(). lux/no_lux
+  // already encode effective ambient in the caller's mental model.
+  let exteriorDaytimeMultiplier: number;
+  switch (state.exteriorLightLevel) {
+    case "lux":
+      exteriorDaytimeMultiplier = 1;
+      break;
+    case "low_lux":
+      exteriorDaytimeMultiplier = 0.5;
+      break;
+    case "none":
+    default:
+      exteriorDaytimeMultiplier = 0.15;
+      break;
+  }
+  // Twilight/night multiplier maps civil/nautical/astronomical twilight to a
+  // 0..1 multiplier on the exterior ambient when the user has set
+  // `timeOfDay = "night"` (the cell still benefits from some ambient until
+  // astronomical night).
+  let exteriorTwilightMultiplier: number;
+  switch (state.twilightPhase) {
+    case "day":
+      exteriorTwilightMultiplier = 1;
+      break;
+    case "civil_twilight":
+      exteriorTwilightMultiplier = 0.45;
+      break;
+    case "nautical_twilight":
+      exteriorTwilightMultiplier = 0.18;
+      break;
+    case "astronomical_twilight":
+      exteriorTwilightMultiplier = 0.06;
+      break;
+    case "night":
+    default:
+      exteriorTwilightMultiplier = 0;
+      break;
+  }
+  return {
+    state,
+    applied: true,
+    exteriorDaytimeMultiplier,
+    exteriorTwilightMultiplier,
+  };
+}
 
 export type CellComputation = CoverageCellResult & {
   probabilities: number[];
@@ -90,7 +192,12 @@ export type CoverageEvaluator = {
     cellsPerMeter?: number,
     targetHeightM?: number,
     yieldEvery?: number,
+    onProgress?: (fraction: number) => void,
   ) => Promise<CellComputation[]>;
+  /** Seasonal lighting contribution resolved from `scene.timeSchedule` + the
+   *  evaluator's `currentTime`. `applied=false` means the scene has no
+   *  location-aware schedule; legacy timeOfDay-only behavior is used. */
+  seasonal: SeasonalLightingContribution;
   /** Release Three.js GPU resources (geometry, material, BVH). Safe to call after all evaluations are done. */
   dispose: () => void;
 };
@@ -198,10 +305,19 @@ function getLightingContext(
   targetHeightM: number,
   raycaster: THREE.Raycaster,
   visionMesh: VisionColliderMesh,
+  seasonal: SeasonalLightingContribution,
 ) {
   const illuminatedBy: string[] = [];
   const shadowedBy = new Set<string>();
+  // Base exterior light comes from the user-chosen timeOfDay assumption. When
+  // the caller supplies a seasonal contribution (currentTime + location-aware
+  // timeSchedule), it modulates that base — the timeOfDay assumption still
+  // decides which branch we evaluate (day vs night), but the actual ambient
+  // light level reflects sun position + twilight phase.
   let lightLevel = scene.assumptions.timeOfDay === "day" ? 1 : 0;
+  if (seasonal.applied && scene.assumptions.timeOfDay === "day") {
+    lightLevel = seasonal.exteriorDaytimeMultiplier;
+  }
 
   for (const light of scene.securityLights) {
     if (light.status !== "on" || !light.illuminatesNightCoverage) {
@@ -236,6 +352,14 @@ function getLightingContext(
 
   if (scene.assumptions.timeOfDay === "day") {
     return { penalty: envPenalty, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
+  }
+
+  // Apply twilight multiplier BEFORE security-light contribution so a security
+  // light's contribution still wins on top of any exterior ambient. Without
+  // this, a cell at civil twilight gets 0.45 multiplier from the sky and then
+  // gets a +X contribution from any nearby security light (correct).
+  if (seasonal.applied) {
+    lightLevel = seasonal.exteriorTwilightMultiplier;
   }
 
   /**
@@ -453,6 +577,7 @@ function computePpmPenalties(
   targetHeightM: number,
   raycaster: THREE.Raycaster,
   visionMesh: VisionColliderMesh,
+  seasonal: SeasonalLightingContribution,
 ): PpmPenaltyResult {
   let ppm = basePpm;
   const edgeAngle = Math.max(Math.abs(hAngle), Math.abs(vAngle));
@@ -503,7 +628,7 @@ function computePpmPenalties(
   }
   ppm *= 1 - glarePenalty;
 
-  const lightingContext = getLightingContext(camera, cell, scene, targetHeightM, raycaster, visionMesh);
+  const lightingContext = getLightingContext(camera, cell, scene, targetHeightM, raycaster, visionMesh, seasonal);
   const lightingPenalty = lightingContext.penalty;
   if (lightingPenalty > 0) {
     getReasonCodesForLighting(camera, lightingPenalty).forEach((code) => reasonCodes.add(code));
@@ -548,6 +673,12 @@ function evaluateCameraAgainstCell(
   raycaster: THREE.Raycaster,
   visionMesh: VisionColliderMesh,
   ignoredSourceIds: Set<string> = new Set<string>(),
+  seasonal: SeasonalLightingContribution = {
+    state: null,
+    applied: false,
+    exteriorDaytimeMultiplier: 1,
+    exteriorTwilightMultiplier: 1,
+  },
 ): CameraEvaluation {
   if (camera.status !== "on") {
     return makeEmptyEvaluation({
@@ -610,7 +741,7 @@ function evaluateCameraAgainstCell(
   const basePpm = computePixelDensity(camera, distance);
   const penalties = computePpmPenalties(
     basePpm, camera, scene, cell, distance, hAngle, vAngle,
-    occlusion, targetHeightM, raycaster, visionMesh,
+    occlusion, targetHeightM, raycaster, visionMesh, seasonal,
   );
 
   const finalPpmMultiplier = basePpm > 0 ? penalties.ppm / basePpm : 0;
@@ -656,9 +787,14 @@ function evaluateCameraAgainstCell(
   };
 }
 
-export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator {
+export function createCoverageEvaluator(scene: SecurityScene, context: CoverageContext = {}): CoverageEvaluator {
   const visionMesh = buildVisionColliderMesh(scene);
   const raycaster = new THREE.Raycaster();
+  const resolvedContext: Required<CoverageContext> = {
+    ...DEFAULT_COVERAGE_CONTEXT,
+    ...context,
+  };
+  const seasonal = resolveSeasonalContribution(scene, resolvedContext);
 
   const evaluatePoint = (
     camera: CameraNode,
@@ -681,6 +817,8 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
       targetHeightM,
       raycaster,
       visionMesh,
+      new Set<string>(),
+      seasonal,
     );
   };
 
@@ -767,6 +905,7 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
         raycaster,
         visionMesh,
         new Set([window.id]),
+        seasonal,
       );
 
       if (bounced.quality === "none") {
@@ -876,20 +1015,21 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
     cellsPerMeter = 4,
     targetHeightM = scene.assumptions.personHeightM,
     yieldEvery = 50,
+    onProgress?: (fraction: number) => void,
   ) => {
     const { cells } = buildCoverageGrid(scene, cellsPerMeter);
     const results: CellComputation[] = [];
     let evaluatedSinceYield = 0;
+    const total = cells.length;
 
-    for (const cell of cells) {
-      const result = evaluateCell(cell, targetHeightM);
-      if (result) {
-        results.push(result);
-        evaluatedSinceYield++;
-      }
+    for (let i = 0; i < total; i++) {
+      const result = evaluateCell(cells[i]!, targetHeightM);
+      if (result) results.push(result);
+      evaluatedSinceYield++;
 
       if (evaluatedSinceYield >= yieldEvery) {
         evaluatedSinceYield = 0;
+        onProgress?.(total > 0 ? (i + 1) / total : 1);
         await new Promise<void>((resolve) => setTimeout(resolve, 0));
       }
     }
@@ -901,14 +1041,34 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
     evaluatePoint,
     computeCoverageCells,
     computeCoverageCellsAsync,
+    seasonal,
     dispose: () => disposeVisionColliderMesh(visionMesh),
   };
 }
 
-export function computeCoverageCells(scene: SecurityScene, cellsPerMeter = 4) {
-  const evaluator = createCoverageEvaluator(scene);
+export function computeCoverageCells(
+  scene: SecurityScene,
+  cellsPerMeter = 4,
+  context: CoverageContext = {},
+) {
+  const evaluator = createCoverageEvaluator(scene, context);
   try {
     return evaluator.computeCoverageCells(cellsPerMeter);
+  } finally {
+    evaluator.dispose();
+  }
+}
+
+export async function computeCoverageCellsAsync(
+  scene: SecurityScene,
+  cellsPerMeter = 4,
+  context: CoverageContext = {},
+  yieldEvery = 50,
+  onProgress?: (fraction: number) => void,
+) {
+  const evaluator = createCoverageEvaluator(scene, context);
+  try {
+    return await evaluator.computeCoverageCellsAsync(cellsPerMeter, scene.assumptions.personHeightM, yieldEvery, onProgress);
   } finally {
     evaluator.dispose();
   }

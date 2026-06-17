@@ -68,12 +68,13 @@ const TARGET_TYPE_LABELS: Record<CriticalZoneNode["targetType"], string> = {
 function SimStatus() {
   const dirty = useStudioStore((s) => s.simulationDirty);
   const running = useStudioStore((s) => s.simulationRunning);
+  const progress = useStudioStore((s) => s.simulationProgress);
 
   if (running) {
     return (
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-amber-500/20 bg-amber-500/8 px-2 py-1 text-[10px] font-semibold text-amber-300">
         <Loader2 className="h-3 w-3 animate-spin" />
-        Reviewing
+        Reviewing{progress !== null && progress > 0 ? ` ${Math.round(progress * 100)}%` : ""}
       </span>
     );
   }
@@ -120,6 +121,7 @@ export function TopBar() {
   const refreshSavedScenesList = useStudioStore((s) => s.refreshSavedScenesList);
   const exportScene = useStudioStore((s) => s.exportScene);
   const running = useStudioStore((s) => s.simulationRunning);
+  const progress = useStudioStore((s) => s.simulationProgress);
   const demoMode = useStudioStore((s) => s.demoMode);
   const setDemoMode = useStudioStore((s) => s.setDemoMode);
   const canUndo = useStudioStore((s) => s.historyPast.length > 0);
@@ -536,14 +538,23 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           disabled={running}
           title="Run the site review and refresh coverage, route exposure, redundancy, and report evidence."
           className={cn(
-            "inline-flex h-7 items-center justify-center gap-1.5 rounded-lg px-3 text-[11px] font-semibold transition-colors",
+            "relative inline-flex h-7 items-center justify-center gap-1.5 overflow-hidden rounded-lg px-3 text-[11px] font-semibold transition-colors",
             running
               ? "border border-green-900/40 bg-green-900/25 text-green-600"
               : "bg-green-600 text-white shadow-lg shadow-green-900/25 hover:bg-green-500",
           )}
         >
-          {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
-          {running ? "Reviewing" : "Run Review"}
+          {running && progress !== null ? (
+            <span
+              className="absolute inset-y-0 left-0 bg-green-700/30 transition-[width] duration-150"
+              style={{ width: `${Math.max(4, Math.round(progress * 100))}%` }}
+              aria-hidden
+            />
+          ) : null}
+          <span className="relative inline-flex items-center gap-1.5">
+            {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
+            {running ? `Reviewing${progress !== null && progress > 0 ? ` ${Math.round(progress * 100)}%` : ""}` : "Run Review"}
+          </span>
         </button>
 
         {/* Secondary actions — collapse into more menu below xl */}

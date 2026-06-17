@@ -92,6 +92,26 @@ export interface EvidenceActivitySummary {
   lastEventTimestamp: number | null;
 }
 
+export type LiveHealthStatus = "healthy" | "degraded" | "fault";
+
+export interface LiveHealthEntry {
+  nodeId: string;
+  kind: "sensor" | "camera";
+  label: string;
+  status: LiveHealthStatus;
+  lastEventTitle: string;
+  lastEventTimestamp: number;
+}
+
+export interface LiveOperationalHealthSummary {
+  trackedSensors: number;
+  trackedCameras: number;
+  faultedSensors: number;
+  degradedCameras: number;
+  /** Non-healthy entries only, most recent first. */
+  alerts: LiveHealthEntry[];
+}
+
 export interface ResilienceSummary {
   kRobustness: number | null;
   totalCameras: number;
@@ -129,6 +149,7 @@ export interface SecurityAnalyticsModel {
   temporal: TemporalAnalytics | null;
   coverageTrend: CoverageTrendPoint[];
   evidenceActivity: EvidenceActivitySummary;
+  liveHealth: LiveOperationalHealthSummary;
   placementSuggestion: PlacementSuggestionSummary | null;
   blindSpots: BlindSpotSummary | null;
 }
@@ -252,7 +273,7 @@ function buildDoriDistribution(result: SimulationResult): DoriDistributionBand[]
   ];
 }
 
-function buildZoneStatus(result: SimulationResult): SecurityAnalyticsModel["zoneStatus"] {
+export function buildZoneStatus(result: SimulationResult): SecurityAnalyticsModel["zoneStatus"] {
   let pass = 0;
   let partial = 0;
   let fail = 0;
@@ -326,7 +347,7 @@ function buildOcclusionOffenders(result: SimulationResult): OcclusionOffender[] 
     .slice(0, MAX_OCCLUSION_OFFENDERS);
 }
 
-function buildResilience(result: SimulationResult): ResilienceSummary {
+export function buildResilience(result: SimulationResult): ResilienceSummary {
   const fragility = result.fragilitySummary ?? null;
   const robustness = result.kRobustness ?? null;
   return {
@@ -421,6 +442,88 @@ function buildEvidenceActivity(events: OperationalEvidenceEvent[]): EvidenceActi
   };
 }
 
+const MAX_LIVE_HEALTH_ALERTS = 8;
+const CAMERA_CONNECTION_FAULT_TERMS = ["error", "disconnected"];
+const CAMERA_CONNECTION_DEGRADED_TERMS = ["connecting", "authenticating"];
+
+const SENSOR_EVENT_KINDS = new Set<OperationalEvidenceEvent["kind"]>([
+  "sensor_triggered",
+  "sensor_heartbeat",
+  "sensor_faulted",
+  "sensor_restored",
+]);
+
+function classifyCameraConnectionStatus(event: OperationalEvidenceEvent): LiveHealthStatus {
+  const haystack = `${event.title} ${event.afterSummary ?? ""}`.toLowerCase();
+  if (CAMERA_CONNECTION_FAULT_TERMS.some((term) => haystack.includes(term))) return "fault";
+  if (CAMERA_CONNECTION_DEGRADED_TERMS.some((term) => haystack.includes(term))) return "degraded";
+  return "healthy";
+}
+
+/**
+ * "Live fusion" — derives a live health snapshot for sensors and cameras from
+ * the operational evidence ledger (sensor heartbeats/faults, camera live
+ * connection updates), tracking the most recent event per node. This is the
+ * "observed" half of the simulated-vs-observed picture: the simulation result
+ * describes what the deterministic engine expects; this describes what the
+ * live ledger has actually reported.
+ */
+export function buildLiveOperationalHealth(
+  scene: SecurityScene,
+  events: OperationalEvidenceEvent[],
+): LiveOperationalHealthSummary {
+  const sensorLabelById = new Map(scene.sensors.map((sensor) => [sensor.id, sensor.label] as const));
+  const cameraLabelById = new Map(scene.cameras.map((camera) => [camera.id, camera.name] as const));
+
+  const latestByNode = new Map<string, LiveHealthEntry>();
+
+  for (const event of events) {
+    if (SENSOR_EVENT_KINDS.has(event.kind)) {
+      const sensorId = event.affectedNodeIds[0];
+      if (!sensorId) continue;
+      const existing = latestByNode.get(sensorId);
+      if (existing && existing.lastEventTimestamp > event.timestamp) continue;
+      latestByNode.set(sensorId, {
+        nodeId: sensorId,
+        kind: "sensor",
+        label: sensorLabelById.get(sensorId) ?? sensorId,
+        status: event.kind === "sensor_faulted" ? "fault" : "healthy",
+        lastEventTitle: event.title,
+        lastEventTimestamp: event.timestamp,
+      });
+      continue;
+    }
+
+    if (event.kind === "camera_live_connection_updated") {
+      const cameraId = event.affectedNodeIds[0];
+      if (!cameraId) continue;
+      const existing = latestByNode.get(cameraId);
+      if (existing && existing.lastEventTimestamp > event.timestamp) continue;
+      latestByNode.set(cameraId, {
+        nodeId: cameraId,
+        kind: "camera",
+        label: cameraLabelById.get(cameraId) ?? cameraId,
+        status: classifyCameraConnectionStatus(event),
+        lastEventTitle: event.title,
+        lastEventTimestamp: event.timestamp,
+      });
+    }
+  }
+
+  const entries = [...latestByNode.values()];
+  const trackedSensors = entries.filter((entry) => entry.kind === "sensor").length;
+  const trackedCameras = entries.filter((entry) => entry.kind === "camera").length;
+  const faultedSensors = entries.filter((entry) => entry.kind === "sensor" && entry.status === "fault").length;
+  const degradedCameras = entries.filter((entry) => entry.kind === "camera" && entry.status !== "healthy").length;
+
+  const alerts = entries
+    .filter((entry) => entry.status !== "healthy")
+    .sort((a, b) => b.lastEventTimestamp - a.lastEventTimestamp)
+    .slice(0, MAX_LIVE_HEALTH_ALERTS);
+
+  return { trackedSensors, trackedCameras, faultedSensors, degradedCameras, alerts };
+}
+
 function buildPlacementSuggestion(result: SimulationResult): PlacementSuggestionSummary | null {
   const best = result.placementOracle?.bestCandidate ?? null;
   if (!best) return null;
@@ -449,6 +552,7 @@ export function buildSecurityAnalyticsModel(input: SecurityAnalyticsInput): Secu
   const evidenceActivity = buildEvidenceActivity(evidenceEvents);
   const temporal = buildTemporalAnalytics(temporalProfile);
   const coverageTrend = buildCoverageTrend(snapshots, simulationResult);
+  const liveHealth = buildLiveOperationalHealth(scene, evidenceEvents);
 
   if (!simulationResult) {
     return {
@@ -472,6 +576,7 @@ export function buildSecurityAnalyticsModel(input: SecurityAnalyticsInput): Secu
       temporal,
       coverageTrend,
       evidenceActivity,
+      liveHealth,
       placementSuggestion: null,
       blindSpots: null,
     };
@@ -494,6 +599,7 @@ export function buildSecurityAnalyticsModel(input: SecurityAnalyticsInput): Secu
     temporal,
     coverageTrend,
     evidenceActivity,
+    liveHealth,
     placementSuggestion: buildPlacementSuggestion(simulationResult),
     blindSpots: buildBlindSpotSummary(simulationResult),
   };

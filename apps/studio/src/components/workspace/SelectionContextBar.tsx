@@ -37,7 +37,7 @@ import { useStudioStore } from "@/store/studio-store";
  */
 
 const QUICK_ACTION_ORDER: ContextActionId[] = [
-  "aim_at_zone",
+  "aim_at_selected_zone",
   "open_camera_view",
   "door_toggle_open_close",
   "snap_to_wall",
@@ -49,7 +49,7 @@ const QUICK_ACTION_ORDER: ContextActionId[] = [
 const MAX_QUICK_ACTIONS = 5;
 
 const ACTION_ICONS: Partial<Record<ContextActionId, React.ReactNode>> = {
-  aim_at_zone: <Crosshair className="h-3.5 w-3.5" />,
+  aim_at_selected_zone: <Crosshair className="h-3.5 w-3.5" />,
   open_camera_view: <Camera className="h-3.5 w-3.5" />,
   door_toggle_open_close: <DoorOpen className="h-3.5 w-3.5" />,
   snap_to_wall: <Magnet className="h-3.5 w-3.5" />,
@@ -73,7 +73,8 @@ export function SelectionContextBar() {
   const scene = useStudioStore((s) => s.scene);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
-  const activeTool = useStudioStore((s) => s.activeTool);
+  const editorMode = useStudioStore((s) => s.editor.editorMode);
+  const isAiming = useStudioStore((s) => Boolean(s.editor.placementAim));
 
   const updateNode = useStudioStore((s) => s.updateNode);
   const duplicateNode = useStudioStore((s) => s.duplicateNode);
@@ -100,7 +101,11 @@ export function SelectionContextBar() {
     [model],
   );
 
-  const visible = Boolean(node && model && activeTool === "select");
+  // Selection canonically retargets the active tool (selectNode applies a
+  // contextual tool), so gate on editor activity instead of tool identity:
+  // hide only while the user is actively drawing, transforming, or aiming.
+  const editorBusy = editorMode !== "idle" && editorMode !== "placing";
+  const visible = Boolean(node && model) && !editorBusy && !isAiming;
 
   const runAction = (actionId: ContextActionId) => {
     if (!node) return;

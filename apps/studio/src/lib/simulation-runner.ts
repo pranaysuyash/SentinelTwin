@@ -31,12 +31,22 @@ export interface SimulationRunOutput {
 export interface SimulationRunOptions {
   /** Compute the 24h temporal profile in the same run (default true). */
   includeTemporalProfile?: boolean;
+  /** Called with a 0..1 fraction as the engine reports incremental progress. */
+  onProgress?: (fraction: number) => void;
+  /**
+   * Active simulation hour/minute — when set with a scene that has a
+   * `timeSchedule.location`, the coverage evaluator honours sun position and
+   * twilight phase. Defaults to noon.
+   */
+  currentTime?: { hour: number; minute: number };
 }
 
 interface PendingRequest {
   resolve: (response: SimulationRunOutput) => void;
   reject: (error: Error) => void;
   includeTemporalProfile: boolean;
+  onProgress?: (fraction: number) => void;
+  currentTime?: { hour: number; minute: number };
 }
 
 let worker: Worker | null = null;
@@ -76,6 +86,10 @@ function getWorker(): Worker | null {
     const response = event.data;
     const pending = pendingRequests.get(response.id);
     if (!pending) return;
+    if (!("ok" in response)) {
+      pending.onProgress?.(response.fraction);
+      return;
+    }
     pendingRequests.delete(response.id);
     if (response.ok) {
       pending.resolve({
@@ -97,15 +111,20 @@ function getWorker(): Worker | null {
   return worker;
 }
 
-function runInWorker(scene: SecurityScene, includeTemporalProfile: boolean): Promise<SimulationRunOutput> | null {
+function runInWorker(
+  scene: SecurityScene,
+  includeTemporalProfile: boolean,
+  onProgress?: (fraction: number) => void,
+  currentTime?: { hour: number; minute: number },
+): Promise<SimulationRunOutput> | null {
   const activeWorker = getWorker();
   if (!activeWorker) return null;
 
   const id = nextRequestId++;
-  const payload: SimulationRunPayload = { id, scene, includeTemporalProfile };
+  const payload: SimulationRunPayload = { id, scene, includeTemporalProfile, currentTime };
 
   return new Promise<SimulationRunOutput>((resolve, reject) => {
-    pendingRequests.set(id, { resolve, reject, includeTemporalProfile });
+    pendingRequests.set(id, { resolve, reject, includeTemporalProfile, onProgress, currentTime });
     try {
       activeWorker.postMessage(payload);
     } catch (error) {
@@ -118,8 +137,10 @@ function runInWorker(scene: SecurityScene, includeTemporalProfile: boolean): Pro
 async function runOnMainThread(
   scene: SecurityScene,
   includeTemporalProfile: boolean,
+  onProgress?: (fraction: number) => void,
+  currentTime?: { hour: number; minute: number },
 ): Promise<SimulationRunOutput> {
-  const result = await simulateStudioAsync(scene, { yieldEvery: 50 });
+  const result = await simulateStudioAsync(scene, { yieldEvery: 50, onProgress, currentTime });
   const temporalProfile = includeTemporalProfile ? computeTemporalProfileForResult(scene, result) : null;
   return { result, temporalProfile, executionPath: "main_thread" };
 }
@@ -130,8 +151,9 @@ export async function runStudioSimulation(
   options: SimulationRunOptions = {},
 ): Promise<SimulationRunOutput> {
   const includeTemporalProfile = options.includeTemporalProfile ?? true;
+  const currentTime = options.currentTime;
 
-  const workerRun = runInWorker(scene, includeTemporalProfile);
+  const workerRun = runInWorker(scene, includeTemporalProfile, options.onProgress, currentTime);
   if (workerRun) {
     try {
       return await workerRun;
@@ -140,7 +162,7 @@ export async function runStudioSimulation(
     }
   }
 
-  return runOnMainThread(scene, includeTemporalProfile);
+  return runOnMainThread(scene, includeTemporalProfile, options.onProgress, currentTime);
 }
 
 /** Test-only hook: reset module state so worker availability is re-evaluated. */

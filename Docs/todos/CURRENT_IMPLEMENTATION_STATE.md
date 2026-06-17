@@ -902,3 +902,470 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - **Analytics dashboard animation polish**: KPI stagger + count-up, chart draw-in, DORI band grow-in, hover/tap micro-interactions ✅
 - **QA hook**: `?qa=1` exposes the store as `window.__sentinelStudioStore` for scripted browser verification ✅
 - Suite: 929 pass / 0 fail; typecheck clean; production build green; Tier 4 browser evidence for aim cycle, library placement, preview panel, and worker auto-recompute after placement.
+
+## Addendum (2026-06-12, third pass): Progressive-disclosure UI (D-304)
+
+- Overlay density defaults to `compact`; legend + preset pickers start collapsed; labels are chips at rest and full cards on hover/selection ✅
+- New `SelectionContextBar` — floating contextual task bar above the canvas bottom for the current selection, sharing the canonical context-action model and the new `applyContextActionPlan` executor with the right-click menu ✅
+- Right-click menu refactored onto the shared executor (no behavioral fork) ✅
+- Verified in production build: calm canvas screenshot, bar action execution (Duplicate), 929/0 tests ✅
+
+## Addendum (2026-06-12, fourth pass): Disclosure completeness + motion accessibility
+
+- Sensors and security lights now follow the same progressive-disclosure pattern: no labels at rest, identity chip (`MarkerHoverChip`) on hover/selection. Lights were previously unselectable and unlabeled — they now have full selection handlers, hover affordance, and selected-state emphasis ✅ (browser-verified: light chip + selection, sensor placement + chip)
+- Global `MotionConfig reducedMotion="user"` in StudioShell — all framer-motion animations (dashboard, context bar) respect OS prefers-reduced-motion (declarative config; not runtime-verified)
+- Known deferred item: drei `distanceFactor` label scaling has no max clamp, so chips grow when zoomed very close; a clamp needs a custom scale loop in `SceneHtml` (per-frame distance measurement) — deferred deliberately rather than hacked
+- Suite 929 pass / 0 fail; production build green
+
+## Addendum (2026-06-12, fifth pass): Analytics → Report convergence (D-305) + "do all" scoping
+
+This pass starts execution of the priority roadmap from the deep-analysis doc
+(`Docs/exploration/DEEP_ANALYSIS_BEST_IN_CLASS_2026-06-12.md` §4), in response to
+the directive to "do all" the proposed roadmap under full motto_v3 rigor, with the
+explicit feedback that prior feature/vision proposals were too small in ambition.
+Per motto_v3 §0.13 (Scope Expansion Control), the roadmap is executed incrementally
+across passes rather than in one unscoped sweep — see scoping note at the end of
+this addendum.
+
+### Item #1: Analytics → Report convergence (done, Tier 4)
+
+- New pure module `apps/studio/src/lib/report-analytics-export.ts` exports
+  `buildAnalyticsReportSection(model: SecurityAnalyticsModel): string` and
+  `ANALYTICS_REPORT_STYLES`. Renders the same `buildSecurityAnalyticsModel`
+  output (KPI cards, DORI quality distribution, issue-severity bars, coverage
+  trend, camera leaderboard) as a self-contained HTML fragment with inline SVG
+  charts — no React/DOM, portable to any export path.
+- Wired into `ReportLiteTab.tsx`'s `buildHtmlReport`: the function now computes
+  `buildSecurityAnalyticsModel` from the same scene/result/temporalProfile/
+  evidence/snapshots already in scope, and inserts a new "Security Analytics
+  Overview" section between the existing summary/AI report block and the
+  "Temporal Operational Twin" table. Both single-report export call sites
+  (download HTML, print/PDF) now pass `snapshots` through to `buildHtmlReport`.
+- This closes the duplication gap noted during investigation: the report now
+  carries the *same* dashboard-derived numbers as the Analytics view, instead
+  of only the separately-computed "Advanced Risk Signals" table. The
+  "Advanced Risk Signals" table in `buildHtmlReport` is left as-is (it covers
+  fragility/k-robustness/placement-oracle/occlusion detail not yet duplicated
+  in the analytics model's KPI set) — no parallel system was created, the new
+  section is additive and sourced from the canonical analytics model.
+- New test `src/lib/__tests__/report-analytics-export.test.ts` (3 cases): empty
+  fragment when no simulation, full section (KPIs/DORI/issues/leaderboard) for
+  a simulated scene, coverage-trend chart appears once >=1 snapshot exists.
+- Verified Tier 4: `bun test` → 932/932 pass (929 + 3 new), `tsc --noEmit`
+  clean, `pnpm --filter studio build` green.
+
+### "Do all" scoping (motto_v3 §0.13)
+
+The full roadmap from §4 of the deep-analysis doc plus the interactive-scene-
+creator candidates from `EXPLORATION_MAP.md` is large (9 items spanning UI,
+worker protocol, org/account-dependent multi-site analytics, and a new
+first-person walk mode). Executing all of it as one unreviewed pass would
+violate the 3-pass review and acceptance-contract discipline. This pass
+completes item #1 (above) as the first concrete slice. The remaining items are
+tracked as follow-up work; #3 (multi-site/org analytics) is explicitly blocked
+on the org/account slice (gap inventory §8) and cannot be implemented until
+that lands. A separate "super app" vision addendum, addressing the explicit
+"vision is too small" feedback, is being added to
+`Docs/exploration/EXPLORATION_MAP.md` in this same session.
+
+## Addendum (2026-06-12, sixth pass): Coverage CI / comparative analytics (D-306)
+
+Continuing the §4 roadmap per "do all, keep working and documenting" — item #5
+("snapshot-over-snapshot KPI deltas, regression alerts when a scene edit reduces
+coverage"). Item #2 (worker progress/cancellation) was evaluated and deferred:
+`simulateStudio` runs synchronously inside the worker with no chunking/yield
+points, so true mid-computation progress would require restructuring the
+engine's control flow — out of scope for a single pass and a risk of "hacks"
+under the no-hacks policy. Re-scoped to a dedicated pass if/when pursued.
+
+### Item #5: Coverage CI (done, Tier 3 + partial Tier 4)
+
+- New pure module `apps/studio/src/lib/coverage-regression.ts` exports
+  `buildCoverageRegressionReport(current, baseline, baselineMeta)`. Compares
+  the live `SimulationResult` against the most recent simulated snapshot and
+  returns pass/warn/fail checks (CI-style) for: total walkable coverage, blind
+  area, critical-zone pass count, open issues (severity-weighted), and
+  k-robustness. No new computation — reuses `buildZoneStatus`/`buildResilience`
+  (now exported from `security-analytics.ts`) so the regression checks can never
+  diverge from the dashboard's own interpretation of the engine output.
+- If no simulated snapshot exists, returns `{ hasBaseline: false, checks: [] }`
+  — an honest empty state, not a fabricated baseline.
+- Wired into `AnalyticsDashboardView.tsx`: a new "Coverage CI" `SectionCard`
+  (gated on `regressionReport !== null`) sits above "Resilience", showing each
+  check's baseline → current value, delta, and pass/warn/fail badge with
+  status-colored styling (`REGRESSION_STATUS_CLASSES`).
+- New test `src/lib/__tests__/coverage-regression.test.ts` (4 cases): no-baseline
+  empty state, unchanged-scene → all pass, coverage drop → fail, new critical
+  issue → fail. `bun test` → 936/936 pass (932 + 4 new). `tsc --noEmit` clean.
+
+**Evidence tier note:** Browser verification confirmed the dashboard renders
+correctly with the Coverage CI card *absent* (no simulated snapshot in the
+fresh/blank scene used for this verification session — `regressionReport` is
+`null`, gate works as intended, no layout/rendering errors in the rest of the
+dashboard). Verifying the *populated* card (an actual baseline comparison with
+checks rendered) requires a scene with at least one saved simulated snapshot,
+which could not be established via the `?qa=1` store hook in this session (a
+manually-added camera + snapshot did not survive `window.location.reload()`).
+Per motto_v3 evidence-tier honesty: this is Tier 3 (full unit-test coverage of
+the populated-report logic, 4/4 passing) + Tier 4 for the empty-state gate
+only. Populated-card screenshot verification is deferred — flagged as a
+follow-up if/when a reliable way to seed a snapshot-bearing scene via the QA
+hook is added (e.g. exposing `loadDemoScene`/`saveSnapshot` directly on
+`window.__sentinelStudioStore` rather than relying on dynamic import).
+
+## Addendum (2026-06-12, seventh pass): Live operational health fusion (D-307)
+
+Continuing "do all, keep working and documenting" — item #4 from the deep-analysis
+roadmap ("Sensor/camera live events already land in the evidence ledger; the
+dashboard's activity panel is the natural home for live health deltas (simulated
+vs observed)").
+
+### Item #4: Live operational health (done, Tier 4)
+
+- New exported types in `security-analytics.ts`: `LiveHealthStatus`,
+  `LiveHealthEntry`, `LiveOperationalHealthSummary`, plus
+  `buildLiveOperationalHealth(scene, events)` — a pure derivation over the
+  existing `OperationalEvidenceEvent[]` ledger. Tracks the latest
+  sensor-heartbeat/fault/restore/trigger event per sensor and the latest
+  `camera_live_connection_updated` event per camera, classifies each as
+  healthy/degraded/fault, and returns counts plus a capped (8) list of
+  non-healthy alerts sorted most-recent-first.
+- `liveHealth` added to `SecurityAnalyticsModel` (both the no-simulation and
+  full-simulation return paths of `buildSecurityAnalyticsModel`) — always
+  present, computed unconditionally from `evidenceEvents` regardless of
+  whether a simulation has run.
+- `AnalyticsDashboardView.tsx`: new "Live Operations" `SectionCard` (Radio
+  icon) between "Coverage CI" and "Resilience", gated on
+  `liveHealth.trackedSensors + liveHealth.trackedCameras > 0`. Shows a
+  "Simulated vs. Observed" summary line and a grid of alert tiles for any
+  non-healthy node.
+- New test `src/lib/__tests__/live-operational-health.test.ts` (4 cases, 15
+  expects): empty summary with no events; fault tracked + alerted; restoration
+  clears the alert; camera connection status classified by keyword
+  (error/disconnected → fault, connecting/authenticating → degraded).
+  `bun test` → 940/940 pass (936 + 4 new). `tsc --noEmit` clean.
+
+**Evidence tier note — environment finding:** Browser verification on this
+machine required a manual `pnpm build` + `pnpm start` cycle. The preview
+tooling's `command` parameter to `preview_start` is not honored for this
+project — every attempt (`pnpm dev`, `pnpm exec next dev --turbopack`) was
+silently rerouted to running the package's `start` script (`next start` on
+`.next`), so source edits are invisible until a production build is rebuilt.
+This is a tooling quirk, not a codebase issue — no action needed in-repo, but
+future sessions doing Tier 4 verification should rebuild (`pnpm build`) before
+each `preview_start` rather than relying on dev-server HMR.
+
+With the rebuild in place: empty state confirmed (fresh scene, 0 live events →
+card absent, "Coverage CI" / "Live Operations" both correctly absent with no
+rendering errors). Populated state confirmed: injected a synthetic
+`sensor_faulted` event for `sensor_demo_1` via
+`window.__sentinelStudioStore.setState({ operationalEvidenceEvents: [...] })`
+→ "Live Operations" card appears showing "1 sensor · 0 camera connections
+reporting · 1 need attention" and a FAULT tile for `sensor_demo_1` /
+"Sensor fault reported". Screenshot evidence captured. Full Tier 4.
+
+### Next item
+
+Per "keep working and documenting", the next roadmap item to pick up is one of
+the remaining items from `DEEP_ANALYSIS_BEST_IN_CLASS_2026-06-12.md` §4 (e.g.
+camera live-connection seeding for the "0 camera connections reporting" half
+of the new Live Operations card — currently only sensor events have a demo
+seed path) or an EXPLORATION_MAP.md "super app" item not yet started.
+
+## Addendum (2026-06-12, eighth pass): Camera Drift (D-308)
+
+Continuing "do all, keep working and documenting" — first slice of
+EXPLORATION_MAP.md §A1 ("live coverage drift detection"), scoped schema-free
+per Rule 5 by reusing the Coverage CI (D-306) baseline snapshot mechanism.
+
+### Item: Camera Drift (done, Tier 4)
+
+- New module `src/lib/camera-drift.ts`: `buildCameraDriftReport(currentCameras,
+  baselineCameras, baselineMeta)` — pure diff of the live scene's
+  `CameraNode[]` against the most-recently-saved simulated snapshot's cameras.
+  Flags `moved` / `reaimed` / `status_changed` / `fov_changed` / `added` /
+  `removed` entries with `minor`/`major` severity (thresholds: position
+  0.1m/0.5m, angle 2°/10°, FOV/range 5%/20%; any status transition into
+  `{off, blocked, dirty, malfunctioning}` is `major`). Returns an
+  empty-but-honest `{ hasBaseline: false, entries: [] }` when no simulated
+  snapshot exists yet.
+- `AnalyticsDashboardView.tsx`: new "Camera Drift" `SectionCard` (Compass
+  icon) between "Coverage CI" and "Live Operations", computed via a
+  `cameraDriftReport` useMemo over `scene.cameras` and `snapshots` (selects
+  the latest snapshot with a `simulation` result as baseline). Gated on
+  `cameraDriftReport && cameraDriftReport.entries.length > 0`.
+- New test `src/lib/__tests__/camera-drift.test.ts` (6 cases, 14 expects):
+  no-baseline, no-drift-when-unchanged, major moved (>0.5m), major reaimed
+  (>10°), major status_changed (`on → malfunctioning`), added/removed camera
+  diffing. `bun test` → 946/946 pass (940 + 6 new). `tsc --noEmit` clean.
+
+**Bug caught during implementation:** `CameraNode["position"]` is a tuple
+`[number, number, number]`, not `{x,y,z}` — an initial `.x/.y/.z` access in
+`distance()` produced `NaN` and a silent false-negative (no drift detected
+despite a 1m position change). Caught via a `bun -e` debug script before
+shipping; fixed by indexing `[0]/[1]/[2]`.
+
+**Evidence tier (Tier 4, full):** Production build (`pnpm build` + `pnpm
+start`, per the seventh-pass environment finding). Empty state: fresh scene, 0
+snapshots → "Camera Drift" card absent, no rendering errors. Populated state:
+via `window.__sentinelStudioStore`, added `cam_drift_test` (position
+`[2,2,3]`, yawDeg 0, status "on") with `addNode`, ran `runSimulation()` →
+`{ hasSim: true }`, called `saveSnapshot("Baseline")`, then `updateNode(
+"cam_drift_test", { position: [2,2,4.5], status: "malfunctioning" })` (1.5m
+move + status flip). The "Camera Drift" card rendered with both entries as
+MAJOR: "Moved 1.50 m from baseline position" and "Status changed: on →
+malfunctioning". Screenshot evidence captured.
+
+### Next item
+
+Per "keep working and documenting", continue to the next EXPLORATION_MAP.md
+"super app" item or remaining DEEP_ANALYSIS_BEST_IN_CLASS_2026-06-12.md §4 item
+(e.g. camera live-connection seeding for Live Operations, or the live-feed
+half of A1 fusing Camera Drift with D-307's Live Operational Health).
+
+## Addendum (2026-06-12, ninth pass): Simulation worker progress reporting (D-309)
+
+Continuing "do all, keep working and documenting" — item #2 from the deep-
+analysis roadmap §4 ("Worker protocol → progress + cancellation").
+
+### Item: Worker progress reporting (done, Tier 4)
+
+- `packages/simulation/src/coverage.ts`: `computeCoverageCellsAsync` gained an
+  optional `onProgress?: (fraction: number) => void`, called every
+  `yieldEvery` cells with `(i+1)/total`.
+- `packages/simulation/src/simulate-studio.ts`: `simulateStudioAsync` gained
+  `options.onProgress`, mapping coverage-cell progress to `0..0.9` and firing
+  `0.9` / `1` around zone-evaluation + result assembly.
+- `apps/studio/src/lib/simulation-run-core.ts`: `SimulationRunResponse` gained
+  a `{ id, type: "progress", fraction }` variant.
+- `apps/studio/src/workers/simulation.worker.ts`: now runs
+  `simulateStudioAsync` (was the synchronous `simulateStudio`) and posts
+  progress messages alongside the final response.
+- `apps/studio/src/lib/simulation-runner.ts`: `runInWorker`/`runOnMainThread`
+  thread an `onProgress` callback (new `SimulationRunOptions.onProgress`);
+  worker `onmessage` distinguishes progress messages via `"ok" in response`
+  (the `"type" in response` check did not narrow the union correctly under
+  `tsc --noEmit` — fixed to check the `ok` discriminant instead).
+- `apps/studio/src/store/slices/core/simulation-slice.ts`: new
+  `simulationProgress: number | null` (null when idle), set to `0` at run
+  start, updated per progress callback (guarded by the existing
+  `scene.updatedAt` stale-run check), cleared to `null` in all three terminal
+  paths (`buildSimulationState`, fix-sandbox success, both catch blocks).
+- `apps/studio/src/components/layout/TopBar.tsx`: "Run Review" button shows a
+  filling progress bar + live percentage while reviewing; `SimStatus` chip
+  shows the percentage too.
+
+**No schema change** — `SimulationResult`/`SecurityScene` untouched (Rule 5
+clean). `bun test` → 946/946 pass (unchanged count — additive, no new test
+file). `tsc --noEmit` clean.
+
+**Evidence tier (Tier 4, store-level):** Production build (`pnpm build` +
+`pnpm start`). Subscribed to `window.__sentinelStudioStore` and called
+`runSimulation()`: observed 28 incremental `simulationProgress` values ramping
+`0 → 0.035 → ... → 0.9 → 1`, then `simulationRunning: false` /
+`simulationProgress: null`. The reference scene completes in tens of ms — too
+fast for a screenshot to catch the bar mid-fill, which itself confirms the
+worker path is fast for typical scenes. Full UI screenshot verification
+deferred to a future pass with a larger reference scene.
+
+**Explicitly out of scope:** true mid-run cancellation (`worker.terminate()` +
+rebuild). The existing stale-result-discard (`scene.updatedAt` version check)
+already prevents a superseded run from overwriting newer state.
+
+### Next item
+
+Per "keep working and documenting", continue to the next
+EXPLORATION_MAP.md "super app" item — multi-site/org analytics (deep-analysis
+§4 item #3) is gated on the org/account slice (gap inventory §8) and is a
+larger schema-touching item warranting its own decision pass; alternatively,
+pick up the live-feed half of A1 (fusing Camera Drift with D-307's Live
+Operational Health) or another EXPLORATION_MAP.md thread not yet started.
+
+## Addendum (2026-06-12, eleventh pass): Cinematic framing grade (D-310)
+
+Implemented Thread 146 from the "Director/Simulator Lens & Adjacent Expansion
+Surfaces" exploration batch (2026-06-12) — the lowest-lift, highest-
+differentiation item in that batch per its sequencing note.
+
+- New pure module `apps/studio/src/lib/framing-grade.ts`
+  (`buildFramingGradeReport`): for every critical zone with at least one
+  `status: "on"` covering camera, projects the zone polygon's centroid (at
+  `scene.assumptions.personHeightM`) into each covering camera's frame using
+  the same hAngle/vAngle projection as `evaluatePoint`
+  (`packages/simulation/src/coverage.ts` ~L573-579), normalized by `±fov/2`
+  to a `-1..1` in-frame position. Grades: `out_of_frame` (`|norm| > 1` on
+  either axis), `foreshortened` (`camera.pitchDeg <= -55°`, steep top-down),
+  `edge_of_frame` (`|norm| > 0.6`), else `well_framed`. Returns
+  `zonesNeedingAttention` — zones where no covering camera is `well_framed`.
+- Wired into `AnalyticsDashboardView.tsx` as a new "Shot Quality" `SectionCard`
+  (Clapperboard icon) between "Trend & Activity" and "Resilience", gated on
+  `zonesNeedingAttention.length > 0`; only non-`well_framed` entries render.
+
+**No schema change** (Rule 5 clean — pure derivation over existing camera pose
++ zone geometry, same shape as Camera Drift D-308 / Coverage CI D-306).
+
+**Verification:** New test `src/lib/__tests__/framing-grade.test.ts` (4 cases,
+12 expects). `bun test` (from `apps/studio`) → 950/950 pass (946 + 4 new).
+`tsc --noEmit` (from `apps/studio`) clean. `pnpm build` green.
+
+**Evidence tier (Tier 4):** Production build (`pnpm build` + `pnpm start`).
+Loaded the Small Retail Shop reference scene via
+`window.__sentinelStudioStore.getState().importScene(...)` and ran the
+simulation — with the stock 5-camera layout the "Cash Counter" zone already
+has 2 well-framed covering cameras, so the card is correctly absent (no
+framing problem to report). To exercise the populated state, re-aimed
+`cam_aisle_wide` to a steep `-75°` pitch directly above the zone centroid and
+disabled the other covering cameras, then re-ran the simulation: the "Shot
+Quality" card appeared showing "Cash Counter — OUT OF FRAME / Cash Counter
+falls outside Camera 3's frame...". Screenshot evidence captured.
+
+### Next item
+
+Continue "keep working and documenting" with another thread from the
+Thread 146-153 batch — Thread 148 ("Director's Cut" cut-sequence export) is
+the next-ranked item per the sequencing note (builds entirely on existing
+POV-preview + path-replay + this pass's framing grade, no new simulation
+math), or pick up the live-feed half of A1 (Camera Drift × Live Operational
+Health fusion).
+
+## Addendum (2026-06-12, twelfth pass): Director's Cut camera-cut sequence (D-311)
+
+Completed Thread 148 ("Director's Cut") — the natural sequel to D-310's
+framing grade, applied along a moving subject's path instead of a static
+zone.
+
+- New pure module `apps/studio/src/lib/directors-cut.ts`
+  (`buildDirectorsCutSequence(scene, path)`): takes D-009's adversarial-path
+  waypoints and, for each one, picks the best-framed eligible camera
+  (`status: "on"`, `distance <= rangeM`, not `out_of_frame`, ranked
+  `well_framed` > `edge_of_frame` > `foreshortened`, ties broken by distance)
+  via D-310's `gradeCameraFraming` (now exported from `framing-grade.ts`).
+  Waypoints with no eligible camera get `grade: "no_coverage"`. Adjacent
+  waypoints with the same camera+grade collapse into a single cut `segment`
+  with `startTimeS`/`endTimeS`/`startPosition`. `noCoverageDurationS` sums
+  segment durations graded `no_coverage`/`out_of_frame`. Returns `null` only
+  for a zero-waypoint path.
+- Wired into `AnalyticsDashboardView.tsx` as a new "Director's Cut"
+  `SectionCard` (Clapperboard icon), placed right after "Trend & Activity" /
+  Evidence Ledger, gated on `directorsCut.segments.length > 0`. Shows a
+  headline (`% with no usable shot`) and a row of segment tiles (camera name,
+  grade badge, time range).
+
+**No schema change** (Rule 5 clean — pure selection over existing camera pose
++ adversarial-path waypoints + D-310's projection, same shape as Camera Drift
+D-308 / Shot Quality D-310).
+
+**Verification:** New test `src/lib/__tests__/directors-cut.test.ts` (4 cases).
+`bun test` (from `apps/studio`) → 954/954 pass (950 + 4 new). `tsc --noEmit`
+(from `apps/studio`) clean. `pnpm build` green.
+
+**Evidence tier (Tier 4):** Production build (`pnpm build` + `pnpm start`).
+Loaded the Small Retail Shop reference scene fresh via
+`window.__sentinelStudioStore.getState().importScene(...)` and ran the
+simulation — the adversarial path has 6 waypoints, all
+`exposedToCamera: "cam_entrance"`, `criticalZoneReachable: true`,
+`totalDurationS: 1.5`. The "Director's Cut" card rendered with headline
+"Camera-cut sequence following the adversarial path · 0% with no usable
+shot" and one collapsed segment, "Camera 3 — WELL FRAMED — 0.0s – 1.5s".
+Screenshot evidence captured.
+
+**Investigation note (not a bug):** a `document.body.innerText.includes("Director")`
+check initially returned `false` even with the card correctly rendered —
+`innerText` reflects the `SectionCard` title's `text-transform: uppercase`,
+so the live text is `"DIRECTOR'S CUT"`. The case-sensitive substring check
+was the false negative, not the component.
+
+### Next item
+
+Continue "keep working and documenting" with another thread from the
+Thread 146-153 batch (Threads 147, 149-153 remain), or pick up the live-feed
+half of A1 (Camera Drift × Live Operational Health fusion).
+
+## Addendum (2026-06-12, thirteenth pass): Selection-overlay crowding fixes (D-312)
+
+Pranay screenshotted the editor at ~800px width with a wall selected and
+flagged real overlapping/illegible UI, plus a standing complaint about
+engineering jargon in the copy.
+
+- Fixed three concrete overlap bugs (see D-312 for full detail):
+  `WorkspaceCanvas.tsx` `SelectionHighlights` no longer renders a redundant
+  "Primary" chip for single-node selections (it collided with the "Move"
+  transform handle label); `CommandBar.tsx`'s collapsed status pill now hides
+  its provider/health/budget chips below `sm`/`md` breakpoints so it stops
+  colliding with the centered `SelectionContextBar`; `BottomRow.tsx`'s
+  "Simulation Assumptions" card switched from an overflowing `grid-cols-2` to
+  a scrollable `grid-cols-1`, with `AssumptionRow` gaining `min-w-0`/`truncate`
+  so label text can never bleed into the value.
+- `bun test` (from `apps/studio`) → 954/954 pass (no count change, layout-only).
+  `tsc --noEmit` clean. `pnpm build` green. Browser-verified at 800×830:
+  before/after screenshots show the overlapping "OODPCVS 20/Window
+  Handling/Night Penalty/..." text now rendering as clean stacked rows, no
+  "Primary" chip on single selection, and the Guided-Edit pill collapsed to
+  an icon clear of the selection task bar.
+- Logged the jargon complaint as **Thread 154** in `EXPLORATION_MAP.md`
+  ("Plain-language pass over dashboard/inspector copy") with candidate
+  renames (K-Robustness, DORI Quality Distribution, OODPCVS 2025, Night
+  Penalty Mode, Transmission, Budget blocked/guarded/ready) and an open
+  question about dual-labeling (plain headline + technical term as secondary)
+  vs. hiding technical terms behind tooltips entirely — deferred as its own
+  pass since it's a copy audit across many files, not a layout fix.
+
+### Next item
+
+Thread 154 (plain-language copy pass) is the next-ranked item per Pranay's
+most recent feedback — start with a small audit slice (Simulation
+Assumptions card + Resilience/DORI section headers in the Analytics
+dashboard) using the dual-label approach (plain headline, technical term as
+a smaller secondary line or `ExplainBadge`), then expand file-by-file.
+Otherwise, continue the Thread 146-153 batch (Threads 147, 149-153 remain) or
+the live-feed half of A1.
+
+## Addendum (2026-06-13, fourteenth pass): Plain-language copy pass, first slice (D-313)
+
+- Implemented the first slice of Thread 154's dual-label pattern (plain
+  headline + technical term as a smaller secondary label, never hidden):
+  `BottomRow.tsx`'s `AssumptionRow` gained an optional `sublabel` prop
+  (shown as `(sublabel)`, `hidden sm:inline`); `AnalyticsDashboardView.tsx`'s
+  `SectionCard` gained an optional `subtitle` prop (smaller, non-uppercase,
+  dimmer, next to the title).
+- Renamed the eight "Simulation Assumptions" card rows: "Quality Model" →
+  "Image quality" (sublabel "OODPCVS 2025"/"DORI 2014"), "Lighting Model" →
+  "Indoor lighting", "Night Penalty" → "Night view" (sublabel "Night
+  penalty"), "Window Handling" → "Windows", "Person Height" → "Person
+  height", "Time of Day" → "Time of day", "Wall Height" → "Wall height",
+  "Night Mode" → "Night mode". `AssumptionsPanel.tsx`'s editing-mode field
+  labels were intentionally left as-is for this slice.
+- Renamed "DORI Quality Distribution" → "What can you actually see?" (subtitle
+  "DORI quality distribution") and "K-Robustness" → "Failure tolerance
+  (k-robustness)" in the Resilience section, in `AnalyticsDashboardView.tsx`.
+- `ContextRightPanel.tsx`'s collapsed "Simulation Assumptions" summary line
+  ("IEC 62676-4:2025 · day · normal") rewritten to "Latest image standard
+  (IEC 62676-4:2025) · day · normal light" / "Legacy image standard (DORI
+  2014) · ..." — keeps the technical term as the dual-label parenthetical.
+- `bun test` (from `apps/studio`) → 954/954 pass (no count change,
+  copy-only). `tsc --noEmit` clean. `pnpm build` green. Confirmed via grep
+  that "DORI Quality Distribution"/"K-Robustness" also appear in
+  `security-analytics.ts`, `pdf-export.ts`, `coverage-regression.ts`,
+  `report-analytics-export.ts` and their tests as the report/export
+  pipeline's own independent section headings (D-305) — untouched, no
+  conflict (`bun test` confirms). Browser-verified at 1280×900 ("WHAT CAN YOU
+  ACTUALLY SEE? (DORI QUALITY DISTRIBUTION)" and "FAILURE TOLERANCE
+  (K-ROBUSTNESS)" both render cleanly) and at 800×830 (the Simulation
+  Assumptions card's new labels truncate gracefully with ellipsis in their
+  ~102px column — single-line, no overlap, distinct from the D-312
+  overlapping-text bug). See D-313 for full detail.
+- **Caught during this slice:** the first attempt used longer labels ("Image
+  quality standard", "Night-time estimate") with the sublabel always visible,
+  which truncated to unreadable fragments ("Ima...", "Ni...") in the narrow
+  Simulation Assumptions column. Fixed by shortening the labels and hiding
+  the sublabel below `sm`.
+
+### Next item
+
+Continue Thread 154: `AssumptionsPanel.tsx`'s editing-mode field labels,
+"Truth: Simulated", "Transmission" (glass material property), and "Budget
+blocked/guarded/ready" (CommandBar telemetry chips — appears in 6+ files
+including `WorkspaceCanvas.tsx`, `InspectorPanel.tsx`,
+`SceneBuilderWizard.tsx` and several test files, so it needs its own audit
+pass rather than a quick rename). Otherwise, continue the Thread 146-153
+batch (Threads 147, 149-153 remain) or the live-feed half of A1.

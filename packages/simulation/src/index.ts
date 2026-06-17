@@ -1,6 +1,6 @@
 // Core coverage engine
-export { createCoverageEvaluator, computeCoverageCells, getQualityShare, getIdentificationAreaPct, getRecognitionAreaPct } from "./coverage";
-export type { CellComputation, CameraEvaluation, CoverageEvaluator } from "./coverage";
+export { createCoverageEvaluator, computeCoverageCells, computeCoverageCellsAsync, getQualityShare, getIdentificationAreaPct, getRecognitionAreaPct } from "./coverage";
+export type { CellComputation, CameraEvaluation, CoverageEvaluator, CoverageContext, SeasonalLightingContribution } from "./coverage";
 export { simulateStudio, simulateStudioAsync, simulateStudioLite } from "./simulate-studio";
 
 // DORI/OODPCVS quality models (re-exported from core)

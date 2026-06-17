@@ -94,11 +94,14 @@ function SnapshotsPanel() {
   );
 }
 
-function AssumptionRow({ label, value }: { label: string; value: string }) {
+function AssumptionRow({ label, sublabel, value }: { label: string; sublabel?: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 text-[9px]">
-      <span className="text-[#647089]">{label}</span>
-      <span className="text-right text-[#d3dbea]">{value}</span>
+    <div className="flex min-w-0 items-center justify-between gap-2 text-[9px]">
+      <span className="truncate text-[#647089]">
+        {label}
+        {sublabel ? <span className="ml-1 hidden text-[8px] text-[#3a4158] sm:inline">({sublabel})</span> : null}
+      </span>
+      <span className="flex-shrink-0 text-right text-[#d3dbea]">{value}</span>
     </div>
   );
 }
@@ -275,15 +278,19 @@ function AssumptionsPanel() {
             <div className="pt-1 text-[8px] text-[#3a4158]">Changes apply on next simulation run.</div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[9px]">
-            <AssumptionRow label="Quality Model" value={ass.doriStandard === "oodpcvs_2025" ? "OODPCVS 2025" : "DORI 2014"} />
-            <AssumptionRow label="Lighting Model" value={capitalize(ass.interiorLightLevel)} />
-            <AssumptionRow label="Night Penalty" value={capitalize(ass.nightPenaltyMode)} />
-            <AssumptionRow label="Window Handling" value={summarizeWindowStates(scene)} />
-            <AssumptionRow label="Person Height" value={`${ass.personHeightM} m`} />
-            <AssumptionRow label="Time of Day" value={capitalize(ass.timeOfDay)} />
-            <AssumptionRow label="Wall Height" value={`${ass.wallHeightM} m`} />
-            <AssumptionRow label="Night Mode" value={ass.timeOfDay === "night" ? "On" : "Off"} />
+          <div className="grid grid-cols-1 gap-1.5 text-[9px]">
+            <AssumptionRow
+              label="Image quality"
+              sublabel={ass.doriStandard === "oodpcvs_2025" ? "OODPCVS 2025" : "DORI 2014"}
+              value={ass.doriStandard === "oodpcvs_2025" ? "Latest" : "Legacy"}
+            />
+            <AssumptionRow label="Indoor lighting" value={capitalize(ass.interiorLightLevel)} />
+            <AssumptionRow label="Night view" sublabel="Night penalty" value={capitalize(ass.nightPenaltyMode)} />
+            <AssumptionRow label="Windows" value={summarizeWindowStates(scene)} />
+            <AssumptionRow label="Person height" value={`${ass.personHeightM} m`} />
+            <AssumptionRow label="Time of day" value={capitalize(ass.timeOfDay)} />
+            <AssumptionRow label="Wall height" value={`${ass.wallHeightM} m`} />
+            <AssumptionRow label="Night mode" value={ass.timeOfDay === "night" ? "On" : "Off"} />
           </div>
         )}
       </div>

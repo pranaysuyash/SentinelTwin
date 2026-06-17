@@ -70,6 +70,20 @@ function isCounterCriticalZone(zone: CriticalZoneNode, options: Required<Critica
   return options.counterLabelPatterns.some((pattern) => pattern.test(haystack));
 }
 
+/**
+ * Tier 1: explicit targetType match (strongest signal — author-declared intent).
+ * Tier 2: label-pattern match (fallback heuristic).
+ * Used so that an explicit `targetType: "cash_counter_activity"` beats a label
+ * like "Cash Desk" attached to a different `targetType` (e.g. `vehicle_detection`).
+ */
+function counterMatchTier(zone: CriticalZoneNode, options: Required<CriticalZoneSelectionOptions>): 0 | 1 | 2 {
+  const targetTypes = new Set<CriticalZoneNode["targetType"]>(options.counterTargetTypes);
+  if (targetTypes.has(zone.targetType)) return 1;
+  const haystack = `${zone.label} ${zone.id}`.toLowerCase();
+  if (options.counterLabelPatterns.some((pattern) => pattern.test(haystack))) return 2;
+  return 0;
+}
+
 function getSortPolicy(policy: "requiredQuality-first" | "priority-first") {
   if (policy === "priority-first") {
     return (a: CriticalZoneNode, b: CriticalZoneNode) => {
@@ -149,9 +163,18 @@ function selectWithDecision(scene: SecurityScene, options: CriticalZoneSelection
     };
   }
 
+  // Prefer explicit counter targetType matches over label-only matches before
+  // applying the ranking policy. This honours the contract documented in
+  // `selectCounterCriticalZone prefers explicit targetType signals before labels`.
+  const counterTiers = counter.map((zone) => counterMatchTier(zone, normalized));
+  const hasExplicitTargetType = counterTiers.some((tier) => tier === 1);
+  const counterForRanking = hasExplicitTargetType
+    ? counter.filter((zone) => counterMatchTier(zone, normalized) === 1)
+    : counter;
+
   const rankPolicy: "requiredQuality-first" | "priority-first" =
     normalized.policy === "priority-first" ? "priority-first" : "requiredQuality-first";
-  const selected = pickZoneByPolicy(counter.length > 0 ? counter : all, rankPolicy);
+  const selected = pickZoneByPolicy(counterForRanking.length > 0 ? counterForRanking : all, rankPolicy);
   return {
     zone: selected,
     decision: {

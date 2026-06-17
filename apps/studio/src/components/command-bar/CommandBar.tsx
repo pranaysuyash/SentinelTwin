@@ -109,20 +109,20 @@ export function CommandBar() {
           className="group absolute bottom-3 right-3 z-30 flex h-9 items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0b0f17]/80 px-3 text-[10px] font-medium text-[#5b667c] shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-[border-color,color,box-shadow] hover:border-[#32384d] hover:text-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
         >
         <Sparkles className="h-3.5 w-3.5 text-emerald-400/70 group-hover:text-emerald-400" />
-        Guided Edit
-        <span className="rounded-full border border-emerald-500/15 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] text-emerald-300">
+        <span className="hidden sm:inline">Guided Edit</span>
+        <span className="hidden rounded-full border border-emerald-500/15 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] text-emerald-300 sm:inline">
           {mode.label}
         </span>
-        <span className="rounded-full border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#8b96ab]">
+        <span className="hidden rounded-full border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#8b96ab] md:inline">
           {mode.providerLabel}
         </span>
-        <span className={`rounded-full border px-1.5 py-0.5 text-[8px] ${compactHealthClass}`}>
+        <span className={`hidden rounded-full border px-1.5 py-0.5 text-[8px] md:inline ${compactHealthClass}`}>
           {hasMounted ? (healthStatus === "healthy" ? "Healthy" : healthStatus === "partial" ? "Partial" : "Blocked") : "Syncing"}
         </span>
-        <span className={`rounded-full border px-1.5 py-0.5 text-[8px] ${compactTelemetryClass}`}>
+        <span className={`hidden rounded-full border px-1.5 py-0.5 text-[8px] md:inline ${compactTelemetryClass}`}>
           {hasMounted ? (telemetryStatus === "ready" ? "Budget ready" : telemetryStatus === "guarded" ? "Budget guarded" : "Budget blocked") : "Syncing"}
         </span>
-        <kbd className="ml-1 rounded border border-[#24283a] bg-[#111521] px-1 py-0.5 text-[8px] text-[#4d566b]">
+        <kbd className="ml-1 hidden rounded border border-[#24283a] bg-[#111521] px-1 py-0.5 text-[8px] text-[#4d566b] sm:inline">
           ⌘K
         </kbd>
       </button>

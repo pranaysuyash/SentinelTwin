@@ -10,7 +10,12 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "composite": true
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@sentineltwin/core": ["./src/index.ts"],
+      "@sentineltwin/core/*": ["./src/*"]
+    }
   },
   "include": ["src"]
 }

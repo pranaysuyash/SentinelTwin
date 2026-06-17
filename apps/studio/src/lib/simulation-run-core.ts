@@ -12,11 +12,19 @@ export interface SimulationRunPayload {
   id: number;
   scene: SecurityScene;
   includeTemporalProfile: boolean;
+  /**
+   * Optional caller-supplied current time for the coverage evaluator.
+   * Forwarded to the simulation engine so the same scene at different hours
+   * yields different coverage when `scene.timeSchedule.location` is set.
+   * Defaults to `{ hour: 12, minute: 0 }` (noon) at the engine when omitted.
+   */
+  currentTime?: { hour: number; minute: number };
 }
 
 export type SimulationRunResponse =
   | { id: number; ok: true; result: SimulationResult; temporalProfile: TemporalSecurityProfile | null }
-  | { id: number; ok: false; error: string };
+  | { id: number; ok: false; error: string }
+  | { id: number; type: "progress"; fraction: number };
 
 /**
  * Computes the 24h temporal profile for a scene using a fresh simulation

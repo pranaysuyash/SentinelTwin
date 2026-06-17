@@ -86,6 +86,12 @@ export function SensorInspector() {
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <TextInput
+          label="Name"
+          value={sensor.label}
+          onChange={(value) => updateNode(sensor.id, { label: value })}
+        />
+
         <SectionCard title="Position">
           <div className="grid grid-cols-3 gap-2">
             <NumberInput

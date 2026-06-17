@@ -65,3 +65,13 @@
 - The operator can move from one evaluation mode to another without losing context.
 - Next useful step: browser QA on desktop and tablet to confirm the compact focus chrome does not crowd the canvas on smaller widths.
 
+## Live Browser QA Note
+- Date: 2026-06-17
+- Environment: local Studio shell on `http://127.0.0.1:3011/?qa=1`
+- Scene: `Small Retail Shop Demo`
+- Verified the three review surfaces render in the live shell:
+  - Camera View shows the camera inspection chrome, DORI context, verification controls, and replay-related overlays in standard mode.
+  - Path Replay shows the route summary, play/pause controls, and visibility timeline in standard mode.
+  - Camera Wall shows the multi-feed grid, active/offline counts, and route context in standard mode.
+- Finding: the shell-level `F` shortcut toggles the global focus layout, not the in-surface immersive copy that the view components expose in their own local headers.
+- Practical implication: browser QA should assert both the shell focus preset and the per-surface chrome state separately so the operator-facing shortcut contract stays honest.

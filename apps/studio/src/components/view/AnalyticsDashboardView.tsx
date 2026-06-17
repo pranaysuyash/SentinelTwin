@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Activity, BarChart3, Camera, Clock3, Crosshair, Layers, ShieldAlert, Sparkles, Compass, Clapperboard } from "lucide-react";
+import { Activity, BarChart3, Camera, Clock3, Crosshair, Download, Layers, ShieldAlert, Sparkles, Compass, Clapperboard } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
@@ -16,6 +16,7 @@ import { buildCameraDriftReport, type DriftSeverity } from "@/lib/camera-drift";
 import { buildFramingGradeReport, type FramingGrade } from "@/lib/framing-grade";
 import { buildDirectorsCutSequence, type DirectorsCutGrade } from "@/lib/directors-cut";
 import { buildObservedVsPlannedReport } from "@/lib/observed-vs-planned";
+import { exportDirectorsCutPdf } from "@/lib/pdf-export";
 import { useStudioStore, type BottomTab, type ViewMode } from "@/store/studio-store";
 
 const TONE_CARD_CLASSES: Record<AnalyticsTone, string> = {
@@ -349,6 +350,72 @@ function CoverageTrendSparkline({
   );
 }
 
+function DirectorsCutCard({
+  scene,
+  directorsCut,
+}: {
+  scene: import("@/schema/security-scene").SecurityScene;
+  directorsCut: import("@/lib/directors-cut").DirectorsCutSequence;
+}) {
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await exportDirectorsCutPdf({ scene, sequence: directorsCut });
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return (
+    <SectionCard
+      title="Director's Cut"
+      subtitle="incident replay"
+      icon={<Clapperboard className="h-3.5 w-3.5" />}
+      action={
+        <button
+          type="button"
+          disabled={exporting}
+          onClick={handleExport}
+          className="flex items-center gap-1 rounded-lg border border-[#1f2845] bg-[#0d1628] px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-[#7a8fb5] transition hover:border-sky-500/30 hover:bg-sky-500/8 hover:text-sky-300 disabled:opacity-50"
+        >
+          <Download className="h-3 w-3" />
+          {exporting ? "Exporting…" : "Export PDF"}
+        </button>
+      }
+    >
+      <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
+        Camera-cut sequence following the adversarial path
+        {directorsCut.totalDurationS > 0
+          ? ` · ${Math.round((directorsCut.noCoverageDurationS / directorsCut.totalDurationS) * 100)}% with no usable shot`
+          : ""}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {directorsCut.segments.map((segment, index) => (
+          <div
+            key={`${segment.startTimeS}-${index}`}
+            className={cn(
+              "rounded-lg border px-2.5 py-1.5 text-[11px]",
+              DIRECTORS_CUT_GRADE_CLASSES[segment.grade],
+            )}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold">{segment.cameraName ?? "No camera"}</span>
+              <span className="text-[10px] uppercase tracking-[0.1em]">
+                {DIRECTORS_CUT_GRADE_LABELS[segment.grade]}
+              </span>
+            </div>
+            <div className="mt-0.5 text-[10px] opacity-80">
+              {segment.startTimeS.toFixed(1)}s – {segment.endTimeS.toFixed(1)}s
+            </div>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  );
+}
+
 export function AnalyticsDashboardView() {
   const scene = useStudioStore((s) => s.scene);
   const simulationResult = useStudioStore((s) => s.simulationResult);
@@ -454,7 +521,7 @@ export function AnalyticsDashboardView() {
           <div>
             <h1 className="text-sm font-semibold uppercase tracking-[0.2em] text-[#dde2ef]">Security Analytics</h1>
             <p className="text-[11px] text-[#7a86a0]">
-              {model.sceneName} · Truth: Simulated · deterministic engine output
+              {model.sceneName} · Simulation results · geometry-based, not from live feeds
               {model.computedAt ? ` · computed ${new Date(model.computedAt).toLocaleTimeString()}` : ""}
             </p>
           </div>
@@ -831,35 +898,7 @@ export function AnalyticsDashboardView() {
         ) : null}
 
         {directorsCut && directorsCut.segments.length > 0 ? (
-          <SectionCard title="Director's Cut" icon={<Clapperboard className="h-3.5 w-3.5" />}>
-            <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
-              Camera-cut sequence following the adversarial path
-              {directorsCut.totalDurationS > 0
-                ? ` · ${Math.round((directorsCut.noCoverageDurationS / directorsCut.totalDurationS) * 100)}% with no usable shot`
-                : ""}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {directorsCut.segments.map((segment, index) => (
-                <div
-                  key={`${segment.startTimeS}-${index}`}
-                  className={cn(
-                    "rounded-lg border px-2.5 py-1.5 text-[11px]",
-                    DIRECTORS_CUT_GRADE_CLASSES[segment.grade],
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold">{segment.cameraName ?? "No camera"}</span>
-                    <span className="text-[10px] uppercase tracking-[0.1em]">
-                      {DIRECTORS_CUT_GRADE_LABELS[segment.grade]}
-                    </span>
-                  </div>
-                  <div className="mt-0.5 text-[10px] opacity-80">
-                    {segment.startTimeS.toFixed(1)}s – {segment.endTimeS.toFixed(1)}s
-                  </div>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
+          <DirectorsCutCard scene={scene} directorsCut={directorsCut} />
         ) : null}
 
 

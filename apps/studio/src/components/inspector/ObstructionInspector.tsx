@@ -7,6 +7,7 @@ import {
   NumberInput,
   SelectInput,
   SliderInput,
+  TextInput,
 } from "@/components/inspector/inspector-controls";
 import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";
@@ -111,6 +112,12 @@ export function ObstructionInspector() {
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <TextInput
+          label="Name"
+          value={obs.label}
+          onChange={(value) => updateNode(obs.id, { label: value })}
+        />
+
         <SectionCard title="Position">
           <div className="grid grid-cols-2 gap-2">
             <NumberInput

@@ -2,6 +2,7 @@
 
 import { Camera, Shield, Trash2 } from "lucide-react";
 
+import { NumberInput, TextInput } from "@/components/inspector/inspector-controls";
 import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { cn } from "@/lib/cn";
@@ -72,6 +73,12 @@ export function CriticalZoneInspector() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-2.5 space-y-2.5">
+        <TextInput
+          label="Name"
+          value={zone.label}
+          onChange={(value) => updateNode(zone.id, { label: value })}
+        />
+
         <SectionCard title="Evidence Quality" helpText="Shows the required and measured camera evidence level for this zone. A pass means the current simulation meets the zone target under the active assumptions." helpTitle="Evidence quality help">
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
@@ -145,6 +152,16 @@ export function CriticalZoneInspector() {
               </button>
             </div>
           ))}
+          <div className="pt-1.5">
+            <NumberInput
+              label="Height"
+              value={zone.heightM}
+              min={0.5}
+              step={0.1}
+              unit="m"
+              onChange={(value) => updateNode(zone.id, { heightM: value })}
+            />
+          </div>
         </SectionCard>
 
         <SectionCard title="Target Requirement" helpText="Explains the default evidence quality SentinelTwin expects for this type of zone, plus the detail threshold used by the simulation." helpTitle="Target requirement help">

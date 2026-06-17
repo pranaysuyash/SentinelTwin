@@ -1448,7 +1448,35 @@ Implemented 2026-06-17.
 - `truth-audit.ts`: Added "Observed vs Planned fusion card" surface; `forbiddenPhrases: ["Live Operations"]` guards against re-introducing the old card
 - `tsc --noEmit` clean; all tests pass
 
+### Thread 154 close-out (D-316)
+
+Implemented 2026-06-17.
+
+- `AnalyticsDashboardView.tsx` header subtext: `"Truth: Simulated · deterministic engine output"` → `"Simulation results · geometry-based, not from live feeds"` — plain operator language, trust signal preserved
+- Audited `WorkspaceCanvas.tsx`, `InspectorPanel.tsx`, `SceneBuilderWizard.tsx` for stale "Budget blocked/guarded/ready" telemetry strings — **none found**. All "Budget" references in those files are the unrelated `CoverageBudget` / `maxBudget` domain concepts. Thread 154 is fully closed.
+
+### Thread 148: Director's Cut PDF export (D-317)
+
+Implemented 2026-06-17.
+
+- `src/lib/pdf-export.ts`:
+  - Added `exportDirectorsCutPdf({ scene, sequence, includeTimestamp? })` — async jsPDF generator
+  - Cover page: scene name, gap % headline (color-coded: green/amber/red by severity), path metadata
+  - Page 2: 6-cell summary card grid (total duration, gap time/%, well-framed time, segments, gap windows, cameras used)
+  - Cut Sequence table: color-coded rows by grade (no_coverage=red, out_of_frame=amber, well_framed=green)
+  - Coverage Gap Windows section: only rendered when gaps exist; describes unobserved path windows with position coordinates
+  - Filename: `{scene_name}_directors_cut.pdf`
+- `src/components/view/AnalyticsDashboardView.tsx`:
+  - Extracted `DirectorsCutCard` component with `action` prop wired to export button
+  - "Export PDF" button: async, disabled while exporting, shows "Exporting…" spinner text
+  - `subtitle="incident replay"` on `SectionCard` (plain-language per Thread 154)
+  - Added `Download` Lucide icon, `exportDirectorsCutPdf` import
+- `src/lib/__tests__/directors-cut-export.test.ts`: 9 tests verifying export function presence, cover content, table structure, grade coverage, dashboard wiring
+- `truth-audit.ts`: "Director's Cut PDF export" surface added
+- `tsc --noEmit` clean; 1050/1051 tests pass (1 pre-existing env-key failure unrelated to this work)
+
 ### Next item
 
-- Thread 154 remaining: "Truth: Simulated" label in AnalyticsDashboardView header; `WorkspaceCanvas.tsx` / `InspectorPanel.tsx` / `SceneBuilderWizard.tsx` "Budget blocked/guarded/ready" data-model string audit.
-- Threads 147/149-153 remain research-stage or gated on Thread 147 (crowd sim).
+- Thread 147 (NPC/crowd sim for dynamic occlusion) — highest architectural leverage remaining; all of Threads 149-153 become richer once crowds are in
+- Thread 149 (perimeter/outdoor — fencing, LPR, CPTED lighting) — schema design needed
+- Thread 151 (audio layer — PA, gunshot/glass-break) — sibling of existing multi-sensor work

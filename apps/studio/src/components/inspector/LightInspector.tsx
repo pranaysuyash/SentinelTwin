@@ -46,6 +46,12 @@ export function LightInspector() {
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <TextInput
+          label="Name"
+          value={light.name}
+          onChange={(value) => updateNode(light.id, { name: value })}
+        />
+
         <SectionCard title="Position">
           <div className="grid grid-cols-2 gap-2">
             <NumberInput

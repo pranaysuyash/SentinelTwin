@@ -34,4 +34,43 @@ describe("NovelAlgorithmsTab", () => {
     expect(source).toContain("setViewMode(\"map\")");
     expect(source).toContain("setBottomTab(\"timeline\")");
   });
+
+  test("surfaces the 4 core novel algorithms (occlusion/blind/fragility/k-robustness)", () => {
+    // I19: the simulation package exports four pure functions for novel
+    // security analysis. Each must be visible somewhere in the
+    // NovelAlgorithmsTab. This test is the contract.
+    const source = readFileSync(novelAlgorithmsPath, "utf8");
+
+    // Occlusion Blame Attribution
+    expect(source).toMatch(/Occlusion Blame/);
+    expect(source).toMatch(/occlusionBlame/);
+    expect(source).toMatch(/blameFraction/);
+
+    // Coverage Fragility Field
+    expect(source).toMatch(/Coverage Stability/);
+    expect(source).toMatch(/fragilitySummary/);
+    expect(source).toMatch(/meanFragility/);
+
+    // Blind-Spot Topology
+    expect(source).toMatch(/Blind Spot Topology/);
+    expect(source).toMatch(/blindRegions/);
+    // The component reads blindRegions from the simulation result
+    // (the analyseBlindSpotTopology function is called inside
+    // simulateStudio). The contract is: the UI surfaces the
+    // blind-region list.
+    expect(source).toMatch(/result\?\.blindRegions|blindRegions\s*=/);
+
+    // Adversarial K-Robustness
+    expect(source).toMatch(/Backup Coverage|K-Robustness|kRobustness/);
+    expect(source).toMatch(/kRobustness/);
+    expect(source).toMatch(/criticalSets/);
+
+    // All four should map to clearly-labelled Section headers
+    const sectionTitles = source.match(/title="[^"]+"/g) ?? [];
+    const labels = sectionTitles.map((entry) => entry.replace(/title="/, "").replace(/"$/, ""));
+    expect(labels.some((l) => l.toLowerCase().includes("occlusion"))).toBe(true);
+    expect(labels.some((l) => l.toLowerCase().includes("fragility") || l.toLowerCase().includes("stability"))).toBe(true);
+    expect(labels.some((l) => l.toLowerCase().includes("blind") || l.toLowerCase().includes("topology"))).toBe(true);
+    expect(labels.some((l) => l.toLowerCase().includes("backup") || l.toLowerCase().includes("k-robustness") || l.toLowerCase().includes("robustness"))).toBe(true);
+  });
 });

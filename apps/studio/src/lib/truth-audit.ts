@@ -669,6 +669,18 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
       "Live Operations",
     ],
   },
+  {
+    surface: "Director's Cut PDF export",
+    file: "src/lib/pdf-export.ts",
+    requiredPhrases: [
+      "exportDirectorsCutPdf",
+      "DirectorsCutSequence",
+      "Incident Replay",
+      "Coverage Gap Windows",
+      "directors_cut.pdf",
+    ],
+    forbiddenPhrases: [],
+  },
 ];
 
 function readSurface(rootDir: string, surface: TrustAuditSurface) {

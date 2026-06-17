@@ -28,6 +28,12 @@ export function PrivacyZoneInspector() {
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <TextInput
+          label="Name"
+          value={zone.label}
+          onChange={(value) => updateNode(zone.id, { label: value })}
+        />
+
         <SectionCard title="Properties">
           <SelectInput
             label="Restriction"

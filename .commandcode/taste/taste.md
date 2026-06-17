@@ -18,6 +18,8 @@
 # code-style
 - Fix all discovered errors immediately — do not defer them as "pre-existing" or out-of-scope. Follow motto_v3 §6: knowing about an issue is a mandate to fix it in the same session. Confidence: 0.72
 - For file naming collisions across packages: rename the ambiguous file rather than adding compat shims or aliases. Update all import sites and add a structural test that asserts the old name no longer appears. Confidence: 0.70
+- When a test assertion contradicts its own comment or the function's documented contract (e.g. comment says "all stages become ready" but assertion expects "blocked"): the test is wrong, not the function. Fix the assertion to match the actual contract. Verify the fix by running the test in isolation AND in the full suite — stale test state can mask real failures. Confidence: 0.72
+- When investigating a reported test failure that doesn't reproduce in isolation: check if the failure is stale state from a prior session, then find the actual root cause (often a different test file with a stale assertion) before fixing. Run the full suite to see the real failure pattern. Confidence: 0.70
 
 # workflow
 - Prefer complete end-to-end implementation over partial patchwork fixes. When a choice exists between a quick patch and a proper long-term solution, always choose the latter per motto_v3 long-term 1st principles. Confidence: 0.68

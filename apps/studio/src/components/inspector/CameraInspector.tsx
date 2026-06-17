@@ -882,6 +882,14 @@ export function CameraInspector() {
       <div className="flex-1 overflow-y-auto px-3 py-2.5">
         {inspectorTab === "properties" && (
           <div>
+            <div className="mb-2.5 px-3 pt-3">
+              <TextInput
+                label="Camera Name"
+                value={camera.name}
+                onChange={(value) => updateNode(camera.id, { name: value })}
+              />
+            </div>
+
             <div className="mb-2.5">
               <CameraFeedCanvas cameraId={camera.id} />
             </div>

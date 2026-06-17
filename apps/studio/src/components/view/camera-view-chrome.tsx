@@ -299,12 +299,16 @@ export function BottomControlStrip({
   flags,
   onFlagsChange,
   onBackToMap,
+  immersiveMode,
+  onToggleImmersive,
 }: {
   mode: CameraFeedMode;
   onModeChange: (value: CameraFeedMode) => void;
   flags: OverlayFlags;
   onFlagsChange: (next: OverlayFlags) => void;
   onBackToMap: () => void;
+  immersiveMode?: boolean;
+  onToggleImmersive?: () => void;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement | null>(null);
@@ -326,6 +330,35 @@ export function BottomControlStrip({
     window.addEventListener("pointerdown", onPointerDown);
     return () => window.removeEventListener("pointerdown", onPointerDown);
   }, []);
+
+  if (immersiveMode) {
+    return (
+      <div className="absolute inset-x-3 bottom-3 z-30 flex items-center justify-between gap-1.5">
+        <div className="flex rounded-md border border-[#27364e] bg-black/60 px-1 py-1 text-[8px]">
+          <span className="flex items-center gap-1 rounded-md px-2 py-1 text-[#8ea5cc]">
+            <span>Feed mode:</span>
+            <span className="font-semibold uppercase text-[#c7d0e4]">{mode === "ir_bw" ? "IR" : mode === "low_light" ? "Low Light" : mode === "thermal" ? "Thermal" : "Normal"}</span>
+          </span>
+        </div>
+        <div className="inline-flex rounded-md border border-[#27364e] bg-black/60 text-[8px]">
+          <button
+            type="button"
+            onClick={onBackToMap}
+            className="rounded-l-md border-r border-[#27364e] px-2 py-1 font-medium text-[#8ea5cc] transition-colors hover:text-white"
+          >
+            <ArrowLeft className="inline-block h-3 w-3" /> Map View
+          </button>
+          <button
+            type="button"
+            onClick={onToggleImmersive}
+            className="rounded-r-md px-2 py-1 font-medium text-emerald-200 transition-colors hover:text-white"
+          >
+            Exit Focus
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-x-3 bottom-3 z-30 flex items-end gap-1.5">
@@ -453,6 +486,13 @@ export function BottomControlStrip({
             </div>
           ) : null}
         </div>
+        <button
+          type="button"
+          onClick={onToggleImmersive}
+          className="border-l border-[#27364e] px-2 py-1 font-medium text-[#8ea5cc] transition-colors hover:text-white"
+        >
+          Focus
+        </button>
         <button
           type="button"
           onClick={onBackToMap}

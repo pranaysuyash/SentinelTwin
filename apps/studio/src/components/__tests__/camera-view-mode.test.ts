@@ -115,6 +115,12 @@ describe("CameraViewMode", () => {
     expect(source).not.toContain("const safeReplayDurationS = activePathResult?.totalDurationS > 0");
     expect(source).toContain("st-camera-view-safe-zone");
     expect(source).toContain("--st-full-canvas-safe-top");
+    expect(source).toContain("const \[immersiveMode, setImmersiveMode\] = useState(false);");
+    expect(source).toContain("Press F to exit focus");
+    expect(source).toContain("setImmersiveMode((value) => !value);");
+    expect(source).toContain("event.key !== \"f\" && event.key !== \"F\"");
+    expect(chromeSource).toContain("Exit Focus");
+    expect(chromeSource).toContain("Feed mode:");
   });
 
   test("derives target labels from the zone target type", () => {

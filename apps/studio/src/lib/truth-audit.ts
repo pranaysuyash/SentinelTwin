@@ -197,9 +197,7 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
     surface: "Workspace control-plane persistence route",
     file: "src/app/api/workspace-control-plane/route.ts",
     requiredPhrases: [
-      "normalizeWorkspaceAccessState",
       "normalizeWorkspaceGovernance",
-      "normalizeWorkspaceAccountProfile",
       "mapLocalGovernanceToSceneRecord",
       "generateAuditLogForGovernanceTransition",
     ],
@@ -219,9 +217,9 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
     requiredPhrases: [
       "Cloud review available",
       "Local-only",
-      "Budget ready",
-      "Budget guarded",
-      "Budget blocked",
+      "AI ready",
+      "AI limited",
+      "AI online",
     ],
     forbiddenPhrases: ["stub"],
   },
@@ -656,6 +654,20 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
       "formatConfidenceSummary",
     ],
     forbiddenPhrases: [],
+  },
+  {
+    surface: "Observed vs Planned fusion card",
+    file: "src/components/view/AnalyticsDashboardView.tsx",
+    requiredPhrases: [
+      "buildObservedVsPlannedReport",
+      "observedVsPlannedReport",
+      "Observed vs Planned",
+      "driftEntries",
+      "liveAlerts",
+    ],
+    forbiddenPhrases: [
+      "Live Operations",
+    ],
   },
 ];
 

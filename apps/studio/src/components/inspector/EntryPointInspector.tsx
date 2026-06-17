@@ -2,7 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 
-import { NumberInput } from "@/components/inspector/inspector-controls";
+import { NumberInput, TextInput } from "@/components/inspector/inspector-controls";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -15,6 +15,16 @@ export function EntryPointInspector() {
   const entryPoint = scene.entryPoints.find((entry) => entry.id === selectedId);
   if (!entryPoint) return null;
 
+  const SNAP_RADIUS = 2.5;
+  const [epx, epz] = entryPoint.position;
+  const nearbyPaths = scene.paths.filter((p) => {
+    const first = p.points[0]?.position;
+    const last = p.points[p.points.length - 1]?.position;
+    const near = (pt: [number, number] | undefined) =>
+      pt ? Math.hypot(pt[0] - epx, pt[1] - epz) <= SNAP_RADIUS : false;
+    return near(first) || near(last);
+  });
+
   return (
     <>
       <div className="border-b border-[#1e2130] px-3 py-3">
@@ -23,6 +33,12 @@ export function EntryPointInspector() {
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <TextInput
+          label="Name"
+          value={entryPoint.label}
+          onChange={(value) => updateNode(entryPoint.id, { label: value })}
+        />
+
         <SectionCard title="Position">
           <div className="grid grid-cols-2 gap-2">
             <NumberInput
@@ -40,6 +56,21 @@ export function EntryPointInspector() {
               onChange={(value) => updateNode(entryPoint.id, { position: [entryPoint.position[0], value] })}
             />
           </div>
+        </SectionCard>
+
+        <SectionCard title="Nearby Paths">
+          {nearbyPaths.length > 0 ? (
+            <div className="space-y-1">
+              {nearbyPaths.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-2 border-b border-[#181c27] py-1.5 last:border-0">
+                  <span className="text-[10px] text-[#c7d0e4]">{p.label}</span>
+                  <span className="text-[9px] capitalize text-[#556076]">{p.intent}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[10px] text-[#4a5568]">No paths start or end within 2.5 m of this entry point.</p>
+          )}
         </SectionCard>
       </div>
 

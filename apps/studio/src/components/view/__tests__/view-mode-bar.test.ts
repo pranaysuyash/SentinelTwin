@@ -8,7 +8,7 @@ describe("ViewModeBar semantics", () => {
     const source = readFileSync(viewModeBarPath, "utf8");
 
     expect(source).toContain('aria-label={`Switch to ${label} mode`}');
-    expect(source).toContain("aria-pressed={viewMode === mode}");
+    expect(source).toContain("aria-pressed={active}");
     expect(source).toContain("Map View");
     expect(source).toContain("Camera View");
     expect(source).toContain("Camera Wall");

@@ -6,6 +6,7 @@ import {
   Field,
   NumberInput,
   SelectInput,
+  TextInput,
 } from "@/components/inspector/inspector-controls";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { pathLength } from "@/components/workspace/editing/editor-geometry";
@@ -34,6 +35,12 @@ export function PathInspector() {
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <TextInput
+          label="Name"
+          value={path.label}
+          onChange={(value) => updateNode(path.id, { label: value })}
+        />
+
         <SectionCard title="Actor">
           <SelectInput
             label="Actor Type"

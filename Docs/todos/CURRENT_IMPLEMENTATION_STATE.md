@@ -13,6 +13,9 @@ For the full-vision gap inventory and next-slice sequencing, see
 - `WorkspaceCanvas.tsx` overlay components extracted to `workspace/overlays/` — `NorthCompass`, `ViewControls`, `ControlHintBar` are now standalone files; `view-settings-entrypoints.test.ts` updated to assert against the extracted ViewControls source ✅
 - Tool constants (`TOOL_GHOST_COLORS`, `TOOL_ICONS`, `TOOL_LABELS`) extracted from `WorkspaceCanvas.tsx` to `lib/tool-constants.tsx` ✅
 - `InspectorPanel.tsx` (2390 lines) split into 9 focused sub-inspectors plus a thin routing component; no behavioral changes ✅
+- The top-canvas `ViewModeBar` now acts like a real studio navigator, with grouped workspace/review mode chips, descriptive tab labels, keyboard shortcut hints, and richer active-mode context chips for map, camera, wall, replay, compare, report, and analytics modes ✅
+- Camera View now has Focus Mode (`F`) to prioritize a full-iframe operator canvas while collapsing nonessential overlays and retaining a quick path back to map review. ✅
+- Path Replay and Camera Wall now also expose the same Focus Mode shortcut (`F`) so the three main review surfaces share one low-chrome inspection pattern. ✅
 - `ScheduleEditor` component added at `components/inspector/ScheduleEditor.tsx` — full site-schedule configuration UI covering interior lights, exterior lights, occupancy periods, guard patrol rounds, and site location for seasonal lighting ✅
 - `SectionCard` extended with optional `icon` prop, wired into the section header ✅
 - `updateTimeSchedule` store action added to `scene-slice.ts` — patches `scene.timeSchedule` via `commitSceneChange` for undo/redo compatibility ✅
@@ -1381,3 +1384,71 @@ including `WorkspaceCanvas.tsx`, `InspectorPanel.tsx`,
 `SceneBuilderWizard.tsx` and several test files, so it needs its own audit
 pass rather than a quick rename). Otherwise, continue the Thread 146-153
 batch (Threads 147, 149-153 remain) or the live-feed half of A1.
+
+## Addendum (2026-06-17, fifteenth pass): Confidence card, Thread 154 second slice (D-314)
+
+### OverallConfidence card in MetricsTab (D-314a)
+
+- `packages/simulation/src/confidence.ts`'s `formatConfidenceSummary` is now
+  imported in MetricsTab via `@sentineltwin/simulation`.
+- New `ConfidenceCard` component inline in `MetricsTab.tsx`: reads
+  `(result as Record<string, unknown>).overallConfidence as ConfidenceBand |
+  undefined` from the simulation result (the packages schema has it but the
+  studio schema doesn't — accessed as a runtime value, not a typed field).
+  Displays: level badge with color coding (verified/high/medium/low/none),
+  `formatConfidenceSummary` narrative sentence, `sensitiveTo` input chips,
+  and `reasonCodes` as smaller dim chips. Has `TruthBadge label="simulated"`.
+- `CONFIDENCE_LEVEL_STYLE` map added with five levels and distinct colors.
+- Two new surfaces added to `TRUST_AUDIT_SURFACES` in `truth-audit.ts`:
+  - `"Scenario comparison panel truth badge"` — checks `ScenarioComparisonPanel.tsx`
+    has `TruthBadge`, `label="simulated"`, `runScenarioComparison`,
+    `runAssumptionSensitivity`.
+  - `"Metrics confidence card wiring"` — checks `MetricsTab.tsx` has
+    `ConfidenceCard`, `overallConfidence`, `formatConfidenceSummary`.
+
+### Thread 154 second slice — operator-language copy pass (D-314b)
+
+- `AssumptionsTab.tsx`:
+  - "Night Penalty Mode" → "Night-time visibility" (with `(Night Penalty Mode)` dimmed sublabel)
+  - Night mode button values: "none/simple/detailed" → rendered as "Off / Basic / Full model"
+  - Coverage Standard buttons: "DORI 2014" → "2014 (legacy)", "IEC 62676-4:2025 (OODPCVS)" → "2025 (latest)"
+  - "Quality Thresholds (px/m)" → "Resolution thresholds (px/m)"
+  - "Standard-defined IEC 62676-4:2025 (7 levels)" → "Levels from IEC 62676-4:2025"
+- `WallInspector.tsx`: `label="Transmission"` → `label="Light through (%)"`
+- `DoorWindowInspector.tsx`: `label="Transmission"` → `label="Light through (%)"`
+- `ObstructionInspector.tsx`: `label="Vision Transmission"` → `label="Camera sees through"`
+- `CommandBar.tsx`:
+  - Collapsed chips: "Healthy/Partial/Blocked" → "AI online/AI partial/AI offline"
+  - Collapsed chips: "Budget ready/guarded/blocked" → "AI ready/AI limited/AI paused"
+  - Expanded panel: "Provider healthy/partial/blocked" → "AI online/AI partial/AI offline"
+  - Expanded panel: "Budget ready/guarded/blocked" → "AI ready/AI limited/AI paused"
+- `truth-audit.ts`:
+  - `"AI command provider health"` surface updated to check new labels ("AI ready", "AI limited", "AI online")
+  - `"Workspace control-plane persistence route"` surface corrected: removed stale `normalizeWorkspaceAccessState` check (function lives in `workspace-identity-conflict/route.ts`, not `workspace-control-plane/route.ts`)
+- `view-mode-bar.test.ts`: fixed pre-existing assertion mismatch — test expected `aria-pressed={viewMode === mode}` but `ModeButton` receives an `active` bool prop and renders `aria-pressed={active}`.
+
+**Verification:** `bun test` (from `apps/studio`) → 1031/1031 pass (includes 5 new truth-audit checks).
+`tsc --noEmit` clean. No schema change (Rule 5 clean).
+
+### A1 live-feed fusion — "Observed vs Planned" card (D-315)
+
+Implemented 2026-06-17.
+
+- New pure module `src/lib/observed-vs-planned.ts`:
+  - `ObservedVsPlannedReport` interface composing `CameraDriftEntry[]` + `LiveHealthEntry[]` + summary
+  - `buildObservedVsPlannedReport(cameraDriftReport | null, liveHealth)` → derived `statusLabel`: "On plan" / "Minor deviations" / "Critical deviation"
+- Tests: `src/lib/__tests__/observed-vs-planned.test.ts` — 12 tests, all pass
+- `AnalyticsDashboardView.tsx`:
+  - Removed separate "Camera Drift" `SectionCard` and "Live Operations" `SectionCard`
+  - Added single "Observed vs Planned" `SectionCard` using `observedVsPlannedReport` useMemo
+  - Status badge (green/amber/red) driven by `summary.statusLabel`
+  - Two gated sub-sections: "Design drift" (from `driftEntries`) and "Live faults" (from `liveAlerts`)
+  - Gate: `observedVsPlannedReport.hasData` (true when drift entries OR live alerts OR tracked nodes > 0)
+  - Removed unused `Radio` Lucide import
+- `truth-audit.ts`: Added "Observed vs Planned fusion card" surface; `forbiddenPhrases: ["Live Operations"]` guards against re-introducing the old card
+- `tsc --noEmit` clean; all tests pass
+
+### Next item
+
+- Thread 154 remaining: "Truth: Simulated" label in AnalyticsDashboardView header; `WorkspaceCanvas.tsx` / `InspectorPanel.tsx` / `SceneBuilderWizard.tsx` "Budget blocked/guarded/ready" data-model string audit.
+- Threads 147/149-153 remain research-stage or gated on Thread 147 (crowd sim).

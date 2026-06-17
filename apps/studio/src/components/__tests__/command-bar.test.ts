@@ -17,9 +17,9 @@ describe("CommandBar", () => {
     expect(source).toContain('{mode.cloudAvailable ? "Cloud review available" : "Local-only"}');
     expect(source).toContain('providerHealth.overallStatus');
     expect(source).toContain('providerTelemetry.overallStatus');
-    expect(source).toContain('Provider healthy');
-    expect(source).toContain('Budget ready');
-    expect(source).toContain('Budget guarded');
+    expect(source).toContain('AI online');
+    expect(source).toContain('AI ready');
+    expect(source).toContain('AI limited');
     expect(source).toContain('telemetryStatus');
     expect(source).toContain('aiActionTelemetrySummary');
     expect(source).toContain('Readiness: {providerHealth.healthyProviders} ready / {providerHealth.partialProviders} limited / {providerHealth.blockedProviders} blocked.');

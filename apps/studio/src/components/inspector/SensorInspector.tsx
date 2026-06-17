@@ -6,6 +6,7 @@ import {
   Field,
   NumberInput,
   SelectInput,
+  TextInput,
 } from "@/components/inspector/inspector-controls";
 import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";

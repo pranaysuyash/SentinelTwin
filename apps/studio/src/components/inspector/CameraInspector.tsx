@@ -11,6 +11,7 @@ import {
   PropSelect,
   SelectInput,
   SummaryStat,
+  TextInput,
   ToggleField,
 } from "@/components/inspector/inspector-controls";
 import { Badge } from "@/components/shared/Badge";

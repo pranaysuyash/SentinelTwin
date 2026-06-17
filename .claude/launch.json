@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "studio-dev",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "apps/studio", "dev"],
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd apps/studio && node ./scripts/run-fixed-port.mjs dev"],
       "port": 3001,
       "autoPort": true
     }

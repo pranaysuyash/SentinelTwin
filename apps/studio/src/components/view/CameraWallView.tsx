@@ -663,6 +663,7 @@ export function CameraWallView() {
   const [layoutMode, setLayoutMode] = useState<CameraWallLayoutMode>("auto");
   const [syncTime, setSyncTime] = useState(true);
   const [freeRunningTimestamp, setFreeRunningTimestamp] = useState(() => Date.now());
+  const [immersiveMode, setImmersiveMode] = useState(false);
 
   const cameras = useMemo(() => {
     return orderCamerasForReplayPlayback(scene.cameras, selectedCameraId, selectedId);
@@ -741,6 +742,20 @@ export function CameraWallView() {
     return () => window.clearInterval(timer);
   }, [syncTime]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      if (event.key !== "f" && event.key !== "F") return;
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (["INPUT", "TEXTAREA", "SELECT", "OPTION", "BUTTON"].includes(target.tagName)) return;
+      setImmersiveMode((value) => !value);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const activeCount = cameras.filter((cam) => cam.status === "on").length;
   const offlineCount = cameras.length - activeCount;
   const selectedCamera = cameras.find((cam) => cam.id === selectedId)
@@ -780,101 +795,136 @@ export function CameraWallView() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#07090d] p-2.5" style={{ paddingTop: "var(--st-full-canvas-safe-top, 4.25rem)" }}>
-      <div className="mb-2 flex items-center justify-between rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-2">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Wall - Multi Camera</div>
-          <div className="mt-0.5 text-[11px] text-[#94a3b8]">
-            {viewCount} view layout
-            {hiddenCount > 0 ? ` · ${hiddenCount} more camera${hiddenCount === 1 ? "" : "s"}` : ""}
+      {immersiveMode ? (
+        <div className="mb-2 flex items-center justify-between rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-2">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Wall Focus Mode</div>
+            <div className="mt-0.5 text-[11px] text-[#94a3b8]">
+              {viewCount} view layout · {selectedCamera?.name ?? "None"}
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px] text-[#6b7c95]">
+              <span className="rounded-md border border-emerald-500/15 bg-emerald-500/8 px-2 py-0.5 text-emerald-300">Active {activeCount}</span>
+              <span className="rounded-md border border-rose-500/15 bg-rose-500/8 px-2 py-0.5 text-rose-300">Offline {offlineCount}</span>
+              {activePath ? (
+                <span className="rounded-md border border-[#24527b] bg-[#0b1a2d]/60 px-2 py-0.5 text-[#93c5fd]">
+                  Route {activePath.label}
+                </span>
+              ) : (
+                <span className="rounded-md border border-[#334155] bg-[#0f172a]/50 px-2 py-0.5 text-[#9ca3af]">
+                  Route unavailable
+                </span>
+              )}
+            </div>
+            <div className="mt-1 text-[9px] text-[#9fb0c9]">
+              Focus mode collapses the layout controls so the operator can read the wall at a glance. Press F to exit focus.
+            </div>
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px] text-[#6b7c95]">
-            <span className="rounded-md border border-emerald-500/15 bg-emerald-500/8 px-2 py-0.5 text-emerald-300">
-              Active {activeCount}
-            </span>
-            <span className="rounded-md border border-rose-500/15 bg-rose-500/8 px-2 py-0.5 text-rose-300">
-              Offline {offlineCount}
-            </span>
-            <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5 text-[#c7d0e4]">
-              Selected {selectedCamera?.name ?? "None"}
-            </span>
-            {activePath ? (
-              <span className="rounded-md border border-[#24527b] bg-[#0b1a2d]/60 px-2 py-0.5 text-[#93c5fd]">
-                Route Context {activePath.label}
-              </span>
-            ) : (
-              <span className="rounded-md border border-[#334155] bg-[#0f172a]/50 px-2 py-0.5 text-[#9ca3af]">
-                Route Context unavailable
-              </span>
-            )}
-            {bestCameraId ? (
+        </div>
+      ) : (
+        <div className="mb-2 flex items-center justify-between rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-2">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Wall - Multi Camera</div>
+            <div className="mt-0.5 text-[11px] text-[#94a3b8]">
+              {viewCount} view layout
+              {hiddenCount > 0 ? ` · ${hiddenCount} more camera${hiddenCount === 1 ? "" : "s"}` : ""}
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px] text-[#6b7c95]">
               <span className="rounded-md border border-emerald-500/15 bg-emerald-500/8 px-2 py-0.5 text-emerald-300">
-                Best camera now {scene.cameras.find((cam) => cam.id === bestCameraId)?.name ?? bestCameraId}
+                Active {activeCount}
               </span>
-            ) : null}
-            {activePath ? (
-              <span className={cn(
-                "rounded-md border px-2 py-0.5",
-                weakRouteCameras > 0
-                  ? "border-rose-500/20 bg-rose-500/10 text-rose-300"
-                  : "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
-              )}>
-                Route risk {weakRouteCameras > 0 ? "Elevated" : "Low"}
+              <span className="rounded-md border border-rose-500/15 bg-rose-500/8 px-2 py-0.5 text-rose-300">
+                Offline {offlineCount}
               </span>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setSyncTime((prev) => !prev)}
-              className={`rounded-md border px-2 py-0.5 transition-colors ${
-                syncTime
-                  ? "border-sky-400/20 bg-sky-500/10 text-sky-200"
-                  : "border-[#27364e] bg-black/30 text-[#9ca3af]"
-              }`}
-            >
-              {syncTime ? "Synchronized Time" : "Free Running Time"}
-            </button>
+              <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5 text-[#c7d0e4]">
+                Selected {selectedCamera?.name ?? "None"}
+              </span>
+              {activePath ? (
+                <span className="rounded-md border border-[#24527b] bg-[#0b1a2d]/60 px-2 py-0.5 text-[#93c5fd]">
+                  Route Context {activePath.label}
+                </span>
+              ) : (
+                <span className="rounded-md border border-[#334155] bg-[#0f172a]/50 px-2 py-0.5 text-[#9ca3af]">
+                  Route Context unavailable
+                </span>
+              )}
+              {bestCameraId ? (
+                <span className="rounded-md border border-emerald-500/15 bg-emerald-500/8 px-2 py-0.5 text-emerald-300">
+                  Best camera now {scene.cameras.find((cam) => cam.id === bestCameraId)?.name ?? bestCameraId}
+                </span>
+              ) : null}
+              {activePath ? (
+                <span className={cn(
+                  "rounded-md border px-2 py-0.5",
+                  weakRouteCameras > 0
+                    ? "border-rose-500/20 bg-rose-500/10 text-rose-300"
+                    : "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
+                )}>
+                  Route risk {weakRouteCameras > 0 ? "Elevated" : "Low"}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setSyncTime((prev) => !prev)}
+                className={`rounded-md border px-2 py-0.5 transition-colors ${
+                  syncTime
+                    ? "border-sky-400/20 bg-sky-500/10 text-sky-200"
+                    : "border-[#27364e] bg-black/30 text-[#9ca3af]"
+                }`}
+              >
+                {syncTime ? "Synchronized Time" : "Free Running Time"}
+              </button>
+            </div>
+            <div className="mt-1 text-[9px] text-[#9fb0c9]">{wallActionHint}</div>
           </div>
-          <div className="mt-1 text-[9px] text-[#9fb0c9]">{wallActionHint}</div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-lg border border-[#27364e] bg-black/40 p-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
+              <button
+                type="button"
+                onClick={() => setLayoutMode("quad")}
+                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "quad" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
+              >
+                4 Views
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayoutMode("overview")}
+                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "overview" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
+              >
+                6 Views
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayoutMode("dense")}
+                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "dense" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
+                data-testid="wall-layout-dense"
+              >
+                16 Views
+              </button>
+              {effectiveLayout === "dense" ? (
+                <DenseModePerfGuard cameraCount={visibleCount} />
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setLayoutMode("auto")}
+                className={`rounded-md px-2 py-1 transition-colors ${layoutMode === "auto" ? "bg-emerald-500/20 text-emerald-200" : "text-[#9ca3af]"}`}
+              >
+                Auto Layout
+              </button>
+            </div>
+            <div className="rounded-lg border border-[#27364e] bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
+              {viewCount} Views
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-lg border border-[#27364e] bg-black/40 p-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
-            <button
-              type="button"
-              onClick={() => setLayoutMode("quad")}
-              className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "quad" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
-            >
-              4 Views
-            </button>
-            <button
-              type="button"
-              onClick={() => setLayoutMode("overview")}
-              className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "overview" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
-            >
-              6 Views
-            </button>
-            <button
-              type="button"
-              onClick={() => setLayoutMode("dense")}
-              className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "dense" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
-              data-testid="wall-layout-dense"
-            >
-              16 Views
-            </button>
-            {effectiveLayout === "dense" ? (
-              <DenseModePerfGuard cameraCount={visibleCount} />
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setLayoutMode("auto")}
-              className={`rounded-md px-2 py-1 transition-colors ${layoutMode === "auto" ? "bg-emerald-500/20 text-emerald-200" : "text-[#9ca3af]"}`}
-            >
-              Auto Layout
-            </button>
-          </div>
-          <div className="rounded-lg border border-[#27364e] bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
-            {viewCount} Views
-          </div>
-        </div>
-      </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setImmersiveMode((value) => !value)}
+        className="absolute right-3 top-[calc(var(--st-full-canvas-safe-top,4.25rem)+0.5rem)] z-30 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#3a4a66] hover:text-white"
+      >
+        {immersiveMode ? "Exit Focus" : "Focus"}
+      </button>
 
       <div className={`grid flex-1 gap-2.5 ${layoutSpec.gridClass}`}>
         {effectiveLayout === "dense" ? (

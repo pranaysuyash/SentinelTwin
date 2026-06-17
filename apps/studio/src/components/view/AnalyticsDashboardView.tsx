@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Activity, BarChart3, Camera, Clock3, Crosshair, Layers, Radio, ShieldAlert, Sparkles, Compass, Clapperboard } from "lucide-react";
+import { Activity, BarChart3, Camera, Clock3, Crosshair, Layers, ShieldAlert, Sparkles, Compass, Clapperboard } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
@@ -15,6 +15,7 @@ import { buildCoverageRegressionReport, type RegressionStatus } from "@/lib/cove
 import { buildCameraDriftReport, type DriftSeverity } from "@/lib/camera-drift";
 import { buildFramingGradeReport, type FramingGrade } from "@/lib/framing-grade";
 import { buildDirectorsCutSequence, type DirectorsCutGrade } from "@/lib/directors-cut";
+import { buildObservedVsPlannedReport } from "@/lib/observed-vs-planned";
 import { useStudioStore, type BottomTab, type ViewMode } from "@/store/studio-store";
 
 const TONE_CARD_CLASSES: Record<AnalyticsTone, string> = {
@@ -401,6 +402,11 @@ export function AnalyticsDashboardView() {
     });
   }, [scene.cameras, snapshots]);
 
+  const observedVsPlannedReport = useMemo(
+    () => buildObservedVsPlannedReport(cameraDriftReport, model.liveHealth),
+    [cameraDriftReport, model.liveHealth],
+  );
+
   const framingGradeReport = useMemo(() => {
     if (!simulationResult) return null;
     return buildFramingGradeReport(scene, simulationResult);
@@ -716,28 +722,82 @@ export function AnalyticsDashboardView() {
           </SectionCard>
         ) : null}
 
-        {cameraDriftReport && cameraDriftReport.entries.length > 0 ? (
-          <SectionCard title="Camera Drift" icon={<Compass className="h-3.5 w-3.5" />}>
-            <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
-              vs. baseline: {cameraDriftReport.baselineLabel}
+        {observedVsPlannedReport.hasData ? (
+          <SectionCard
+            title="Observed vs Planned"
+            subtitle="camera drift + live ops"
+            icon={<Compass className="h-3.5 w-3.5" />}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
+                {observedVsPlannedReport.trackedSensors + observedVsPlannedReport.trackedCameras > 0
+                  ? `${observedVsPlannedReport.trackedSensors} sensor${observedVsPlannedReport.trackedSensors === 1 ? "" : "s"} · ${observedVsPlannedReport.trackedCameras} camera${observedVsPlannedReport.trackedCameras === 1 ? "" : "s"} tracked`
+                  : observedVsPlannedReport.baselineLabel
+                    ? `vs. baseline: ${observedVsPlannedReport.baselineLabel}`
+                    : "design-time diff"}
+              </div>
+              <span
+                className={cn(
+                  "rounded-md border px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider",
+                  observedVsPlannedReport.summary.totalIssues === 0
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                    : observedVsPlannedReport.summary.majorDriftCount > 0 || observedVsPlannedReport.summary.faultCount > 0
+                      ? "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                      : "border-amber-500/30 bg-amber-500/10 text-amber-400",
+                )}
+              >
+                {observedVsPlannedReport.summary.statusLabel}
+              </span>
             </div>
-            <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-              {cameraDriftReport.entries.map((entry) => (
-                <div
-                  key={`${entry.cameraId}-${entry.kind}`}
-                  className={cn(
-                    "rounded-lg border px-2.5 py-1.5 text-[11px]",
-                    DRIFT_SEVERITY_CLASSES[entry.severity],
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold">{entry.cameraName}</span>
-                    <span className="text-[10px] uppercase tracking-[0.1em]">{entry.severity}</span>
-                  </div>
-                  <div className="mt-0.5 text-[10px] opacity-80">{entry.detail}</div>
+            {observedVsPlannedReport.driftEntries.length > 0 ? (
+              <div className="mt-2">
+                <div className="mb-1 text-[9px] uppercase tracking-[0.14em] text-[#4a5568]">
+                  Design drift
+                  {observedVsPlannedReport.baselineLabel
+                    ? ` · vs. ${observedVsPlannedReport.baselineLabel}`
+                    : ""}
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  {observedVsPlannedReport.driftEntries.map((entry) => (
+                    <div
+                      key={`${entry.cameraId}-${entry.kind}`}
+                      className={cn(
+                        "rounded-lg border px-2.5 py-1.5 text-[11px]",
+                        DRIFT_SEVERITY_CLASSES[entry.severity],
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold">{entry.cameraName}</span>
+                        <span className="text-[10px] uppercase tracking-[0.1em]">{entry.severity}</span>
+                      </div>
+                      <div className="mt-0.5 text-[10px] opacity-80">{entry.detail}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {observedVsPlannedReport.liveAlerts.length > 0 ? (
+              <div className="mt-2">
+                <div className="mb-1 text-[9px] uppercase tracking-[0.14em] text-[#4a5568]">Live faults</div>
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  {observedVsPlannedReport.liveAlerts.map((alert) => (
+                    <div
+                      key={alert.nodeId}
+                      className={cn(
+                        "rounded-lg border px-2.5 py-1.5 text-[11px]",
+                        LIVE_HEALTH_STATUS_CLASSES[alert.status === "fault" ? "fault" : "degraded"],
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold">{alert.label}</span>
+                        <span className="text-[10px] uppercase tracking-[0.1em]">{alert.status}</span>
+                      </div>
+                      <div className="mt-0.5 text-[10px] opacity-80">{alert.lastEventTitle}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </SectionCard>
         ) : null}
 
@@ -802,39 +862,6 @@ export function AnalyticsDashboardView() {
           </SectionCard>
         ) : null}
 
-        {model.liveHealth.trackedSensors + model.liveHealth.trackedCameras > 0 ? (
-          <SectionCard title="Live Operations" icon={<Radio className="h-3.5 w-3.5" />}>
-            <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
-              Simulated vs. Observed
-            </div>
-            <div className="mt-1 text-[11px] text-[#c0cbe4]">
-              {model.liveHealth.trackedSensors} sensor{model.liveHealth.trackedSensors === 1 ? "" : "s"} ·{" "}
-              {model.liveHealth.trackedCameras} camera connection{model.liveHealth.trackedCameras === 1 ? "" : "s"} reporting
-              {model.liveHealth.faultedSensors + model.liveHealth.degradedCameras > 0
-                ? ` · ${model.liveHealth.faultedSensors + model.liveHealth.degradedCameras} need attention`
-                : " · all healthy"}
-            </div>
-            {model.liveHealth.alerts.length > 0 ? (
-              <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                {model.liveHealth.alerts.map((alert) => (
-                  <div
-                    key={alert.nodeId}
-                    className={cn(
-                      "rounded-lg border px-2.5 py-1.5 text-[11px]",
-                      LIVE_HEALTH_STATUS_CLASSES[alert.status === "fault" ? "fault" : "degraded"],
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold">{alert.label}</span>
-                      <span className="text-[10px] uppercase tracking-[0.1em]">{alert.status}</span>
-                    </div>
-                    <div className="mt-0.5 text-[10px] opacity-80">{alert.lastEventTitle}</div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </SectionCard>
-        ) : null}
 
         <SectionCard title="Resilience" icon={<ShieldAlert className="h-3.5 w-3.5" />}>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

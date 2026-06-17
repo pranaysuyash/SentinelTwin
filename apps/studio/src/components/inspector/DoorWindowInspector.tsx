@@ -2,7 +2,7 @@
 
 import { Crosshair, Trash2 } from "lucide-react";
 
-import { NumberInput, SelectInput } from "@/components/inspector/inspector-controls";
+import { NumberInput, SelectInput, TextInput } from "@/components/inspector/inspector-controls";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { snapDoorWindowToWall } from "@/components/inspector/door-window-snap";
 import type { DoorNode, WindowNode } from "@/schema/security-scene";
@@ -37,6 +37,12 @@ export function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <TextInput
+          label="Name"
+          value={node.label}
+          onChange={(value) => updateNode(node.id, { label: value })}
+        />
+
         <SectionCard title="Position">
           <div className="grid grid-cols-3 gap-2">
             <NumberInput label="X" value={node.position[0]} step={0.1} unit="m" onChange={(value) => updateNode(node.id, { position: [value, node.position[1], node.position[2]] })} />

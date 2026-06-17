@@ -33,6 +33,10 @@ describe("PathReplayView", () => {
     expect(source).toContain("lostNow: ReplayCameraStateSummary[]");
     expect(source).toContain("Visible Now");
     expect(source).toContain("Incident Review");
+    expect(source).toContain("Replay Focus Mode");
+    expect(source).toContain("Press F to exit focus");
+    expect(source).toContain("setImmersiveMode((value) => !value)");
+    expect(source).toContain("Focus");
     expect(source).toContain("--st-full-canvas-safe-top");
   });
 });

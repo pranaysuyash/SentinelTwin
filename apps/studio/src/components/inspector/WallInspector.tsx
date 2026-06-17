@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import {
   NumberInput,
   SelectInput,
+  TextInput,
 } from "@/components/inspector/inspector-controls";
 import { SectionCard } from "@/components/shared/SectionCard";
 import type { WallNode } from "@/schema/security-scene";
@@ -29,6 +30,12 @@ export function WallInspector() {
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <TextInput
+          label="Name"
+          value={wall.label}
+          onChange={(value) => updateNode(wall.id, { label: value })}
+        />
+
         <SectionCard title="Endpoints">
           <div className="grid grid-cols-2 gap-2">
             <NumberInput label="Start X" value={wall.start[0]} step={0.1} unit="m" onChange={(value) => updateNode(wall.id, { start: [value, wall.start[1]] })} />

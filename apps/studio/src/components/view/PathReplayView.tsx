@@ -1005,12 +1005,27 @@ export function PathReplayView() {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [speed, setSpeed] = useState(pathReplaySpeed);
+  const [immersiveMode, setImmersiveMode] = useState(false);
 
   useEffect(() => {
     startTransition(() => {
       setSpeed(pathReplaySpeed);
     });
   }, [pathReplaySpeed]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      if (event.key !== "f" && event.key !== "F") return;
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (["INPUT", "TEXTAREA", "SELECT", "OPTION", "BUTTON"].includes(target.tagName)) return;
+      setImmersiveMode((value) => !value);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   // Derived data
   const playbackWaypoints = useMemo(() => {
@@ -1292,68 +1307,105 @@ export function PathReplayView() {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07090d]" style={{ paddingTop: "var(--st-full-canvas-safe-top, 4.25rem)" }}>
-      <div className="flex items-center justify-between gap-4 border-b border-[#1f2536] bg-[#0b0f17] px-4 py-3">
-        <div className="min-w-0">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">
-            Incident Review — Coverage Replay
+      {immersiveMode ? (
+        <div className="absolute left-3 top-3 z-20 max-w-[420px] rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Replay Focus Mode</div>
+          <div className="mt-1 text-[13px] font-medium text-white">{selectedPathLabel}</div>
+          <div className="mt-1 text-[9px] leading-4 text-[#9fb0c9]">
+            Path replay, camera responsibility, and visible-now state are still active. Press F to exit focus.
           </div>
-          <div className="mt-1 text-[9px] leading-4 text-[#556076]">
-            Defensive analysis: subject visibility along the selected route.
-            Use the timeline controls below to review camera responsibility and coverage loss events.
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <select
-              className="min-w-55 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[11px] font-medium text-[#d7deed] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
-              value={activePathId ?? ""}
-              onChange={(event) => handlePathChange(event.target.value || null)}
-              aria-label="Select active replay path"
-            >
-              <option value="">Coverage Failure Path</option>
-              {scene.paths.map((path) => (
-                <option key={path.id} value={path.id}>
-                  {path.label}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={handleEditPath}
-              disabled={!activePath}
-              className="rounded-lg border border-[#24283a] bg-[#111521] px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Edit Path
-            </button>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] text-[#8ea5cc]">
+            <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5">Time {safeCurrentTime.toFixed(1)}s</span>
+            <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5">Visible {activePathResult ? `${replayCameraStateSummary.visibleNow.length}/${scene.cameras.length}` : "--"}</span>
             <button
               type="button"
               onClick={handlePlayPause}
-              className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium text-emerald-200 transition-colors hover:bg-emerald-500/20"
+              className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-200 transition-colors hover:bg-emerald-500/20"
             >
-              {playing ? "Pause" : "Play"} Path
+              {playing ? "Pause" : "Play"}
+            </button>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5 font-medium text-[#c7d0e4] transition-colors hover:text-white"
+            >
+              Reset
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-2 text-right text-[9px]">
-          <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
-            <div className="uppercase tracking-[0.16em] text-[#556076]">Path Length</div>
-            <div className="mt-0.5 font-mono text-[#c7d0e4]">{pathLengthM.toFixed(1)}m</div>
+      ) : (
+        <div className="flex items-center justify-between gap-4 border-b border-[#1f2536] bg-[#0b0f17] px-4 py-3">
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">
+              Incident Review — Coverage Replay
+            </div>
+            <div className="mt-1 text-[9px] leading-4 text-[#556076]">
+              Defensive analysis: subject visibility along the selected route.
+              Use the timeline controls below to review camera responsibility and coverage loss events.
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <select
+                className="min-w-55 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[11px] font-medium text-[#d7deed] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                value={activePathId ?? ""}
+                onChange={(event) => handlePathChange(event.target.value || null)}
+                aria-label="Select active replay path"
+              >
+                <option value="">Coverage Failure Path</option>
+                {scene.paths.map((path) => (
+                  <option key={path.id} value={path.id}>
+                    {path.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleEditPath}
+                disabled={!activePath}
+                className="rounded-lg border border-[#24283a] bg-[#111521] px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Edit Path
+              </button>
+              <button
+                type="button"
+                onClick={handlePlayPause}
+                className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium text-emerald-200 transition-colors hover:bg-emerald-500/20"
+              >
+                {playing ? "Pause" : "Play"} Path
+              </button>
+            </div>
           </div>
-          <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
-            <div className="uppercase tracking-[0.16em] text-[#556076]">Est. Time</div>
-            <div className="mt-0.5 font-mono text-[#c7d0e4]">{estimatedTimeS > 0 ? formatSecondsShort(estimatedTimeS) : "--"}</div>
-          </div>
-          <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
-            <div className="uppercase tracking-[0.16em] text-[#556076]">Start Time</div>
-            <div className="mt-0.5 font-mono text-[#c7d0e4]">{formatSecondsShort(playbackWaypoints[0]?.timeS ?? 0)}</div>
-          </div>
-          <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
-            <div className="uppercase tracking-[0.16em] text-[#556076]">Visible Now</div>
-            <div className="mt-0.5 font-mono text-[#c7d0e4]">
-              {activePathResult ? `${replayCameraStateSummary.visibleNow.length}/${scene.cameras.length}` : "--"}
+          <div className="grid grid-cols-4 gap-2 text-right text-[9px]">
+            <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
+              <div className="uppercase tracking-[0.16em] text-[#556076]">Path Length</div>
+              <div className="mt-0.5 font-mono text-[#c7d0e4]">{pathLengthM.toFixed(1)}m</div>
+            </div>
+            <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
+              <div className="uppercase tracking-[0.16em] text-[#556076]">Est. Time</div>
+              <div className="mt-0.5 font-mono text-[#c7d0e4]">{estimatedTimeS > 0 ? formatSecondsShort(estimatedTimeS) : "--"}</div>
+            </div>
+            <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
+              <div className="uppercase tracking-[0.16em] text-[#556076]">Start Time</div>
+              <div className="mt-0.5 font-mono text-[#c7d0e4]">{formatSecondsShort(playbackWaypoints[0]?.timeS ?? 0)}</div>
+            </div>
+            <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
+              <div className="uppercase tracking-[0.16em] text-[#556076]">Visible Now</div>
+              <div className="mt-0.5 font-mono text-[#c7d0e4]">
+                {activePathResult ? `${replayCameraStateSummary.visibleNow.length}/${scene.cameras.length}` : "--"}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
+      <button
+        type="button"
+        onClick={() => setImmersiveMode((value) => !value)}
+        className="absolute right-3 top-3 z-30 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#3a4a66] hover:text-white"
+      >
+        {immersiveMode ? "Exit Focus" : "Focus"}
+      </button>
+
+      {immersiveMode ? null : (
         <InfoOverlay
           pathLabel={selectedPathLabel}
           waypointCount={waypoints.length}
@@ -1361,15 +1413,16 @@ export function PathReplayView() {
           criticalZoneReachableAlongRoute={criticalZoneReachableAlongRoute}
           qualityBands={qualityExposure}
           collisionCount={collisionCount}
-        firstCollisionLabel={firstCollision?.blockedBy}
-        firstCollisionTimeS={firstCollision?.timeS}
-        currentTime={safeCurrentTime}
-        currentSegmentLabel={currentSegmentLabel}
-        currentQualityLabel={currentQualityLabel}
-        bestCameraLabel={bestCameraLabel}
-        nextEventLabel={nextTimelineEvent?.reason ?? nextTimelineEvent?.event?.replace(/_/g, " ")}
-      />
-      {activePathResult ? (
+          firstCollisionLabel={firstCollision?.blockedBy}
+          firstCollisionTimeS={firstCollision?.timeS}
+          currentTime={safeCurrentTime}
+          currentSegmentLabel={currentSegmentLabel}
+          currentQualityLabel={currentQualityLabel}
+          bestCameraLabel={bestCameraLabel}
+          nextEventLabel={nextTimelineEvent?.reason ?? nextTimelineEvent?.event?.replace(/_/g, " ")}
+        />
+      )}
+      {immersiveMode ? null : activePathResult ? (
         <CurrentVisibilityPanel
           currentTime={safeCurrentTime}
           visibleNow={replayCameraStateSummary.visibleNow}
@@ -1419,26 +1472,30 @@ export function PathReplayView() {
         />
       </Canvas>
 
-      <PlaybackControls
-        playing={playing}
-        currentTime={safeCurrentTime}
-        duration={totalDuration}
-        onPlayPause={handlePlayPause}
-        onSeek={handleSeek}
-        onReset={handleReset}
-        speed={speed}
-        onSpeedChange={handleSpeedChange}
-        coverageBands={coverageBands}
-      />
+      {immersiveMode ? null : (
+        <PlaybackControls
+          playing={playing}
+          currentTime={safeCurrentTime}
+          duration={totalDuration}
+          onPlayPause={handlePlayPause}
+          onSeek={handleSeek}
+          onReset={handleReset}
+          speed={speed}
+          onSpeedChange={handleSpeedChange}
+          coverageBands={coverageBands}
+        />
+      )}
 
       {/* Visibility Timeline — shown below the canvas */}
-      <div className="absolute bottom-25 left-3 right-3 z-10">
-        <VisibilityTimeline
-          pathResult={activePathResult}
-          currentTime={safeCurrentTime}
-          onSeek={handleSeek}
-        />
-      </div>
+      {immersiveMode ? null : (
+        <div className="absolute bottom-25 left-3 right-3 z-10">
+          <VisibilityTimeline
+            pathResult={activePathResult}
+            currentTime={safeCurrentTime}
+            onSeek={handleSeek}
+          />
+        </div>
+      )}
     </div>
   );
 }

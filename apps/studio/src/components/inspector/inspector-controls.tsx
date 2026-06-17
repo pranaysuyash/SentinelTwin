@@ -173,6 +173,33 @@ export function SummaryStat({ label, value, accent = "text-[#d2d9e8]" }: { label
   );
 }
 
+export function TextInput({
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="block rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">{label}</span>
+      </div>
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full bg-transparent text-right font-mono text-[11px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+      />
+    </label>
+  );
+}
+
 export function PropSelect({
   label, value, options, onChange,
 }: {

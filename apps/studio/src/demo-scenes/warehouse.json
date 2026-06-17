@@ -1,18 +1,18 @@
 {
-  "id": "demo_warehouse",
+  "id": "scene_warehouse",
   "name": "Warehouse Demo",
   "createdAt": 1718600000000,
   "updatedAt": 1718600000000,
-  "units": "metric",
+  "units": "meters",
   "dimensions": { "width": 30, "depth": 20, "height": 8 },
   "source": "demo",
-  "version": 1,
+  "version": "0.1.0",
   "assumptions": {
     "wallHeightM": 8,
     "personHeightM": 1.75,
     "vehicleHeightM": 3.5,
     "timeOfDay": "day",
-    "interiorLightLevel": "low",
+    "interiorLightLevel": "dim",
     "nightPenaltyMode": "detailed",
     "doriStandard": "simplified",
     "pixelsPerMeter": {
@@ -24,17 +24,49 @@
     "showAssumptionsPanel": true
   },
   "walls": [
-    { "id": "w_north", "nodeType": "wall", "label": "North Wall", "start": [0,0],  "end": [30,0],  "heightM": 8, "thicknessM": 0.25, "material": "solid", "visionTransmission": 0, "source": "demo" },
-    { "id": "w_south", "nodeType": "wall", "label": "South Wall", "start": [0,20], "end": [30,20], "heightM": 8, "thicknessM": 0.25, "material": "solid", "visionTransmission": 0, "source": "demo" },
-    { "id": "w_west",  "nodeType": "wall", "label": "West Wall",  "start": [0,0],  "end": [0,20],  "heightM": 8, "thicknessM": 0.25, "material": "solid", "visionTransmission": 0, "source": "demo" },
-    { "id": "w_east",  "nodeType": "wall", "label": "East Wall",  "start": [30,0], "end": [30,20], "heightM": 8, "thicknessM": 0.25, "material": "solid", "visionTransmission": 0, "source": "demo" },
-    { "id": "w_office","nodeType": "wall", "label": "Office Partition", "start": [0,16], "end": [6,16], "heightM": 3.5, "thicknessM": 0.15, "material": "solid", "visionTransmission": 0, "source": "demo" }
+    { "id": "wall_north",  "nodeType": "wall", "label": "North Wall",       "start": [0, 0],   "end": [30, 0],  "heightM": 8,   "thicknessM": 0.25, "material": "solid", "visionTransmission": 0, "source": "demo" },
+    { "id": "wall_south",  "nodeType": "wall", "label": "South Wall",       "start": [0, 20],  "end": [30, 20], "heightM": 8,   "thicknessM": 0.25, "material": "solid", "visionTransmission": 0, "source": "demo" },
+    { "id": "wall_west",   "nodeType": "wall", "label": "West Wall",        "start": [0, 0],   "end": [0, 20],  "heightM": 8,   "thicknessM": 0.25, "material": "solid", "visionTransmission": 0, "source": "demo" },
+    { "id": "wall_east",   "nodeType": "wall", "label": "East Wall",        "start": [30, 0],  "end": [30, 20], "heightM": 8,   "thicknessM": 0.25, "material": "solid", "visionTransmission": 0, "source": "demo" },
+    { "id": "wall_office", "nodeType": "wall", "label": "Office Partition", "start": [0, 16],  "end": [6, 16],  "heightM": 3.5, "thicknessM": 0.15, "material": "solid", "visionTransmission": 0, "source": "demo" }
   ],
   "doors": [
-    { "id": "door_loading_1", "nodeType": "door", "label": "Loading Dock A", "wallId": "w_south", "positionAlongWall": 5,  "widthM": 4.0, "heightM": 5.0, "type": "rolling_door", "source": "demo" },
-    { "id": "door_loading_2", "nodeType": "door", "label": "Loading Dock B", "wallId": "w_south", "positionAlongWall": 20, "widthM": 4.0, "heightM": 5.0, "type": "rolling_door", "source": "demo" },
-    { "id": "door_office",    "nodeType": "door", "label": "Office Door",    "wallId": "w_office","positionAlongWall": 3,  "widthM": 0.9, "heightM": 2.1, "type": "single",       "source": "demo" },
-    { "id": "door_exit",      "nodeType": "door", "label": "Emergency Exit", "wallId": "w_east",  "positionAlongWall": 10, "widthM": 1.2, "heightM": 2.4, "type": "emergency",    "source": "demo" }
+    {
+      "id": "door_loading_a",
+      "nodeType": "door",
+      "label": "Loading Dock A",
+      "position": [5, 2.5, 20],
+      "dimensions": [4.0, 5.0, 0.25],
+      "state": "closed",
+      "source": "demo"
+    },
+    {
+      "id": "door_loading_b",
+      "nodeType": "door",
+      "label": "Loading Dock B",
+      "position": [20, 2.5, 20],
+      "dimensions": [4.0, 5.0, 0.25],
+      "state": "closed",
+      "source": "demo"
+    },
+    {
+      "id": "door_office_entry",
+      "nodeType": "door",
+      "label": "Office Door",
+      "position": [3, 1.05, 16],
+      "dimensions": [0.9, 2.1, 0.15],
+      "state": "closed",
+      "source": "demo"
+    },
+    {
+      "id": "door_emergency_exit",
+      "nodeType": "door",
+      "label": "Emergency Exit",
+      "position": [30, 1.2, 10],
+      "dimensions": [1.2, 2.4, 0.25],
+      "state": "closed",
+      "source": "demo"
+    }
   ],
   "windows": [],
   "cameras": [
@@ -257,64 +289,64 @@
   ],
   "securityLights": [],
   "obstructions": [
-    { "id": "rack_a1", "nodeType": "obstruction", "label": "Rack A1", "position": [5, 5, 3.0], "rotationYDeg": 0, "dimensions": [1.2, 8, 6], "material": "grill", "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf", "source": "demo" },
-    { "id": "rack_a2", "nodeType": "obstruction", "label": "Rack A2", "position": [8, 5, 3.0], "rotationYDeg": 0, "dimensions": [1.2, 8, 6], "material": "grill", "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf", "source": "demo" },
-    { "id": "rack_b1", "nodeType": "obstruction", "label": "Rack B1", "position": [11, 5, 3.0], "rotationYDeg": 0, "dimensions": [1.2, 8, 6], "material": "grill", "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf", "source": "demo" },
-    { "id": "rack_b2", "nodeType": "obstruction", "label": "Rack B2", "position": [14, 5, 3.0], "rotationYDeg": 0, "dimensions": [1.2, 8, 6], "material": "grill", "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf", "source": "demo" },
-    { "id": "rack_c1", "nodeType": "obstruction", "label": "Rack C1", "position": [17, 5, 3.0], "rotationYDeg": 0, "dimensions": [1.2, 8, 6], "material": "grill", "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf", "source": "demo" },
-    { "id": "rack_c2", "nodeType": "obstruction", "label": "Rack C2", "position": [20, 5, 3.0], "rotationYDeg": 0, "dimensions": [1.2, 8, 6], "material": "grill", "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf", "source": "demo" },
-    { "id": "rack_d1", "nodeType": "obstruction", "label": "Rack D1", "position": [23, 5, 3.0], "rotationYDeg": 0, "dimensions": [1.2, 8, 6], "material": "grill", "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf", "source": "demo" },
-    { "id": "pallet_staging", "nodeType": "obstruction", "label": "Pallet Staging", "position": [5, 16, 0.75], "rotationYDeg": 0, "dimensions": [6, 3, 1.5], "material": "solid", "visionTransmission": 0, "glareRisk": false, "nightIRReflective": false, "movable": true, "movableByAI": true, "obstructionType": "other", "source": "demo" }
+    { "id": "obs_rack_a1",        "nodeType": "obstruction", "label": "Rack A1",        "position": [5, 5, 3.0],   "rotationYDeg": 0, "dimensions": [1.2, 8, 6],   "material": "grill",  "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf",  "source": "demo" },
+    { "id": "obs_rack_a2",        "nodeType": "obstruction", "label": "Rack A2",        "position": [8, 5, 3.0],   "rotationYDeg": 0, "dimensions": [1.2, 8, 6],   "material": "grill",  "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf",  "source": "demo" },
+    { "id": "obs_rack_b1",        "nodeType": "obstruction", "label": "Rack B1",        "position": [11, 5, 3.0],  "rotationYDeg": 0, "dimensions": [1.2, 8, 6],   "material": "grill",  "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf",  "source": "demo" },
+    { "id": "obs_rack_b2",        "nodeType": "obstruction", "label": "Rack B2",        "position": [14, 5, 3.0],  "rotationYDeg": 0, "dimensions": [1.2, 8, 6],   "material": "grill",  "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf",  "source": "demo" },
+    { "id": "obs_rack_c1",        "nodeType": "obstruction", "label": "Rack C1",        "position": [17, 5, 3.0],  "rotationYDeg": 0, "dimensions": [1.2, 8, 6],   "material": "grill",  "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf",  "source": "demo" },
+    { "id": "obs_rack_c2",        "nodeType": "obstruction", "label": "Rack C2",        "position": [20, 5, 3.0],  "rotationYDeg": 0, "dimensions": [1.2, 8, 6],   "material": "grill",  "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf",  "source": "demo" },
+    { "id": "obs_rack_d1",        "nodeType": "obstruction", "label": "Rack D1",        "position": [23, 5, 3.0],  "rotationYDeg": 0, "dimensions": [1.2, 8, 6],   "material": "grill",  "visionTransmission": 0.25, "glareRisk": false, "nightIRReflective": false, "movable": false, "movableByAI": false, "obstructionType": "shelf",  "source": "demo" },
+    { "id": "obs_pallet_staging", "nodeType": "obstruction", "label": "Pallet Staging", "position": [5, 16, 0.75], "rotationYDeg": 0, "dimensions": [6, 3, 1.5],   "material": "solid",  "visionTransmission": 0,    "glareRisk": false, "nightIRReflective": false, "movable": true,  "movableByAI": true,  "obstructionType": "other",  "source": "demo" }
   ],
   "criticalZones": [
     {
-      "id": "cz_loading_dock_a",
+      "id": "zone_loading_dock_a",
       "nodeType": "critical_zone",
       "label": "Loading Dock A",
       "polygon": [[0.5, 16.5], [8.5, 16.5], [8.5, 19.5], [0.5, 19.5]],
       "heightM": 5,
       "priority": "critical",
       "requiredQuality": "recognition",
-      "targetType": "loading_dock",
+      "targetType": "vehicle_detection",
       "nightRequired": true,
       "redundancyRequired": true,
       "privacyZone": false
     },
     {
-      "id": "cz_loading_dock_b",
+      "id": "zone_loading_dock_b",
       "nodeType": "critical_zone",
       "label": "Loading Dock B",
       "polygon": [[17, 16.5], [29.5, 16.5], [29.5, 19.5], [17, 19.5]],
       "heightM": 5,
       "priority": "critical",
       "requiredQuality": "recognition",
-      "targetType": "loading_dock",
+      "targetType": "vehicle_detection",
       "nightRequired": true,
       "redundancyRequired": true,
       "privacyZone": false
     },
     {
-      "id": "cz_office",
+      "id": "zone_manager_office",
       "nodeType": "critical_zone",
       "label": "Manager Office",
       "polygon": [[0.5, 16], [6, 16], [6, 19.5], [0.5, 19.5]],
       "heightM": 3.5,
       "priority": "high",
       "requiredQuality": "identification",
-      "targetType": "office",
+      "targetType": "face_identification",
       "nightRequired": false,
       "redundancyRequired": false,
       "privacyZone": false
     },
     {
-      "id": "cz_forklift_aisle",
+      "id": "zone_forklift_aisle",
       "nodeType": "critical_zone",
       "label": "Forklift Aisle",
       "polygon": [[3, 10], [27, 10], [27, 13], [3, 13]],
       "heightM": 4,
       "priority": "high",
       "requiredQuality": "observation",
-      "targetType": "forklift_zone",
+      "targetType": "vehicle_detection",
       "nightRequired": true,
       "redundancyRequired": false,
       "privacyZone": false
@@ -323,8 +355,18 @@
   "privacyZones": [],
   "sensors": [],
   "entryPoints": [
-    { "id": "ep_dock_a", "nodeType": "entry_point", "label": "Loading Dock A", "position": [5, 20], "type": "vehicle", "accessLevel": "authorized", "source": "demo" },
-    { "id": "ep_dock_b", "nodeType": "entry_point", "label": "Loading Dock B", "position": [20, 20], "type": "vehicle", "accessLevel": "authorized", "source": "demo" }
+    {
+      "id": "entry_dock_a",
+      "nodeType": "entry_point",
+      "label": "Loading Dock A",
+      "position": [5, 20]
+    },
+    {
+      "id": "entry_dock_b",
+      "nodeType": "entry_point",
+      "label": "Loading Dock B",
+      "position": [20, 20]
+    }
   ],
   "paths": [
     {
@@ -361,7 +403,7 @@
       "heightM": 1.75,
       "widthM": 0.55,
       "timeOfDay": "night",
-      "intent": "unauthorized"
+      "intent": "suspicious"
     }
   ],
   "snapshots": [],

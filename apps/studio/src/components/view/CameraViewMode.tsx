@@ -3,8 +3,8 @@
 import Image from "next/image";
 import { PerspectiveCamera } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { ArrowLeft, Camera as CameraIcon, CircleSmall, VideoOff } from "lucide-react";
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Camera as CameraIcon, CircleSmall, VideoOff } from "lucide-react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { useStudioStore } from "@/store/studio-store";
 import "@/lib/three-compat";
@@ -135,6 +135,7 @@ export function CameraViewMode() {
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
   const [feedMode, setFeedMode] = useState<CameraFeedMode>("normal");
   const [flags, setFlags] = useState<OverlayFlags>({ overlays: true, dori: true, path: false, zones: true, timestamp: true, grid: false });
+  const [immersiveMode, setImmersiveMode] = useState(false);
   const canvasFilter =
     feedMode === "normal"
       ? "brightness(0.82) contrast(1.08) saturate(0.92)"
@@ -273,6 +274,28 @@ export function CameraViewMode() {
     [camera, cameraLiveConnectionEvents, cameraMetadataEvents, scene.sensors],
   );
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
+        return;
+      }
+      if (event.key !== "f" && event.key !== "F") {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (["INPUT", "TEXTAREA", "SELECT", "OPTION", "BUTTON"].includes(target.tagName)) {
+        return;
+      }
+      setImmersiveMode((value) => !value);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
   const replayQualityLabel = activeCameraTimelineEvent?.quality
     ? activeCameraTimelineEvent.quality.toUpperCase()
     : activeCameraReplayState?.quality
@@ -323,22 +346,33 @@ export function CameraViewMode() {
           top: calc(var(--st-full-canvas-safe-top, 4.25rem) + 5.25rem);
         }
       `}</style>
-      <CameraHeader
-        camera={camera}
-        index={cameraIndex}
-        total={orderedCameras.length}
-        cameras={orderedCameras}
-        onPrevious={() => {
-          setCameraByDelta(-1);
-        }}
-        onNext={() => {
-          setCameraByDelta(1);
-        }}
-        onSelect={(id) => {
-          setSelectedCameraId(id);
-          selectNode(id);
-        }}
-      />
+      {immersiveMode ? (
+        <div className="absolute left-3 top-3 z-30 rounded-xl border border-[#263246] bg-[#0b0f17]/92 px-3 py-2">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Focus Mode</div>
+          <div className="text-[13px] font-medium text-white">{camera.name}</div>
+          <div className="mt-1 text-[10px] text-[#8ea5cc]">{cameraIndex + 1}/{orderedCameras.length} • Press F to exit focus</div>
+          <div className="mt-2 rounded-lg border border-[#2a344a] bg-black/45 px-2 py-1 text-[9px] text-[#9ab0ce]">
+            Frame, zoom, timeline, and overlays can be tuned after exiting focus mode.
+          </div>
+        </div>
+      ) : (
+        <CameraHeader
+          camera={camera}
+          index={cameraIndex}
+          total={orderedCameras.length}
+          cameras={orderedCameras}
+          onPrevious={() => {
+            setCameraByDelta(-1);
+          }}
+          onSelect={(id) => {
+            setSelectedCameraId(id);
+            selectNode(id);
+          }}
+          onNext={() => {
+            setCameraByDelta(1);
+          }}
+        />
+      )}
       {camera.status === "on" ? (
         <>
           <Canvas
@@ -394,29 +428,31 @@ export function CameraViewMode() {
               />
             </div>
           ) : null}
-          <CameraModeFilter mode={feedMode} />
-          <CameraControlStrip camera={camera!} zones={scene.criticalZones} />
-          <LiveFeedHUD
-            camera={camera}
-            mode={feedMode}
-            flags={flags}
-            ppm={scene.assumptions.pixelsPerMeter}
-            simulationAssumptions={scene.assumptions}
-            targetType={selectedCriticalZone?.targetType}
-            sensorFusion={{
-              totalCount: sensorFusion.totalCount,
-              activeCount: sensorFusion.activeCount,
-              nearestSensorLabel,
-              nearestSensorState,
-              nearestSensorCoverage,
-              nearestDistanceM: sensorFusion.nearestDistanceM,
-            }}
-            operationalFusion={operationalFusion}
-            sensorEvent={latestSensorEvent}
-            cameraMetadataEvent={latestCameraMetadataEvent}
-            cameraLiveConnectionEvent={latestCameraLiveConnectionEvent}
-          />
-          {flags.overlays && flags.path && activePath && activePathResult ? (
+          {immersiveMode ? null : <CameraModeFilter mode={feedMode} />}
+          {immersiveMode ? null : <CameraControlStrip camera={camera!} zones={scene.criticalZones} />}
+          {immersiveMode ? null : (
+            <LiveFeedHUD
+              camera={camera}
+              mode={feedMode}
+              flags={flags}
+              ppm={scene.assumptions.pixelsPerMeter}
+              simulationAssumptions={scene.assumptions}
+              targetType={selectedCriticalZone?.targetType}
+              sensorFusion={{
+                totalCount: sensorFusion.totalCount,
+                activeCount: sensorFusion.activeCount,
+                nearestSensorLabel,
+                nearestSensorState,
+                nearestSensorCoverage,
+                nearestDistanceM: sensorFusion.nearestDistanceM,
+              }}
+              operationalFusion={operationalFusion}
+              sensorEvent={latestSensorEvent}
+              cameraMetadataEvent={latestCameraMetadataEvent}
+              cameraLiveConnectionEvent={latestCameraLiveConnectionEvent}
+            />
+          )}
+          {immersiveMode ? null : flags.overlays && flags.path && activePath && activePathResult ? (
             <ReplayStatusOverlay
               pathLabel={activePath.label}
               timeS={pathTimeS}
@@ -426,7 +462,7 @@ export function CameraViewMode() {
               progressPct={pathReplay.progress}
             />
           ) : null}
-          {flags.overlays && flags.path && activePathResult && visibilityForCurrentCamera ? (
+          {immersiveMode ? null : flags.overlays && flags.path && activePathResult && visibilityForCurrentCamera ? (
             <CameraPathVisibilityOverlay
               cameraName={camera.name}
               visibleSeconds={visibilityForCurrentCamera.visibleS}
@@ -434,7 +470,7 @@ export function CameraViewMode() {
               maxQuality={visibilityForCurrentCamera.maxQuality}
             />
           ) : null}
-          {flags.overlays && flags.dori && selectedCriticalZone ? (
+          {immersiveMode ? null : flags.overlays && flags.dori && selectedCriticalZone ? (
             zoneAnalysis ? (
               <DoriInsightCard
                 camera={camera}
@@ -465,87 +501,102 @@ export function CameraViewMode() {
               </div>
             </div>
           )}
-          <SharedVerificationPanel
-            enabled={verification.verificationEnabled}
-            mode={verification.verificationMode}
-            opacity={verification.verificationOpacity}
-            split={verification.verificationSplit}
-            offsetX={verification.verificationOffsetX}
-            offsetY={verification.verificationOffsetY}
-            fileName={verification.verificationFileName}
-            alignmentScore={verification.alignmentQualityScore}
-            alignmentLabel={verification.alignmentQualityScore !== null ? alignmentQualityLabel(verification.alignmentQualityScore) : null}
-            alignmentMethod={verification.verificationAlignmentMethod}
-            autoAlignDelta={verification.verificationAutoAlignDelta}
-            scale={verification.verificationScale}
-            sourceType={verification.verificationSourceType}
-            videoDurationS={verification.verificationVideoDurationS}
-            sampleTimeS={verification.verificationSampleTimeS}
-            extractionInProgress={verification.verificationExtracting}
-            errorMessage={verification.verificationError}
-            canResample={verification.canResample}
-            canAutoAlign={verification.canAutoAlign}
-            videoCandidates={verification.verificationVideoCandidates}
-            selectedCandidateId={verification.verificationSelectedCandidateId}
-            bestCandidateId={verification.verificationBestCandidateId}
-            onSelectVideoCandidate={(candidateId) => {
-              if (!verification.verificationVideoFile) return;
-              const candidate = verification.verificationVideoCandidates.find((entry) => entry.id === candidateId);
-              if (!candidate) return;
-              verification.setVerificationSelectedCandidateId(candidateId);
-              verification.applyVideoCandidate(candidate, verification.verificationVideoFile.name);
+          {immersiveMode ? null : (
+            <SharedVerificationPanel
+              enabled={verification.verificationEnabled}
+              mode={verification.verificationMode}
+              opacity={verification.verificationOpacity}
+              split={verification.verificationSplit}
+              offsetX={verification.verificationOffsetX}
+              offsetY={verification.verificationOffsetY}
+              fileName={verification.verificationFileName}
+              alignmentScore={verification.alignmentQualityScore}
+              alignmentLabel={verification.alignmentQualityScore !== null ? alignmentQualityLabel(verification.alignmentQualityScore) : null}
+              alignmentMethod={verification.verificationAlignmentMethod}
+              autoAlignDelta={verification.verificationAutoAlignDelta}
+              scale={verification.verificationScale}
+              sourceType={verification.verificationSourceType}
+              videoDurationS={verification.verificationVideoDurationS}
+              sampleTimeS={verification.verificationSampleTimeS}
+              extractionInProgress={verification.verificationExtracting}
+              errorMessage={verification.verificationError}
+              canResample={verification.canResample}
+              canAutoAlign={verification.canAutoAlign}
+              videoCandidates={verification.verificationVideoCandidates}
+              selectedCandidateId={verification.verificationSelectedCandidateId}
+              bestCandidateId={verification.verificationBestCandidateId}
+              onSelectVideoCandidate={(candidateId) => {
+                if (!verification.verificationVideoFile) return;
+                const candidate = verification.verificationVideoCandidates.find((entry) => entry.id === candidateId);
+                if (!candidate) return;
+                verification.setVerificationSelectedCandidateId(candidateId);
+                verification.applyVideoCandidate(candidate, verification.verificationVideoFile.name);
+              }}
+              onAutoPickBestFrame={() => {
+                if (!verification.verificationBestCandidateId || !verification.verificationVideoFile) return;
+                const best = verification.verificationVideoCandidates.find((entry) => entry.id === verification.verificationBestCandidateId);
+                if (!best) return;
+                verification.setVerificationSelectedCandidateId(best.id);
+                verification.applyVideoCandidate(best, verification.verificationVideoFile.name);
+              }}
+              onSampleTimeChange={(value) => {
+                verification.setVerificationSampleTimeS(value);
+              }}
+              onResampleVideoFrame={() => {
+                verification.extractFromCurrentVideo(verification.verificationSampleTimeS ?? undefined);
+              }}
+              showHeatOverlay={verification.showDifferenceHeatOverlay}
+              snapshots={verification.snapshotsForCamera}
+              onToggle={verification.setVerificationEnabled}
+              onUpload={verification.handleUpload}
+              onSaveSnapshot={verification.handleSaveSnapshot}
+              onLoadSnapshot={verification.handleLoadSnapshot}
+              onDeleteSnapshot={verification.handleDeleteSnapshot}
+              onModeChange={verification.setVerificationMode}
+              onOpacityChange={verification.setVerificationOpacity}
+              onSplitChange={verification.setVerificationSplit}
+              onOffsetXChange={(value) => {
+                verification.setVerificationAlignmentMethod("manual");
+                verification.setVerificationAutoAlignDelta(null);
+                verification.setVerificationOffsetX(value);
+              }}
+              onOffsetYChange={(value) => {
+                verification.setVerificationAlignmentMethod("manual");
+                verification.setVerificationAutoAlignDelta(null);
+                verification.setVerificationOffsetY(value);
+              }}
+              onScaleChange={(value) => {
+                verification.setVerificationAlignmentMethod("manual");
+                verification.setVerificationAutoAlignDelta(null);
+                verification.setVerificationScale(value);
+              }}
+              onToggleHeatOverlay={verification.setShowDifferenceHeatOverlay}
+              onNudge={(dx, dy) => {
+                verification.handleNudge(dx, dy);
+              }}
+              onAutoAlign={verification.autoAlignVerification}
+              onResetAlign={() => {
+                verification.handleResetAlign();
+              }}
+              onClear={() => {
+                verification.handleClear();
+              }}
+            />
+          )}
+          <BottomControlStrip
+            mode={feedMode}
+            onModeChange={setFeedMode}
+            flags={flags}
+            onFlagsChange={setFlags}
+            onBackToMap={() => {
+              setWorkspacePreset("edit");
+              setViewMode("map");
             }}
-            onAutoPickBestFrame={() => {
-              if (!verification.verificationBestCandidateId || !verification.verificationVideoFile) return;
-              const best = verification.verificationVideoCandidates.find((entry) => entry.id === verification.verificationBestCandidateId);
-              if (!best) return;
-              verification.setVerificationSelectedCandidateId(best.id);
-              verification.applyVideoCandidate(best, verification.verificationVideoFile.name);
-            }}
-            onSampleTimeChange={(value) => {
-              verification.setVerificationSampleTimeS(value);
-            }}
-            onResampleVideoFrame={() => {
-              verification.extractFromCurrentVideo(verification.verificationSampleTimeS ?? undefined);
-            }}
-            showHeatOverlay={verification.showDifferenceHeatOverlay}
-            snapshots={verification.snapshotsForCamera}
-            onToggle={verification.setVerificationEnabled}
-            onUpload={verification.handleUpload}
-            onSaveSnapshot={verification.handleSaveSnapshot}
-            onLoadSnapshot={verification.handleLoadSnapshot}
-            onDeleteSnapshot={verification.handleDeleteSnapshot}
-            onModeChange={verification.setVerificationMode}
-            onOpacityChange={verification.setVerificationOpacity}
-            onSplitChange={verification.setVerificationSplit}
-            onOffsetXChange={(value) => {
-              verification.setVerificationAlignmentMethod("manual");
-              verification.setVerificationAutoAlignDelta(null);
-              verification.setVerificationOffsetX(value);
-            }}
-            onOffsetYChange={(value) => {
-              verification.setVerificationAlignmentMethod("manual");
-              verification.setVerificationAutoAlignDelta(null);
-              verification.setVerificationOffsetY(value);
-            }}
-            onScaleChange={(value) => {
-              verification.setVerificationAlignmentMethod("manual");
-              verification.setVerificationAutoAlignDelta(null);
-              verification.setVerificationScale(value);
-            }}
-            onToggleHeatOverlay={verification.setShowDifferenceHeatOverlay}
-            onNudge={(dx, dy) => {
-              verification.handleNudge(dx, dy);
-            }}
-            onAutoAlign={verification.autoAlignVerification}
-            onResetAlign={() => {
-              verification.handleResetAlign();
-            }}
-            onClear={() => {
-              verification.handleClear();
+            immersiveMode={immersiveMode}
+            onToggleImmersive={() => {
+              setImmersiveMode((value) => !value);
             }}
           />
-          <BottomControlStrip mode={feedMode} onModeChange={setFeedMode} flags={flags} onFlagsChange={setFlags} onBackToMap={() => { setWorkspacePreset("edit"); setViewMode("map"); }} />
         </>
       ) : (
         <div className="relative h-full w-full">
@@ -553,18 +604,6 @@ export function CameraViewMode() {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => {
-          setWorkspacePreset("edit");
-          setViewMode("map");
-        }}
-        className="absolute right-3 z-30 flex items-center gap-1.5 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#3a4a66] hover:text-white"
-        style={{ top: "var(--st-full-canvas-safe-top, 4.25rem)" }}
-      >
-        <ArrowLeft className="size-3" />
-        Back to Map View
-      </button>
     </div>
   );
 }

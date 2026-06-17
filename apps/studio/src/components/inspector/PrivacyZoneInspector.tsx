@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import {
   Field,
   SelectInput,
+  TextInput,
 } from "@/components/inspector/inspector-controls";
 import { SectionCard } from "@/components/shared/SectionCard";
 import type { PrivacyZoneNode } from "@/schema/security-scene";

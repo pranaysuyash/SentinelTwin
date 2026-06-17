@@ -167,3 +167,76 @@ Code-grounded explanation:
 - The studio workspace state is persisted in localStorage through the layout/governance slices, so the last workspace mode can reopen on refresh.
 - The current screen is the live studio workspace, not the generic launcher, because the app is restoring the prior workspace state.
 
+
+## Continued demo session notes
+
+- User asked to continue the live walkthrough after the PDF-library/documentation change.
+- Demo rule reaffirmed: stay in demo mode until the walkthrough ends; no code changes during the demo.
+- Current live flow is still the floor-plan review path.
+- Noted UI issues in the uploaded floor plan flow:
+  - preview is very small and visually cramped
+  - right-side panel text crowds the panel and is hard to read
+  - the detection count appears suspiciously high for walls and may be counting linework/legend elements
+  - checkboxes in the review list appear to toggle detected items for inclusion/exclusion before applying corrections
+- Suggested next step in the live flow: review and prune obvious false positives, then continue to the review/next step in the guided upload flow.
+
+- Demo interruption: Next.js build error reported in browser.
+  - Error: Module not found: Can't resolve 'pdf-lib'
+  - Scope: client component browser and SSR traces both point at `apps/studio/src/lib/pdf-export.ts`
+  - Demo impact: PDF export paths are blocked until the dependency is resolvable in the running app bundle.
+  - Presenter note: this should be called out as a live showstopper, not hidden.
+
+- Dependency blocker resolved: `pdf-lib` is now installed in the studio workspace package (`apps/studio/node_modules/pdf-lib`).
+- Demo guidance: reload or restart the running dev server so the client bundle picks up the installed dependency and the floor-plan flow can continue.
+
+- User reached the upload-confirmation point after importing the floor plan and asked whether to proceed.
+- Presenter guidance: if the preview and detection list look acceptable for this room, click `Next` to continue to the review stage; if the wall count or false positives still look wrong, stop here and prune obvious bad detections first.
+
+- User reached the review screen and reported that the name field was not editable, dimensions were defaulted instead of reflecting the uploaded image, detected walls showed 1335, confidence showed 100%, and Tier 1 Gate showed Manual Review.
+- Presenter guidance: do not click `Create Scene` yet; this screen is not trustworthy as a final commit because the imported values look wrong and the wall detection count appears inflated.
+- UI note: Tier 1 Gate / Manual Review appears to be a human verification checkpoint that flags the import as needing attention before scene creation.
+
+- User hit `Back` from the review screen and returned to the configure/import screen.
+- Presenter explanation: the back action returns to the correction stage so the floor-plan import can be edited before scene creation.
+- Current recommendation: this is still not a commit-ready state because the preview remains tiny, the wall count is still suspicious, and the UI suggests the imported plan needs correction or a different source image.
+
+- User confirmed the source image is good and shared the original floor plan.
+- Presenter assessment: the image is valid; the issue is in the floor-plan extraction, which appears to be over-counting linework and likely confusing the legend/text blocks with walls.
+- Current guidance: do not replace the image; continue in the correction/review flow and treat the import as needing calibration and false-positive cleanup.
+
+- User asked to walk through the exact correction choices one by one, live-call style.
+- Presenter approach: use the correction screen in small steps, starting with low-risk verification before any apply/create action.
+
+- Clarification: after clicking `Back`, the user is on the configure/import screen with `Next` at bottom right, not the review screen with `Create Scene`.
+- Demo guidance: the correction walkthrough should happen on the configure/import screen first; `Create Scene` only appears after advancing to Review.
+
+- User asked what needs correcting on the configure screen.
+- Presenter assessment from the source image: the source floor plan is valid, but the imported scale is wrong and the detector is over-reading the drawing and legend text.
+- Primary correction order recommended: fix scale calibration first, then prune any remaining false-positive wall/door detections if the counts still look inflated.
+
+- User reported that `Apply Calibration` is not noticeably changing the preview or counts.
+- Presenter issue note: the calibration control does not provide visible feedback, which makes the action feel untrustworthy and hard to demo.
+- Demo guidance: if calibration has no visible effect, call that out as a UX defect and avoid pretending the state changed; continue with the live correction flow only if the UI reflects the adjustment.
+
+- User clicked `Apply Calibration` and reported that the detected warnings updated.
+- Presenter interpretation: calibration did affect detector state, even if the visual preview change was subtle.
+- Next step in the walkthrough: review the updated warnings and then prune obvious false-positive wall entries if the counts remain inflated.
+
+- Calibration now changed the detected state: walls show 1245, room size shows 12.5 x 7.9 m, and warnings changed to a new set including near-duplicate wall pairs, door/window marker mismatch, and many short wall fragments.
+- Presenter read: the app is responding to calibration, but the calibrated footprint is still not aligned to the true source plan.
+- Next demo step: keep this as a correction pass, inspect whether the current wall list is now closer to the actual perimeter, and avoid `Next` until the footprint and wall set look credible.
+
+- User noted that the manually entered calibration values were replaced by `12.5 x 7.9` after apply.
+- Presenter assessment: the app is not treating the entered dimensions as a hard override; it appears to be recomputing a normalized footprint from detector state.
+- Demo issue note: this is confusing for users because the control suggests manual calibration but the UI substitutes a derived value without clearly explaining that behavior.
+
+- User asked what to do next after the app normalized entered calibration values.
+- Presenter guidance: stay on the correction screen, inspect the wall list first, and only uncheck obvious false-positive fragments or duplicates before considering `Next`.
+
+- User shared the visible wall list after calibration.
+- Current wall list is now only W1, W2, W3 plus D1 and D2 entries.
+- Presenter read: the wall list is much cleaner than before and appears close to the real perimeter, so the demo should avoid aggressive pruning unless a duplicate is obviously present.
+
+- Demo closed with a negative response from the user.
+- User feedback: product felt buggy, complicated, and the imported values were wrong.
+- Presenter outcome: demo ended without purchase interest; key objections were trust in extraction accuracy, calibration behavior, and overall UX clarity.

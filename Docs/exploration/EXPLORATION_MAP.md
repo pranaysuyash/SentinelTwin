@@ -7283,3 +7283,19 @@ pass.
 - GitHub readmes for `Hopding/pdf-lib`, `bpampuch/pdfmake`, and `foliojs/pdfkit`.
 - npm metadata for unpacked size and latest stable versions.
 - Remaining security advisories in the old chain were tied to nested `jspdf` / `dompurify` resolution rather than SentinelTwin code itself.
+
+## 2026-06-18 - Floor plan reader diversity exploration
+
+### Thread: Handling many floor-plan source styles
+
+**Why this thread exists**
+- Users may upload floor plans from different agencies, architects, builders, scan qualities, and drafting conventions.
+- Some inputs may be clean CAD exports; others may be annotated marketing sheets, rasterized scans, or even hand-drawn sketches.
+
+**Key observation**
+- A floor-plan import pipeline should not assume a single visual style or legend format.
+- Reader robustness likely needs style detection, layout region separation, legend suppression, scale recovery, and confidence-aware fallback paths.
+
+**Implication for SentinelTwin**
+- The current floor-plan import flow should be treated as one ingestion mode, not the full answer.
+- A dedicated floor-plan reader side project may be needed to normalize heterogeneous floor-plan inputs before scene creation.

@@ -4,8 +4,9 @@ import { useStudioStore } from "@/store/studio-store";
 import { DonutChart } from "@/components/shared/DonutChart";
 import { Badge } from "@/components/shared/Badge";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
+import type { ConfidenceBand } from "@sentineltwin/core";
 import { qualityToScore } from "@sentineltwin/core";
-import { computeCoverageEntropy } from "@sentineltwin/simulation";
+import { computeCoverageEntropy, formatConfidenceSummary } from "@sentineltwin/simulation";
 import { TruthBadge } from "@/components/shared/TruthBadge";
 import { truthLabelDetail } from "@/lib/truth-labels";
 import { QUALITY_COLOR } from "@/lib/quality-display";
@@ -36,6 +37,48 @@ function SignalRow({ label, value, detail, status }: {
       <span className="min-w-[100px] text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">{label}</span>
       <span className="ml-auto text-[10px] font-semibold text-[#d2d9e8]">{value}</span>
       <span className="hidden text-[8px] text-[#5a6a88] sm:inline">{detail}</span>
+    </div>
+  );
+}
+
+const CONFIDENCE_LEVEL_STYLE: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  verified: { bg: "bg-violet-500/10", text: "text-violet-300", border: "border-violet-500/30", label: "VERIFIED" },
+  high:     { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30", label: "HIGH" },
+  medium:   { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/30", label: "MEDIUM" },
+  low:      { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30", label: "LOW" },
+  none:     { bg: "bg-[#111521]", text: "text-[#4d5870]", border: "border-[#1f2536]", label: "NONE" },
+};
+
+function ConfidenceCard({ confidence, zones }: { confidence: ConfidenceBand; zones: { status: string }[] }) {
+  const style = CONFIDENCE_LEVEL_STYLE[confidence.level] ?? CONFIDENCE_LEVEL_STYLE.none;
+  const summary = formatConfidenceSummary(confidence, zones as Parameters<typeof formatConfidenceSummary>[1]);
+  return (
+    <div className="rounded-xl border border-[#1a2030] bg-[#0b0f17] px-3 py-2.5">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Simulation Confidence</span>
+          <TruthBadge label="simulated" />
+        </div>
+        <span className={`rounded-md border px-2 py-0.5 text-[8px] font-bold tracking-wider ${style.bg} ${style.text} ${style.border}`}>
+          {style.label}
+        </span>
+      </div>
+      <p className="mb-2 text-[9px] leading-relaxed text-[#6b7a95]">{summary}</p>
+      {confidence.sensitiveTo.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          <span className="text-[8px] uppercase tracking-wider text-[#3d4d63]">Sensitive to:</span>
+          {confidence.sensitiveTo.map((s) => (
+            <span key={s} className="rounded-md border border-[#1f2536] bg-[#0a0d15] px-1.5 py-0.5 text-[8px] text-[#8094b8]">{s}</span>
+          ))}
+        </div>
+      )}
+      {confidence.reasonCodes.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {confidence.reasonCodes.map((r) => (
+            <span key={r} className="rounded-md border border-[#1a2030] bg-[#07090f] px-1.5 py-0.5 text-[7px] uppercase tracking-wider text-[#3d4d63]">{r}</span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -109,6 +152,7 @@ export function MetricsTab() {
   const reflectiveBounce = result.reflectiveBounce;
   const occlusionBlameCount = result.occlusionBlame?.length ?? 0;
   const temporalSummary = scene.temporalProfile?.anomalySummary;
+  const overallConfidence = (result as Record<string, unknown>).overallConfidence as ConfidenceBand | undefined;
 
   const advancedSignals: { label: string; value: string; detail: string; status: "good" | "warn" | "neutral" }[] = [];
   if (coverageEntropy) {
@@ -313,20 +357,25 @@ export function MetricsTab() {
 
       </div>
 
-      {/* ── Advanced Signals: compact table ── */}
-      {advancedSignals.length > 0 ? (
-        <div className="flex-1 overflow-y-auto px-3 py-2">
-          <div className="mb-2 flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
-            <span>Advanced Coverage Signals</span>
-            <span className="text-[#3a4158] font-normal">· {advancedSignals.length} metrics</span>
+      {/* ── Advanced Signals + Confidence ── */}
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
+        {advancedSignals.length > 0 && (
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
+              <span>Advanced Coverage Signals</span>
+              <span className="text-[#3a4158] font-normal">· {advancedSignals.length} metrics</span>
+            </div>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {advancedSignals.map((signal) => (
+                <SignalRow key={signal.label} {...signal} />
+              ))}
+            </div>
           </div>
-          <div className="grid gap-1.5 sm:grid-cols-2">
-            {advancedSignals.map((signal) => (
-              <SignalRow key={signal.label} {...signal} />
-            ))}
-          </div>
-        </div>
-      ) : null}
+        )}
+        {overallConfidence && (
+          <ConfidenceCard confidence={overallConfidence} zones={result.criticalZoneResults} />
+        )}
+      </div>
     </div>
   );
 }

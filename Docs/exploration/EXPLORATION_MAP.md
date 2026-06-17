@@ -7299,3 +7299,18 @@ pass.
 **Implication for SentinelTwin**
 - The current floor-plan import flow should be treated as one ingestion mode, not the full answer.
 - A dedicated floor-plan reader side project may be needed to normalize heterogeneous floor-plan inputs before scene creation.
+
+## 2026-06-18 - Demo-driven floor-plan trust recovery
+
+### Thread: Why the buyer demo failed on floor-plan import
+
+**Observed in live walkthrough**
+- A valid uploaded plan still produced implausible wall/opening counts.
+- Manual calibration did not appear authoritative because normalization replaced entered dimensions.
+- Review surfaced blank/default metadata in the direct floor-plan flow.
+- `100% confidence` contradicted obvious detector noise and made the product feel dishonest.
+
+**Implementation direction**
+- Treat calibration as a source-of-truth override once the user applies it.
+- Separate detector confidence from buyer-facing import trust/readiness.
+- Keep scene metadata editable inside the floor-plan flow itself instead of relying on earlier wizard steps that direct intake may skip.

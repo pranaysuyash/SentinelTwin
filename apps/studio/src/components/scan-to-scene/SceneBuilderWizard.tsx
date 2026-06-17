@@ -95,7 +95,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
         if (state.importMethod === "blank") return true;
         if (state.importMethod === "template") return state.selectedTemplate !== null;
         if (state.importMethod === "floor_plan") {
-          return state.floorPlanResult !== null && state.floorPlanGateDecision?.action !== "rescan_required";
+          return state.roomName.trim().length > 0 && state.floorPlanResult !== null && state.floorPlanGateDecision?.action !== "rescan_required";
         }
         return false;
       case 3: return true; // Review always ready
@@ -125,11 +125,16 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
       const semanticContext = deriveFloorPlanSemanticContext(result, validation.diagnostics);
       const gateDecision = evaluateFloorPlanTierGate(semanticContext);
       const gateWarning = getFloorPlanTierGateWarning(gateDecision);
+      const seededName = state.roomName.trim().length > 0 ? state.roomName : deriveSceneNameFromFile(file.name);
       update({
         floorPlanResult: result,
         floorPlanSemanticContext: semanticContext,
         floorPlanGateDecision: gateDecision,
         importWarnings: gateWarning ? [...validation.warnings, gateWarning] : validation.warnings,
+        roomName: seededName,
+        widthM: result.roomDimensions.widthM,
+        depthM: result.roomDimensions.depthM,
+        heightM: result.roomDimensions.heightM,
         isProcessing: false,
       });
     } catch (err) {
@@ -141,7 +146,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
         importWarnings: [`Failed to process image: ${err instanceof Error ? err.message : "Unknown error"}`],
       });
     }
-  }, [floorPlanScalePixelsPerMeter, roomHeightM, update]);
+  }, [floorPlanScalePixelsPerMeter, roomHeightM, state.roomName, update]);
 
   const handleCreate = useCallback(() => {
     let scene;
@@ -533,6 +538,8 @@ function ConfigureStep({
             <ImportReview
               key={`${value.floorPlanResult.imageWidth}x${value.floorPlanResult.imageHeight}-${value.floorPlanResult.walls.length}-${value.floorPlanResult.doors.length}-${value.floorPlanResult.windows.length}-${value.floorPlanResult.confidence.toFixed(3)}`}
               result={value.floorPlanResult}
+              semanticContext={value.floorPlanSemanticContext}
+              gateDecision={value.floorPlanGateDecision}
               warnings={value.importWarnings}
               onImageChange={() => onChange({
                 floorPlanResult: null,
@@ -552,6 +559,9 @@ function ConfigureStep({
                   floorPlanSemanticContext: semanticContext,
                   floorPlanGateDecision: gateDecision,
                   importWarnings: gateWarning ? [...validation.warnings, gateWarning] : validation.warnings,
+                  widthM: recalibrated.roomDimensions.widthM,
+                  depthM: recalibrated.roomDimensions.depthM,
+                  heightM: recalibrated.roomDimensions.heightM,
                 });
               }}
               onUpdateResult={(nextResult) => {
@@ -564,6 +574,9 @@ function ConfigureStep({
                   floorPlanSemanticContext: semanticContext,
                   floorPlanGateDecision: gateDecision,
                   importWarnings: gateWarning ? [...validation.warnings, gateWarning] : validation.warnings,
+                  widthM: nextResult.roomDimensions.widthM,
+                  depthM: nextResult.roomDimensions.depthM,
+                  heightM: nextResult.roomDimensions.heightM,
                 });
               }}
             />
@@ -604,6 +617,36 @@ function ConfigureStep({
             )}
           </div>
         )}
+
+        <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
+          <div className="text-[9px] font-medium text-[#c5ccdb]">Scene Metadata</div>
+          <p className="mt-0.5 text-[8px] text-[#59637a]">
+            Name the imported scene here. Detected or calibrated dimensions sync into the final review automatically.
+          </p>
+          <div className="mt-2 grid gap-2 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+            <label className="text-[8px] text-[#59637a]">
+              Scene Name
+              <input
+                type="text"
+                value={value.roomName}
+                onChange={(e) => onChange({ roomName: e.target.value })}
+                placeholder="e.g., East Wing Floor Plan"
+                className="mt-0.5 w-full rounded border border-[#1e2130] bg-[#0a0f18] px-1.5 py-1 text-[9px] text-[#c5ccdb] outline-none placeholder:text-[#3a4158] focus:border-blue-500/40"
+              />
+            </label>
+            <div className="rounded border border-[#1e2130] bg-[#0a0f18] px-2 py-1.5 text-[8px] text-[#8090a8]">
+              <div className="uppercase tracking-[0.14em] text-[#59637a]">Current Footprint</div>
+              <div className="mt-1 text-[10px] font-medium text-[#c5ccdb]">
+                {value.widthM}m × {value.depthM}m × {value.heightM}m
+              </div>
+              <div className="mt-0.5 text-[#59637a]">
+                {value.floorPlanResult?.manualCalibration
+                  ? "Manual calibration is active."
+                  : "Using detector-derived footprint."}
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
           <span className="text-[8px] font-medium uppercase tracking-wider text-[#59637a]">Scale</span>
@@ -652,10 +695,15 @@ function ReviewStep({
 }: {
   value: WizardState;
 }) {
+  const reviewDimensions = value.floorPlanResult?.roomDimensions ?? {
+    widthM: value.widthM,
+    depthM: value.depthM,
+    heightM: value.heightM,
+  };
   const summary = useMemo(() => {
     const lines: { label: string; value: string }[] = [
-      { label: "Name", value: value.roomName },
-      { label: "Dimensions", value: `${value.widthM}m × ${value.depthM}m × ${value.heightM}m` },
+      { label: "Name", value: value.roomName || "Untitled Scene" },
+      { label: "Dimensions", value: `${reviewDimensions.widthM}m × ${reviewDimensions.depthM}m × ${reviewDimensions.heightM}m` },
       { label: "Method", value: value.importMethod === "blank" ? "Blank Canvas" : value.importMethod === "template" ? `Template: ${value.selectedTemplate?.name ?? "None"}` : "Floor Plan Import" },
     ];
 
@@ -672,7 +720,7 @@ function ReviewStep({
     }
 
     return lines;
-  }, [value]);
+  }, [reviewDimensions.depthM, reviewDimensions.heightM, reviewDimensions.widthM, value]);
 
   return (
     <div className="space-y-4">
@@ -696,6 +744,8 @@ function ReviewStep({
           <div className="mt-2 grid grid-cols-2 gap-2 text-[9px] text-[#8090a8]">
             <div>Detection confidence: <span className="text-[#c5ccdb]">{(value.floorPlanResult.confidence * 100).toFixed(0)}%</span></div>
             <div>Tier 1 gate: <span className="text-[#c5ccdb]">{formatGateAction(value.floorPlanGateDecision?.action ?? "proceed_to_tier2")}</span></div>
+            <div>Scene footprint: <span className="text-[#c5ccdb]">{reviewDimensions.widthM}m × {reviewDimensions.depthM}m × {reviewDimensions.heightM}m</span></div>
+            <div>Dimension source: <span className="text-[#c5ccdb]">{value.floorPlanResult.manualCalibration ? "Manual calibration" : "Detector-derived"}</span></div>
             <div>Unresolved warnings: <span className={value.importWarnings.length > 0 ? "text-amber-300" : "text-emerald-300"}>{value.importWarnings.length}</span></div>
             <div>Scene type: <span className="text-[#c5ccdb]">{value.floorPlanSemanticContext?.sceneType ?? "unknown"}</span></div>
             <div>Tier 1 quality: <span className="text-[#c5ccdb]">{value.floorPlanSemanticContext ? `${Math.round(value.floorPlanSemanticContext.qualityScore * 100)}%` : "—"}</span></div>
@@ -704,6 +754,11 @@ function ReviewStep({
             <div>Walls: <span className="text-[#c5ccdb]">{value.floorPlanResult.walls.length}</span></div>
             <div>Scale: <span className="text-[#c5ccdb]">{value.floorPlanResult.scalePixelsPerMeter} px/m</span></div>
           </div>
+          {value.floorPlanGateDecision?.reason ? (
+            <div className="mt-2 rounded border border-[#1f2a3e] bg-[#0a0f18] px-2 py-1.5 text-[8px] text-[#9bb0ce]">
+              <span className="font-medium text-[#c5ccdb]">Gate reason:</span> {value.floorPlanGateDecision.reason}
+            </div>
+          ) : null}
           {value.importWarnings.length > 0 ? (
             <div className="mt-2 rounded border border-amber-500/20 bg-amber-500/10 px-2 py-1.5 text-[8px] text-amber-100">
               {value.importWarnings.slice(0, 4).map((warning, index) => (
@@ -737,6 +792,12 @@ function ReviewStep({
       )}
     </div>
   );
+}
+
+function deriveSceneNameFromFile(filename: string) {
+  const withoutExt = filename.replace(/\.[^/.]+$/, "");
+  const normalized = withoutExt.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  return normalized || "Imported Floor Plan";
 }
 
 function formatGateAction(action: FloorPlanGateDecision["action"]) {

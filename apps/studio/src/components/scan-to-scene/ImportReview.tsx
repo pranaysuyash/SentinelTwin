@@ -4,17 +4,25 @@ import { AlertTriangle, CheckCircle2, ImageUp, RotateCcw } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 
-import { getFloorPlanDiagnostics, normalizeFloorPlanResult, type FloorPlanResult } from "@/lib/floor-plan-import";
+import {
+  getFloorPlanDiagnostics,
+  normalizeFloorPlanResult,
+  type FloorPlanGateDecision,
+  type FloorPlanResult,
+  type FloorPlanSemanticContext,
+} from "@/lib/floor-plan-import";
 
 interface ImportReviewProps {
   result: FloorPlanResult;
+  semanticContext?: FloorPlanSemanticContext | null;
+  gateDecision?: FloorPlanGateDecision | null;
   warnings: string[];
   onImageChange: () => void;
   onRecalibrate: (calibration: { widthM?: number; depthM?: number; heightM?: number }) => void;
   onUpdateResult: (result: FloorPlanResult) => void;
 }
 
-export function ImportReview({ result, warnings, onImageChange, onRecalibrate, onUpdateResult }: ImportReviewProps) {
+export function ImportReview({ result, semanticContext, gateDecision, warnings, onImageChange, onRecalibrate, onUpdateResult }: ImportReviewProps) {
   const [widthM, setWidthM] = useState(result.roomDimensions.widthM.toString());
   const [depthM, setDepthM] = useState(result.roomDimensions.depthM.toString());
   const [heightM, setHeightM] = useState(result.roomDimensions.heightM.toString());
@@ -79,6 +87,8 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
   const unresolvedCount = warnings.length;
   const confidencePct = Math.round(result.confidence * 100);
   const confidenceBand = confidencePct >= 75 ? "high" : confidencePct >= 50 ? "medium" : "low";
+  const hasManualCalibration = Boolean(result.manualCalibration);
+  const qualityPct = semanticContext ? Math.round(semanticContext.qualityScore * 100) : null;
 
   const updateDraggedOpening = (
     event: ReactPointerEvent<SVGSVGElement>,
@@ -116,17 +126,24 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
             <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#9bb0cf]">Floor Plan Review</div>
             <div className="mt-0.5 text-[8px] text-[#7083a5]">Review detected walls, openings, and warnings before creating a site twin draft.</div>
           </div>
-          <span
-            className={`rounded border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] ${
-              confidenceBand === "high"
-                ? "border-emerald-500/30 bg-emerald-500/12 text-emerald-200"
-                : confidenceBand === "medium"
-                  ? "border-amber-500/30 bg-amber-500/12 text-amber-100"
-                  : "border-red-500/30 bg-red-500/12 text-red-200"
-            }`}
-          >
-            Confidence {confidencePct}%
-          </span>
+          <div className="flex flex-wrap items-center justify-end gap-1">
+            {hasManualCalibration ? (
+              <span className="rounded border border-blue-500/30 bg-blue-500/12 px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-blue-100">
+                Manual footprint
+              </span>
+            ) : null}
+            <span
+              className={`rounded border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] ${
+                confidenceBand === "high"
+                  ? "border-emerald-500/30 bg-emerald-500/12 text-emerald-200"
+                  : confidenceBand === "medium"
+                    ? "border-amber-500/30 bg-amber-500/12 text-amber-100"
+                    : "border-red-500/30 bg-red-500/12 text-red-200"
+              }`}
+            >
+              Import trust {confidencePct}%
+            </span>
+          </div>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-2 text-[8px]">
           <div className="rounded border border-[#1f2a3e] bg-[#0a101d] px-2 py-1 text-[#9fb2d1]">
@@ -144,6 +161,23 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
         </div>
       </div>
 
+      {gateDecision ? (
+        <div className="rounded-lg border border-[#22314b] bg-[#0a111d] p-2">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#9bb0cf]">Tier 1 Gate</div>
+              <div className="mt-0.5 text-[10px] font-medium text-[#d5deed]">{formatGateAction(gateDecision.action)}</div>
+            </div>
+            {qualityPct != null ? (
+              <span className="rounded border border-[#2a3045] bg-[#0f1727] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#b2c4de]">
+                Quality {qualityPct}%
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-1 text-[8px] text-[#7f93b3]">{gateDecision.reason}</div>
+        </div>
+      ) : null}
+
       {/* Confidence & metrics */}
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2 text-center">
@@ -156,13 +190,13 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
           <div className="text-[14px] font-bold text-[#c5ccdb]">
             {(result.confidence * 100).toFixed(0)}%
           </div>
-          <div className="text-[8px] text-[#59637a]">Confidence</div>
+          <div className="text-[8px] text-[#59637a]">Import Trust</div>
         </div>
         <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2 text-center">
           <div className="text-[14px] font-bold text-[#c5ccdb]">
             {result.roomDimensions.widthM}×{result.roomDimensions.depthM}
           </div>
-          <div className="text-[8px] text-[#59637a]">Room Size (m)</div>
+          <div className="text-[8px] text-[#59637a]">{hasManualCalibration ? "Scene Footprint (locked)" : "Scene Footprint (m)"}</div>
         </div>
       </div>
 
@@ -476,7 +510,11 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
           </label>
         </div>
         <div className="mt-2 flex items-center justify-between">
-          <span className="text-[8px] text-[#4f5a72]">Use known room dimensions to refine scale.</span>
+          <span className="text-[8px] text-[#4f5a72]">
+            {hasManualCalibration
+              ? "Manual calibration is active. Apply new values to replace the locked scene footprint."
+              : "Use known room dimensions to lock the scene footprint and refine scale."}
+          </span>
           <button type="button"
             onClick={() => {
               const nextWidth = Number(widthM);
@@ -531,4 +569,18 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
       </button>
     </div>
   );
+}
+
+function formatGateAction(action: FloorPlanGateDecision["action"]) {
+  switch (action) {
+    case "rescan_required":
+      return "Rescan Required";
+    case "human_review":
+      return "Manual Review";
+    case "cloud_geometry_required":
+      return "Cloud Geometry Required";
+    case "proceed_to_tier2":
+    default:
+      return "Ready for Tier 2";
+  }
 }

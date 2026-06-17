@@ -5340,3 +5340,28 @@ Meta released SAM 3 (Segment Anything with Concepts) on 2025-11-20. This decisio
 
 **Follow-up**
 - If future export layouts become declarative-document heavy, revisit `pdfmake` only if we need more table automation than `pdf-lib` should reasonably own.
+## D-288: Manual floor-plan calibration owns scene footprint once applied
+
+- Date: 2026-06-18
+- Status: Accepted
+
+### Context
+
+The live buyer demo on 2026-06-17 exposed a trust break in the floor-plan import flow. Users could enter known dimensions from the source drawing, click `Apply Calibration`, and then watch the system replace those values with a different derived footprint during normalization. The review step also continued to surface stale wizard defaults instead of the imported or calibrated dimensions.
+
+### Decision
+
+Once a user applies floor-plan calibration, those dimensions become the authoritative scene footprint for that import session. Normalization may still merge walls, snap openings, and update diagnostics, but it must not silently overwrite user-supplied dimensions. The wizard state must stay synchronized with the imported/calibrated footprint and expose scene metadata directly in the floor-plan flow.
+
+### Rationale
+
+- Calibration is a user trust contract, not just a detector hint.
+- A buyer who knows the source dimensions must be able to correct the import deterministically.
+- Review surfaces must reflect the same scene truth that will be created, otherwise the flow looks buggy and unsafe.
+
+### Consequences
+
+- `FloorPlanResult` now preserves manual calibration metadata.
+- `normalizeFloorPlanResult(...)` keeps manual dimensions authoritative when present.
+- The floor-plan wizard path now syncs room name and dimensions into review state instead of leaking blank/default metadata from the skipped room-setup step.
+- The import-review UI distinguishes import trust, gate status, and locked manual footprint more clearly during correction.

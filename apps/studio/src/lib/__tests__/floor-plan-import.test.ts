@@ -82,7 +82,37 @@ describe("recalibrateFloorPlanResult", () => {
     expect(calibrated.roomDimensions.widthM).toBe(8);
     expect(calibrated.roomDimensions.depthM).toBe(3);
     expect(calibrated.roomDimensions.heightM).toBe(3.4);
+    expect(calibrated.manualCalibration).toEqual({ widthM: 8, depthM: 3, heightM: 3.4 });
     expect(calibrated.scalePixelsPerMeter).toBeGreaterThan(base.scalePixelsPerMeter);
+  });
+
+  test("keeps manual calibration authoritative through later normalization", () => {
+    const calibrated = recalibrateFloorPlanResult({
+      imageWidth: 1000,
+      imageHeight: 500,
+      scalePixelsPerMeter: 50,
+      confidence: 0.8,
+      roomDimensions: { widthM: 20, depthM: 10, heightM: 3 },
+      walls: [
+        { start: { x: 100, y: 100 }, end: { x: 900, y: 100 }, detected: true },
+        { start: { x: 900, y: 100 }, end: { x: 900, y: 400 }, detected: true },
+        { start: { x: 100, y: 400 }, end: { x: 900, y: 400 }, detected: true },
+        { start: { x: 100, y: 100 }, end: { x: 100, y: 400 }, detected: true },
+      ],
+      doors: [],
+      windows: [],
+    }, { widthM: 8, depthM: 3, heightM: 3.4 });
+
+    const normalized = normalizeFloorPlanResult({
+      ...calibrated,
+      walls: [
+        ...calibrated.walls,
+        { start: { x: 500, y: 100 }, end: { x: 500, y: 400 }, detected: true },
+      ],
+    });
+
+    expect(normalized.roomDimensions).toEqual({ widthM: 8, depthM: 3, heightM: 3.4 });
+    expect(normalized.manualCalibration).toEqual({ widthM: 8, depthM: 3, heightM: 3.4 });
   });
 });
 
@@ -138,6 +168,37 @@ describe("floor-plan import diagnostics", () => {
     expect(validation.diagnostics).toEqual(diagnostics);
     expect(validation.warnings.some((warning) => warning.includes("near-duplicate wall pair"))).toBe(true);
     expect(validation.warnings.some((warning) => warning.includes("door/window marker"))).toBe(true);
+  });
+
+  test("lowers import trust when duplicate walls and off-wall openings remain", () => {
+    const clean = normalizeFloorPlanResult({
+      imageWidth: 1000,
+      imageHeight: 800,
+      scalePixelsPerMeter: 100,
+      confidence: 0.7,
+      roomDimensions: { widthM: 10, depthM: 8, heightM: 3 },
+      walls: [
+        { start: { x: 100, y: 100 }, end: { x: 900, y: 100 }, detected: true },
+        { start: { x: 900, y: 100 }, end: { x: 900, y: 700 }, detected: true },
+        { start: { x: 100, y: 700 }, end: { x: 900, y: 700 }, detected: true },
+        { start: { x: 100, y: 100 }, end: { x: 100, y: 700 }, detected: true },
+      ],
+      doors: [{ position: { x: 500, y: 100 }, widthM: 0.9, orientation: "horizontal" }],
+      windows: [{ position: { x: 900, y: 400 }, widthM: 1.2, orientation: "vertical" }],
+    });
+
+    const noisy = normalizeFloorPlanResult({
+      ...clean,
+      walls: [
+        ...clean.walls,
+        { start: { x: 102, y: 104 }, end: { x: 898, y: 104 }, detected: true },
+        { start: { x: 200, y: 220 }, end: { x: 214, y: 220 }, detected: true },
+        { start: { x: 260, y: 290 }, end: { x: 274, y: 290 }, detected: true },
+      ],
+      doors: [{ position: { x: 500, y: 320 }, widthM: 0.9, orientation: "horizontal" }],
+    });
+
+    expect(noisy.confidence).toBeLessThan(clean.confidence);
   });
 });
 

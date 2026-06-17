@@ -19,5 +19,8 @@ describe("ImportReview", () => {
     expect(source).toContain("Split First Kept Wall");
     expect(source).toContain("Merge First Two Kept Walls");
     expect(source).toContain("Snap Kept Walls Orthogonal");
+    expect(source).toContain("Import trust");
+    expect(source).toContain("Manual footprint");
+    expect(source).toContain("Tier 1 Gate");
   });
 });

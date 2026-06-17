@@ -10,7 +10,11 @@ describe("SceneBuilderWizard floor-plan Tier 1 gate", () => {
     expect(source).toContain("Tier 1 Gate");
     expect(source).toContain("evaluateFloorPlanTierGate");
     expect(source).toContain("getFloorPlanTierGateWarning");
-    expect(source).toContain("state.floorPlanGateDecision?.action !== \"rescan_required\"");
+    expect(source).toContain("state.roomName.trim().length > 0 && state.floorPlanResult !== null && state.floorPlanGateDecision?.action !== \"rescan_required\"");
     expect(source).toContain("formatGateAction");
+    expect(source).toContain("Scene Metadata");
+    expect(source).toContain("deriveSceneNameFromFile");
+    expect(source).toContain("roomName: seededName");
+    expect(source).toContain("widthM: recalibrated.roomDimensions.widthM");
   });
 });

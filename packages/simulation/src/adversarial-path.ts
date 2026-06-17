@@ -359,7 +359,11 @@ export function computeAdversarialPath(
     id: string;
     label: string;
     pos2: [number, number];
-    ac: { type: string; breachDifficulty: number; breachTimeS?: number };
+    ac: {
+      type: "none" | "pin" | "card" | "biometric" | "guard_post";
+      breachDifficulty: number;
+      breachTimeS?: number;
+    };
   };
 
   const barrierCandidates: BarrierCandidate[] = [

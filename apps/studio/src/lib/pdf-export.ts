@@ -248,6 +248,10 @@ class PdfWriter {
     return page;
   }
 
+  beginPage() {
+    this.addPage();
+  }
+
   private drawPageHeader(page: any) {
     page.drawText(this.title, {
       x: this.margin,
@@ -717,7 +721,7 @@ export async function exportAuditReportPdf(options: {
     "Coverage failure analysis and hardening recommendations",
   );
 
-  writer.addPage();
+  writer.beginPage();
   writer.addSectionTitle("Executive Summary", "A compact readout for reviewers and stakeholders.");
   writer.addParagraph(
     asString(result.summary ?? result.overview ?? result.description ?? "No summary was supplied with the audit result."),
@@ -789,7 +793,7 @@ export async function exportTextAsPdf(options: {
     "Open-source PDF generation path",
   );
 
-  writer.addPage();
+  writer.beginPage();
   writer.addSectionTitle(title, options.subtitle ?? "Plain text export");
 
   for (const section of sections) {
@@ -831,7 +835,7 @@ export async function exportDirectorsCutPdf(options: {
     "Incident replay and camera-selection analysis",
   );
 
-  writer.addPage();
+  writer.beginPage();
   writer.addSectionTitle("Cut Sequence", "Shot ordering and quality across the replay path.");
   const rows = sequence.segments.map((segment: any, index: number) => ({
     shot: `${index + 1}`,

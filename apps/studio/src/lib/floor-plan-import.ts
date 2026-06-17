@@ -37,6 +37,7 @@ export interface FloorPlanResult {
   roomDimensions: { widthM: number; depthM: number; heightM: number };
   scalePixelsPerMeter: number;
   confidence: number; // 0-1 estimate of detection quality
+  manualCalibration?: { widthM: number; depthM: number; heightM: number } | null;
 }
 
 export interface FloorPlanDiagnostics {
@@ -115,10 +116,7 @@ export async function extractFloorPlan(
   // Step 5: Extract room dimensions from wall bounding box
   const dimensions = extractDimensions(wallSegments, cfg.scalePixelsPerMeter, cfg.roomHeightM);
 
-  // Step 6: Calculate confidence based on wall completeness
-  const confidence = calculateConfidence(wallSegments, width, height);
-
-  return {
+  const baseResult: FloorPlanResult = {
     imageWidth: width,
     imageHeight: height,
     walls: wallSegments,
@@ -126,7 +124,13 @@ export async function extractFloorPlan(
     windows,
     roomDimensions: dimensions,
     scalePixelsPerMeter: cfg.scalePixelsPerMeter,
-    confidence,
+    confidence: 0,
+    manualCalibration: null,
+  };
+
+  return {
+    ...baseResult,
+    confidence: calculateReviewedImportConfidence(baseResult),
   };
 }
 
@@ -303,6 +307,11 @@ export function recalibrateFloorPlanResult(
       depthM: Number(depthM.toFixed(2)),
       heightM: Number(heightM.toFixed(2)),
     },
+    manualCalibration: {
+      widthM: Number(widthM.toFixed(2)),
+      depthM: Number(depthM.toFixed(2)),
+      heightM: Number(heightM.toFixed(2)),
+    },
   });
 }
 
@@ -310,10 +319,15 @@ export function normalizeFloorPlanResult(result: FloorPlanResult): FloorPlanResu
   const normalizedWalls = mergeCollinearWalls(result.walls);
   const normalizedDoors = snapOpeningsToWalls(result.doors, normalizedWalls, result.scalePixelsPerMeter);
   const normalizedWindows = snapOpeningsToWalls(result.windows, normalizedWalls, result.scalePixelsPerMeter);
-  const nextDimensions = extractDimensions(normalizedWalls, result.scalePixelsPerMeter, result.roomDimensions.heightM);
-  const nextConfidence = calculateConfidence(normalizedWalls, result.imageWidth, result.imageHeight);
+  const nextDimensions = result.manualCalibration
+    ? {
+        widthM: Number(result.manualCalibration.widthM.toFixed(2)),
+        depthM: Number(result.manualCalibration.depthM.toFixed(2)),
+        heightM: Number(result.manualCalibration.heightM.toFixed(2)),
+      }
+    : extractDimensions(normalizedWalls, result.scalePixelsPerMeter, result.roomDimensions.heightM);
 
-  return {
+  const normalizedResultBase: FloorPlanResult = {
     ...result,
     walls: normalizedWalls,
     doors: normalizedDoors,
@@ -321,10 +335,38 @@ export function normalizeFloorPlanResult(result: FloorPlanResult): FloorPlanResu
     roomDimensions: {
       widthM: nextDimensions.widthM,
       depthM: nextDimensions.depthM,
-      heightM: result.roomDimensions.heightM,
+      heightM: result.manualCalibration?.heightM ?? result.roomDimensions.heightM,
     },
-    confidence: nextConfidence,
+    manualCalibration: result.manualCalibration ?? null,
+    confidence: 0,
   };
+
+  return {
+    ...normalizedResultBase,
+    confidence: calculateReviewedImportConfidence(normalizedResultBase),
+  };
+}
+
+function calculateReviewedImportConfidence(
+  result: Pick<FloorPlanResult, "walls" | "doors" | "windows" | "imageWidth" | "imageHeight" | "scalePixelsPerMeter">,
+): number {
+  const structuralConfidence = calculateConfidence(result.walls, result.imageWidth, result.imageHeight);
+  const diagnostics = getFloorPlanDiagnostics({
+    ...result,
+    confidence: structuralConfidence,
+    roomDimensions: { widthM: 1, depthM: 1, heightM: 3 },
+  });
+  const fragmentRatio = diagnostics.wallCount > 0 ? diagnostics.shortWallCount / diagnostics.wallCount : 1;
+  const duplicatePenalty = Math.min(0.35, diagnostics.duplicateWallPairs * 0.04);
+  const offWallPenalty = Math.min(0.25, (diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount) * 0.05);
+  const fragmentPenalty = Math.min(0.3, fragmentRatio * 0.55);
+  const coveragePenalty = diagnostics.boundsCoverageRatio > 0.82
+    ? Math.min(0.18, (diagnostics.boundsCoverageRatio - 0.82) * 0.75)
+    : 0;
+
+  return clampUnit(
+    Number((structuralConfidence - duplicatePenalty - offWallPenalty - fragmentPenalty - coveragePenalty).toFixed(2)),
+  );
 }
 
 /**

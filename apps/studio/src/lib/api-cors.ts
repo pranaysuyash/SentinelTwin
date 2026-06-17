@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export type CorsOptions = {
-  methods?: string[];
+  methods?: readonly string[];
   allowedHeaders?: string[];
   exposeHeaders?: string[];
   maxAgeSeconds?: number;

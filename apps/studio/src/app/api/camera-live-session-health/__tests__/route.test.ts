@@ -64,7 +64,7 @@ describe("camera-live-session-health route", () => {
   test("returns session health summary", async () => {
     const response = await GET(new NextRequest("http://localhost/api/camera-live-session-health"));
     expect(response.status).toBe(200);
-    const body = await response.json() as { ok: boolean; totals: { active: number } };
+    const body = (await response.json()) as { ok: boolean; totals: { active: number }; apiVersion: string; requestId: string; timestamp: string; errorCode?: string };
     expect(body.ok).toBe(true);
     expect(body.errorCode).toBeUndefined();
     expect(body.apiVersion).toBe("1");
@@ -82,7 +82,7 @@ describe("camera-live-session-health route", () => {
     }));
 
     expect(response.status).toBe(200);
-    const body = await response.json() as { ok: boolean; renewedSessionId: string };
+    const body = (await response.json()) as { ok: boolean; renewedSessionId: string; apiVersion: string; requestId: string; timestamp: string; errorCode?: string };
     expect(body.ok).toBe(true);
     expect(body.errorCode).toBeUndefined();
     expect(body.apiVersion).toBe("1");

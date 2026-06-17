@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
     return apiJson(
       request,
       {
-        ok: true,
         ...summary,
+        ok: true,
         storedAt,
         historyCount: history.length,
       },

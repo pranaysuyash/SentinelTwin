@@ -34,7 +34,7 @@ describe("workspace-control-plane route", () => {
     }));
 
     expect(response.status).toBe(200);
-    const body = await response.json() as { ok: boolean; synced: boolean; sceneStatus: string };
+    const body = (await response.json()) as { ok: boolean; synced: boolean; sceneStatus: string; requestId: string; apiVersion: string; timestamp: string; errorCode?: string };
     expect(body.ok).toBe(true);
     expect(body.errorCode).toBeUndefined();
     expect(typeof body.requestId).toBe("string");
@@ -54,7 +54,7 @@ describe("workspace-control-plane route", () => {
 
     const response = await GET(new NextRequest("http://localhost/api/workspace-control-plane"));
     expect(response.status).toBe(200);
-    const body = await response.json() as { ok: boolean };
+    const body = (await response.json()) as { ok: boolean; requestId: string; apiVersion: string; timestamp: string; errorCode?: string };
     expect(body.ok).toBe(true);
     expect(body.errorCode).toBeUndefined();
     expect(typeof body.requestId).toBe("string");

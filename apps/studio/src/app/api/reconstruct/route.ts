@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
 
     const photos = parsed.data.photos
       .map((raw: unknown) => capturePhotoSchema.safeParse(raw))
-      .filter((result: { success: boolean }) => result.success)
-      .map((result: { data: unknown }) => (result as { success: true; data: CapturePhoto }).data);
+      .filter((result): result is { success: true; data: CapturePhoto } => result.success)
+      .map((result) => result.data);
 
     if (photos.length === 0) {
       return apiJson(

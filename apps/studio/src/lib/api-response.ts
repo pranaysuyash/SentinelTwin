@@ -48,7 +48,7 @@ export function apiJson<T extends Record<string, unknown>>(
     requestId?: string;
     apiVersion?: string;
   },
-) {
+): NextResponse<T & { requestId: string; apiVersion: string; timestamp: string }> {
   const envelope = buildRequestMetadata(request, metadata?.requestId, metadata?.apiVersion);
   return corsJson(
     {
@@ -60,7 +60,7 @@ export function apiJson<T extends Record<string, unknown>>(
     request,
     init,
     options,
-  );
+  ) as NextResponse<T & { requestId: string; apiVersion: string; timestamp: string }>;
 }
 
 export function formatValidationIssues(error: z.ZodError): ApiIssue[] {

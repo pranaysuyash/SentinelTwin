@@ -100,6 +100,110 @@ function getEffectiveCameraWallLayout(
   return "quad";
 }
 
+/**
+ * Real live-feed renderer. Renders the bound video stream for a camera that
+ * has a `liveFeedUrl`. The video element is the source of truth for the
+ * surface; the existing `LiveFeedOverlay` (HUD with status, timestamps,
+ * zone quality) sits on top of it like on top of the R3F synthetic POV.
+ *
+ * Notes for operators reading this:
+ * - The `<video>` element plays whatever the URL serves: an MJPEG stream,
+ *   an HTTP progressive MP4, or any browser-supported format. RTSP is NOT
+ *   supported natively by browsers; users who bind an RTSP URL will need
+ *   an external proxy that exposes HLS or MJPEG (this matches the existing
+ *   `camera-live-connection` library's expectation).
+ * - `liveFeedUrl` is the URL on the SecurityScene's camera node, populated
+ *   by the camera inspector's "Live Camera Binding" form.
+ * - When the URL fails to load (404, auth, CORS), we fall back to the
+ *   static "Feed unreachable" badge so the tile doesn't go blank.
+ */
+function LiveFeedVideo({
+  camera: camData,
+  cameraResult,
+  pathVisibility,
+  replayState,
+  isBestCamera = false,
+  timestampLabel,
+}: {
+  camera: CameraNode;
+  cameraResult?: SimulationResult["cameraResults"][number] | null;
+  pathVisibility?: {
+    visibleS: number;
+    totalDurationS: number;
+    maxQuality: string;
+  } | null;
+  replayState?: CameraReplayState | null;
+  isBestCamera?: boolean;
+  timestampLabel: string;
+}) {
+  const [loadState, setLoadState] = useState<"loading" | "playing" | "error">("loading");
+  const feedUrl = camData.liveFeedUrl ?? "";
+
+  useEffect(() => {
+    setLoadState("loading");
+  }, [feedUrl]);
+
+  return (
+    <>
+      <video
+        key={feedUrl}
+        src={feedUrl}
+        autoPlay
+        muted
+        playsInline
+        loop
+        controls={false}
+        className="absolute inset-0 h-full w-full bg-black object-cover"
+        onPlaying={() => setLoadState("playing")}
+        onError={() => setLoadState("error")}
+        onLoadedData={() => setLoadState("playing")}
+      />
+      {/* Subtle scanline overlay for visual consistency with the synthetic
+          POV tiles; also hides a small letterbox when the stream aspect
+          ratio differs from the tile. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px)",
+        }}
+      />
+      {loadState === "error" ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+          <div className="rounded-md border border-amber-500/30 bg-amber-950/40 px-3 py-2 text-center">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+              Feed Unreachable
+            </div>
+            <div className="mt-1 max-w-[18ch] truncate font-mono text-[8px] text-amber-200/80">
+              {feedUrl}
+            </div>
+            <div className="mt-1 text-[8px] text-amber-200/60">
+              Browser couldn't decode this URL. RTSP needs an HLS/MJPEG proxy.
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {loadState === "loading" ? (
+        <div className="absolute left-2 top-9 flex items-center gap-1.5 rounded bg-black/65 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-[#93c5fd]">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#93c5fd]" />
+          Connecting live feed
+        </div>
+      ) : null}
+      <div className="pointer-events-none absolute right-2 top-2 rounded bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-emerald-300">
+        Live
+      </div>
+      <LiveFeedOverlay
+        camera={camData}
+        cameraResult={cameraResult}
+        pathVisibility={pathVisibility}
+        replayState={replayState}
+        isBestCamera={isBestCamera}
+        timestampLabel={timestampLabel}
+      />
+    </>
+  );
+}
+
 function LiveFeedOverlay({
   camera: camData,
   cameraResult,
@@ -258,6 +362,19 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
       )}
     >
       {isActive ? (
+        camData.liveFeedUrl ? (
+          // Real live feed path: render the bound RTSP/HTTP video stream when the
+          // camera has a `liveFeedUrl`. Falls back to the synthetic R3F POV
+          // below for cameras that aren't bound to a live feed.
+          <LiveFeedVideo
+            camera={camData}
+            cameraResult={cameraResult}
+            pathVisibility={pathVisibility}
+            replayState={replayState}
+            isBestCamera={isBestCamera}
+            timestampLabel={timestampLabel}
+          />
+        ) : (
         <>
           <Canvas
             camera={{
@@ -294,6 +411,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
             timestampLabel={timestampLabel}
           />
         </>
+        )
   ) : (
         <>
           {/* Offline state */}

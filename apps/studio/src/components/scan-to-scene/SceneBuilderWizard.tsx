@@ -242,12 +242,12 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#0b0f17]">
       {/* Step indicators */}
-      <div className="flex items-center justify-between border-b border-[#1e2130] px-4 py-2">
+      <div className="flex items-center justify-between border-b border-[#1e2130] px-4 py-3">
         <div className="flex items-center gap-2">
           {["Room Setup", "Method", "Configure", "Review"].map((label, i) => (
             <div key={label} className="flex items-center gap-1.5">
               <div
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-medium ${
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-medium ${
                   i < state.step
                     ? "bg-emerald-500 text-white"
                     : i === state.step
@@ -258,7 +258,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
                 {i < state.step ? <Check className="h-2.5 w-2.5" /> : i + 1}
               </div>
               <span
-                className={`text-[10px] ${
+                className={`text-[11px] ${
                   i === state.step ? "font-medium text-[#c5ccdb]" : "text-[#59637a]"
                 }`}
               >
@@ -270,7 +270,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
         </div>
         <button type="button"
           onClick={handleReset}
-          className="flex items-center gap-1 rounded px-2 py-1 text-[9px] text-[#59637a] hover:text-white"
+          className="flex items-center gap-1 rounded px-2 py-1 text-[11px] text-[#59637a] hover:text-white"
         >
           <RotateCcw className="h-3 w-3" /> Reset
         </button>
@@ -291,10 +291,10 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between border-t border-[#1e2130] px-4 py-2">
+      <div className="flex items-center justify-between border-t border-[#1e2130] px-4 py-3">
         <button type="button"
           onClick={() => state.step > 0 ? goTo(state.step - 1) : onClose?.()}
-          className="flex items-center gap-1 rounded-lg border border-[#1e2130] px-3 py-1.5 text-[10px] text-[#68738a] transition-colors hover:border-[#2a3045] hover:text-white"
+          className="flex items-center gap-1 rounded-lg border border-[#1e2130] px-3 py-2 text-[11px] text-[#68738a] transition-colors hover:border-[#2a3045] hover:text-white"
         >
           <ArrowLeft className="h-3 w-3" />
           {state.step > 0 ? "Back" : "Cancel"}
@@ -304,7 +304,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
           <button type="button"
             onClick={() => goTo(state.step + 1)}
             disabled={!canAdvance}
-            className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-[10px] font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+            className="flex items-center gap-1 rounded-lg bg-blue-600 px-4 py-2 text-[11px] font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
           >
             Next
             <ArrowRight className="h-3 w-3" />
@@ -312,9 +312,9 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
         ) : (
           <button type="button"
             onClick={handleCreate}
-            className="flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-1.5 text-[10px] font-medium text-white transition-colors hover:bg-emerald-500"
+            className="flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-2 text-[11px] font-medium text-white transition-colors hover:bg-emerald-500"
           >
-            <Plus className="h-3 w-3" /> Create Scene
+            <Plus className="h-3 w-3" /> {state.importMethod === "floor_plan" ? "Create Draft Scene" : "Create Scene"}
           </button>
         )}
       </div>
@@ -534,7 +534,15 @@ function ConfigureStep({
         </p>
 
         {value.floorPlanResult ? (
-          <div>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-3">
+              <div className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#8090a8]">How this review works</div>
+              <div className="mt-2 grid gap-2 text-[9px] text-[#9bb0ce] md:grid-cols-3">
+                <div className="rounded border border-[#1f2a3e] bg-[#0a0f18] px-2 py-1.5">1. Check the zoomed draft shell and remove obvious false positives.</div>
+                <div className="rounded border border-[#1f2a3e] bg-[#0a0f18] px-2 py-1.5">2. Apply known plan dimensions if the detector guessed the footprint incorrectly.</div>
+                <div className="rounded border border-[#1f2a3e] bg-[#0a0f18] px-2 py-1.5">3. Continue only when the shell looks credible enough to become a draft scene.</div>
+              </div>
+            </div>
             <ImportReview
               key={`${value.floorPlanResult.imageWidth}x${value.floorPlanResult.imageHeight}-${value.floorPlanResult.walls.length}-${value.floorPlanResult.doors.length}-${value.floorPlanResult.windows.length}-${value.floorPlanResult.confidence.toFixed(3)}`}
               result={value.floorPlanResult}
@@ -741,6 +749,9 @@ function ReviewStep({
       {value.importMethod === "floor_plan" && value.floorPlanResult ? (
         <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-3">
           <div className="text-[8px] font-medium uppercase tracking-wider text-[#59637a]">Floor Plan Commit Summary</div>
+          <div className="mt-1 text-[8px] text-[#8090a8]">
+            This action creates a draft scene shell for Studio review. It does not imply the floor plan is production-trusted.
+          </div>
           <div className="mt-2 grid grid-cols-2 gap-2 text-[9px] text-[#8090a8]">
             <div>Detection confidence: <span className="text-[#c5ccdb]">{(value.floorPlanResult.confidence * 100).toFixed(0)}%</span></div>
             <div>Tier 1 gate: <span className="text-[#c5ccdb]">{formatGateAction(value.floorPlanGateDecision?.action ?? "proceed_to_tier2")}</span></div>

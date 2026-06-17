@@ -89,6 +89,66 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
   const confidenceBand = confidencePct >= 75 ? "high" : confidencePct >= 50 ? "medium" : "low";
   const hasManualCalibration = Boolean(result.manualCalibration);
   const qualityPct = semanticContext ? Math.round(semanticContext.qualityScore * 100) : null;
+  const previewViewport = useMemo(() => {
+    const xs: number[] = [];
+    const ys: number[] = [];
+
+    draftWalls.forEach((wall, index) => {
+      if (!(wallMask[index] ?? true)) return;
+      xs.push(wall.start.x, wall.end.x);
+      ys.push(wall.start.y, wall.end.y);
+    });
+    draftDoors.forEach((door, index) => {
+      if (!(doorMask[index] ?? true)) return;
+      xs.push(door.position.x);
+      ys.push(door.position.y);
+    });
+    draftWindows.forEach((window, index) => {
+      if (!(windowMask[index] ?? true)) return;
+      xs.push(window.position.x);
+      ys.push(window.position.y);
+    });
+
+    if (xs.length === 0 || ys.length === 0) {
+      return {
+        minX: 0,
+        minY: 0,
+        width: result.imageWidth,
+        height: result.imageHeight,
+      };
+    }
+
+    const minX = Math.max(0, Math.min(...xs) - 80);
+    const maxX = Math.min(result.imageWidth, Math.max(...xs) + 80);
+    const minY = Math.max(0, Math.min(...ys) - 80);
+    const maxY = Math.min(result.imageHeight, Math.max(...ys) + 80);
+
+    return {
+      minX,
+      minY,
+      width: Math.max(240, maxX - minX),
+      height: Math.max(180, maxY - minY),
+    };
+  }, [draftDoors, draftWalls, draftWindows, doorMask, result.imageHeight, result.imageWidth, wallMask, windowMask]);
+  const nextStepGuidance = useMemo(() => {
+    const guidance: string[] = [];
+    if (gateDecision?.action === "human_review") {
+      guidance.push("Manual review is required because the import still has signals that are too noisy to trust automatically.");
+    }
+    if (diagnostics.duplicateWallPairs > 0) {
+      guidance.push(`Review duplicate walls first. ${diagnostics.duplicateWallPairs} near-duplicate pairs are still present.`);
+    }
+    if ((diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount) > 0) {
+      guidance.push("Check door and window markers. Some openings are still not aligned to a matching wall.");
+    }
+    if (diagnostics.shortWallCount > 0) {
+      guidance.push("Short wall fragments are still present. Exclude obvious noise before continuing.");
+    }
+    if (guidance.length === 0) {
+      guidance.push("This draft looks coherent enough to continue. Move to review and create the draft scene shell.");
+    }
+    return guidance;
+  }, [diagnostics.duplicateWallPairs, diagnostics.shortWallCount, diagnostics.unsnappedDoorCount, diagnostics.unsnappedWindowCount, gateDecision?.action]);
 
   const updateDraggedOpening = (
     event: ReactPointerEvent<SVGSVGElement>,
@@ -119,21 +179,21 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
   };
 
   return (
-    <div className="space-y-3">
-      <div className="rounded-lg border border-[#22314b] bg-[#0b1220] p-2">
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-[#22314b] bg-[#0b1220] p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#9bb0cf]">Floor Plan Review</div>
-            <div className="mt-0.5 text-[8px] text-[#7083a5]">Review detected walls, openings, and warnings before creating a site twin draft.</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9bb0cf]">Floor Plan Review</div>
+            <div className="mt-1 max-w-[720px] text-[12px] leading-5 text-[#9aaed0]">Review the extracted shell before creating a draft. This screen is for calibration, false-positive cleanup, and opening placement checks.</div>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-1">
             {hasManualCalibration ? (
-              <span className="rounded border border-blue-500/30 bg-blue-500/12 px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-blue-100">
+              <span className="rounded border border-blue-500/30 bg-blue-500/12 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-blue-100">
                 Manual footprint
               </span>
             ) : null}
             <span
-              className={`rounded border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] ${
+              className={`rounded border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${
                 confidenceBand === "high"
                   ? "border-emerald-500/30 bg-emerald-500/12 text-emerald-200"
                   : confidenceBand === "medium"
@@ -145,16 +205,16 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
             </span>
           </div>
         </div>
-        <div className="mt-2 grid grid-cols-3 gap-2 text-[8px]">
-          <div className="rounded border border-[#1f2a3e] bg-[#0a101d] px-2 py-1 text-[#9fb2d1]">
+        <div className="mt-4 grid gap-2 text-[10px] md:grid-cols-3">
+          <div className="rounded-xl border border-[#1f2a3e] bg-[#0a101d] px-3 py-2 text-[#9fb2d1]">
             <div className="text-[#6f82a4]">Warnings</div>
             <div className={unresolvedCount > 0 ? "text-amber-200" : "text-emerald-200"}>{unresolvedCount} unresolved</div>
           </div>
-          <div className="rounded border border-[#1f2a3e] bg-[#0a101d] px-2 py-1 text-[#9fb2d1]">
+          <div className="rounded-xl border border-[#1f2a3e] bg-[#0a101d] px-3 py-2 text-[#9fb2d1]">
             <div className="text-[#6f82a4]">Openings</div>
             <div>{result.doors.length + result.windows.length} total</div>
           </div>
-          <div className="rounded border border-[#1f2a3e] bg-[#0a101d] px-2 py-1 text-[#9fb2d1]">
+          <div className="rounded-xl border border-[#1f2a3e] bg-[#0a101d] px-3 py-2 text-[#9fb2d1]">
             <div className="text-[#6f82a4]">Walls</div>
             <div>{result.walls.length} detected</div>
           </div>
@@ -162,84 +222,94 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
       </div>
 
       {gateDecision ? (
-        <div className="rounded-lg border border-[#22314b] bg-[#0a111d] p-2">
+        <div className="rounded-2xl border border-[#22314b] bg-[#0a111d] p-4">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#9bb0cf]">Tier 1 Gate</div>
-              <div className="mt-0.5 text-[10px] font-medium text-[#d5deed]">{formatGateAction(gateDecision.action)}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9bb0cf]">Tier 1 Gate</div>
+              <div className="mt-1 text-[14px] font-medium text-[#d5deed]">{formatGateAction(gateDecision.action)}</div>
             </div>
             {qualityPct != null ? (
-              <span className="rounded border border-[#2a3045] bg-[#0f1727] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#b2c4de]">
+              <span className="rounded border border-[#2a3045] bg-[#0f1727] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[#b2c4de]">
                 Quality {qualityPct}%
               </span>
             ) : null}
           </div>
-          <div className="mt-1 text-[8px] text-[#7f93b3]">{gateDecision.reason}</div>
+          <div className="mt-2 text-[12px] leading-5 text-[#9aaed0]">{gateDecision.reason}</div>
         </div>
       ) : null}
 
-      {/* Confidence & metrics */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2 text-center">
-          <div className="text-[14px] font-bold text-[#c5ccdb]">
+      <div className="rounded-2xl border border-[#1f2a3e] bg-[#0a111d] p-4">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9bb0cf]">What to check before continuing</div>
+        <ul className="mt-3 space-y-2">
+          {nextStepGuidance.map((item) => (
+            <li key={item} className="flex items-start gap-2 text-[13px] leading-5 text-[#d2ddf0]">
+              <span className="mt-1 h-2 w-2 flex-none rounded-full bg-sky-400" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4 text-center">
+          <div className="text-[22px] font-bold text-[#c5ccdb]">
             {result.walls.length}
           </div>
-          <div className="text-[8px] text-[#59637a]">Walls Detected</div>
+          <div className="text-[11px] text-[#59637a]">Walls Detected</div>
         </div>
-        <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2 text-center">
-          <div className="text-[14px] font-bold text-[#c5ccdb]">
+        <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4 text-center">
+          <div className="text-[22px] font-bold text-[#c5ccdb]">
             {(result.confidence * 100).toFixed(0)}%
           </div>
-          <div className="text-[8px] text-[#59637a]">Import Trust</div>
+          <div className="text-[11px] text-[#59637a]">Import Trust</div>
         </div>
-        <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2 text-center">
-          <div className="text-[14px] font-bold text-[#c5ccdb]">
+        <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4 text-center">
+          <div className="text-[22px] font-bold text-[#c5ccdb]">
             {result.roomDimensions.widthM}×{result.roomDimensions.depthM}
           </div>
-          <div className="text-[8px] text-[#59637a]">{hasManualCalibration ? "Scene Footprint (locked)" : "Scene Footprint (m)"}</div>
+          <div className="text-[11px] text-[#59637a]">{hasManualCalibration ? "Scene Footprint (locked)" : "Scene Footprint (m)"}</div>
         </div>
       </div>
 
-      {/* Detection details */}
-      <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
+      <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4">
         <div className="flex items-center justify-between">
-          <span className="text-[9px] font-medium text-[#59637a]">Detection Details</span>
+          <span className="text-[11px] font-medium text-[#9bb0cf]">Detection Details</span>
         </div>
-        <div className="mt-1.5 space-y-1">
-          <div className="flex justify-between text-[8px]">
+        <div className="mt-3 grid gap-x-6 gap-y-2 md:grid-cols-2">
+          <div className="flex justify-between gap-3 text-[11px]">
             <span className="text-[#3a4158]">Image Size</span>
             <span className="text-[#68738a]">{result.imageWidth}×{result.imageHeight}px</span>
           </div>
-          <div className="flex justify-between text-[8px]">
+          <div className="flex justify-between gap-3 text-[11px]">
             <span className="text-[#3a4158]">Scale</span>
             <span className="text-[#68738a]">{result.scalePixelsPerMeter} px/m</span>
           </div>
-          <div className="flex justify-between text-[8px]">
+          <div className="flex justify-between gap-3 text-[11px]">
             <span className="text-[#3a4158]">Doors Detected</span>
             <span className="text-[#68738a]">{result.doors.length}</span>
           </div>
-          <div className="flex justify-between text-[8px]">
+          <div className="flex justify-between gap-3 text-[11px]">
             <span className="text-[#3a4158]">Windows Detected</span>
             <span className="text-[#68738a]">{result.windows.length}</span>
           </div>
-          <div className="flex justify-between text-[8px]">
+          <div className="flex justify-between gap-3 text-[11px]">
             <span className="text-[#3a4158]">Wall Orientation</span>
             <span className="text-[#68738a]">H {diagnostics.horizontalWallCount} / V {diagnostics.verticalWallCount} / D {diagnostics.diagonalWallCount}</span>
           </div>
-          <div className="flex justify-between text-[8px]">
+          <div className="flex justify-between gap-3 text-[11px]">
             <span className="text-[#3a4158]">Review Flags</span>
             <span className="text-[#68738a]">{diagnostics.duplicateWallPairs} dup · {diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount} off-wall · {diagnostics.shortWallCount} short</span>
           </div>
-          <div className="flex justify-between text-[8px]">
+          <div className="flex justify-between gap-3 text-[11px] md:col-span-2">
             <span className="text-[#3a4158]">Plan Coverage</span>
             <span className="text-[#68738a]">{Math.round(diagnostics.boundsCoverageRatio * 100)}% of image bounds</span>
           </div>
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
+      <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4">
         <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-[9px] font-medium text-[#59637a]">Detection Corrections</span>
+          <span className="text-[11px] font-medium text-[#9bb0cf]">Detection Corrections</span>
           <button type="button"
             onClick={() => {
               setWallMask(result.walls.map(() => true));
@@ -250,17 +320,19 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
               setDraftWindows(result.windows);
               setDragging(null);
             }}
-            className="text-[8px] text-[#8ea5c6] hover:text-white"
+            className="text-[11px] text-[#8ea5c6] hover:text-white"
           >
             Reset
           </button>
         </div>
 
-        <div className="mb-2 rounded border border-[#1b2233] bg-[#0b1220] p-1.5">
-          <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#4f5a72]">Spatial Preview</div>
+        <div className="mb-4 rounded-xl border border-[#1b2233] bg-[#0b1220] p-3">
+          <div className="mb-1 text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Spatial Preview</div>
+          <div className="mb-2 text-[12px] leading-5 text-[#9aaed0]">Preview is zoomed to the extracted geometry so you can inspect the actual draft shell instead of the full uploaded sheet.</div>
           <svg
-            viewBox={`0 0 ${result.imageWidth} ${result.imageHeight}`}
-            className="h-24 w-full rounded bg-[#060a12]"
+            viewBox={`${previewViewport.minX} ${previewViewport.minY} ${previewViewport.width} ${previewViewport.height}`}
+            className="h-64 w-full rounded-xl bg-[#060a12]"
+            preserveAspectRatio="xMidYMid meet"
             onPointerMove={(event) => {
               if (!dragging) return;
               updateDraggedOpening(event, dragging);
@@ -326,10 +398,10 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
               />
             ))}
           </svg>
-          <div className="mt-1 text-[8px] text-[#4f5a72]">Blue/cyan/green = kept, red = excluded. Drag wall endpoints and door/window markers to correct placement.</div>
+          <div className="mt-2 text-[11px] leading-5 text-[#7f93b3]">Blue, cyan, and green items stay in the draft. Red items are excluded. Drag wall endpoints and opening markers to correct placement.</div>
         </div>
 
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => {
@@ -349,7 +421,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
                 return copy;
               });
             }}
-            className="rounded border border-[#2a3045] px-2 py-1 text-[8px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+            className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
           >
             Split First Kept Wall
           </button>
@@ -369,7 +441,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
               setDraftWalls(next);
               setWallMask(new Array(next.length).fill(true));
             }}
-            className="rounded border border-[#2a3045] px-2 py-1 text-[8px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+            className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
           >
             Merge First Two Kept Walls
           </button>
@@ -385,18 +457,21 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
                 return { ...wall, end: { x: wall.start.x, y: wall.end.y } };
               }));
             }}
-            className="rounded border border-[#2a3045] px-2 py-1 text-[8px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+            className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
           >
             Snap Kept Walls Orthogonal
           </button>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-3">
           <div>
-            <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#4f5a72]">Walls</div>
-            <div className="max-h-20 space-y-1 overflow-y-auto pr-1">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Walls</div>
+              <div className="text-[11px] text-[#6d819f]">Checked items stay in the draft</div>
+            </div>
+            <div className="max-h-32 space-y-1.5 overflow-y-auto pr-1">
               {draftWalls.slice(0, 20).map((wall, index) => (
-                <label key={`wall-${index}`} className="flex items-center justify-between rounded border border-[#1b2233] px-1.5 py-1 text-[8px] text-[#9bb0ce]">
+                <label key={`wall-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
                   <span>
                     W{index + 1}: ({wall.start.x},{wall.start.y}) → ({wall.end.x},{wall.end.y})
                   </span>
@@ -414,14 +489,14 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#4f5a72]">Doors</div>
-              <div className="max-h-16 space-y-1 overflow-y-auto pr-1">
+              <div className="mb-2 text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Doors</div>
+              <div className="max-h-24 space-y-1.5 overflow-y-auto pr-1">
                 {result.doors.length === 0 ? (
-                  <div className="text-[8px] text-[#4f5a72]">None detected</div>
+                  <div className="text-[11px] text-[#4f5a72]">None detected</div>
                 ) : draftDoors.map((door, index) => (
-                  <label key={`door-${index}`} className="flex items-center justify-between rounded border border-[#1b2233] px-1.5 py-1 text-[8px] text-[#9bb0ce]">
+                  <label key={`door-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
                     <span>D{index + 1}: {door.widthM}m @ ({door.position.x},{door.position.y})</span>
                     <input
                       type="checkbox"
@@ -438,12 +513,12 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
             </div>
 
             <div>
-              <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#4f5a72]">Windows</div>
-              <div className="max-h-16 space-y-1 overflow-y-auto pr-1">
+              <div className="mb-2 text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Windows</div>
+              <div className="max-h-24 space-y-1.5 overflow-y-auto pr-1">
                 {result.windows.length === 0 ? (
-                  <div className="text-[8px] text-[#4f5a72]">None detected</div>
+                  <div className="text-[11px] text-[#4f5a72]">None detected</div>
                 ) : draftWindows.map((window, index) => (
-                  <label key={`window-${index}`} className="flex items-center justify-between rounded border border-[#1b2233] px-1.5 py-1 text-[8px] text-[#9bb0ce]">
+                  <label key={`window-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
                     <span>Wn{index + 1}: {window.widthM}m @ ({window.position.x},{window.position.y})</span>
                     <input
                       type="checkbox"
@@ -461,8 +536,8 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
           </div>
         </div>
 
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-[8px] text-[#4f5a72]">Uncheck false detections, then apply.</span>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <span className="text-[11px] leading-5 text-[#7f93b3]">Uncheck false detections, then apply the cleaned draft.</span>
           <button type="button"
             disabled={!hasFilteredEdits}
             onClick={() => {
@@ -474,43 +549,44 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
               };
               onUpdateResult(normalizeFloorPlanResult(filtered));
             }}
-            className="rounded border border-[#2a3045] px-2 py-1 text-[8px] text-[#93a5c7] transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40"
+            className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40"
           >
             Apply Corrections
           </button>
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
-        <div className="mb-1.5 text-[9px] font-medium text-[#59637a]">Scale Calibration (meters)</div>
-        <div className="grid grid-cols-3 gap-1.5">
-          <label className="text-[8px] text-[#59637a]">
+      <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4">
+        <div className="mb-1.5 text-[11px] font-medium text-[#9bb0cf]">Known Footprint (meters)</div>
+        <div className="mb-3 text-[12px] leading-5 text-[#9aaed0]">Use the real plan dimensions here. Applying calibration locks the scene footprint to these values instead of the detector-derived estimate.</div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <label className="text-[11px] text-[#59637a]">
             Width
             <input
               value={widthM}
               onChange={(event) => setWidthM(event.target.value)}
-              className="mt-0.5 w-full rounded border border-[#1e2130] bg-[#0a0f18] px-1.5 py-1 text-[9px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+              className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#0a0f18] px-2 py-2 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
             />
           </label>
-          <label className="text-[8px] text-[#59637a]">
+          <label className="text-[11px] text-[#59637a]">
             Depth
             <input
               value={depthM}
               onChange={(event) => setDepthM(event.target.value)}
-              className="mt-0.5 w-full rounded border border-[#1e2130] bg-[#0a0f18] px-1.5 py-1 text-[9px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+              className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#0a0f18] px-2 py-2 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
             />
           </label>
-          <label className="text-[8px] text-[#59637a]">
+          <label className="text-[11px] text-[#59637a]">
             Height
             <input
               value={heightM}
               onChange={(event) => setHeightM(event.target.value)}
-              className="mt-0.5 w-full rounded border border-[#1e2130] bg-[#0a0f18] px-1.5 py-1 text-[9px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+              className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#0a0f18] px-2 py-2 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
             />
           </label>
         </div>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-[8px] text-[#4f5a72]">
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <span className="text-[11px] leading-5 text-[#7f93b3]">
             {hasManualCalibration
               ? "Manual calibration is active. Apply new values to replace the locked scene footprint."
               : "Use known room dimensions to lock the scene footprint and refine scale."}
@@ -525,7 +601,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
               }
             }}
             disabled={!hasCalibrationChange}
-            className="rounded border border-[#2a3045] px-2 py-1 text-[8px] text-[#93a5c7] transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40"
+            className="rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-[11px] font-medium text-blue-100 transition-colors hover:border-blue-400 hover:bg-blue-500/16 hover:text-white disabled:opacity-40"
           >
             Apply Calibration
           </button>
@@ -534,14 +610,14 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
 
       {/* Warnings */}
       {warnings.length > 0 && (
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-2">
-          <div className="flex items-center gap-1 text-[9px] font-medium text-amber-400">
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3">
+          <div className="flex items-center gap-1 text-[11px] font-medium text-amber-400">
             <AlertTriangle className="h-3 w-3" />
             Detection Warnings
           </div>
-          <ul className="mt-1 space-y-0.5">
+          <ul className="mt-2 space-y-1.5">
             {warnings.map((w, i) => (
-              <li key={i} /* stable display list */ className="flex items-start gap-1 text-[8px] text-amber-300/80">
+              <li key={i} /* stable display list */ className="flex items-start gap-1.5 text-[11px] leading-5 text-amber-300/80">
                 <span className="mt-0.5 block h-1 w-1 flex-shrink-0 rounded-full bg-amber-400/40" />
                 {w}
               </li>
@@ -552,16 +628,16 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
 
       {/* Success state */}
       {warnings.length === 0 && result.walls.length >= 4 && (
-        <div className="flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5">
+        <div className="flex items-center gap-1.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
           <CheckCircle2 className="h-3 w-3 text-emerald-400" />
-          <span className="text-[9px] text-emerald-300">Floor plan processed successfully</span>
+          <span className="text-[11px] text-emerald-300">Floor plan processed successfully</span>
         </div>
       )}
 
       {/* Re-upload button */}
       <button type="button"
         onClick={onImageChange}
-        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#1e2130] px-3 py-2 text-[9px] text-[#59637a] transition-colors hover:border-[#2a3045] hover:text-[#68738a]"
+        className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-[#1e2130] px-3 py-3 text-[11px] text-[#59637a] transition-colors hover:border-[#2a3045] hover:text-[#68738a]"
       >
         <RotateCcw className="h-3 w-3" />
         Choose different image

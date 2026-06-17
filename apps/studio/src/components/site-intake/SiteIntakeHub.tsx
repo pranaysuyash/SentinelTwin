@@ -344,7 +344,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
               <p className="mt-4 text-[19px] leading-7 text-slate-300">
                 Turn a physical site into a trusted, editable site twin.
               </p>
-              <p className="text-[19px] leading-7 text-slate-300">Choose how you want to start.</p>
+              <p className="text-[19px] leading-7 text-slate-300">Choose the source that best matches what you already have.</p>
             </div>
 
             <div className="mt-1 flex h-12 items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-4 text-[15px] text-slate-300">
@@ -353,9 +353,9 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
             </div>
           </div>
 
-          <div className="mt-10 grid min-h-0 flex-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="mt-10 grid min-h-0 flex-1 gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
             <section className="min-w-0">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 {cards.map((card) => {
                   const isSelected = selectedSourceId === card.id;
                   const Icon = card.icon;
@@ -391,7 +391,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                           ].join(" ")}>
                             {card.status}
                           </span>
-                          <p className="mt-4 max-w-[240px] text-[17px] leading-7 text-slate-300">{card.description}</p>
+                          <p className="mt-4 max-w-[260px] text-[16px] leading-6 text-slate-300">{card.description}</p>
                         </div>
                       </div>
                       <div className="mt-7 border-t border-white/8 pt-4 text-[14px] text-slate-400">
@@ -420,8 +420,8 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                     <selected.icon className={`h-6 w-6 ${tClasses.text}`} />
                   </div>
                   <div>
-                    <h2 className="text-[31px] font-medium tracking-[-0.03em] text-white">{selected.title}</h2>
-                    <div className="mt-2 flex items-center gap-2 text-[18px] text-emerald-300">
+                    <h2 className="text-[30px] font-medium tracking-[-0.03em] text-white">{selected.title}</h2>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[16px] text-emerald-300">
                       <span className="h-2 w-2 rounded-full bg-emerald-400" />
                       <span>Draft-gated · {selected.status}</span>
                     </div>
@@ -432,40 +432,36 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                 ) : null}
               </div>
 
-              <p className="mt-7 max-w-[560px] border-b border-white/8 pb-6 text-[18px] leading-8 text-slate-300">
+              <p className="mt-6 max-w-[560px] text-[17px] leading-7 text-slate-300">
                 {selected.detail.description}
               </p>
 
-              <div className="border-b border-white/8 py-6">
-                <div className="grid gap-6 xl:grid-cols-2">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/8 text-[15px] text-slate-300">
-                      <span className="relative top-px">👥</span>
-                    </div>
-                    <div>
-                      <div className="text-[14px] font-medium text-white">Best for</div>
-                      <div className="mt-1 max-w-[260px] text-[14px] leading-6 text-slate-300">{selected.detail.bestFor}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/8 text-[15px] text-slate-300">
-                      <span className="relative top-px">↪</span>
-                    </div>
-                    <div>
-                      <div className="text-[14px] font-medium text-white">Output</div>
-                      <div className="mt-1 max-w-[260px] text-[14px] leading-6 text-slate-300">{selected.detail.outputDetail}</div>
-                    </div>
-                  </div>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/8 bg-[#0c1420] p-4">
+                  <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8ca3c8]">Best for</div>
+                  <div className="mt-2 text-[15px] leading-6 text-slate-200">{selected.detail.bestFor}</div>
+                </div>
+                <div className="rounded-2xl border border-white/8 bg-[#0c1420] p-4">
+                  <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8ca3c8]">Output</div>
+                  <div className="mt-2 text-[15px] leading-6 text-slate-200">{selected.detail.outputDetail}</div>
+                </div>
+                <div className="rounded-2xl border border-white/8 bg-[#0c1420] p-4">
+                  <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8ca3c8]">Review level</div>
+                  <div className="mt-2 text-[15px] leading-6 text-slate-200">{selected.review}</div>
+                </div>
+                <div className="rounded-2xl border border-white/8 bg-[#0c1420] p-4">
+                  <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8ca3c8]">Average time</div>
+                  <div className="mt-2 text-[15px] leading-6 text-slate-200">{selected.detail.timeEstimate}</div>
                 </div>
               </div>
 
-              <div className="grid gap-5 py-6 xl:grid-cols-[minmax(0,1fr)_252px]">
+              <div className="grid gap-5 py-6">
                 <div>
                   <div className="mb-4 text-[17px] font-medium text-white">What you&apos;ll do</div>
-                  <ol className="space-y-4">
+                  <ol className="space-y-3">
                     {selected.detail.steps.map((step, index) => (
-                      <li key={step} className="flex items-center gap-4 text-[16px] text-slate-300">
-                        <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-sky-500 text-[14px] font-medium text-white">
+                      <li key={step} className="flex items-start gap-4 text-[15px] text-slate-300">
+                        <span className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full bg-sky-500 text-[14px] font-medium text-white">
                           {index + 1}
                         </span>
                         <span className="leading-6">{step}</span>
@@ -474,19 +470,12 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                   </ol>
                 </div>
 
-                <div className="self-start rounded-2xl border border-white/8 bg-[#0c1420] p-4">
-                  <div className="grid gap-4 text-[14px] text-slate-300">
-                    <div>
-                      <div className="text-white">Review level</div>
-                      <div className="mt-1">{selected.review}</div>
-                    </div>
+                <div className="rounded-2xl border border-white/8 bg-[#0c1420] p-4">
+                  <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8ca3c8]">Before you start</div>
+                  <div className="mt-3 grid gap-4 text-[14px] text-slate-300 sm:grid-cols-2">
                     <div>
                       <div className="text-white">Confidence</div>
-                      <div className="mt-1">{selected.detail.confidence}</div>
-                    </div>
-                    <div>
-                      <div className="text-white">Average time</div>
-                      <div className="mt-1">{selected.detail.timeEstimate}</div>
+                      <div className="mt-1 leading-6">{selected.detail.confidence}</div>
                     </div>
                     <div>
                       <div className="text-white">Limitations</div>

@@ -10,6 +10,7 @@ describe("SiteIntakeHub", () => {
     const source = readFileSync(siteIntakeHubPath, "utf8");
 
     expect(source).toContain("Guided capture + manual review");
+    expect(source).toContain("Choose the source that best matches what you already have.");
     expect(source).toContain("Output");
     expect(source).toContain('Output:');
     expect(source).toContain('{card.output}');
@@ -63,6 +64,7 @@ describe("SiteIntakeHub", () => {
 
     expect(source).toContain("Import Site Twin JSON");
     expect(source).toContain("Draft-gated · {selected.status}");
+    expect(source).toContain("Before you start");
     expect(source).not.toContain("Import JSON or floor plan");
     expect(source).not.toContain("Manual-assisted · {selected.status}");
   });

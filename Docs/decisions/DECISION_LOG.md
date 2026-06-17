@@ -75,6 +75,33 @@ This pass standardized `errorCode` on failure paths, wrapped the `draft-scene` h
 - Leave route-local error keys in place: rejected because it preserves contract drift and makes client handling inconsistent.
 - Keep the heuristic draft response outside `apiJson`: rejected because it breaks the same envelope guarantee that the rest of the studio APIs now provide.
 
+## D-319 | 2026-06-18 | Buyer-facing intake and floor-plan review must privilege trust, legibility, and draft honesty over detector internals
+
+**Decision:** Rework the `Create Site Twin` intake detail panel and the floor-plan correction/review surface so they behave like product guidance, not internal tooling telemetry.
+
+Applied changes:
+- `apps/studio/src/components/site-intake/SiteIntakeHub.tsx`
+  - reduced right-panel crowding by replacing the compressed two-column text block with spaced summary cards (`Best for`, `Output`, `Review level`, `Average time`);
+  - kept truthful maturity language but reframed the hero copy around source selection instead of a generic wizard prompt;
+  - separated process steps from limitations so the primary CTA is no longer visually competing with dense copy.
+- `apps/studio/src/components/scan-to-scene/ImportReview.tsx`
+  - zoom the preview to the extracted geometry bounds instead of the full uploaded sheet so the review surface shows the actual draft shell at a readable scale;
+  - add plain-language "What to check before continuing" guidance derived from gate state and diagnostics;
+  - make calibration visually prominent and explicitly describe it as a footprint lock, matching the authority change from the prior floor-plan trust pass.
+- `apps/studio/src/components/scan-to-scene/SceneBuilderWizard.tsx`
+  - explain the floor-plan correction flow in-product;
+  - rename the final CTA for floor-plan imports to `Create Draft Scene` so the action no longer implies production-trusted geometry.
+
+**Rationale:**
+- The live buyer walkthrough showed that the existing surfaces were technically rich but commercially fragile: crowded intake copy, tiny correction preview, weak calibration affordance, and a final CTA that overstated certainty.
+- In a trust-sensitive workflow, legibility and semantic honesty are product behavior, not polish. If the UI says "100%" while the preview looks wrong, buyers correctly treat the product as dishonest.
+- Draft-oriented naming and plain-language review guidance preserve the deterministic CV pipeline while making its current maturity legible to non-authors.
+
+**Alternatives rejected:**
+- Keep the internal-tool density and rely on future training/docs: rejected because the failed demo proved the product surface itself is the first training artifact.
+- Hide diagnostics entirely: rejected because operators still need geometry-level review; the problem was presentation and sequencing, not the existence of diagnostics.
+- Allow the floor-plan flow to keep using a production-sounding `Create Scene` CTA: rejected because draft gating is a core truth of the feature.
+
 ## D-294 | 2026-06-01 | Deterministic seek-aware path replay timing loop
 
 **Decision:** Path replay playback in `PathReplayView.tsx` now uses a requestAnimationFrame-based timeline loop with an explicit time anchor so slider scrubbing while playing reuses the same loop without stutter or timeline drift.

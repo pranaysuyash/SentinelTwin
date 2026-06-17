@@ -7314,3 +7314,17 @@ pass.
 - Treat calibration as a source-of-truth override once the user applies it.
 - Separate detector confidence from buyer-facing import trust/readiness.
 - Keep scene metadata editable inside the floor-plan flow itself instead of relying on earlier wizard steps that direct intake may skip.
+
+### Thread: Demo fallout beyond detector quality
+
+**Observed after the first trust fixes**
+- The intake hub still looked cramped on the right-hand detail panel, especially around `What you'll do`, limitations, and the CTA.
+- The floor-plan correction preview showed the full uploaded sheet instead of the extracted geometry, making the review target look tiny even when the detector had enough signal to continue.
+- Checkboxes and correction helpers exposed the right primitives, but the surface did not explain what a buyer/operator should actually do next.
+- `Create Scene` on the floor-plan path sounded more final than the real behavior, which is still a draft shell requiring Studio review.
+
+**Implementation direction**
+- Treat buyer-facing intake panels as product storytelling surfaces, not simply data-dense configuration panes.
+- Zoom geometry review to the extracted draft shell, not the entire upload canvas.
+- Add plain-language next-step guidance that translates diagnostics into operator actions.
+- Use draft-honest CTA language throughout any import path that still requires downstream verification.

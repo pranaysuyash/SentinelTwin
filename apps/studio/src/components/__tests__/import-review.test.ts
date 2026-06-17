@@ -15,12 +15,15 @@ describe("ImportReview", () => {
     expect(source).toContain("draftWindows.filter");
     expect(source).toContain("Spatial Preview");
     expect(source).toContain("normalizeFloorPlanResult(filtered)");
-    expect(source).toContain("Drag wall endpoints and door/window markers");
+    expect(source).toContain("Drag wall endpoints and opening markers");
     expect(source).toContain("Split First Kept Wall");
     expect(source).toContain("Merge First Two Kept Walls");
     expect(source).toContain("Snap Kept Walls Orthogonal");
     expect(source).toContain("Import trust");
     expect(source).toContain("Manual footprint");
     expect(source).toContain("Tier 1 Gate");
+    expect(source).toContain("Preview is zoomed to the extracted geometry");
+    expect(source).toContain("What to check before continuing");
+    expect(source).toContain("Applying calibration locks the scene footprint");
   });
 });

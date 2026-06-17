@@ -7255,3 +7255,31 @@ or always shown as a smaller secondary line (so a security professional who
 plain-language headline)? Leaning toward the latter — dual-label, not
 hide — but this is a design call worth a quick UI sketch before a large copy
 pass.
+
+## 2026-06-17 - PDF export engine replacement
+
+### Thread: Lightweight open-source PDF generation for studio exports
+
+**Why this thread exists**
+- We needed to eliminate the remaining jsPDF / dompurify advisory chain while keeping the PDF export flow feature-rich enough for audit reports, compare text exports, and director's-cut incident replay PDFs.
+- The replacement had to stay browser-friendly, open source, and lightweight enough for a client-side export path.
+
+**Options reviewed**
+- `pdf-lib`
+  - MIT licensed, pure JavaScript, browser-friendly, supports creating and modifying PDFs, embedding fonts/images, and drawing tables/graphics manually.
+  - Best fit for SentinelTwin because the export flows are layout-specific and need direct control over cover pages, summary cards, tables, and bullet sections.
+- `pdfmake`
+  - MIT licensed and very capable for document-style tables and declarative layouts.
+  - Heavier abstraction and larger footprint than we need for the current export set.
+- `pdfkit`
+  - MIT licensed and small, but more Node-shaped and less convenient for a browser-first export path.
+
+**Outcome**
+- Chose `pdf-lib` as the canonical export engine for the studio PDF paths.
+- Replaced the jsPDF-based export module with a pdf-lib writer that can render audit reports, plain text exports, and Director's Cut incident replay PDFs.
+- Kept the output flow client-side and downloadable without introducing a proprietary PDF dependency.
+
+**Evidence**
+- GitHub readmes for `Hopding/pdf-lib`, `bpampuch/pdfmake`, and `foliojs/pdfkit`.
+- npm metadata for unpacked size and latest stable versions.
+- Remaining security advisories in the old chain were tied to nested `jspdf` / `dompurify` resolution rather than SentinelTwin code itself.

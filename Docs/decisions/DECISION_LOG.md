@@ -5308,3 +5308,35 @@ Meta released SAM 3 (Segment Anything with Concepts) on 2025-11-20. This decisio
 - Browser memory budgets grow past ~4 GB per tab (likely 2027+ on Safari, Chrome on Apple Silicon).
 - The studio gains a video-scan pipeline and SAM 3's memory gating becomes a quality differentiator vs. SAM 2.
 - A self-hosted SAM 3 endpoint pattern becomes standard practice for the studio's deployment story (would then be a default rather than opt-in).
+
+## D-0XX - Replace jsPDF with pdf-lib for SentinelTwin PDF exports
+
+**Date:** 2026-06-17
+
+**Status:** Accepted
+
+**Context**
+- The studio's PDF export paths still carried jsPDF / jspdf-autotable transitive advisories, including a nested `dompurify` chain that the workspace override did not displace cleanly.
+- We needed an open-source, lightweight, browser-friendly library that could keep the export experience feature-rich without introducing a proprietary dependency.
+
+**Decision**
+- Replace jsPDF with `pdf-lib` for the studio export module.
+- Keep PDF generation client-side and implement the report layouts directly with `pdf-lib` drawing primitives.
+
+**Why `pdf-lib`**
+- MIT licensed.
+- Pure JavaScript and browser-friendly.
+- Good fit for mixed export content: cover pages, summary cards, tables, bullet lists, and structured incident replay output.
+- Smaller and more direct than introducing a heavier declarative document abstraction for this use case.
+
+**Alternatives considered**
+- `pdfmake` - viable, but heavier and less aligned with the direct-control layout needs of the app.
+- `pdfkit` - capable, but more Node-shaped and less natural for the browser-first export flow.
+
+**Impact**
+- Removed the jsPDF / jspdf-autotable dependency chain from the studio export path.
+- Preserved the PDF export UX while reducing advisory surface area.
+- Kept the codebase on a permissive OSS stack.
+
+**Follow-up**
+- If future export layouts become declarative-document heavy, revisit `pdfmake` only if we need more table automation than `pdf-lib` should reasonably own.

@@ -2,7 +2,8 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { auditTrustSurfaces, formatTrustAuditReport } from "@/lib/truth-audit";
-import { corsJson, corsNoContent } from "@/lib/api-cors";
+import { apiJson } from "@/lib/api-response";
+import { corsNoContent } from "@/lib/api-cors";
 
 function resolveStudioRoot() {
   const cwd = process.cwd();
@@ -20,17 +21,24 @@ function resolveStudioRoot() {
 
 import { NextRequest } from "next/server";
 
+const truthAuditMethods = ["GET", "OPTIONS"] as const;
+
 export async function GET(request: NextRequest) {
   const report = auditTrustSurfaces(resolveStudioRoot());
-  return corsJson({
-    ok: report.ok,
-    rootDir: report.rootDir,
-    issues: report.issues,
-    surfaces: report.surfaces,
-    formatted: formatTrustAuditReport(report),
-  }, request, undefined, { methods: ["GET", "OPTIONS"] });
+  return apiJson(
+    request,
+    {
+      ok: report.ok,
+      rootDir: report.rootDir,
+      issues: report.issues,
+      surfaces: report.surfaces,
+      formatted: formatTrustAuditReport(report),
+    },
+    undefined,
+    { methods: truthAuditMethods },
+  );
 }
 
 export async function OPTIONS(request: NextRequest) {
-  return corsNoContent(request, { methods: ["GET", "OPTIONS"] });
+  return corsNoContent(request, { methods: truthAuditMethods });
 }

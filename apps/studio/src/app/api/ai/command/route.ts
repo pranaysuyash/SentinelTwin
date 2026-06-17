@@ -3,7 +3,8 @@ import { z } from "zod";
 
 import { parseCommandDetailed, type SceneContextSummary } from "@sentineltwin/agents";
 import { createModelProvider, describeAiProviderSelection, providerKeyAvailable, type AiProviderSelection } from "@/agents/provider-selection";
-import { corsJson, corsNoContent } from "@/lib/api-cors";
+import { API_METHODS, apiJson, parseValidatedJsonBody } from "@/lib/api-response";
+import { corsNoContent } from "@/lib/api-cors";
 import type { SecurityScene } from "@/schema/security-scene";
 
 const selectionSchema = z.object({
@@ -38,45 +39,73 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const parsed = await parseValidatedJsonBody(request, commandRequestSchema, {
+    validationErrorMessage: "Invalid command payload.",
+    parseErrorMessage: "Failed to parse command payload.",
+    methods: ["POST", "OPTIONS"],
+  });
+  if (!parsed.ok) {
+    return parsed.response;
+  }
+
   try {
-    const body = commandRequestSchema.parse(await request.json());
-    const selection = body.selection as AiProviderSelection;
+    const selection = parsed.data.selection as AiProviderSelection;
     const summary = describeAiProviderSelection(selection);
 
-    if (body.localOnlyMode) {
-      return corsJson({
-        ok: false,
-        code: "LOCAL_ONLY_MODE",
-        error: "Local-only mode blocks cloud-backed parsing.",
-      }, request, { status: 403 }, { methods: ["POST", "OPTIONS"] });
+    if (parsed.data.localOnlyMode) {
+      return apiJson(
+        request,
+        {
+          ok: false,
+          errorCode: "LOCAL_ONLY_MODE",
+          error: "Local-only mode blocks cloud-backed parsing.",
+        },
+        { status: 403 },
+        { methods: ["POST", "OPTIONS"] },
+      );
     }
 
     if (!providerKeyAvailable(selection.providerId)) {
-      return corsJson({
-        ok: false,
-        code: "PROVIDER_KEY_MISSING",
-        error: `${summary.providerName} API key not configured.`,
-      }, request, { status: 400 }, { methods: ["POST", "OPTIONS"] });
+      return apiJson(
+        request,
+        {
+          ok: false,
+          errorCode: "PROVIDER_KEY_MISSING",
+          error: `${summary.providerName} API key not configured.`,
+        },
+        { status: 400 },
+        { methods: ["POST", "OPTIONS"] },
+      );
     }
 
     const provider = createModelProvider(selection);
     const result = await parseCommandDetailed(
-      body.userText,
-      body.sceneContext as SceneContextSummary,
+      parsed.data.userText,
+      parsed.data.sceneContext as SceneContextSummary,
       provider,
-      body.scene as SecurityScene | undefined,
+      parsed.data.scene as SecurityScene | undefined,
     );
 
-    return corsJson({
-      ok: true,
-      result,
-    }, request, undefined, { methods: ["POST", "OPTIONS"] });
+    return apiJson(
+      request,
+      {
+        ok: true,
+        result,
+      },
+      undefined,
+      { methods: ["POST", "OPTIONS"] },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return corsJson({
-      ok: false,
-      code: "COMMAND_PARSE_FAILED",
-      error: message,
-    }, request, { status: 500 }, { methods: ["POST", "OPTIONS"] });
+    return apiJson(
+      request,
+      {
+        ok: false,
+        errorCode: "COMMAND_PARSE_FAILED",
+        error: message,
+      },
+      { status: 500 },
+      { methods: ["POST", "OPTIONS"] },
+    );
   }
 }

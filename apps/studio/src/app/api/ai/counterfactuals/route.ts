@@ -3,7 +3,8 @@ import { z } from "zod";
 
 import { proposeCounterfactuals } from "@/agents/CounterfactualAgent";
 import { createModelProvider, describeAiProviderSelection, providerKeyAvailable, type AiProviderSelection } from "@/agents/provider-selection";
-import { corsJson, corsNoContent } from "@/lib/api-cors";
+import { apiJson, parseValidatedJsonBody } from "@/lib/api-response";
+import { corsNoContent } from "@/lib/api-cors";
 
 const selectionSchema = z.object({
   providerId: z.enum(["openai", "gemini", "qwen"]),
@@ -23,42 +24,70 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const parsed = await parseValidatedJsonBody(request, counterfactualRequestSchema, {
+    validationErrorMessage: "Invalid counterfactual payload.",
+    parseErrorMessage: "Failed to parse counterfactual payload.",
+    methods: ["POST", "OPTIONS"],
+  });
+  if (!parsed.ok) {
+    return parsed.response;
+  }
+
   try {
-    const body = counterfactualRequestSchema.parse(await request.json());
-    const selection = body.selection as AiProviderSelection;
+    const selection = parsed.data.selection as AiProviderSelection;
     const summary = describeAiProviderSelection(selection);
 
-    if (body.localOnlyMode) {
-      return corsJson({
-        ok: false,
-        code: "LOCAL_ONLY_MODE",
-        error: "Local-only mode blocks cloud-backed counterfactual proposals.",
-      }, request, { status: 403 }, { methods: ["POST", "OPTIONS"] });
+    if (parsed.data.localOnlyMode) {
+      return apiJson(
+        request,
+        {
+          ok: false,
+          errorCode: "LOCAL_ONLY_MODE",
+          error: "Local-only mode blocks cloud-backed counterfactual proposals.",
+        },
+        { status: 403 },
+        { methods: ["POST", "OPTIONS"] },
+      );
     }
 
     if (!providerKeyAvailable(selection.providerId)) {
-      return corsJson({
-        ok: false,
-        code: "PROVIDER_KEY_MISSING",
-        error: `${summary.providerName} API key not configured.`,
-      }, request, { status: 400 }, { methods: ["POST", "OPTIONS"] });
+      return apiJson(
+        request,
+        {
+          ok: false,
+          errorCode: "PROVIDER_KEY_MISSING",
+          error: `${summary.providerName} API key not configured.`,
+        },
+        { status: 400 },
+        { methods: ["POST", "OPTIONS"] },
+      );
     }
 
     const provider = createModelProvider(selection);
     const candidates = await proposeCounterfactuals(
-      body.issuesSummary,
-      body.sceneSummary,
-      body.constraints,
+      parsed.data.issuesSummary,
+      parsed.data.sceneSummary,
+      parsed.data.constraints,
       provider,
     );
 
-    return corsJson({ ok: true, candidates }, request, undefined, { methods: ["POST", "OPTIONS"] });
+    return apiJson(
+      request,
+      { ok: true, candidates },
+      undefined,
+      { methods: ["POST", "OPTIONS"] },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return corsJson({
-      ok: false,
-      code: "COUNTERFACTUAL_FAILED",
-      error: message,
-    }, request, { status: 500 }, { methods: ["POST", "OPTIONS"] });
+    return apiJson(
+      request,
+      {
+        ok: false,
+        errorCode: "COUNTERFACTUAL_FAILED",
+        error: message,
+      },
+      { status: 500 },
+      { methods: ["POST", "OPTIONS"] },
+    );
   }
 }

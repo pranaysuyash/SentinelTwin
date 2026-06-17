@@ -11,6 +11,13 @@ import { GET, POST } from "../route";
 const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
   new Request(url, init) as unknown as NextRequest
 );
+const expectEnvelopeMetadata = (payload: Record<string, unknown>) => {
+  expect(typeof payload.requestId).toBe("string");
+  expect(payload.requestId).toBeTruthy();
+  expect(payload.apiVersion).toBe("1");
+  expect(payload.timestamp).toBeTruthy();
+  expect(typeof payload.timestamp).toBe("string");
+};
 
 const originalStoreDir = process.env.SENTINELTWIN_GOVERNANCE_ARCHIVE_STORE_DIR;
 const testStoreDir = mkdtempSync(join(tmpdir(), "sentineltwin-governance-archive-"));
@@ -92,6 +99,7 @@ describe("governance-archive route", () => {
 
     expect(response.status).toBe(200);
     const payload = await response.json();
+    expectEnvelopeMetadata(payload);
     expect(payload.ok).toBe(true);
     expect(payload.source).toBe("debug-panel");
     expect(payload.historyCount).toBe(1);
@@ -105,6 +113,7 @@ describe("governance-archive route", () => {
     const historyResponse = await GET(createNextRequest("http://localhost/api/governance-archive"));
     expect(historyResponse.status).toBe(200);
     const historyPayload = await historyResponse.json();
+    expectEnvelopeMetadata(historyPayload);
     expect(historyPayload.ok).toBe(true);
     expect(historyPayload.historyCount).toBe(1);
     expect(historyPayload.latestSubmission?.sceneId).toBe("scene-1");
@@ -185,6 +194,7 @@ describe("governance-archive route", () => {
       expect(response.status).toBe(200);
       const payload = await response.json();
       expect(payload.ok).toBe(true);
+      expectEnvelopeMetadata(payload);
       expect(payload.deliveredCount).toBe(1);
       expect(payload.queuedCount).toBe(1);
       expect(payload.failedCount).toBe(0);
@@ -199,5 +209,19 @@ describe("governance-archive route", () => {
     } finally {
       server.close();
     }
+  });
+
+  test("rejects invalid payloads", async () => {
+    const response = await POST(createNextRequest("http://localhost/api/governance-archive", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ workspaceAccessSummary: { teamSize: "invalid" } }),
+    }));
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.ok).toBe(false);
+    expect(body.errorCode).toBe("validation_error");
+    expect(body.error).toContain("Invalid governance archive payload");
   });
 });

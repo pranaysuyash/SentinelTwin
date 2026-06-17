@@ -3,6 +3,7 @@ import { appendCameraLiveSessionRecord, closeCameraLiveSessionRecord, pruneExpir
 import { CameraLiveConnectionProbeRequestSchema, probeCameraLiveConnection, type CameraLiveConnectionProbeRequest, type CameraLiveConnectionProbeResponse } from "@/lib/camera-live-connection";
 import { OnvifClient } from "@/lib/onvif-client";
 import { corsJson, corsNoContent } from "@/lib/api-cors";
+import { API_METHODS, apiJson, parseValidatedJsonBody } from "@/lib/api-response";
 
 import { NextRequest } from "next/server";
 
@@ -20,41 +21,36 @@ function shouldRenewOnvifSubscription(activeSession: CameraLiveSessionRecord | n
 export async function GET(request: NextRequest) {
   const history = loadCameraLiveConnectionHistory();
   const sessions = pruneExpiredCameraLiveSessionRegistry().filter((record) => record.status === "active");
-  return corsJson({
-    ok: true,
-    history,
-    historyCount: history.length,
-    latestSubmission: history[0] ?? null,
-    activeSessions: sessions,
-    activeSessionCount: sessions.length,
-  }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
+  return apiJson(
+    request,
+    {
+      ok: true,
+      history,
+      historyCount: history.length,
+      latestSubmission: history[0] ?? null,
+      activeSessions: sessions,
+      activeSessionCount: sessions.length,
+    },
+    undefined,
+    { methods: API_METHODS },
+  );
 }
 
 export async function OPTIONS(request: NextRequest) {
-  return corsNoContent(request, { methods: ["GET", "POST", "OPTIONS"] });
+  return corsNoContent(request, { methods: API_METHODS });
 }
 
 export async function POST(request: NextRequest) {
+  const parsed = await parseValidatedJsonBody(request, CameraLiveConnectionProbeRequestSchema, {
+    validationErrorMessage: "Invalid camera live connection payload.",
+    parseErrorMessage: "Failed to parse camera live connection payload.",
+    methods: API_METHODS,
+  });
+  if (!parsed.ok) {
+    return parsed.response;
+  }
+
   try {
-    const body = await request.json();
-    const parsed = CameraLiveConnectionProbeRequestSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return corsJson(
-        {
-          ok: false,
-          error: "Invalid camera live connection payload.",
-          issues: parsed.error.issues.map((issue) => ({
-            path: issue.path.join("."),
-            message: issue.message,
-          })),
-        },
-        request,
-        { status: 400 },
-        { methods: ["GET", "POST", "OPTIONS"] },
-      );
-    }
-
     const storedAt = Date.now();
     const sessionRegistry = pruneExpiredCameraLiveSessionRegistry();
     const activeSession = sessionRegistry.find((record) => record.cameraId === parsed.data.cameraId && record.status === "active") ?? null;
@@ -275,20 +271,26 @@ export async function POST(request: NextRequest) {
       raw: parsed.data.raw.trim(),
     });
 
-    return corsJson({
+    return apiJson(
+      request,
+      {
       ...summary,
       storedAt,
       historyCount: history.length,
-    }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
+      },
+      undefined,
+      { methods: API_METHODS },
+    );
   } catch {
-    return corsJson(
+    return apiJson(
+      request,
       {
         ok: false,
         error: "Failed to parse camera live connection payload.",
+        errorCode: "internal_error",
       },
-      request,
-      { status: 400 },
-      { methods: ["GET", "POST", "OPTIONS"] },
+      { status: 500 },
+      { methods: API_METHODS },
     );
   }
 }

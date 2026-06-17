@@ -52,6 +52,28 @@ Implementation scope:
   - `apps/studio/src/app/api/workspace-control-plane/__tests__/route.test.ts`
   - `apps/studio/src/app/api/camera-live-session-health/__tests__/route.test.ts`
 
+## D-318 | 2026-06-17 | Extend API envelope migration to AI routes, reconstruction, and health
+
+**Decision:** Continue the studio API contract migration by normalizing the remaining AI and utility endpoints to the shared envelope/error taxonomy:
+- `apps/studio/src/app/api/ai/command/route.ts`
+- `apps/studio/src/app/api/ai/counterfactuals/route.ts`
+- `apps/studio/src/app/api/ai/draft-scene/route.ts`
+- `apps/studio/src/app/api/ai/model-eval/route.ts`
+- `apps/studio/src/app/api/ai/report/route.ts`
+- `apps/studio/src/app/api/reconstruct/route.ts`
+- `apps/studio/src/app/api/health/route.ts`
+
+This pass standardized `errorCode` on failure paths, wrapped the `draft-scene` heuristic response in the shared metadata envelope, added a `GET` availability contract for `model-eval`, and renamed the health payload's internal timestamp field to avoid colliding with the shared envelope timestamp.
+
+**Rationale:**
+- The earlier envelope migration was only partially applied; these routes were still mixing legacy `code` fields, bare metadata responses, or field names that conflicted with the shared envelope.
+- `model-eval` already had a contract test that expected a GET availability payload, so the code needed to match the test instead of weakening the assertion.
+- Health should expose a service heartbeat without shadowing the canonical envelope timestamp field.
+
+**Alternatives rejected:**
+- Leave route-local error keys in place: rejected because it preserves contract drift and makes client handling inconsistent.
+- Keep the heuristic draft response outside `apiJson`: rejected because it breaks the same envelope guarantee that the rest of the studio APIs now provide.
+
 ## D-294 | 2026-06-01 | Deterministic seek-aware path replay timing loop
 
 **Decision:** Path replay playback in `PathReplayView.tsx` now uses a requestAnimationFrame-based timeline loop with an explicit time anchor so slider scrubbing while playing reuses the same loop without stutter or timeline drift.

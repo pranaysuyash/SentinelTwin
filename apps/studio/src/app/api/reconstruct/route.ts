@@ -1,70 +1,106 @@
 import { NextRequest } from "next/server";
-import { corsJson, corsNoContent } from "@/lib/api-cors";
-import { reconstructionSessionSchema, capturePhotoSchema, roomMeasurementSchema, type CapturePhoto } from "@/schema/reconstruction-pipeline";
+import { z } from "zod";
+
 import { ReconstructionPipeline } from "@/lib/reconstruction-pipeline";
+import {
+  capturePhotoSchema,
+  reconstructionSessionSchema,
+  roomMeasurementSchema,
+  type CapturePhoto,
+} from "@/schema/reconstruction-pipeline";
+import { API_METHODS, apiJson, parseValidatedJsonBody } from "@/lib/api-response";
+import { corsNoContent } from "@/lib/api-cors";
+
+const reconstructionRequestSchema = z.object({
+  photos: z.array(z.unknown()).default([]),
+  measurements: z.unknown().optional(),
+  config: z.unknown().optional(),
+});
 
 export async function OPTIONS(request: NextRequest) {
-  return corsNoContent(request, { methods: ["GET", "POST", "OPTIONS"] });
+  return corsNoContent(request, { methods: API_METHODS });
 }
 
 export async function GET(request: NextRequest) {
-  return corsJson({
-    ok: true,
-    status: "available",
-    description: "Real site twin reconstruction pipeline. POST photos and measurements to run a reconstruction session.",
-    stages: [
-      "capture",
-      "depth_estimation",
-      "segmentation",
-      "correspondence",
-      "structural_extraction",
-      "scale_anchoring",
-      "quality_gate",
-      "compile",
-    ],
-    modelEndpoints: {
-      depthEstimation: "Depth Anything V2 (expected endpoint)",
-      segmentation: "SAM 3 (expected endpoint)",
-      correspondence: "VGGT (expected endpoint)",
-      structuralExtraction: "SpatialLM (expected endpoint)",
+  return apiJson(
+    request,
+    {
+      ok: true,
+      status: "available",
+      description: "Real site twin reconstruction pipeline. POST photos and measurements to run a reconstruction session.",
+      stages: [
+        "capture",
+        "depth_estimation",
+        "segmentation",
+        "correspondence",
+        "structural_extraction",
+        "scale_anchoring",
+        "quality_gate",
+        "compile",
+      ],
+      modelEndpoints: {
+        depthEstimation: "Depth Anything V2 (expected endpoint)",
+        segmentation: "SAM 3 (expected endpoint)",
+        correspondence: "VGGT (expected endpoint)",
+        structuralExtraction: "SpatialLM (expected endpoint)",
+      },
+      integrationNote: "Model endpoints are not yet connected. Pipeline runs in deterministic heuristic mode by default.",
     },
-    integrationNote: "Model endpoints are not yet connected. Pipeline runs in deterministic heuristic mode by default.",
-  }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
+    undefined,
+    { methods: API_METHODS },
+  );
 }
 
 export async function POST(request: NextRequest) {
+  const parsed = await parseValidatedJsonBody(request, reconstructionRequestSchema, {
+    validationErrorMessage: "Invalid reconstruction payload.",
+    parseErrorMessage: "Failed to parse reconstruction payload.",
+    methods: API_METHODS,
+  });
+  if (!parsed.ok) {
+    return parsed.response;
+  }
+
   try {
-    const body = await request.json();
-
-    const photosRaw = Array.isArray(body.photos) ? body.photos : [];
-    const measurementsRaw = body.measurements ?? {};
-    const configRaw = body.config ?? {};
-
-    const measurementsResult = roomMeasurementSchema.safeParse(measurementsRaw);
+    const measurementsResult = roomMeasurementSchema.safeParse(parsed.data.measurements ?? {});
     if (!measurementsResult.success) {
-      return corsJson({
-        ok: false,
-        error: `Invalid measurements: ${measurementsResult.error.issues[0]?.message ?? "validation failed"}`,
-        issues: measurementsResult.error.issues.map((issue) => ({
-          path: issue.path.join("."),
-          message: issue.message,
-        })),
-      }, request, { status: 400 }, { methods: ["GET", "POST", "OPTIONS"] });
+      return apiJson(
+        request,
+        {
+          ok: false,
+          error: `Invalid measurements: ${measurementsResult.error.issues[0]?.message ?? "validation failed"}`,
+          errorCode: "validation_error",
+          issues: measurementsResult.error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        },
+        { status: 400 },
+        { methods: API_METHODS },
+      );
     }
 
-    const photos = photosRaw
+    const photos = parsed.data.photos
       .map((raw: unknown) => capturePhotoSchema.safeParse(raw))
-      .filter((r: { success: boolean }) => r.success)
-      .map((r: { data: unknown }) => (r as { success: true; data: unknown }).data);
+      .filter((result: { success: boolean }) => result.success)
+      .map((result: { data: unknown }) => (result as { success: true; data: CapturePhoto }).data);
 
     if (photos.length === 0) {
-      return corsJson({
-        ok: false,
-        error: "At least one valid photo is required.",
-      }, request, { status: 400 }, { methods: ["GET", "POST", "OPTIONS"] });
+      return apiJson(
+        request,
+        {
+          ok: false,
+          error: "At least one valid photo is required.",
+          errorCode: "validation_error",
+        },
+        { status: 400 },
+        { methods: API_METHODS },
+      );
     }
 
-    const enableModels = configRaw.enableModels === true;
+    const configRaw = parsed.data.config;
+    const requestedConfig = (configRaw && typeof configRaw === "object" && configRaw !== null) ? configRaw as Record<string, unknown> : {};
+    const enableModels = requestedConfig.enableModels === true;
     const pipeline = new ReconstructionPipeline(
       photos as CapturePhoto[],
       measurementsResult.data,
@@ -73,9 +109,9 @@ export async function POST(request: NextRequest) {
         enableSegmentation: enableModels,
         enableCorrespondence: enableModels,
         enableStructuralExtraction: enableModels,
-        minConfidenceForAutoAccept: configRaw.minConfidenceForAutoAccept ?? 0.7,
-        minConfidenceForFallback: configRaw.minConfidenceForFallback ?? 0.4,
-        modelEndpointUrl: configRaw.modelEndpointUrl,
+        minConfidenceForAutoAccept: typeof requestedConfig.minConfidenceForAutoAccept === "number" ? requestedConfig.minConfidenceForAutoAccept : 0.7,
+        minConfidenceForFallback: typeof requestedConfig.minConfidenceForFallback === "number" ? requestedConfig.minConfidenceForFallback : 0.4,
+        modelEndpointUrl: typeof requestedConfig.modelEndpointUrl === "string" ? requestedConfig.modelEndpointUrl : undefined,
       },
     );
 
@@ -83,34 +119,44 @@ export async function POST(request: NextRequest) {
     const compileResult = session.stageResults.find((r) => r.stage === "compile");
     const qualityGateResult = session.stageResults.find((r) => r.stage === "quality_gate");
 
-    return corsJson({
-      ok: true,
-      sessionId: session.id,
-      completedAt: session.completedAt,
-      durationMs: session.completedAt ? session.completedAt - session.startedAt : null,
-      overallConfidence: session.overallConfidence ?? null,
-      fallbackTriggered: session.fallbackTriggered,
-      errors: session.errors,
-      stageResults: session.stageResults.map((r) => ({
-        stage: r.stage,
-        status: r.status,
-        durationMs: r.durationMs,
-        confidence: r.confidence ?? null,
-        error: r.error ?? null,
-        elementCount: r.extractedElements.length,
-      })),
-      qualityRecommendation: (qualityGateResult?.outputData as Record<string, unknown>)?.recommendation ?? "review_before_accept",
-      compiledSceneId: (compileResult?.outputData as Record<string, unknown>)?.sceneId ?? null,
-      compiledScene: compileResult?.outputData?.compiledSnapshot ?? null,
-      photosAccepted: photos.length,
-      integrationNote: "Pipeline runs in deterministic mode. Model endpoints for depth estimation (Depth Anything V2), segmentation (SAM 3), correspondence (VGGT), and structural extraction (SpatialLM) are not yet connected.",
-    }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
-
+    return apiJson(
+      request,
+      {
+        ok: true,
+        sessionId: session.id,
+        completedAt: session.completedAt,
+        durationMs: session.completedAt ? session.completedAt - session.startedAt : null,
+        overallConfidence: session.overallConfidence ?? null,
+        fallbackTriggered: session.fallbackTriggered,
+        errors: session.errors,
+        stageResults: session.stageResults.map((r) => ({
+          stage: r.stage,
+          status: r.status,
+          durationMs: r.durationMs,
+          confidence: r.confidence ?? null,
+          error: r.error ?? null,
+          elementCount: r.extractedElements.length,
+        })),
+        qualityRecommendation: (qualityGateResult?.outputData as Record<string, unknown>)?.recommendation ?? "review_before_accept",
+        compiledSceneId: (compileResult?.outputData as Record<string, unknown>)?.sceneId ?? null,
+        compiledScene: compileResult?.outputData?.compiledSnapshot ?? null,
+        photosAccepted: photos.length,
+        integrationNote: "Pipeline runs in deterministic mode. Model endpoints for depth estimation (Depth Anything V2), segmentation (SAM 3), correspondence (VGGT), and structural extraction (SpatialLM) are not yet connected.",
+      },
+      undefined,
+      { methods: API_METHODS },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return corsJson({
-      ok: false,
-      error: `Reconstruction pipeline error: ${message}`,
-    }, request, { status: 500 }, { methods: ["GET", "POST", "OPTIONS"] });
+    return apiJson(
+      request,
+      {
+        ok: false,
+        error: `Reconstruction pipeline error: ${message}`,
+        errorCode: "internal_error",
+      },
+      { status: 500 },
+      { methods: API_METHODS },
+    );
   }
 }

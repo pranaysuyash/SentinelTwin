@@ -9,6 +9,13 @@ import { GET, POST } from "../route";
 const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
   new Request(url, init) as unknown as NextRequest
 );
+const expectEnvelopeMetadata = (payload: Record<string, unknown>) => {
+  expect(typeof payload.requestId).toBe("string");
+  expect(payload.requestId).toBeTruthy();
+  expect(payload.apiVersion).toBe("1");
+  expect(payload.timestamp).toBeTruthy();
+  expect(typeof payload.timestamp).toBe("string");
+};
 
 const originalStoreDir = process.env.SENTINELTWIN_WORKSPACE_IDENTITY_CONFLICT_STORE_DIR;
 const testStoreDir = mkdtempSync(join(tmpdir(), "sentineltwin-workspace-identity-conflict-"));
@@ -95,6 +102,7 @@ describe("workspace-identity-conflict route", () => {
 
     expect(response.status).toBe(200);
     const body = await response.json();
+    expectEnvelopeMetadata(body);
     expect(body.ok).toBe(true);
     expect(body.historyCount).toBe(1);
     expect(body.conflictStatus).toBe("reconcile_needed");
@@ -105,6 +113,7 @@ describe("workspace-identity-conflict route", () => {
 
     const history = await GET(createNextRequest("http://localhost/api/workspace-identity-conflict"));
     const payload = await history.json();
+    expectEnvelopeMetadata(payload);
     expect(payload.historyCount).toBe(1);
     expect(payload.latestSubmission.conflictStatus).toBe("reconcile_needed");
     expect(payload.latestSubmission.resolutionStatus).toBe("reconcile_before_route");
@@ -195,5 +204,19 @@ describe("workspace-identity-conflict route", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  test("rejects invalid payloads", async () => {
+    const response = await POST(createNextRequest("http://localhost/api/workspace-identity-conflict", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ workspaceAccessState: { members: [{ id: "member_admin" }] } }),
+    }));
+
+    expect(response.status).toBe(400);
+    const payload = await response.json();
+    expect(payload.ok).toBe(false);
+    expect(payload.errorCode).toBe("validation_error");
+    expect(payload.error).toContain("Invalid workspace identity conflict payload");
   });
 });

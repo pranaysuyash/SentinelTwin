@@ -11,6 +11,13 @@ import { GET, POST } from "../route";
 const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
   new Request(url, init) as unknown as NextRequest
 );
+const expectEnvelopeMetadata = (payload: Record<string, unknown>) => {
+  expect(typeof payload.requestId).toBe("string");
+  expect(payload.requestId).toBeTruthy();
+  expect(payload.apiVersion).toBe("1");
+  expect(payload.timestamp).toBeTruthy();
+  expect(typeof payload.timestamp).toBe("string");
+};
 
 const originalStoreDir = process.env.SENTINELTWIN_SUPPORT_DELIVERY_STORE_DIR;
 const testStoreDir = mkdtempSync(join(tmpdir(), "sentineltwin-support-delivery-"));
@@ -81,6 +88,7 @@ describe("support-delivery route", () => {
     expect(response.status).toBe(200);
 
     const payload = await response.json();
+    expectEnvelopeMetadata(payload);
     expect(payload.ok).toBe(true);
     expect(payload.source).toBe("debug-panel");
     expect(payload.historyCount).toBe(1);
@@ -111,6 +119,7 @@ describe("support-delivery route", () => {
     expect(response.status).toBe(400);
     const payload = await response.json();
     expect(payload.ok).toBe(false);
+    expect(payload.errorCode).toBe("validation_error");
     expect(payload.error).toContain("Invalid support delivery payload");
   });
 
@@ -189,8 +198,9 @@ describe("support-delivery route", () => {
       );
 
       expect(response.status).toBe(200);
-      const payload = await response.json();
-      expect(payload.ok).toBe(true);
+    const payload = await response.json();
+    expectEnvelopeMetadata(payload);
+    expect(payload.ok).toBe(true);
       expect(payload.deliveredCount).toBe(1);
       expect(payload.queuedCount).toBe(1);
       expect(payload.failedCount).toBe(0);

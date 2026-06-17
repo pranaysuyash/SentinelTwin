@@ -11,6 +11,13 @@ import { GET, POST } from "../route";
 const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
   new Request(url, init) as unknown as NextRequest
 );
+const expectEnvelopeMetadata = (payload: Record<string, unknown>) => {
+  expect(typeof payload.requestId).toBe("string");
+  expect(payload.requestId).toBeTruthy();
+  expect(payload.apiVersion).toBe("1");
+  expect(payload.timestamp).toBeTruthy();
+  expect(typeof payload.timestamp).toBe("string");
+};
 
 const originalStoreDir = process.env.SENTINELTWIN_WORKSPACE_APPROVAL_ROUTE_STORE_DIR;
 const testStoreDir = mkdtempSync(join(tmpdir(), "sentineltwin-workspace-approval-route-"));
@@ -97,6 +104,7 @@ describe("workspace-approval-route route", () => {
 
     expect(response.status).toBe(200);
     const body = await response.json();
+    expectEnvelopeMetadata(body);
     expect(body.ok).toBe(true);
     expect(body.historyCount).toBe(1);
     expect(body.approvalRoute.routeStatus).toBe("review_required");
@@ -104,6 +112,7 @@ describe("workspace-approval-route route", () => {
 
     const history = await GET(createNextRequest("http://localhost/api/workspace-approval-route"));
     const payload = await history.json();
+    expectEnvelopeMetadata(payload);
     expect(payload.historyCount).toBe(1);
     expect(payload.latestSubmission.approvalRoute.routeStatus).toBe("review_required");
   });
@@ -184,5 +193,19 @@ describe("workspace-approval-route route", () => {
     } finally {
       server.close();
     }
+  });
+
+  test("rejects invalid payloads", async () => {
+    const response = await POST(createNextRequest("http://localhost/api/workspace-approval-route", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ workspaceAccessState: { members: [{ id: "member_admin" }] } }),
+    }));
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.ok).toBe(false);
+    expect(body.errorCode).toBe("validation_error");
+    expect(body.error).toContain("Invalid workspace approval route payload");
   });
 });

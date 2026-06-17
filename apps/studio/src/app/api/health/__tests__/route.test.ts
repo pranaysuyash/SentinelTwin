@@ -6,6 +6,7 @@ import { GET } from "../route";
 const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
   new Request(url, init) as unknown as NextRequest
 );
+
 const expectEnvelopeMetadata = (payload: Record<string, unknown>) => {
   expect(typeof payload.requestId).toBe("string");
   expect(payload.requestId).toBeTruthy();
@@ -14,17 +15,19 @@ const expectEnvelopeMetadata = (payload: Record<string, unknown>) => {
   expect(typeof payload.timestamp).toBe("string");
 };
 
-describe("truth-audit route", () => {
-  test("returns the current trust audit report", async () => {
-    const response = await GET(createNextRequest("http://localhost/api/truth-audit"));
-    expect(response.status).toBe(200);
+describe("health route", () => {
+  test("returns the shared metadata envelope and service heartbeat", async () => {
+    const response = await GET(createNextRequest("http://localhost/api/health"));
 
+    expect(response.status).toBe(200);
     const payload = await response.json();
     expectEnvelopeMetadata(payload);
-    expect(typeof payload.ok).toBe("boolean");
-    expect(payload.surfaces.length).toBeGreaterThan(0);
-    expect(payload.formatted).toContain("Trust audit for");
-    expect(payload.formatted).toContain("Governance control plane");
-    expect(payload.formatted).toContain("Debug diagnostics bundle");
+    expect(payload.ok).toBe(true);
+    expect(payload.status).toBe("ok");
+    expect(payload.version).toBe("0.1.0");
+    expect(typeof payload.uptime).toBe("number");
+    expect(payload.uptime).toBeGreaterThan(0);
+    expect(typeof payload.serverTimestampMs).toBe("number");
+    expect(payload.serverTimestampMs).toBeGreaterThan(0);
   });
 });

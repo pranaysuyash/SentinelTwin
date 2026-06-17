@@ -1,44 +1,40 @@
 import { appendSupportIngestHistory, loadSupportIngestHistory } from "@/lib/support-ingest-history";
 import { SupportIngestRequestSchema, summarizeSupportIngest } from "@/lib/support-ingest";
-import { corsJson, corsNoContent } from "@/lib/api-cors";
+import { API_METHODS, apiJson, parseValidatedJsonBody } from "@/lib/api-response";
+import { corsNoContent } from "@/lib/api-cors";
 
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   const history = loadSupportIngestHistory();
-  return corsJson({
-    ok: true,
-    history,
-    historyCount: history.length,
-    latestSubmission: history[0] ?? null,
-  }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
+  return apiJson(
+    request,
+    {
+      ok: true,
+      history,
+      historyCount: history.length,
+      latestSubmission: history[0] ?? null,
+    },
+    undefined,
+    { methods: API_METHODS },
+  );
 }
 
 export async function OPTIONS(request: NextRequest) {
-  return corsNoContent(request, { methods: ["GET", "POST", "OPTIONS"] });
+  return corsNoContent(request, { methods: API_METHODS });
 }
 
 export async function POST(request: NextRequest) {
+  const parsed = await parseValidatedJsonBody(request, SupportIngestRequestSchema, {
+    validationErrorMessage: "Invalid support ingest payload.",
+    parseErrorMessage: "Failed to parse support ingest payload.",
+    methods: API_METHODS,
+  });
+  if (!parsed.ok) {
+    return parsed.response;
+  }
+
   try {
-    const body = await request.json();
-    const parsed = SupportIngestRequestSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return corsJson(
-        {
-          ok: false,
-          error: "Invalid support ingest payload.",
-          issues: parsed.error.issues.map((issue) => ({
-            path: issue.path.join("."),
-            message: issue.message,
-          })),
-        },
-        request,
-        { status: 400 },
-        { methods: ["GET", "POST", "OPTIONS"] },
-      );
-    }
-
     const summary = summarizeSupportIngest(parsed.data);
     const storedAt = Date.now();
     const history = appendSupportIngestHistory({
@@ -47,20 +43,27 @@ export async function POST(request: NextRequest) {
       storedAt,
     });
 
-    return corsJson({
-      ...summary,
-      storedAt,
-      historyCount: history.length,
-    }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
-  } catch {
-    return corsJson(
+    return apiJson(
+      request,
+      {
+        ...summary,
+        storedAt,
+        historyCount: history.length,
+      },
+      undefined,
+      { methods: API_METHODS },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to process support ingest payload.";
+    return apiJson(
+      request,
       {
         ok: false,
-        error: "Failed to parse support ingest payload.",
+        error: message,
+        errorCode: "internal_error",
       },
-      request,
-      { status: 400 },
-      { methods: ["GET", "POST", "OPTIONS"] },
+      { status: 500 },
+      { methods: API_METHODS },
     );
   }
 }

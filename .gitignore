@@ -71,3 +71,12 @@ apps/studio/.workspace-membership-archive/
 .sentineltwin-backend/
 .sentinel-reset-lock
 bin/
+
+# ML model files (operator-provisioned, not bundled in source control).
+# Onnxruntime-web and other ML backends fetch these at runtime from
+# /public/models/* paths. Keep the directories; ignore the binaries.
+apps/studio/public/models/**/*.onnx
+apps/studio/public/models/**/*.bin
+apps/studio/public/models/**/*.pt
+apps/studio/public/models/**/*.safetensors
+apps/studio/public/models/**/*.tflite

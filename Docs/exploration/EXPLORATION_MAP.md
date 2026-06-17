@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-06-17 (API contract standardization thread now includes test lock-in for response envelope + error-taxonomy across studio runtime routes.)
+**Last updated:** 2026-06-17 (API contract standardization thread now includes test lock-in for response envelope + error-taxonomy across studio runtime routes, plus the remaining AI/reconstruct/health endpoints.)
 
 ---
 
@@ -12,8 +12,8 @@
 **Problem:** Ingest and control-plane routes had hand-rolled request parsing and inconsistent error shapes.
 **Action taken:** Added `apps/studio/src/lib/api-response.ts` and migrated core studio API endpoints to shared parsing and envelope helpers (`apiJson`, `parseValidatedJsonBody`).
 **Result:** Consumers now get stable metadata (`requestId`, `apiVersion`, `timestamp`) and reusable `errorCode` values while preserving existing resource payload fields (`ok`, history count, session summaries, sync status).
-**Test lock-in:** Route tests for `sensor-ingest`, `camera-metadata-ingest`, `workspace-control-plane`, and `camera-live-session-health` now assert envelope metadata and typed validation/error fields in both success and failure cases.
-**Code anchors:** `apps/studio/src/app/api/sensor-ingest/route.ts`; `apps/studio/src/app/api/camera-metadata-ingest/route.ts`; `apps/studio/src/app/api/workspace-control-plane/route.ts`; `apps/studio/src/app/api/camera-live-session-health/route.ts`; `apps/studio/src/lib/api-response.ts`.
+**Test lock-in:** Route tests for `sensor-ingest`, `camera-metadata-ingest`, `workspace-control-plane`, `camera-live-session-health`, `ai/command`, `ai/counterfactuals`, `ai/draft-scene`, `ai/model-eval`, `ai/report`, `reconstruct`, and `health` now assert envelope metadata and typed validation/error fields in both success and failure cases.
+**Code anchors:** `apps/studio/src/app/api/sensor-ingest/route.ts`; `apps/studio/src/app/api/camera-metadata-ingest/route.ts`; `apps/studio/src/app/api/workspace-control-plane/route.ts`; `apps/studio/src/app/api/camera-live-session-health/route.ts`; `apps/studio/src/app/api/ai/command/route.ts`; `apps/studio/src/app/api/ai/counterfactuals/route.ts`; `apps/studio/src/app/api/ai/draft-scene/route.ts`; `apps/studio/src/app/api/ai/model-eval/route.ts`; `apps/studio/src/app/api/ai/report/route.ts`; `apps/studio/src/app/api/reconstruct/route.ts`; `apps/studio/src/app/api/health/route.ts`; `apps/studio/src/lib/api-response.ts`.
 
 ### Thread 0: Product integrity hardening spine
 **Status:** Implemented in code (2026-05-30).

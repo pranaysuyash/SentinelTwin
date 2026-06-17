@@ -3,7 +3,8 @@ import { z } from "zod";
 
 import { generateReport } from "@/agents/ReportAgent";
 import { createModelProvider, describeAiProviderSelection, providerKeyAvailable, type AiProviderSelection } from "@/agents/provider-selection";
-import { corsJson, corsNoContent } from "@/lib/api-cors";
+import { apiJson, API_METHODS, parseValidatedJsonBody } from "@/lib/api-response";
+import { corsNoContent } from "@/lib/api-cors";
 
 const selectionSchema = z.object({
   providerId: z.enum(["openai", "gemini", "qwen"]),
@@ -22,36 +23,64 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const parsed = await parseValidatedJsonBody(request, reportRequestSchema, {
+    validationErrorMessage: "Invalid report payload.",
+    parseErrorMessage: "Failed to parse report payload.",
+    methods: ["POST", "OPTIONS"],
+  });
+  if (!parsed.ok) {
+    return parsed.response;
+  }
+
   try {
-    const body = reportRequestSchema.parse(await request.json());
-    const selection = body.selection as AiProviderSelection;
+    const selection = parsed.data.selection as AiProviderSelection;
     const summary = describeAiProviderSelection(selection);
 
-    if (body.localOnlyMode) {
-      return corsJson({
-        ok: false,
-        code: "LOCAL_ONLY_MODE",
-        error: "Local-only mode blocks cloud-backed report generation.",
-      }, request, { status: 403 }, { methods: ["POST", "OPTIONS"] });
+    if (parsed.data.localOnlyMode) {
+      return apiJson(
+        request,
+        {
+          ok: false,
+          errorCode: "LOCAL_ONLY_MODE",
+          error: "Local-only mode blocks cloud-backed report generation.",
+        },
+        { status: 403 },
+        { methods: ["POST", "OPTIONS"] },
+      );
     }
 
     if (!providerKeyAvailable(selection.providerId)) {
-      return corsJson({
-        ok: false,
-        code: "PROVIDER_KEY_MISSING",
-        error: `${summary.providerName} API key not configured.`,
-      }, request, { status: 400 }, { methods: ["POST", "OPTIONS"] });
+      return apiJson(
+        request,
+        {
+          ok: false,
+          errorCode: "PROVIDER_KEY_MISSING",
+          error: `${summary.providerName} API key not configured.`,
+        },
+        { status: 400 },
+        { methods: ["POST", "OPTIONS"] },
+      );
     }
 
     const provider = createModelProvider(selection);
-    const report = await generateReport(body.simulationSummary, body.sceneSummary, provider);
-    return corsJson({ ok: true, report }, request, undefined, { methods: ["POST", "OPTIONS"] });
+    const report = await generateReport(parsed.data.simulationSummary, parsed.data.sceneSummary, provider);
+    return apiJson(
+      request,
+      { ok: true, report },
+      undefined,
+      { methods: ["POST", "OPTIONS"] },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return corsJson({
-      ok: false,
-      code: "REPORT_FAILED",
-      error: message,
-    }, request, { status: 500 }, { methods: ["POST", "OPTIONS"] });
+    return apiJson(
+      request,
+      {
+        ok: false,
+        errorCode: "REPORT_FAILED",
+        error: message,
+      },
+      { status: 500 },
+      { methods: ["POST", "OPTIONS"] },
+    );
   }
 }

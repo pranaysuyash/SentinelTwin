@@ -156,3 +156,7 @@ export { computeCellConfidence } from "./confidence";
 // Adaptive grid
 export { computeDensityZones, getAdaptiveCellsPerMeter, buildAdaptiveGrid } from "./adaptive-grid";
 export type { DensityZone } from "./adaptive-grid";
+
+// Thread 147: NPC/Crowd Simulation
+export { computeCrowdOcclusion, DEFAULT_RETAIL_ARCHETYPES } from "./crowd-sim";
+export type { CrowdOcclusionResult, CrowdChokepointEntry } from "./crowd-sim";

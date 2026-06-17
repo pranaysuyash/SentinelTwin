@@ -29,6 +29,7 @@ const camera: CameraNode = {
   privacyMaskingEnabled: false,
   source: "manual",
   tags: [],
+  lprCapable: false,
   reviewStatus: "unreviewed",
   sourceTrace: "",
   geometryValidity: "valid",

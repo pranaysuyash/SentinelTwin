@@ -28,6 +28,7 @@ import { computeKRobustness } from "./k-robustness";
 import { computePathResults } from "./path-analysis";
 import { pointInPolygon, polygonCenter } from "@sentineltwin/core";
 import { computePlacementOracle } from "./placement-oracle";
+import { computeCrowdOcclusion } from "./crowd-sim";
 
 type EvaluatedZone = ZoneResult & {
   blockingLabels: string[];
@@ -494,10 +495,61 @@ function simulateStudioInternal(
       includeNovelAnalytics,
       includeFailureAnalysis,
       performanceEnvelope,
+      currentTime,
     );
   } finally {
     evaluator.dispose();
   }
+}
+
+function computePerimeterIntegrity(
+  scene: SecurityScene,
+  coverageCells: CellComputation[],
+): NonNullable<SimulationResult["perimeterIntegrity"]> | undefined {
+  const fences = scene.fenceSegments ?? [];
+  if (fences.length === 0) return undefined;
+
+  const SAMPLES_PER_METER = 2;
+  let totalPerimeterM = 0;
+  let coveredPoints = 0;
+  let totalPoints = 0;
+
+  for (const fence of fences) {
+    const len = Math.hypot(fence.end[0] - fence.start[0], fence.end[1] - fence.start[1]);
+    totalPerimeterM += len;
+    const sampleCount = Math.max(2, Math.round(len * SAMPLES_PER_METER));
+    for (let i = 0; i < sampleCount; i++) {
+      const t = i / (sampleCount - 1);
+      const px = fence.start[0] + t * (fence.end[0] - fence.start[0]);
+      const pz = fence.start[1] + t * (fence.end[1] - fence.start[1]);
+      totalPoints += 1;
+      const nearest = coverageCells.reduce((best, cell) => {
+        const dist = Math.hypot(cell.x - px, cell.z - pz);
+        return dist < best.dist ? { dist, quality: cell.quality } : best;
+      }, { dist: Number.POSITIVE_INFINITY, quality: "none" as string });
+      if (nearest.quality !== "none") coveredPoints += 1;
+    }
+  }
+
+  const integrityPct = totalPoints > 0 ? Number(((coveredPoints / totalPoints) * 100).toFixed(1)) : 0;
+  const coveredPerimeterM = Number(((coveredPoints / Math.max(1, totalPoints)) * totalPerimeterM).toFixed(2));
+
+  const blindGates = (scene.gateNodes ?? [])
+    .filter((g) => !g.hasCameraView)
+    .map((g) => ({ gateId: g.id, gateLabel: g.label }));
+
+  const breachedSegments = fences
+    .filter((f) => f.integrityState === "breached")
+    .map((f) => ({ segmentId: f.id, label: f.label }));
+
+  return {
+    fenceSegmentCount: fences.length,
+    totalPerimeterM: Number(totalPerimeterM.toFixed(2)),
+    coveredPerimeterM,
+    integrityPct,
+    blindGates,
+    breachedSegments,
+  };
 }
 
 function buildSimulationResult(
@@ -509,6 +561,7 @@ function buildSimulationResult(
   includeNovelAnalytics: boolean,
   includeFailureAnalysis: boolean,
   performanceEnvelope?: SimulationPerformanceEnvelope,
+  currentTime?: { hour: number; minute: number },
 ): SimulationResult {
   const coverageThresholds = getQualityThresholds(scene);
   const fragility = computeCoverageFragility(
@@ -643,6 +696,9 @@ function buildSimulationResult(
   const adversarialPath = computeAdversarialPath(scene, coverageCells);
   const kRobustness = includeNovelAnalytics ? computeKRobustness(scene) : undefined;
   const placementOracle = includeNovelAnalytics ? computePlacementOracle(scene, coverageCells, criticalZoneResults) : undefined;
+  const crowdOcclusion = (scene.crowdProfiles?.length ?? 0) > 0
+    ? computeCrowdOcclusion(scene, coverageCells, scene.crowdProfiles, currentTime?.hour ?? 12)
+    : undefined;
   const occlusionBlame = includeNovelAnalytics ? analyzeOcclusionBlame(scene) : undefined;
   const blindRegions = includeNovelAnalytics ? analyseBlindSpotTopology(scene, coverageCells.map((cell) => ({
     x: cell.x, z: cell.z, quality: cell.quality,
@@ -852,6 +908,8 @@ function buildSimulationResult(
     zoneConfidence: zConfidence,
     pathConfidence: pConfidence,
     recommendationConfidence: recConfidence,
+    crowdOcclusion,
+    perimeterIntegrity: computePerimeterIntegrity(scene, coverageCells),
   };
 }
 
@@ -897,6 +955,7 @@ export function simulateStudioAsync(
         true,
         true,
         performanceEnvelope,
+        options?.currentTime,
       );
       evaluator.dispose();
       onProgress?.(1);

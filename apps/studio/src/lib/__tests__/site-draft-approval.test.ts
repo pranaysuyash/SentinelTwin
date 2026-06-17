@@ -36,6 +36,7 @@ function createDraft() {
     ndaaCompliant: true,
     privacyMaskingEnabled: false,
     tags: [],
+    lprCapable: false,
     viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
   });
   scene.criticalZones.push({
@@ -99,6 +100,7 @@ describe("promoteToActiveScene — session activation gate", () => {
       irRangeM: 30, thermalCapable: false, ptz: false, clarity: "good",
       source: "manual", reviewStatus: "unreviewed", sourceTrace: "",
       geometryValidity: "valid", ndaaCompliant: true, privacyMaskingEnabled: false, tags: [],
+      lprCapable: false,
       viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
     });
     scene.criticalZones.push({
@@ -138,6 +140,7 @@ describe("promoteToActiveScene — session activation gate", () => {
       irRangeM: 30, thermalCapable: false, ptz: false, clarity: "good",
       source: "manual", reviewStatus: "unreviewed", sourceTrace: "",
       geometryValidity: "valid", ndaaCompliant: true, privacyMaskingEnabled: false, tags: [],
+      lprCapable: false,
       viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
     });
     scene.criticalZones.push({

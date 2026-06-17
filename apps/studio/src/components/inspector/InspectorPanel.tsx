@@ -2,11 +2,14 @@
 
 import { Copy, Shield, Trash2 } from "lucide-react";
 
+import { BollardInspector } from "@/components/inspector/BollardInspector";
 import { CameraInspector } from "@/components/inspector/CameraInspector";
 import { CommentInspector } from "@/components/inspector/CommentInspector";
 import { CriticalZoneInspector } from "@/components/inspector/CriticalZoneInspector";
 import { DoorWindowInspector } from "@/components/inspector/DoorWindowInspector";
 import { EntryPointInspector } from "@/components/inspector/EntryPointInspector";
+import { FenceInspector } from "@/components/inspector/FenceInspector";
+import { GateNodeInspector } from "@/components/inspector/GateNodeInspector";
 import { LightInspector } from "@/components/inspector/LightInspector";
 import { ObstructionInspector } from "@/components/inspector/ObstructionInspector";
 import { PathInspector } from "@/components/inspector/PathInspector";
@@ -42,6 +45,9 @@ export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } =
 
   const camera = scene.cameras.find((entry) => entry.id === selectedId);
   const wall = scene.walls.find((entry) => entry.id === selectedId);
+  const fence = (scene.fenceSegments ?? []).find((entry) => entry.id === selectedId);
+  const gate = (scene.gateNodes ?? []).find((entry) => entry.id === selectedId);
+  const bollard = (scene.bollardLines ?? []).find((entry) => entry.id === selectedId);
   const door = scene.doors.find((entry) => entry.id === selectedId);
   const windowNode = scene.windows.find((entry) => entry.id === selectedId);
   const obstruction = scene.obstructions.find((entry) => entry.id === selectedId);
@@ -127,6 +133,12 @@ export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } =
         <SensorInspector />
       ) : entryPoint ? (
         <EntryPointInspector />
+      ) : fence ? (
+        <FenceInspector />
+      ) : gate ? (
+        <GateNodeInspector />
+      ) : bollard ? (
+        <BollardInspector />
       ) : (
         <NoSelection />
       )}

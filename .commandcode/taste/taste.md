@@ -22,8 +22,10 @@
 - When investigating a reported test failure that doesn't reproduce in isolation: check if the failure is stale state from a prior session, then find the actual root cause (often a different test file with a stale assertion) before fixing. Run the full suite to see the real failure pattern. Confidence: 0.70
 
 # workflow
-- Prefer complete end-to-end implementation over partial patchwork fixes. When a choice exists between a quick patch and a proper long-term solution, always choose the latter per motto_v3 long-term 1st principles. Confidence: 0.68
-- After each initiative (I-number) is done with tests + typecheck: commit with detailed message describing changes, verification, and long-term assessment — then push. Each initiative is one atomic commit. Confidence: 0.75
-- Always apply "long-term 1st principles" and "motto_v3" thinking to all work — user invokes these by name as standing rules. Look up motto_v3.md and 1st principles docs when deciding approach, scope, and tradeoffs. Confidence: 0.80
-- When the user says "all of them" or "implement all" referring to a list of I-number initiatives: process them sequentially in one session, each as its own commit+push, never batching multiple initiatives into one commit. Maintain the existing pace and rigor for each. Confidence: 0.78
-- Use a todo list (todo_write / equivalent) when executing multi-initiative batches so progress is visible and incomplete items survive across messages. Confidence: 0.72
+See [workflow/taste.md](workflow/taste.md)
+# commit-style
+- For initiative commits (I-number), the commit message body should have these labelled sections in order: CHANGES (what files), VERIFICATION (test/typecheck numbers), FIRST-PRINCIPLES / LONG-TERM ASSESSMENT (why this is the right design), NOT IN SCOPE (deferred items with reason), CONTEXT (initiative ID, owner, evidence tier). This is the canonical commit format for this project; follow it on every initiative commit. Confidence: 0.80
+
+# testing
+- For spec-compliance work: write a contract test that reads the source file and asserts spec-section wording appears verbatim (e.g. expect(source).toMatch(/Coverage Time Budget/), expect(labels).toContain("2MP Indoor Dome")). This guards against future refactors silently dropping a spec'd label or section. Behavior tests cover the runtime; contract tests cover the spec. Confidence: 0.75
+- For Zod schema or store-slice additions: write a focused unit test file (one describe block per slice) that covers default state, each action, and the round-trip (set then reset). The test is the contract; the slice is the implementation. Keep slice tests separate from any UI that consumes the slice. Confidence: 0.72

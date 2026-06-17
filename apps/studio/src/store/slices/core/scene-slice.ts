@@ -149,12 +149,14 @@ const ANALYSIS_TAB_ORDER: BottomTab[] = [
 const collectionKeys = [
   "walls", "doors", "windows", "cameras", "securityLights",
   "sensors", "obstructions", "criticalZones", "privacyZones", "entryPoints", "paths",
+  "fenceSegments", "gateNodes", "bollardLines",
 ] as const;
 
 const sceneNodeCollectionKeys: Array<keyof SecurityScene> = [
   "walls", "doors", "windows", "cameras", "securityLights",
   "obstructions", "criticalZones", "privacyZones", "entryPoints",
   "paths", "sensors", "comments",
+  "fenceSegments", "gateNodes", "bollardLines",
 ];
 
 // ---------------------------------------------------------------------------
@@ -237,6 +239,9 @@ function duplicateNodeInScene(scene: SecurityScene, id: string): { scene: Securi
     entry_point: "entry",
     path: "path",
     comment: "comment",
+    fence_segment: "fence",
+    gate_node: "gate",
+    bollard_line: "bollard",
   };
   const makeDuplicateId = (prefix: string) => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
   const duplicateScenePoint = (point: [number, number]) => [point[0] + duplicateOffset[0], point[1] + duplicateOffset[1]] as [number, number];
@@ -268,8 +273,13 @@ function duplicateNodeInScene(scene: SecurityScene, id: string): { scene: Securi
         duplicate.position = duplicateScenePoint3((duplicate as { position: [number, number, number] }).position);
         break;
       case "wall":
+      case "fence_segment":
+      case "bollard_line":
         duplicate.start = duplicateScenePoint((duplicate as { start: [number, number] }).start);
         duplicate.end = duplicateScenePoint((duplicate as { end: [number, number] }).end);
+        break;
+      case "gate_node":
+        duplicate.position = duplicateScenePoint((duplicate as { position: [number, number] }).position);
         break;
       case "critical_zone":
       case "privacy_zone":
@@ -805,6 +815,13 @@ export interface SceneSlice {
   removeNode: (id: string) => void;
   updateAssumptions: (patch: Partial<import("@/schema/security-scene").SimulationAssumptions>) => void;
   updateTimeSchedule: (patch: Partial<import("@/schema/security-scene").TimeSchedule>) => void;
+  updateCrowdProfiles: (profiles: import("@/schema/security-scene").CrowdProfile[]) => void;
+  addFenceSegment: (fence: import("@/schema/security-scene").FenceSegment) => void;
+  updateFenceSegment: (id: string, patch: Partial<import("@/schema/security-scene").FenceSegment>) => void;
+  addGateNode: (gate: import("@/schema/security-scene").GateNode) => void;
+  updateGateNode: (id: string, patch: Partial<import("@/schema/security-scene").GateNode>) => void;
+  addBollardLine: (bollard: import("@/schema/security-scene").BollardLine) => void;
+  updateBollardLine: (id: string, patch: Partial<import("@/schema/security-scene").BollardLine>) => void;
 
   commitSceneChange: (updater: (scene: SecurityScene) => SecurityScene, label?: string) => void;
   undo: () => void;
@@ -1229,6 +1246,50 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
         ...scene.timeSchedule,
         ...patch,
       },
+    }));
+  },
+
+  updateCrowdProfiles: (profiles) => {
+    get().commitSceneChange((scene: SecurityScene) => ({
+      ...scene,
+      crowdProfiles: profiles,
+    }));
+  },
+
+  addFenceSegment: (fence) => {
+    get().commitSceneChange((scene: SecurityScene) => ({
+      ...scene,
+      fenceSegments: [...(scene.fenceSegments ?? []), fence],
+    }));
+  },
+  updateFenceSegment: (id, patch) => {
+    get().commitSceneChange((scene: SecurityScene) => ({
+      ...scene,
+      fenceSegments: (scene.fenceSegments ?? []).map((f) => f.id === id ? { ...f, ...patch } : f),
+    }));
+  },
+  addGateNode: (gate) => {
+    get().commitSceneChange((scene: SecurityScene) => ({
+      ...scene,
+      gateNodes: [...(scene.gateNodes ?? []), gate],
+    }));
+  },
+  updateGateNode: (id, patch) => {
+    get().commitSceneChange((scene: SecurityScene) => ({
+      ...scene,
+      gateNodes: (scene.gateNodes ?? []).map((g) => g.id === id ? { ...g, ...patch } : g),
+    }));
+  },
+  addBollardLine: (bollard) => {
+    get().commitSceneChange((scene: SecurityScene) => ({
+      ...scene,
+      bollardLines: [...(scene.bollardLines ?? []), bollard],
+    }));
+  },
+  updateBollardLine: (id, patch) => {
+    get().commitSceneChange((scene: SecurityScene) => ({
+      ...scene,
+      bollardLines: (scene.bollardLines ?? []).map((b) => b.id === id ? { ...b, ...patch } : b),
     }));
   },
 

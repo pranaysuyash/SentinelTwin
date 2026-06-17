@@ -110,5 +110,9 @@ export function createBlankSecurityScene(): SecurityScene {
     snapshots: [],
     scenarios: [],
     changeLog: [],
+    crowdProfiles: [],
+    fenceSegments: [],
+    gateNodes: [],
+    bollardLines: [],
   };
 }

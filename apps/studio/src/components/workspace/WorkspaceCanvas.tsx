@@ -35,6 +35,7 @@ import {
   CoverageSegmentPath,
   CoverageHeatmapInstanced,
   ScenePrivacyZones,
+  CrowdChokepointOverlay,
 } from "./SharedScene";
 import { makeSnapEngine } from "./editing/SnapEngine";
 import { PathDrawTool } from "./editing/PathDrawTool";
@@ -982,6 +983,10 @@ function SceneGeometry({
           onHoverCell={onHeatmapHover}
           onClearHover={onHeatmapHoverClear}
         />
+      ) : null}
+
+      {result?.crowdOcclusion?.chokepoints && result.crowdOcclusion.chokepoints.length > 0 ? (
+        <CrowdChokepointOverlay chokepoints={result.crowdOcclusion.chokepoints} />
       ) : null}
 
       {scene.criticalZones.map((zone) => (

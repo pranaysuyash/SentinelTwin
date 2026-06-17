@@ -211,6 +211,7 @@ export function createCameraNode(
     ndaaCompliant: true,
     privacyMaskingEnabled: false,
     tags: [],
+    lprCapable: false,
     source: options?.source ?? "manual",
     reviewStatus: options?.reviewStatus ?? "unreviewed",
     sourceTrace: options?.sourceTrace ?? "factory:createCameraNode",

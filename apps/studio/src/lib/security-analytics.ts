@@ -4,7 +4,10 @@ import type {
   SecurityScene,
   SimulationResult,
   TemporalSecurityProfile,
+  CrowdProfile,
 } from "@/schema/security-scene";
+import type { CoverageCellResult } from "@/schema/security-scene";
+import { computeCrowdOcclusion } from "@sentineltwin/simulation";
 import type { OperationalEvidenceEvent } from "@/lib/operational-evidence";
 
 /**
@@ -65,6 +68,8 @@ export interface TemporalSeriesPoint {
   hour: number;
   minute: number;
   coveragePct: number;
+  /** Crowd-adjusted effective coverage at this hour. Only present when crowdProfiles are configured. */
+  effectiveCoveragePct?: number;
   zonePassRate: number;
   stateLabel: string;
 }
@@ -363,13 +368,30 @@ export function buildResilience(result: SimulationResult): ResilienceSummary {
   };
 }
 
-function buildTemporalAnalytics(profile: TemporalSecurityProfile | null): TemporalAnalytics | null {
+function buildTemporalAnalytics(
+  profile: TemporalSecurityProfile | null,
+  scene: SecurityScene | null,
+  coverageCells: readonly CoverageCellResult[] | null,
+): TemporalAnalytics | null {
   if (!profile || profile.hourlySnapshots.length === 0) return null;
+
+  // Pre-compute 24h effective coverage sweep if crowd profiles are configured
+  const crowdProfiles: CrowdProfile[] = (scene?.crowdProfiles ?? []).filter((p) => p.enabled && p.archetypes.length > 0);
+  const hasCrowd = crowdProfiles.length > 0 && !!coverageCells && coverageCells.length > 0;
+  const crowdByHour = new Map<number, number>();
+  if (hasCrowd && scene) {
+    for (const snapshot of profile.hourlySnapshots) {
+      if (crowdByHour.has(snapshot.hour)) continue;
+      const result = computeCrowdOcclusion(scene as Parameters<typeof computeCrowdOcclusion>[0], coverageCells as Parameters<typeof computeCrowdOcclusion>[1], crowdProfiles, snapshot.hour);
+      crowdByHour.set(snapshot.hour, result.effectiveCoveragePct);
+    }
+  }
 
   const series: TemporalSeriesPoint[] = profile.hourlySnapshots.map((snapshot) => ({
     hour: snapshot.hour,
     minute: snapshot.minute,
     coveragePct: snapshot.overallCoveragePct,
+    effectiveCoveragePct: hasCrowd ? crowdByHour.get(snapshot.hour) : undefined,
     zonePassRate:
       snapshot.criticalZoneTotalCount === 0
         ? 100
@@ -550,7 +572,11 @@ export function buildSecurityAnalyticsModel(input: SecurityAnalyticsInput): Secu
   const { scene, simulationResult, temporalProfile, evidenceEvents, snapshots } = input;
 
   const evidenceActivity = buildEvidenceActivity(evidenceEvents);
-  const temporal = buildTemporalAnalytics(temporalProfile);
+  const temporal = buildTemporalAnalytics(
+    temporalProfile,
+    scene,
+    simulationResult?.coverageCells ?? null,
+  );
   const coverageTrend = buildCoverageTrend(snapshots, simulationResult);
   const liveHealth = buildLiveOperationalHealth(scene, evidenceEvents);
 

@@ -164,6 +164,7 @@ function applyAction(scene: SecurityScene, action: CounterfactualAction): Securi
       privacyMaskingEnabled: false,
       source: "ai",
       tags: [],
+      lprCapable: false,
       reviewStatus: "unreviewed",
       sourceTrace: "",
       geometryValidity: "valid",

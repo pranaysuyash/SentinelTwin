@@ -21,6 +21,9 @@ import type { CameraLiveConnectionProbeResponse } from "@/lib/camera-live-connec
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
 import type { CameraMetadataIngestResponse } from "@/lib/camera-metadata-live-ingest";
 import { QUALITY_COLOR, QUALITY_LABEL } from "@/lib/quality-display";
+import { buildCameraDriftReport } from "@/lib/camera-drift";
+import { buildObservedVsPlannedReport } from "@/lib/observed-vs-planned";
+import { buildLiveOperationalHealth } from "@/lib/security-analytics";
 import type { CameraNode, CameraMotionWaypoint, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 import { qualityToScore } from "@sentineltwin/core";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
@@ -178,6 +181,8 @@ export function CameraInspector() {
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setCameraPresetId = useStudioStore((s) => s.setCameraPresetId);
   const cameraPresetId = useStudioStore((s) => s.cameraPresetId);
+  const snapshots = useStudioStore((s) => s.snapshots);
+  const operationalEvidenceEvents = useStudioStore((s) => s.operationalEvidenceEvents);
   const allCameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents);
   const recordCameraMetadataEvent = useStudioStore((s) => s.recordCameraMetadataEvent);
   const recordCameraLiveConnectionEvent = useStudioStore((s) => s.recordCameraLiveConnectionEvent);
@@ -316,6 +321,22 @@ export function CameraInspector() {
   ];
 
   const camResult = camera ? result?.cameraResults.find((entry) => entry.cameraId === camera.id) : null;
+
+  // Per-camera Observed vs Planned: drift entry for this camera + live health
+  const cameraOvpReport = useMemo(() => {
+    if (!camera) return null;
+    const liveHealth = buildLiveOperationalHealth(scene, operationalEvidenceEvents);
+    const baseline = snapshots[0];
+    const driftReport = buildCameraDriftReport(
+      scene.cameras,
+      baseline?.scene.cameras ?? null,
+      baseline ? { label: baseline.label ?? "Baseline", timestamp: baseline.createdAt } : null,
+    );
+    const ovp = buildObservedVsPlannedReport(driftReport, liveHealth);
+    const thisDrift = driftReport.entries.find((e) => e.cameraId === camera.id) ?? null;
+    return { ovp, thisDrift };
+  }, [camera, scene, snapshots, operationalEvidenceEvents]);
+
   const targetZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? null;
   const targetZoneResult = targetZone
     ? result?.criticalZoneResults.find((entry) => entry.zoneId === targetZone.id) ?? null
@@ -1651,7 +1672,36 @@ export function CameraInspector() {
             <Field label="IR Range" value={camera.irRangeM > 0 ? camera.irRangeM : "None"} unit={camera.irRangeM > 0 ? "m" : undefined} />
             <Field label="PTZ" value={camera.ptz ? "Yes" : "No"} />
             <Field label="Thermal" value={camera.thermalCapable ? "Yes" : "No"} />
-            
+
+            <div className="border-b border-[#181c27] py-1.5">
+              <div className="mb-1.5 text-[10px] text-[#6a748b]">LPR / ALPR</div>
+              <div className="space-y-1.5">
+                <ToggleField
+                  label="LPR Capable"
+                  value={camera.lprCapable ?? false}
+                  trueLabel="Yes"
+                  falseLabel="No"
+                  onChange={(v) => updateNode(camera.id, { lprCapable: v, lprConfig: v ? (camera.lprConfig ?? { readRangeM: 10, maxSpeedKph: 30, mountAngle: "front_on" }) : undefined })}
+                />
+                {camera.lprCapable && camera.lprConfig && (
+                  <>
+                    <NumberInput label="Read Range" value={camera.lprConfig.readRangeM} min={1} step={1} unit="m" onChange={(v) => updateNode(camera.id, { lprConfig: { ...camera.lprConfig!, readRangeM: v } })} />
+                    <NumberInput label="Max Speed" value={camera.lprConfig.maxSpeedKph} min={0} step={5} unit="kph" onChange={(v) => updateNode(camera.id, { lprConfig: { ...camera.lprConfig!, maxSpeedKph: v } })} />
+                    <SelectInput
+                      label="Mount Angle"
+                      value={camera.lprConfig.mountAngle}
+                      options={[
+                        { value: "front_on", label: "Front-on" },
+                        { value: "side_on", label: "Side-on" },
+                        { value: "angled", label: "Angled" },
+                      ]}
+                      onChange={(v) => updateNode(camera.id, { lprConfig: { ...camera.lprConfig!, mountAngle: v as "front_on" | "side_on" | "angled" } })}
+                    />
+                  </>
+                )}
+              </div>
+            </div>
+
             <div className="border-b border-[#181c27] py-1.5">
               <div className="mb-1.5 text-[10px] text-[#6a748b]">Compliance & Privacy</div>
               <div className="space-y-1.5">
@@ -1851,6 +1901,27 @@ export function CameraInspector() {
                 </div>
               </div>
             </SectionCard>
+            {cameraOvpReport && (
+              <SectionCard title="Observed vs Planned" helpText="Compares this camera's current physical state to the last verified baseline. Drift means the camera has moved or been re-aimed since baseline. Live faults mean the camera is not reporting healthy right now." helpTitle="Observed vs Planned help">
+                {!snapshots[0] ? (
+                  <div className="text-[10px] text-[#6a748b]">No baseline snapshot yet. Take a snapshot to enable drift detection for this camera.</div>
+                ) : cameraOvpReport.thisDrift ? (
+                  <div className={`rounded-lg border px-2.5 py-2 text-[11px] ${cameraOvpReport.thisDrift.severity === "major" ? "border-rose-400/25 bg-rose-500/10 text-rose-100" : "border-amber-400/20 bg-amber-500/8 text-amber-100"}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold capitalize">{cameraOvpReport.thisDrift.severity} drift</span>
+                      <span className="text-[10px] uppercase tracking-[0.1em]">{cameraOvpReport.ovp.summary.statusLabel}</span>
+                    </div>
+                    <div className="mt-1 text-[10px] opacity-80">{cameraOvpReport.thisDrift.detail}</div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-[11px] text-emerald-300">
+                    <CircleCheck className="h-3.5 w-3.5" />
+                    On plan — no drift detected against baseline
+                  </div>
+                )}
+              </SectionCard>
+            )}
+
             <SectionCard title="Sensor Fusion" helpText="Shows nearby non-camera sensors that may confirm activity when camera coverage is weak. This is a preview of multi-sensor evidence, not a replacement for camera verification." helpTitle="Sensor fusion help">
               <div className="grid grid-cols-2 gap-1.5">
                 <SummaryStat label="Sensors" value={`${scene.sensors.length}`} accent="text-cyan-300" />

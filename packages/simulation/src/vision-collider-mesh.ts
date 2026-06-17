@@ -12,6 +12,7 @@ import type {
   WindowNode,
   WallNode,
   ObstructionNode,
+  FenceSegment,
 } from "@sentineltwin/core";
 
 declare module "three" {
@@ -37,6 +38,17 @@ export type VisionColliderMesh = {
   sources: VisionColliderSource[];
   faceSources: VisionColliderSource[];
 };
+
+function buildFenceGeometry(fence: FenceSegment) {
+  const [sx, sz] = fence.start;
+  const [ex, ez] = fence.end;
+  const length = Math.hypot(ex - sx, ez - sz);
+  const geometry = new THREE.BoxGeometry(length, fence.heightM, 0.05);
+  const angle = Math.atan2(ez - sz, ex - sx);
+  geometry.rotateY(angle);
+  geometry.translate((sx + ex) / 2, fence.heightM / 2, (sz + ez) / 2);
+  return geometry;
+}
 
 function buildWallGeometry(wall: WallNode) {
   const [sx, sz] = wall.start;
@@ -88,7 +100,7 @@ function pushSourceFaces(
 }
 
 export function buildVisionColliderMesh(
-  scene: Pick<SecurityScene, "walls" | "obstructions" | "doors" | "windows">,
+  scene: Pick<SecurityScene, "walls" | "obstructions" | "doors" | "windows" | "fenceSegments">,
 ): VisionColliderMesh {
   const geometries: THREE.BufferGeometry[] = [];
   const sources: VisionColliderSource[] = [];
@@ -103,6 +115,21 @@ export function buildVisionColliderMesh(
       material: wall.material,
       visionTransmission: wall.visionTransmission,
       label: wall.label,
+      glarePenalty: false,
+    };
+    sources.push(source);
+    pushSourceFaces(faceSources, geometry, source);
+  }
+
+  for (const fence of scene.fenceSegments ?? []) {
+    if (fence.integrityState === "breached") continue;
+    const geometry = buildFenceGeometry(fence);
+    geometries.push(geometry);
+    const source = {
+      id: fence.id,
+      material: fence.material,
+      visionTransmission: fence.visionTransmission,
+      label: fence.label,
       glarePenalty: false,
     };
     sources.push(source);

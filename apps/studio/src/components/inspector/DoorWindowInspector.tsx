@@ -5,7 +5,7 @@ import { Crosshair, Trash2 } from "lucide-react";
 import { NumberInput, SelectInput, TextInput } from "@/components/inspector/inspector-controls";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { snapDoorWindowToWall } from "@/components/inspector/door-window-snap";
-import type { DoorNode, WindowNode } from "@/schema/security-scene";
+import type { DoorAccessControl, DoorNode, WindowNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
 export function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
@@ -86,6 +86,61 @@ export function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
             Snap to Nearest Wall
           </button>
         </SectionCard>
+
+        {!isWindow && (
+          <SectionCard title="Access Control" helpText="Configures how hard it is for an adversary to breach this door. The adversarial path simulation adds breach time to the total route exposure when this door is on the computed path." helpTitle="Access control help">
+            <SelectInput
+              label="Control Type"
+              value={(node as DoorNode).accessControl?.type ?? "none"}
+              options={[
+                { value: "none",       label: "None (open)" },
+                { value: "pin",        label: "PIN Keypad" },
+                { value: "card",       label: "Card Reader" },
+                { value: "biometric",  label: "Biometric" },
+                { value: "guard_post", label: "Guard Post" },
+              ]}
+              onChange={(value) => {
+                const existing = (node as DoorNode).accessControl;
+                updateNode(node.id, {
+                  accessControl: value === "none"
+                    ? undefined
+                    : { type: value as DoorAccessControl["type"], breachDifficulty: existing?.breachDifficulty ?? 2 },
+                } as Partial<DoorNode>);
+              }}
+            />
+            {(node as DoorNode).accessControl && (node as DoorNode).accessControl!.type !== "none" && (
+              <>
+                <NumberInput
+                  label="Breach Difficulty"
+                  value={(node as DoorNode).accessControl!.breachDifficulty}
+                  min={1}
+                  max={5}
+                  step={1}
+                  onChange={(value) =>
+                    updateNode(node.id, {
+                      accessControl: { ...(node as DoorNode).accessControl!, breachDifficulty: value },
+                    } as Partial<DoorNode>)
+                  }
+                />
+                <NumberInput
+                  label="Breach Time"
+                  value={(node as DoorNode).accessControl?.breachTimeS ?? 30}
+                  min={1}
+                  step={5}
+                  unit="s"
+                  onChange={(value) =>
+                    updateNode(node.id, {
+                      accessControl: { ...(node as DoorNode).accessControl!, breachTimeS: value },
+                    } as Partial<DoorNode>)
+                  }
+                />
+                <div className="pt-0.5 text-[9px] leading-relaxed text-[#6a748b]">
+                  Difficulty 1 = trivial (push through), 5 = extreme (biometric + guard). Breach time adds to total adversarial route duration.
+                </div>
+              </>
+            )}
+          </SectionCard>
+        )}
       </div>
 
       <div className="border-t border-[#1e2130] px-3 py-3">

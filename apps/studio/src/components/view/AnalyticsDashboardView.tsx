@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Activity, BarChart3, Camera, Clock3, Crosshair, Download, Layers, ShieldAlert, Sparkles, Compass, Clapperboard } from "lucide-react";
+import { Activity, BarChart3, Camera, Clock3, Crosshair, Download, Layers, ShieldAlert, Sparkles, Compass, Clapperboard, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
@@ -17,6 +17,7 @@ import { buildFramingGradeReport, type FramingGrade } from "@/lib/framing-grade"
 import { buildDirectorsCutSequence, type DirectorsCutGrade } from "@/lib/directors-cut";
 import { buildObservedVsPlannedReport } from "@/lib/observed-vs-planned";
 import { exportDirectorsCutPdf } from "@/lib/pdf-export";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useStudioStore, type BottomTab, type ViewMode } from "@/store/studio-store";
 
 const TONE_CARD_CLASSES: Record<AnalyticsTone, string> = {
@@ -191,12 +192,17 @@ function TemporalCoverageChart({
   const padX = 28;
   const padY = 14;
 
+  const hasEffective = series.some((p) => p.effectiveCoveragePct !== undefined);
+
   const points = useMemo(() => {
     if (series.length === 0) return [];
     return series.map((point, index) => {
       const x = padX + (index / Math.max(1, series.length - 1)) * (width - padX * 2);
       const y = padY + (1 - point.coveragePct / 100) * (height - padY * 2);
-      return { x, y, point, index };
+      const yEff = point.effectiveCoveragePct !== undefined
+        ? padY + (1 - point.effectiveCoveragePct / 100) * (height - padY * 2)
+        : null;
+      return { x, y, yEff, point, index };
     });
   }, [series]);
 
@@ -204,10 +210,26 @@ function TemporalCoverageChart({
 
   const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const areaPath = `${linePath} L${points[points.length - 1].x.toFixed(1)},${height - padY} L${points[0].x.toFixed(1)},${height - padY} Z`;
+
+  const effPoints = hasEffective ? points.filter((p) => p.yEff !== null) : [];
+  const effLinePath = effPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.yEff!.toFixed(1)}`).join(" ");
+
   const hovered = hoverIndex !== null ? points[hoverIndex] : null;
 
   return (
     <div className="relative">
+      {hasEffective && (
+        <div className="mb-1 flex items-center gap-3 text-[9px] text-[#5b6780]">
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-0.5 w-4 rounded bg-sky-400" />
+            Geometric
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-0.5 w-4 rounded bg-amber-400" style={{ borderTop: "1.5px dashed #fbbf24", display: "inline-block", height: 0 }} />
+            Effective (crowd-adj.)
+          </span>
+        </div>
+      )}
       <svg
         viewBox={`0 0 ${width} ${height}`}
         className="w-full cursor-crosshair"
@@ -260,10 +282,25 @@ function TemporalCoverageChart({
           animate={{ pathLength: 1 }}
           transition={{ duration: 1.1, ease: "easeInOut" }}
         />
+        {hasEffective && effLinePath && (
+          <motion.path
+            d={effLinePath}
+            fill="none"
+            stroke="#fbbf24"
+            strokeWidth={1.5}
+            strokeDasharray="5 3"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.3, ease: "easeInOut", delay: 0.3 }}
+          />
+        )}
         {hovered ? (
           <g>
             <line x1={hovered.x} x2={hovered.x} y1={padY} y2={height - padY} stroke="#7dd3fc" strokeWidth={1} strokeDasharray="3 3" />
             <circle cx={hovered.x} cy={hovered.y} r={3.5} fill="#7dd3fc" />
+            {hovered.yEff !== null && (
+              <circle cx={hovered.x} cy={hovered.yEff!} r={3} fill="#fbbf24" />
+            )}
           </g>
         ) : null}
       </svg>
@@ -273,8 +310,12 @@ function TemporalCoverageChart({
             {`${hovered.point.hour.toString().padStart(2, "0")}:${hovered.point.minute.toString().padStart(2, "0")}`}
           </span>
           {" · "}
-          {hovered.point.coveragePct.toFixed(1)}% coverage · zones {hovered.point.zonePassRate.toFixed(0)}% · {hovered.point.stateLabel}
-          <span className="ml-1 text-sky-300/70">(click to scrub scene)</span>
+          {hovered.point.coveragePct.toFixed(1)}% geometric
+          {hovered.point.effectiveCoveragePct !== undefined
+            ? ` · ${hovered.point.effectiveCoveragePct.toFixed(1)}% effective`
+            : ""}
+          {" · "}zones {hovered.point.zonePassRate.toFixed(0)}%
+          <span className="ml-1 text-sky-300/70">(click to scrub)</span>
         </div>
       ) : null}
     </div>
@@ -519,7 +560,10 @@ export function AnalyticsDashboardView() {
       <div className="mx-auto flex max-w-6xl flex-col gap-3">
         <header className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h1 className="text-sm font-semibold uppercase tracking-[0.2em] text-[#dde2ef]">Security Analytics</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-semibold uppercase tracking-[0.2em] text-[#dde2ef]">Security Analytics</h1>
+              <TruthBadge label="simulated" />
+            </div>
             <p className="text-[11px] text-[#7a86a0]">
               {model.sceneName} · Simulation results · geometry-based, not from live feeds
               {model.computedAt ? ` · computed ${new Date(model.computedAt).toLocaleTimeString()}` : ""}
@@ -726,6 +770,101 @@ export function AnalyticsDashboardView() {
             ) : null}
           </SectionCard>
 
+          {simulationResult?.crowdOcclusion && (
+            <SectionCard title="Crowd Impact" subtitle="dynamic occlusion model" icon={<Users className="h-3.5 w-3.5" />}>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">Agents at hour {simulationResult.crowdOcclusion.hour}:00</span>
+                  <span className="font-mono text-[11px] text-[#dde2ef]">{simulationResult.crowdOcclusion.totalAgentCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">Geometric coverage</span>
+                  <span className="font-mono text-[11px] text-[#dde2ef]">{simulationResult.crowdOcclusion.geometricCoveragePct.toFixed(1)}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">Effective (crowd-adjusted)</span>
+                  <span className="font-mono text-[11px] text-emerald-200">{simulationResult.crowdOcclusion.effectiveCoveragePct.toFixed(1)}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">Occlusion penalty</span>
+                  <span className={`font-mono text-[11px] ${simulationResult.crowdOcclusion.occlusionPenaltyPct > 5 ? "text-amber-200" : "text-[#dde2ef]"}`}>
+                    -{simulationResult.crowdOcclusion.occlusionPenaltyPct.toFixed(1)}%
+                  </span>
+                </div>
+                {simulationResult.crowdOcclusion.chokepoints.length > 0 && (
+                  <div className="mt-1">
+                    <div className="mb-1 text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
+                      Chokepoints ({simulationResult.crowdOcclusion.chokepoints.length})
+                    </div>
+                    <ul className="flex flex-col gap-0.5">
+                      {simulationResult.crowdOcclusion.chokepoints.slice(0, 5).map((cp, i) => (
+                        <li key={i} className="flex items-center justify-between rounded border border-[#1f2536] bg-[#111521] px-2 py-1">
+                          <span className="font-mono text-[10px] text-[#9fb1cf]">
+                            ({cp.x.toFixed(1)}, {cp.z.toFixed(1)})
+                          </span>
+                          <span className="rounded bg-amber-500/15 px-1.5 text-[10px] text-amber-200">
+                            {(cp.occlusionProbability * 100).toFixed(0)}% blocked
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <TruthBadge label="simulated" />
+              </div>
+            </SectionCard>
+          )}
+
+          {simulationResult?.perimeterIntegrity && (
+            <SectionCard title="Perimeter Integrity" icon={<ShieldAlert className="h-3.5 w-3.5" />} subtitle="fence coverage & gate exposure">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#7a86a0]">Fence Segments</span>
+                  <span className="font-mono text-[11px] text-[#dde2ef]">{simulationResult.perimeterIntegrity.fenceSegmentCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#7a86a0]">Total Perimeter</span>
+                  <span className="font-mono text-[11px] text-[#dde2ef]">{simulationResult.perimeterIntegrity.totalPerimeterM.toFixed(1)}m</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#7a86a0]">Camera-Covered</span>
+                  <span className="font-mono text-[11px] text-[#dde2ef]">{simulationResult.perimeterIntegrity.coveredPerimeterM.toFixed(1)}m</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#7a86a0]">Integrity Score</span>
+                  <span className={`font-mono text-[11px] ${simulationResult.perimeterIntegrity.integrityPct >= 80 ? "text-emerald-300" : simulationResult.perimeterIntegrity.integrityPct >= 50 ? "text-amber-300" : "text-red-300"}`}>
+                    {simulationResult.perimeterIntegrity.integrityPct.toFixed(1)}%
+                  </span>
+                </div>
+                {simulationResult.perimeterIntegrity.blindGates.length > 0 && (
+                  <>
+                    <div className="mt-1 text-[9px] uppercase tracking-[0.12em] text-amber-500/80">Blind Gates ({simulationResult.perimeterIntegrity.blindGates.length})</div>
+                    {simulationResult.perimeterIntegrity.blindGates.map((g) => (
+                      <div key={g.gateId} className="flex items-center gap-1.5 text-[10px] text-amber-300">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                        {g.gateLabel}
+                      </div>
+                    ))}
+                  </>
+                )}
+                {simulationResult.perimeterIntegrity.breachedSegments.length > 0 && (
+                  <>
+                    <div className="mt-1 text-[9px] uppercase tracking-[0.12em] text-red-500/80">Breached Segments</div>
+                    {simulationResult.perimeterIntegrity.breachedSegments.map((s) => (
+                      <div key={s.segmentId} className="flex items-center gap-1.5 text-[10px] text-red-300">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                        {s.label}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+              <div className="mt-2">
+                <TruthBadge label="simulated" />
+              </div>
+            </SectionCard>
+          )}
+
           <SectionCard title="Trend & Activity" icon={<Activity className="h-3.5 w-3.5" />}>
             <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">Coverage Across Snapshots</div>
             <div className="mt-1">
@@ -901,6 +1040,31 @@ export function AnalyticsDashboardView() {
           <DirectorsCutCard scene={scene} directorsCut={directorsCut} />
         ) : null}
 
+        {simulationResult?.adversarialPath?.accessControlBarriers &&
+          simulationResult.adversarialPath.accessControlBarriers.length > 0 && (
+          <SectionCard title="Access Control on Adversarial Route" icon={<ShieldAlert className="h-3.5 w-3.5" />} subtitle="doors the attacker must breach">
+            <div className="text-[10px] text-[#7a86a0]">
+              {simulationResult.adversarialPath.accessControlBarriers.length} barrier{simulationResult.adversarialPath.accessControlBarriers.length !== 1 ? "s" : ""} add{" "}
+              {simulationResult.adversarialPath.accessControlBarriers.reduce((s, b) => s + b.breachTimeS, 0)}s breach time to the route.
+            </div>
+            <ul className="mt-1.5 flex flex-col gap-1">
+              {simulationResult.adversarialPath.accessControlBarriers.map((barrier) => (
+                <li key={barrier.nodeId} className="flex items-center justify-between rounded-lg border border-[#1f2536] bg-[#111521] px-2.5 py-1.5">
+                  <div>
+                    <div className="text-[11px] text-[#dde2ef]">{barrier.label}</div>
+                    <div className="text-[9px] uppercase tracking-[0.12em] text-[#556076]">{barrier.controlType.replace("_", " ")}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-rose-500/15 px-1.5 text-[10px] text-rose-300">
+                      diff {barrier.breachDifficulty}/5
+                    </span>
+                    <span className="font-mono text-[10px] text-[#9fb1cf]">{barrier.breachTimeS}s</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+        )}
 
         <SectionCard title="Resilience" icon={<ShieldAlert className="h-3.5 w-3.5" />}>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

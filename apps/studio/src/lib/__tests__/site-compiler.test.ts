@@ -63,6 +63,7 @@ function addCamera(scene: SecurityScene) {
     ndaaCompliant: true,
     privacyMaskingEnabled: false,
     tags: [],
+    lprCapable: false,
     viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
   });
 }

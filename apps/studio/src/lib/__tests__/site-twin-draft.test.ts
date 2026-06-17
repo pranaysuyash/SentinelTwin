@@ -34,6 +34,7 @@ function addCamera(scene: SecurityScene) {
     status: "on", nightMode: "ir", irRangeM: 30, thermalCapable: false, ptz: false,
     clarity: "good", source: "manual", reviewStatus: "unreviewed", sourceTrace: "",
     geometryValidity: "valid", ndaaCompliant: true, privacyMaskingEnabled: false, tags: [],
+    lprCapable: false,
     viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
   });
 }
@@ -316,6 +317,7 @@ describe("actionable warnings", () => {
       status: "on", nightMode: "ir", irRangeM: 30, thermalCapable: false, ptz: false,
       clarity: "good", source: "manual", reviewStatus: "unreviewed", sourceTrace: "",
       geometryValidity: "valid", ndaaCompliant: true, privacyMaskingEnabled: false, tags: [],
+      lprCapable: false,
       viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
     });
     const warnings = makeSiteCompilerWarnings(scene);

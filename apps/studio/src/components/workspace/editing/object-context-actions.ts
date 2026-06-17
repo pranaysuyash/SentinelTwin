@@ -219,6 +219,11 @@ function getNodeAnchor(node: AnyEditableNode): [number, number] {
     }
     case "entry_point":
       return [node.position[0], node.position[1]];
+    case "fence_segment":
+    case "bollard_line":
+      return [(node.start[0] + node.end[0]) / 2, (node.start[1] + node.end[1]) / 2];
+    case "gate_node":
+      return [node.position[0], node.position[1]];
     default:
       return [node.position[0], node.position[2]];
   }

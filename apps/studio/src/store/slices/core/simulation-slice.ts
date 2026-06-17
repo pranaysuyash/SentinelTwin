@@ -446,6 +446,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
           privacyMaskingEnabled: false,
           source: "ai",
           tags: [],
+          lprCapable: false,
           reviewStatus: "unreviewed",
           sourceTrace: "",
           geometryValidity: "valid",

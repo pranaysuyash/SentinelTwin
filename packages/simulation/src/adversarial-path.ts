@@ -183,10 +183,33 @@ export function computeAdversarialPath(
     nodeById.set(node.id, node);
   }
 
-  const start = nearestNode(
-    scene.entryPoints[0]?.position ?? [scene.dimensions.width / 2, scene.dimensions.depth],
-    nodes.filter((node) => node.walkable),
-  );
+  // Collect entry candidates: explicit entry points + open/unlocked gates
+  const walkableNodes = nodes.filter((node) => node.walkable);
+  const entryPositions: [number, number][] = [
+    ...(scene.entryPoints ?? []).map((ep) => ep.position),
+    ...(scene.gateNodes ?? [])
+      .filter((g) => g.state === "open" || (g.state === "closed" && !g.accessControl))
+      .map((g) => g.position),
+  ];
+  const fallbackPosition: [number, number] = [scene.dimensions.width / 2, scene.dimensions.depth];
+  const candidatePositions = entryPositions.length > 0 ? entryPositions : [fallbackPosition];
+
+  const start = candidatePositions
+    .map((pos) => nearestNode(pos, walkableNodes))
+    .filter(Boolean)
+    .reduce(
+      (best, candidate) => {
+        if (!best || !candidate) return candidate;
+        // Prefer the candidate closest to the goal to keep path computation lean
+        const zone2 = selectAdversarialTargetZone(scene, options.targetSelection);
+        if (!zone2) return best;
+        const goalPos = polygonCenter(zone2.polygon);
+        const bestDist = Math.hypot(best.x - goalPos[0], best.z - goalPos[1]);
+        const candDist = Math.hypot(candidate.x - goalPos[0], candidate.z - goalPos[1]);
+        return candDist < bestDist ? candidate : best;
+      },
+      undefined as NavNode | undefined,
+    );
   const zone = selectAdversarialTargetZone(scene, options.targetSelection);
   const goal = zone
     ? nearestNode(polygonCenter(zone.polygon), nodes.filter((node) => node.walkable))
@@ -266,6 +289,7 @@ export function computeAdversarialPath(
       criticalZonesReachableAlongRoute: [],
       criticalZoneReachable: false,
       failureReason: "Critical zone is unreachable through walkable space.",
+      accessControlBarriers: [],
     };
   }
 
@@ -327,15 +351,64 @@ export function computeAdversarialPath(
     )
     .map((camera) => camera.id);
 
+  // Collect access-control barriers: doors + locked gates near any waypoint.
+  const DOOR_SNAP_RADIUS = 1.5;
+  const DEFAULT_BREACH_TIME_BY_DIFFICULTY = [0, 5, 15, 30, 60, 120] as const; // index = difficulty 0-5
+
+  type BarrierCandidate = {
+    id: string;
+    label: string;
+    pos2: [number, number];
+    ac: { type: string; breachDifficulty: number; breachTimeS?: number };
+  };
+
+  const barrierCandidates: BarrierCandidate[] = [
+    ...scene.doors
+      .filter((d) => d.accessControl && d.accessControl.type !== "none")
+      .map((d) => ({
+        id: d.id,
+        label: d.label,
+        pos2: [d.position[0], d.position[2]] as [number, number],
+        ac: d.accessControl!,
+      })),
+    ...(scene.gateNodes ?? [])
+      .filter((g) => g.accessControl && g.accessControl.type !== "none")
+      .map((g) => ({
+        id: g.id,
+        label: g.label,
+        pos2: g.position,
+        ac: g.accessControl!,
+      })),
+  ];
+
+  const accessControlBarriers = barrierCandidates
+    .filter(({ pos2 }) =>
+      waypoints.some((wp) => Math.hypot(wp.position[0] - pos2[0], wp.position[1] - pos2[1]) <= DOOR_SNAP_RADIUS),
+    )
+    .map(({ id, label, ac }) => {
+      const diff = ac.breachDifficulty;
+      const breachTimeS = ac.breachTimeS ?? DEFAULT_BREACH_TIME_BY_DIFFICULTY[diff] ?? 30;
+      return {
+        nodeId: id,
+        label,
+        controlType: ac.type,
+        breachDifficulty: diff,
+        breachTimeS,
+      };
+    });
+
+  const breachTimePenalty = accessControlBarriers.reduce((sum, b) => sum + b.breachTimeS, 0);
+
   return {
     waypoints,
     totalExposureScore: Number(distances.get(goal.id)!.toFixed(2)),
-    totalDurationS: Number((waypoints.length * cellSize).toFixed(2)),
+    totalDurationS: Number((waypoints.length * cellSize + breachTimePenalty).toFixed(2)),
     detectionQualityExposure,
     maxDetectionProbability: Math.max(...waypoints.map((waypoint) => waypoint.detectionProbability), 0),
     coverageGapsUsed,
     camerasWithoutCoverageOnRoute,
     criticalZonesReachableAlongRoute,
     criticalZoneReachable: criticalZonesReachableAlongRoute.length > 0,
+    accessControlBarriers,
   };
 }

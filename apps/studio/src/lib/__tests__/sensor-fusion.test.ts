@@ -90,6 +90,7 @@ describe("computeSensorFusionSummary", () => {
       clarity: "good",
       source: "manual",
       tags: [],
+      lprCapable: false,
       reviewStatus: "unreviewed",
       sourceTrace: "",
       geometryValidity: "valid",

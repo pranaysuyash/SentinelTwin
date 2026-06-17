@@ -6897,51 +6897,57 @@ can it reuse `clarity`/`reasonCodes`?
 
 ### Thread 147: Populated Scenes — NPC/Crowd Simulation for Dynamic Occlusion & Baseline Behavior
 
-**Status:** Open. New idea, no code yet. Builds on D-009 (adversarial path) and
+**Status:** Active — core implementation complete (2026-06-17). Builds on D-009 (adversarial path) and
 Thread 12 (workspace interaction/blindspot attribution).
 
-**The gap:** Today's coverage model is *static* — it answers "if a person
-stands at point X, what quality of view do the cameras have?" Real spaces are
-full of moving people who occlude each other and the floor/walls dynamically.
-A single adversarial path (D-009) models one intruder's optimal route, but a
-retail floor at 2pm has 30 shoppers, 4 staff, and a stockroom worker — and
-*their* movement is what actually determines whether a given blind spot is
-"empty 99% of the time" or "always has someone standing in it, permanently
-blocking Camera 3's view of the register."
+**What is built (as of 2026-06-17):**
 
-**The idea — populate the scene with simulated "extras":**
-- A small library of agent archetypes (Customer, Staff, Stocking Cart,
-  Loiterer) each with a simple behavior: wander between points of interest
-  (shelves, registers, doors) with dwell times, using the same walkable-area
-  geometry the coverage grid already uses.
-- Run the coverage simulation across a *population* of agents over simulated
-  time (reuses the 06_TEMPORAL 24h profile machinery — agent density by hour
-  is itself a known retail pattern: empty at 8am, crowded at 6pm).
-- Output: "effective coverage" that accounts for occlusion-by-crowd, not just
-  occlusion-by-furniture (`occlusion-blame.ts` already exists for static
-  obstructions — this is the dynamic sibling). Also surfaces "chokepoints":
-  spots where two agent paths cross and a camera's view is *statistically*
-  blocked a meaningful fraction of the time.
+- **Simulation engine** (`packages/simulation/src/crowd-sim.ts`): Poisson-process occlusion
+  probability field. Per-cell `P(occlusion) = 1 - exp(-λ · A_agent)` where λ is agents/sqm
+  per zone and A_agent is π·bodyRadius². O(zones × cells), no raycasting — runs on main thread.
+  Exports `computeCrowdOcclusion` and `DEFAULT_RETAIL_ARCHETYPES`.
+- **Archetype library** (in `crowd-sim.ts`): Customer, Staff, Stocking Cart, Loiterer — each
+  with per-hour count curves tuned to retail patterns (stocking carts peak pre-open 6–8am;
+  loiterers peak late afternoon 15–18h when staff thins out).
+- **Schema** (`packages/core/src/schema/security-scene.ts`): `agentArchetypeSchema`,
+  `crowdProfileSchema`, `CrowdProfile`, `AgentArchetype`, `crowdOcclusion` in simulation result.
+  `crowdProfiles` field on `SecurityScene`. Rule-5 pass complete.
+- **Simulation integration** (`packages/simulation/src/simulate-studio.ts`): calls
+  `computeCrowdOcclusion` and stores result in `simulationResult.crowdOcclusion` at the current
+  hour. Wired to temporal scrubber — crowd density shifts with the time-of-day slider.
+- **Store action** (`apps/studio/src/store/slices/core/scene-slice.ts`): `updateCrowdProfiles`
+  action for adding/editing/removing crowd profiles from the scene.
+- **UI — Crowd Profile Editor** (`apps/studio/src/components/inspector/CrowdProfileEditor.tsx`):
+  Full editor in the Schedule tab. Add profiles, add archetypes per profile, edit per-hour
+  count via bar chart, toggle enabled/disabled, add Retail preset with one click.
+- **UI — Analytics Dashboard** (`apps/studio/src/components/view/AnalyticsDashboardView.tsx`):
+  "Crowd Impact" section showing: total agents at current hour, geometric vs effective coverage,
+  occlusion penalty %, top 5 chokepoints with their x/z positions and occlusion probability.
+- **UI — 3D scene overlay** (`apps/studio/src/components/workspace/SharedScene.tsx`):
+  `CrowdChokepointOverlay` renders amber-to-red torus rings at chokepoint positions in the
+  3D canvas. Ring diameter and color intensity scale with `occlusionProbability`.
+  Appears automatically whenever `simulationResult.crowdOcclusion.chokepoints` is non-empty.
+- **Tests** (`packages/simulation/src/__tests__/crowd-sim.test.ts`): 8 unit tests covering
+  empty profile, Poisson reduction under high density, chokepoint threshold, valid ranges.
 
-**The director-lens framing:** This is exactly what a virtual-production crowd
-simulation does (e.g. Unreal's crowd/MetaHuman population tools, or game-engine
-NPC pathing) — except instead of making a scene look populated for a render,
-the population is the *load* the security design has to survive. "Your camera
-covers the stockroom door geometrically, but a stocking cart is parked in that
-doorway 40% of business hours, per the simulated traffic pattern" is a finding
-no purely-geometric tool can produce.
+**The gap this closes:** Coverage was reported as a static-geometry number. Now the dashboard
+shows "Geometric: 78% → Effective (with crowd): 61% at 14:00" — an honest number for an
+occupied space. Chokepoint rings in the 3D scene show *where* crowd occlusion hurts most,
+without any additional user action once profiles are configured.
 
-**Relation to existing code:** `adversarial-path.ts` (Dijkstra over the
-walkable grid) is the per-agent pathing primitive; `temporal.ts` /
-`seasonal-lighting.ts` already model time-of-day variation; `occlusion-blame.ts`
-is the static-obstruction occlusion model this would extend to moving bodies
-(a person is just a cylinder-shaped obstruction that moves).
+**The director-lens framing:** This is exactly what a virtual-production crowd simulation does —
+except instead of making a scene look populated for a render, the population is the *load* the
+security design has to survive. "Your camera covers the stockroom door geometrically, but a
+stocking cart is parked in that doorway 40% of business hours" is a finding no purely-geometric
+tool can produce.
 
-**Open questions:** Performance — running coverage for N agents x M timesteps
-is combinatorially heavier than the current single-pass grid; likely needs a
-coarser "occlusion probability field" rather than per-agent raycasting at full
-resolution. Schema impact: likely a new `crowdProfile` config on the scene
-(traffic patterns per zone/hour) — would need its own Rule-5 pass.
+**Open / follow-on items:**
+- *Zone-assignment UX*: archetypes currently spread across all zones equally unless
+  `preferredZones` is set. The editor shows zone IDs but needs a zone-picker dropdown.
+- *24h effective-coverage series*: temporal profile could sweep crowd occlusion across all 24h
+  and plot effective coverage alongside geometric — feeds Thread 150 (VR training) and 152 (access control).
+- *Stocking Cart body width in practice*: 0.55 m radius is an estimate; verify against
+  standard retail trolley dimensions (~0.5 m wide + operator) for calibration.
 
 ---
 

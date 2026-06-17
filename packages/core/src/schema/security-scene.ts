@@ -98,6 +98,14 @@ export const wallNodeSchema = z.object({
   collisionLayer: collisionLayerSchema.optional(),
 });
 
+export const doorAccessControlSchema = z.object({
+  type: z.enum(["none", "pin", "card", "biometric", "guard_post"]).default("none"),
+  /** 1 = trivial (push open), 5 = extremely difficult (biometric + guard) */
+  breachDifficulty: z.number().int().min(1).max(5).default(1),
+  /** Estimated seconds to defeat, used in adversarial path cost. */
+  breachTimeS: z.number().positive().optional(),
+});
+
 export const doorNodeSchema = z.object({
   id: z.string().startsWith("door_"),
   nodeType: z.literal("door"),
@@ -106,12 +114,15 @@ export const doorNodeSchema = z.object({
   dimensions: point3Schema,
   state: z.enum(["open", "closed", "locked", "restricted"]),
   wallId: z.string().optional(),
+  accessControl: doorAccessControlSchema.optional(),
   source: sceneSourceSchema,
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
   collisionLayer: collisionLayerSchema.optional(),
 });
+
+export type DoorAccessControl = z.infer<typeof doorAccessControlSchema>;
 
 export const windowNodeSchema = z.object({
   id: z.string().startsWith("window_"),
@@ -235,6 +246,13 @@ export const cameraNodeSchema = z.object({
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
   collisionLayer: collisionLayerSchema.optional(),
+  /** LPR (License Plate Recognition) capability. When true, lprConfig should be set. */
+  lprCapable: z.boolean().default(false),
+  lprConfig: z.object({
+    readRangeM: z.number().positive(),
+    maxSpeedKph: z.number().nonnegative(),
+    mountAngle: z.enum(["front_on", "side_on", "angled"]),
+  }).optional(),
 });
 
 export const securityLightNodeSchema = z.object({
@@ -594,6 +612,14 @@ export const adversarialPathResultSchema = z.object({
   criticalZonesReachableAlongRoute: z.array(z.string()),
   criticalZoneReachable: z.boolean(),
   failureReason: z.string().optional(),
+  /** Doors with access control that the adversary must breach on this path. */
+  accessControlBarriers: z.array(z.object({
+    nodeId: z.string(),
+    label: z.string(),
+    controlType: z.enum(["none", "pin", "card", "biometric", "guard_post"]),
+    breachDifficulty: z.number().int().min(1).max(5),
+    breachTimeS: z.number().nonnegative(),
+  })).default([]),
 });
 
 export const coverageCellResultSchema = z.object({
@@ -979,6 +1005,28 @@ export const simulationResultSchema = z.object({
   zoneConfidence: z.record(z.string(), confidenceBandSchema).optional(),
   pathConfidence: z.record(z.string(), confidenceBandSchema).optional(),
   recommendationConfidence: z.record(z.string(), confidenceBandSchema).optional(),
+  crowdOcclusion: z.object({
+    hour: z.number().int().min(0).max(23),
+    totalAgentCount: z.number().int().nonnegative(),
+    geometricCoveragePct: z.number().min(0).max(100),
+    effectiveCoveragePct: z.number().min(0).max(100),
+    occlusionPenaltyPct: z.number().min(0).max(100),
+    chokepoints: z.array(z.object({
+      x: z.number(),
+      z: z.number(),
+      occlusionProbability: z.number().min(0).max(1),
+      qualityWithCrowd: z.string(),
+    })),
+    agentDensityByZone: z.record(z.string(), z.number().nonnegative()),
+  }).optional(),
+  perimeterIntegrity: z.object({
+    fenceSegmentCount: z.number().int().nonnegative(),
+    totalPerimeterM: z.number().nonnegative(),
+    coveredPerimeterM: z.number().nonnegative(),
+    integrityPct: z.number().min(0).max(100),
+    blindGates: z.array(z.object({ gateId: z.string(), gateLabel: z.string() })),
+    breachedSegments: z.array(z.object({ segmentId: z.string(), label: z.string() })),
+  }).optional(),
 });
 
 // ── Temporal Simulation Types (defined before base scene schema to avoid TDZ) ──
@@ -1007,6 +1055,85 @@ export const patrolScheduleSchema = z.object({
   durationMinutes: z.number().positive(),
   firstPatrolHour: z.number().min(0).max(23),
 });
+
+// ── Thread 147: NPC/Crowd Simulation ─────────────────────────────────────────
+
+export const agentArchetypeSchema = z.object({
+  archetypeId: z.string(),
+  label: z.string(),
+  bodyRadiusM: z.number().positive().default(0.3),
+  heightM: z.number().positive().default(1.7),
+  preferredZones: z.array(z.string()).default([]),
+  countByHour: z.array(z.number().min(0)).length(24),
+});
+
+// ── Perimeter & Outdoor (Thread 149) ─────────────────────────────────────────
+
+export const fenceSegmentSchema = z.object({
+  id: z.string().startsWith("fence_"),
+  nodeType: z.literal("fence_segment"),
+  label: z.string(),
+  start: point2Schema,
+  end: point2Schema,
+  heightM: z.number().positive().default(1.8),
+  material: z.enum(["chain_link", "solid_metal", "timber", "brick", "razor_wire", "electric"]).default("chain_link"),
+  visionTransmission: z.number().min(0).max(1).default(0.7),
+  integrityState: z.enum(["intact", "damaged", "breached"]).default("intact"),
+  climbDifficulty: z.number().int().min(1).max(5).default(2),
+  source: sceneSourceSchema,
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
+});
+
+export const gateNodeSchema = z.object({
+  id: z.string().startsWith("gate_"),
+  nodeType: z.literal("gate_node"),
+  label: z.string(),
+  position: point2Schema,
+  fenceSegmentId: z.string().optional(),
+  gateType: z.enum(["pedestrian", "vehicle", "service"]).default("pedestrian"),
+  state: z.enum(["open", "closed", "locked", "restricted"]).default("closed"),
+  widthM: z.number().positive().default(1.2),
+  accessControl: doorAccessControlSchema.optional(),
+  hasCameraView: z.boolean().default(false),
+  lprCameraId: z.string().optional(),
+  source: sceneSourceSchema,
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
+});
+
+export const bollardLineSchema = z.object({
+  id: z.string().startsWith("bollard_"),
+  nodeType: z.literal("bollard_line"),
+  label: z.string(),
+  start: point2Schema,
+  end: point2Schema,
+  spacingM: z.number().positive().default(1.0),
+  bollardType: z.enum(["fixed", "removable", "retractable"]).default("fixed"),
+  protectionClass: z.enum(["standard", "pas68", "iwa14_1"]).default("standard"),
+  source: sceneSourceSchema,
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
+});
+
+export type FenceSegment = z.infer<typeof fenceSegmentSchema>;
+export type GateNode = z.infer<typeof gateNodeSchema>;
+export type BollardLine = z.infer<typeof bollardLineSchema>;
+
+export const crowdProfileSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  archetypes: z.array(agentArchetypeSchema),
+  enabled: z.boolean().default(true),
+});
+
+export type AgentArchetype = z.infer<typeof agentArchetypeSchema>;
+export type CrowdProfile = z.infer<typeof crowdProfileSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const timeScheduleSchema = z.object({
   location: z.object({
@@ -1113,6 +1240,10 @@ const securitySceneBaseSchema = z.object({
   assumptions: simulationAssumptionsSchema,
   calibrationConstants: calibrationConstantsSchema.optional(),
   timeSchedule: timeScheduleSchema.optional(),
+  crowdProfiles: z.array(crowdProfileSchema).default([]),
+  fenceSegments: z.array(fenceSegmentSchema).default([]),
+  gateNodes: z.array(gateNodeSchema).default([]),
+  bollardLines: z.array(bollardLineSchema).default([]),
   simulation: simulationResultSchema.optional(),
   previousSimulation: simulationResultSchema.optional(),
   temporalProfile: temporalSecurityProfileSchema.optional(),
@@ -1187,7 +1318,10 @@ export type AnyNode =
   | PrivacyZoneNode
   | EntryPointNode
   | ScenarioPath
-  | CommentNode;
+  | CommentNode
+  | FenceSegment
+  | GateNode
+  | BollardLine;
 
 export type AnyEditableNode = AnyNode;
 

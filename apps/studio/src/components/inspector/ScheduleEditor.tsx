@@ -4,6 +4,7 @@ import { Clock, MapPin, Shield, Sun, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 
 import { SectionCard } from "@/components/shared/SectionCard";
+import { CrowdProfileEditor } from "@/components/inspector/CrowdProfileEditor";
 import type { OccupancyPeriod, PatrolSchedule, TimeSchedule } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -351,6 +352,11 @@ export function ScheduleEditor() {
         <p className="mt-1 text-[8px] text-[#4a5568]">
           Enables real sunrise/sunset times for accurate exterior lighting simulation.
         </p>
+      </SectionCard>
+
+      {/* ── Crowd Profiles ── */}
+      <SectionCard title="Crowd & NPC Simulation" icon={<Users className="h-3.5 w-3.5" />}>
+        <CrowdProfileEditor />
       </SectionCard>
 
       {/* ── Clock icon hint ── */}

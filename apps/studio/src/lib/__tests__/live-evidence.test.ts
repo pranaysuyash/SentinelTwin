@@ -45,6 +45,7 @@ const dummyScene: SecurityScene = {
       privacyMaskingEnabled: false,
       source: "manual",
       tags: [],
+      lprCapable: false,
       reviewStatus: "unreviewed",
       sourceTrace: "",
       geometryValidity: "valid",
@@ -100,6 +101,10 @@ const dummyScene: SecurityScene = {
   evidenceArtifacts: [],
   mismatchReports: [],
   changeLog: [],
+  crowdProfiles: [],
+  fenceSegments: [],
+  gateNodes: [],
+  bollardLines: [],
 };
 
 describe("LiveEvidence", () => {

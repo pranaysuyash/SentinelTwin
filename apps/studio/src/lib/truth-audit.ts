@@ -664,10 +664,22 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
       "Observed vs Planned",
       "driftEntries",
       "liveAlerts",
+      "TruthBadge",
     ],
     forbiddenPhrases: [
       "Live Operations",
     ],
+  },
+  {
+    surface: "Crowd Impact analytics card",
+    file: "src/components/view/AnalyticsDashboardView.tsx",
+    requiredPhrases: [
+      "crowdOcclusion",
+      "occlusionPenaltyPct",
+      "effectiveCoveragePct",
+      "TruthBadge",
+    ],
+    forbiddenPhrases: [],
   },
   {
     surface: "Director's Cut PDF export",

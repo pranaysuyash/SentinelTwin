@@ -17,6 +17,7 @@ describe("buildDirectorsCutSequence", () => {
       camerasWithoutCoverageOnRoute: [],
       criticalZonesReachableAlongRoute: [],
       criticalZoneReachable: false,
+      accessControlBarriers: [],
     });
 
     expect(sequence).toBeNull();

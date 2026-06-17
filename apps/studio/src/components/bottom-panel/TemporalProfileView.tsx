@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertTriangle, Clock, Shield, ShieldAlert, Sun, Moon, Sunset, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { AlertTriangle, Clock, Settings, Shield, ShieldAlert, Sun, Moon, Sunset, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { ScheduleEditor } from "@/components/inspector/ScheduleEditor";
 import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useStudioStore } from "@/store/studio-store";
 import { computeTemporalProfile } from "@sentineltwin/simulation";
@@ -299,6 +300,7 @@ export function TemporalProfileView() {
   const temporalScrubMinute = useStudioStore((s) => s.temporalScrubMinute);
   const environmentMode = useStudioStore((s) => s.environmentMode);
   const [loading, setLoading] = useState(false);
+  const [showScheduleEditor, setShowScheduleEditor] = useState(false);
 
   const handleCompute = useCallback(() => {
     setLoading(true);
@@ -330,15 +332,40 @@ export function TemporalProfileView() {
             </span>
           )}
         </div>
-        <button type="button"
-          onClick={handleCompute}
-          disabled={loading}
-          className="flex items-center gap-1 px-2 py-1 rounded bg-[#1a1d26] hover:bg-[#1e2235] text-[9px] text-[#8090a8] transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-          {loading ? "Computing..." : temporalProfile ? "Recompute" : "Compute 24h Profile"}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setShowScheduleEditor((v) => !v)}
+            title="Configure site schedule"
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] transition-colors ${
+              showScheduleEditor
+                ? "bg-[#1e2235] border border-[#2a3246] text-[#c7d0e4]"
+                : "bg-[#1a1d26] hover:bg-[#1e2235] text-[#8090a8]"
+            }`}
+          >
+            <Settings className="w-3 h-3" />
+            Schedule
+          </button>
+          <button type="button"
+            onClick={handleCompute}
+            disabled={loading}
+            className="flex items-center gap-1 px-2 py-1 rounded bg-[#1a1d26] hover:bg-[#1e2235] text-[9px] text-[#8090a8] transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+            {loading ? "Computing..." : temporalProfile ? "Recompute" : "Compute 24h Profile"}
+          </button>
+        </div>
       </div>
+
+      {/* Collapsible schedule editor */}
+      {showScheduleEditor && (
+        <div className="border-b border-[#1e2130] overflow-y-auto max-h-[280px] flex-shrink-0">
+          <div className="px-2 pt-1.5 pb-0.5">
+            <span className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Site Schedule Configuration</span>
+          </div>
+          <ScheduleEditor />
+        </div>
+      )}
 
       {!temporalProfile ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[11px] text-[#3a4158]">

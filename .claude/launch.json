@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "studio-prod",
+      "name": "studio-dev",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "apps/studio", "start"],
+      "runtimeArgs": ["--dir", "apps/studio", "dev"],
       "port": 3000
     }
   ]

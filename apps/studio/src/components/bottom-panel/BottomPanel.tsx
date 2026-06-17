@@ -23,6 +23,7 @@ import { CoverageBudgetTab } from "./CoverageBudgetTab";
 import { SensorsTab } from "./SensorsTab";
 import { TemporalProfileView } from "./TemporalProfileView";
 import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
+import { WorkflowChips } from "./WorkflowChips";
 
 const PANEL_EXPLAINERS: Record<BottomTab, string> = {
   outcome: "Use this first after a run. It translates the simulation into the current security verdict, top failures, camera responsibility, redundancy, and next actions.",
@@ -294,6 +295,10 @@ export function BottomPanel() {
             {viewMode.replace(/_/g, " ")}
           </TabBadge>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 border-b border-[#1e2130] bg-[#0b0f17] px-3 py-1">
+        <WorkflowChips activeTab={activeTabSafe} />
       </div>
 
       <div className="relative flex min-w-0 items-end gap-0.5 border-b border-[#1e2130] px-1.5 pt-1.5">

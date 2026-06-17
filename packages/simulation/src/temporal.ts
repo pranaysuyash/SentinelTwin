@@ -76,6 +76,8 @@ export type TimeSliceState = {
   occupancy: OccupancyLevel;
   stateLabel: string;
   doorStates?: Record<string, "closed" | "locked">;
+  guardPatrolActive: boolean;
+  activeGuardCount: number;
 };
 
 function isNight(hour: number): SimState {
@@ -105,6 +107,48 @@ function getOccupancyDefault(hour: number, minute: number): { level: OccupancyLe
   if (time < 18) return { level: "medium", label: "Afternoon" };
   if (time < 22) return { level: "low", label: "Closing" };
   return { level: "empty", label: "After Hours" };
+}
+
+/**
+ * Determine how many guards are actively on patrol at a given time.
+ *
+ * A patrol round starts at firstPatrolHour then repeats every intervalMinutes.
+ * A guard is "active" when the current time falls within any round's
+ * [roundStart, roundStart + durationMinutes) window.
+ */
+function getActiveGuardCount(hour: number, minute: number, scene?: SecurityScene): number {
+  const patrols = scene?.timeSchedule?.guardPatrolSchedule;
+  if (!patrols || patrols.length === 0) return 0;
+
+  const currentMinutes = hour * 60 + minute;
+  let count = 0;
+
+  for (const patrol of patrols) {
+    const dayMinutes = 24 * 60;
+    const firstStartMinutes = patrol.firstPatrolHour * 60;
+
+    // Walk through every round in the 24h window
+    for (
+      let roundStart = firstStartMinutes;
+      roundStart < firstStartMinutes + dayMinutes;
+      roundStart += patrol.intervalMinutes
+    ) {
+      const roundStartWrapped = roundStart % dayMinutes;
+      const roundEnd = roundStartWrapped + patrol.durationMinutes;
+
+      const inRound =
+        roundEnd <= dayMinutes
+          ? currentMinutes >= roundStartWrapped && currentMinutes < roundEnd
+          : currentMinutes >= roundStartWrapped || currentMinutes < roundEnd % dayMinutes;
+
+      if (inRound) {
+        count++;
+        break; // This guard is active — no need to check remaining rounds
+      }
+    }
+  }
+
+  return count;
 }
 
 function timeInPeriod(time: number, startHour: number, endHour: number): boolean {
@@ -214,6 +258,13 @@ function computeTimeSliceState(hour: number, minute: number, scene?: SecuritySce
     }
   }
 
+  const activeGuardCount = getActiveGuardCount(hour, minute, scene);
+  const guardPatrolActive = activeGuardCount > 0;
+
+  const baseLabel = ts && ts.doorLockSchedule.length > 0 && scene && scene.doors.length > 0
+    ? `${interior.label}${doorStates && Object.values(doorStates).some(s => s === "locked") ? " (doors locked)" : ""}`
+    : interior.label;
+
   return {
     hour,
     minute,
@@ -221,10 +272,10 @@ function computeTimeSliceState(hour: number, minute: number, scene?: SecuritySce
     interiorLightsOn: interior.on,
     exteriorLightsOn: exterior.on,
     occupancy: occupancy.level,
-    stateLabel: ts && ts.doorLockSchedule.length > 0 && scene && scene.doors.length > 0
-      ? `${interior.label}${doorStates && Object.values(doorStates).some(s => s === "locked") ? " (doors locked)" : ""}`
-      : interior.label,
+    stateLabel: guardPatrolActive ? `${baseLabel} (guard patrol)` : baseLabel,
     doorStates,
+    guardPatrolActive,
+    activeGuardCount,
   };
 }
 
@@ -256,6 +307,15 @@ function collectScheduleTransitionHours(scene: SecurityScene): number[] {
     }
     for (const op of ts.occupancySchedule) {
       addScheduleHours([op.timeRange]);
+    }
+    // Add guard patrol transition hours so each round start/end is a separate snapshot
+    for (const patrol of ts.guardPatrolSchedule) {
+      const dayMinutes = 24 * 60;
+      const firstStart = patrol.firstPatrolHour * 60;
+      for (let start = firstStart; start < firstStart + dayMinutes; start += patrol.intervalMinutes) {
+        hours.add(Math.floor((start % dayMinutes) / 60));
+        hours.add(Math.floor(((start + patrol.durationMinutes) % dayMinutes) / 60));
+      }
     }
   }
 
@@ -444,6 +504,12 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
     const patchedScene = patchSceneForTimeSlice(scene, state);
     const result = simulateStudio(patchedScene);
 
+    const rawExposure = result.adversarialPath?.totalExposureScore ?? 0;
+    // Guard patrol deterrence: each active guard reduces adversarial exposure by 35%.
+    const adjustedExposure = state.guardPatrolActive
+      ? rawExposure * Math.max(0, 1 - 0.35 * state.activeGuardCount)
+      : rawExposure;
+
     hourlySnapshots.push({
       hour: state.hour,
       minute: state.minute,
@@ -455,8 +521,13 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
       ),
       activeCameraCount: result.cameraResults.length,
       activeLightCount: patchedScene.securityLights.filter((l) => l.status === "on").length,
-      adversarialPathExposureScore: result.adversarialPath?.totalExposureScore ?? 0,
-      issues: result.issues.map((i) => i.description),
+      adversarialPathExposureScore: adjustedExposure,
+      issues: [
+        ...result.issues.map((i) => i.description),
+        ...(state.guardPatrolActive
+          ? [`Guard patrol active (${state.activeGuardCount} guard${state.activeGuardCount > 1 ? "s" : ""}) — adversarial exposure reduced`]
+          : []),
+      ],
       stateLabel: state.stateLabel,
     });
   }

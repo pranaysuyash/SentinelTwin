@@ -1074,6 +1074,14 @@ export const counterfactualActionSchema = z.object({
   estimatedCost: z.number().min(0).default(0),
 });
 
+export const counterfactualZoneDeltaSchema = z.object({
+  zoneId: z.string(),
+  baselineStatus: z.string(),
+  proposedStatus: z.string(),
+  coverageChangePct: z.number(),
+  improved: z.boolean(),
+});
+
 export const counterfactualPlanSchema = z.object({
   planId: z.string(),
   label: z.string(),
@@ -1084,6 +1092,8 @@ export const counterfactualPlanSchema = z.object({
   confidenceScore: z.number().min(0).max(1).default(1),
   privacyScore: z.number().min(0).max(1).default(1),
   simulationResult: simulationResultSchema.optional(),
+  zoneResults: z.array(zoneResultSchema).optional(),
+  zoneDeltas: z.array(counterfactualZoneDeltaSchema).optional(),
 });
 
 export type CounterfactualConstraint = z.infer<typeof counterfactualConstraintSchema>;

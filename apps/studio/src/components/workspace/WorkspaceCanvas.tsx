@@ -2,7 +2,7 @@
 
 import { Html, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { MousePointer2 } from "lucide-react";
+import { Camera, MousePointer2 } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -1984,6 +1984,7 @@ export function WorkspaceCanvas() {
   const editorMode = useStudioStore((s) => s.editor.editorMode);
   const isAimingCamera = useStudioStore((s) => Boolean(s.editor.placementAim));
   const rootActiveTool = useStudioStore((s) => s.activeTool);
+  const setActiveTool = useStudioStore((s) => s.setActiveTool);
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
   const [sceneWidth, sceneDepth] = useMemo(
     () => sanitizeSceneDimensions(scene.dimensions.width, scene.dimensions.depth, 0.5),
@@ -2139,6 +2140,32 @@ export function WorkspaceCanvas() {
 
       {/* Floating contextual task bar for the current selection */}
       <SelectionContextBar />
+
+      {/* Empty-state guide: shown only in map view when no cameras exist */}
+      {scene.cameras.length === 0 && rootActiveTool === "select" && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          <button
+            type="button"
+            className="pointer-events-auto flex flex-col items-center gap-3 rounded-2xl border border-[#1e2536] bg-[#0b0f1a]/85 px-7 py-5 text-center backdrop-blur-sm transition-colors hover:border-[#2d3a54] hover:bg-[#0f1422]/95"
+            onClick={() => setActiveTool("camera")}
+          >
+            <div className="flex size-11 items-center justify-center rounded-xl border border-[#1e2840] bg-[#111828]">
+              <Camera className="h-5 w-5 text-blue-400" />
+            </div>
+            <div>
+              <p className="text-[12px] font-semibold text-[#c8d5ee]">Add your first camera</p>
+              <p className="mt-1 text-[9px] leading-relaxed text-[#4d5c7a]">
+                Click here to activate the camera tool
+                <br />
+                or press{" "}
+                <kbd className="rounded border border-[#2a3652] bg-[#0e1525] px-1 py-0.5 font-mono text-[8px] text-[#7a9bcc]">
+                  C
+                </kbd>
+              </p>
+            </div>
+          </button>
+        </div>
+      )}
 
       <Canvas
         shadows="percentage"

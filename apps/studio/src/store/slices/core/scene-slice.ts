@@ -804,6 +804,7 @@ export interface SceneSlice {
   duplicateNode: (id: string) => void;
   removeNode: (id: string) => void;
   updateAssumptions: (patch: Partial<import("@/schema/security-scene").SimulationAssumptions>) => void;
+  updateTimeSchedule: (patch: Partial<import("@/schema/security-scene").TimeSchedule>) => void;
 
   commitSceneChange: (updater: (scene: SecurityScene) => SecurityScene, label?: string) => void;
   undo: () => void;
@@ -1211,6 +1212,21 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
       ...scene,
       assumptions: {
         ...scene.assumptions,
+        ...patch,
+      },
+    }));
+  },
+
+  updateTimeSchedule: (patch) => {
+    get().commitSceneChange((scene: SecurityScene) => ({
+      ...scene,
+      timeSchedule: {
+        interiorLightSchedule: [],
+        exteriorLightSchedule: [],
+        doorLockSchedule: [],
+        occupancySchedule: [],
+        guardPatrolSchedule: [],
+        ...scene.timeSchedule,
         ...patch,
       },
     }));

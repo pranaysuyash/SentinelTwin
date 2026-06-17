@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { DepthAnythingV2Adapter } from "@/lib/scan-adapters/adapters/depth-anything-v2-adapter";
+import { DepthAnythingV2Adapter, createOnnxRuntimeInference } from "@/lib/scan-adapters/adapters/depth-anything-v2-adapter";
 import type { PhotoArtifact, ScanArtifact } from "@/lib/scan-artifacts";
 
 function makePhoto(role: PhotoArtifact["role"] = "overview"): PhotoArtifact {
@@ -104,5 +104,23 @@ describe("DepthAnythingV2Adapter (I14)", () => {
     const ids = set.depthEstimation.map((a) => a.id);
     expect(ids).toContain("stub-depth-estimation");
     expect(ids).toContain("depth-anything-v2");
+  });
+
+  test("createOnnxRuntimeInference factory is exported", () => {
+    // The factory must be a function so callers (and the registry)
+    // can wire a real ONNX session into the adapter. We don't
+    // exercise the actual ONNX runtime here because it requires
+    // a real model file and a browser environment; the
+    // structural test is the gate.
+    expect(typeof createOnnxRuntimeInference).toBe("function");
+  });
+
+  test("ensureDepthAnythingV2Ready is exported from the registry", async () => {
+    const { ensureDepthAnythingV2Ready } = await import("@/lib/scan-adapters/registry");
+    expect(typeof ensureDepthAnythingV2Ready).toBe("function");
+    // Calling it should not throw even if the model file is
+    // missing — the factory catches and falls back to the stub.
+    const adapter = await ensureDepthAnythingV2Ready();
+    expect(adapter.id).toBe("depth-anything-v2");
   });
 });

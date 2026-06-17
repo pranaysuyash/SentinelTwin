@@ -305,3 +305,81 @@ async function defaultRunInference(
       "Wire an onnxruntime-web session into the adapter options.",
   );
 }
+
+/**
+ * Build a real ONNX-backed `runInference` function that loads the
+ * model from `modelUrl` on first call, caches the session, and
+ * returns the relative depth tensor.
+ *
+ * The dynamic import of `onnxruntime-web` is intentional: the
+ * dependency is heavy (~3MB unpacked) and should not be loaded
+ * by adapters that opt out of real CV depth. Code that wants the
+ * real path calls this factory at registry-construction time and
+ * threads the returned function into the adapter options.
+ */
+export async function createOnnxRuntimeInference(modelUrl: string): Promise<(input: Float32Array, dims: { width: number; height: number }) => Promise<Float32Array>> {
+  // Use the runtime-only path: import the package and use the values
+  // directly. Type-only imports would be cleaner, but onnxruntime-web
+  // is large enough that the dynamic import is a meaningful win.
+  // The dynamic import returns `any` from TypeScript's perspective
+  // because the package's type definitions are bundled as `.d.ts`
+  // files that aren't picked up by our `moduleResolution: "bundler"`
+  // config without a tsconfig adjustment. Casting through `unknown`
+  // to a minimal local interface keeps the structural typing
+  // honest without forcing a tsconfig change.
+  const ort = (await import("onnxruntime-web")) as unknown as OnnxRuntime;
+  // Disable warning spam in production: ONNX's logger pushes
+  // per-tensor diagnostics that aren't useful for our use case.
+  if (typeof ort.env.logLevel === "object" && ort.env.logLevel !== null) {
+    ort.env.logLevel = "error";
+  }
+  let sessionPromise: Promise<OnnxSession> | null = null;
+  const getSession = (): Promise<OnnxSession> => {
+    if (!sessionPromise) {
+      sessionPromise = ort.InferenceSession.create(modelUrl, {
+        executionProviders: ["wasm"],
+        graphOptimizationLevel: "all",
+      });
+    }
+    return sessionPromise;
+  };
+  return async (input, dims) => {
+    const session = await getSession();
+    // Depth Anything V2 expects a [1, 3, H, W] float32 tensor with
+    // ImageNet-normalised values — exactly what imageToTensor
+    // produces at INFERENCE_INPUT_SIZE.
+    const tensor = new ort.Tensor("float32", input, [1, 3, dims.height, dims.width]);
+    const feeds: Record<string, OnnxTensor> = { image: tensor };
+    const output = await session.run(feeds);
+    // The model emits a single output named "depth"; pull the first
+    // channel and squeeze the batch dimension.
+    const first = Object.values(output)[0];
+    if (!first) {
+      throw new Error("DepthAnythingV2 ONNX session returned no outputs");
+    }
+    const data = first.data as Float32Array;
+    const out = new Float32Array(dims.width * dims.height);
+    for (let i = 0; i < out.length; i += 1) {
+      out[i] = data[i] ?? 0;
+    }
+    return out;
+  };
+}
+
+interface OnnxTensor {
+  data: Float32Array | Float64Array | Int32Array | BigInt64Array | Uint8Array;
+  type: string;
+  dims: readonly number[];
+}
+
+interface OnnxSession {
+  run: (feeds: Record<string, OnnxTensor>) => Promise<Record<string, OnnxTensor>>;
+}
+
+interface OnnxRuntime {
+  env: { logLevel: string | object };
+  Tensor: new (type: "float32", data: Float32Array, dims: number[]) => OnnxTensor;
+  InferenceSession: {
+    create: (url: string, options: { executionProviders: string[]; graphOptimizationLevel: string }) => Promise<OnnxSession>;
+  };
+}

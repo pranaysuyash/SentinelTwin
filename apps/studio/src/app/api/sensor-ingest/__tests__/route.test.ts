@@ -30,6 +30,14 @@ afterAll(() => {
 });
 
 describe("sensor-ingest route", () => {
+  const expectEnvelopeMetadata = (payload: Record<string, unknown>) => {
+    expect(typeof payload.requestId).toBe("string");
+    expect(payload.requestId).toBeTruthy();
+    expect(payload.apiVersion).toBe("1");
+    expect(payload.timestamp).toBeTruthy();
+    expect(typeof payload.timestamp).toBe("string");
+  };
+
   test("queues a sensor ingest and persists history", async () => {
     const scene = createBlankSecurityScene();
     scene.name = "Ingest Scene";
@@ -54,6 +62,9 @@ describe("sensor-ingest route", () => {
     expect(response.status).toBe(200);
     const payload = await response.json();
     expect(payload.ok).toBe(true);
+    expect(payload.errorCode).toBeUndefined();
+    expect(payload.error).toBeUndefined();
+    expectEnvelopeMetadata(payload);
     expect(payload.source).toBe("debug-panel");
     expect(payload.historyCount).toBe(1);
     expect(payload.summary).toContain("Imported 1 sensor event");
@@ -62,6 +73,7 @@ describe("sensor-ingest route", () => {
     const historyResponse = await GET(createNextRequest("http://localhost/api/sensor-ingest"));
     expect(historyResponse.status).toBe(200);
     const historyPayload = await historyResponse.json();
+    expectEnvelopeMetadata(historyPayload);
     expect(historyPayload.ok).toBe(true);
     expect(historyPayload.historyCount).toBe(1);
     expect(historyPayload.latestSubmission?.sceneName).toBe("Ingest Scene");
@@ -79,6 +91,9 @@ describe("sensor-ingest route", () => {
     expect(response.status).toBe(400);
     const payload = await response.json();
     expect(payload.ok).toBe(false);
+    expect(payload.errorCode).toBe("validation_error");
+    expect(Array.isArray(payload.issues)).toBe(true);
+    expect(payload.issues.length).toBeGreaterThan(0);
     expect(payload.error).toContain("Invalid sensor ingest payload");
   });
 
@@ -128,6 +143,8 @@ describe("sensor-ingest route", () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.ok).toBe(true);
+      expect(body.errorCode).toBeUndefined();
+      expectEnvelopeMetadata(body);
       expect(body.ingestMode).toBe("external");
       expect(body.feedUrl).toBe(`http://127.0.0.1:${address.port}/feed`);
       expect(body.events).toHaveLength(1);

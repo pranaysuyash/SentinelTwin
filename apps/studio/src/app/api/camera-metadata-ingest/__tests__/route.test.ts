@@ -27,6 +27,14 @@ afterAll(() => {
 });
 
 describe("camera-metadata-ingest route", () => {
+  const expectEnvelopeMetadata = (payload: Record<string, unknown>) => {
+    expect(typeof payload.requestId).toBe("string");
+    expect(payload.requestId).toBeTruthy();
+    expect(payload.apiVersion).toBe("1");
+    expect(payload.timestamp).toBeTruthy();
+    expect(typeof payload.timestamp).toBe("string");
+  };
+
   test("archives a live camera metadata feed and persists history", async () => {
     const response = await POST(createNextRequest("http://localhost/api/camera-metadata-ingest", {
       method: "POST",
@@ -55,12 +63,14 @@ describe("camera-metadata-ingest route", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
+    expectEnvelopeMetadata(body);
     expect(body.historyCount).toBe(1);
     expect(body.summary).toContain("Imported 1 camera metadata record");
     expect(body.records).toHaveLength(1);
 
     const history = await GET(createNextRequest("http://localhost/api/camera-metadata-ingest"));
     const payload = await history.json();
+    expectEnvelopeMetadata(payload);
     expect(payload.historyCount).toBe(1);
     expect(payload.latestSubmission.records[0].status).toBe("dirty");
   });
@@ -106,6 +116,8 @@ describe("camera-metadata-ingest route", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
+    expect(body.errorCode).toBeUndefined();
+    expectEnvelopeMetadata(body);
     expect(body.historyCount).toBe(2);
     expect(body.summary).toContain("Imported 1 ONVIF notification event");
     expect(body.evidenceEvents).toHaveLength(1);
@@ -113,6 +125,7 @@ describe("camera-metadata-ingest route", () => {
 
     const history = await GET(createNextRequest("http://localhost/api/camera-metadata-ingest"));
     const payload = await history.json();
+    expectEnvelopeMetadata(payload);
     expect(payload.historyCount).toBe(2);
     expect(payload.latestSubmission.evidenceEvents).toHaveLength(1);
     expect(payload.latestSubmission.evidenceEvents[0].title).toBe("Motion Alarm");
@@ -164,6 +177,7 @@ describe("camera-metadata-ingest route", () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.ok).toBe(true);
+      expectEnvelopeMetadata(body);
       expect(body.ingestMode).toBe("external");
       expect(body.feedUrl).toBe(`http://127.0.0.1:${address.port}/feed`);
       expect(body.records).toHaveLength(1);

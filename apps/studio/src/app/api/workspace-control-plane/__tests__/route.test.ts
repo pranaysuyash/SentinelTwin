@@ -36,6 +36,11 @@ describe("workspace-control-plane route", () => {
     expect(response.status).toBe(200);
     const body = await response.json() as { ok: boolean; synced: boolean; sceneStatus: string };
     expect(body.ok).toBe(true);
+    expect(body.errorCode).toBeUndefined();
+    expect(typeof body.requestId).toBe("string");
+    expect(body.requestId).toBeTruthy();
+    expect(body.apiVersion).toBe("1");
+    expect(body.timestamp).toBeTruthy();
     expect(body.synced).toBe(true);
     expect(body.sceneStatus).toBe("draft");
   });
@@ -51,5 +56,25 @@ describe("workspace-control-plane route", () => {
     expect(response.status).toBe(200);
     const body = await response.json() as { ok: boolean };
     expect(body.ok).toBe(true);
+    expect(body.errorCode).toBeUndefined();
+    expect(typeof body.requestId).toBe("string");
+    expect(body.requestId).toBeTruthy();
+    expect(body.apiVersion).toBe("1");
+    expect(body.timestamp).toBeTruthy();
+  });
+
+  test("returns validation metadata for malformed control-plane payloads", async () => {
+    const response = await POST(new NextRequest("http://localhost/api/workspace-control-plane", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    }));
+
+    expect(response.status).toBe(400);
+    const body = await response.json() as { ok: boolean; errorCode: string; issues?: unknown[] };
+    expect(body.ok).toBe(false);
+    expect(body.errorCode).toBe("validation_error");
+    expect(Array.isArray(body.issues)).toBe(true);
+    expect(body.issues?.length).toBeGreaterThan(0);
   });
 });

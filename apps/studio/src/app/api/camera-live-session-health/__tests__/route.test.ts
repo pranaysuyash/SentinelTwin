@@ -66,6 +66,11 @@ describe("camera-live-session-health route", () => {
     expect(response.status).toBe(200);
     const body = await response.json() as { ok: boolean; totals: { active: number } };
     expect(body.ok).toBe(true);
+    expect(body.errorCode).toBeUndefined();
+    expect(body.apiVersion).toBe("1");
+    expect(typeof body.requestId).toBe("string");
+    expect(body.requestId).toBeTruthy();
+    expect(typeof body.timestamp).toBe("string");
     expect(body.totals.active).toBeGreaterThan(0);
   });
 
@@ -79,6 +84,24 @@ describe("camera-live-session-health route", () => {
     expect(response.status).toBe(200);
     const body = await response.json() as { ok: boolean; renewedSessionId: string };
     expect(body.ok).toBe(true);
+    expect(body.errorCode).toBeUndefined();
+    expect(body.apiVersion).toBe("1");
+    expect(typeof body.requestId).toBe("string");
+    expect(body.requestId).toBeTruthy();
+    expect(typeof body.timestamp).toBe("string");
     expect(body.renewedSessionId).toBe("session_1");
+  });
+
+  test("returns not-found for unknown sessions", async () => {
+    const response = await POST(new NextRequest("http://localhost/api/camera-live-session-health", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId: "missing-session" }),
+    }));
+
+    expect(response.status).toBe(404);
+    const body = await response.json() as { ok: boolean; errorCode: string };
+    expect(body.ok).toBe(false);
+    expect(body.errorCode).toBe("not_found");
   });
 });

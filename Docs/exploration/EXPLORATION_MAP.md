@@ -1,17 +1,18 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-06-17 (Added API contract standardization thread for studio ingest/control endpoints via shared envelope + parse helpers) — previous: Compliance depth gap documented: IEC 62676-4/DORI templates exist, GDPR/BIPA/HIPAA pending; hook purity fixes applied across 7 components; CI gate enhanced to cover packages; camera live-connection contract canonicalized; deployment packaging multi-stage Docker + health API + compose; Simulation engine maturity Thread 2b — calibration, confidence, hashing, scenarios, counterfactuals, sensitivity; Scan/reconstruction pipeline foundation: artifact data model, adapter interfaces, reconstruction compiler, quality gates, 73 new tests; Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
+**Last updated:** 2026-06-17 (API contract standardization thread now includes test lock-in for response envelope + error-taxonomy across studio runtime routes.)
 
 ---
 
 ## Active Research Threads
 
 ### Thread 11: API contract standardization for studio runtime endpoints
-**Status:** In-progress.
+**Status:** Completed (contracts + test lock-in in place).
 **Problem:** Ingest and control-plane routes had hand-rolled request parsing and inconsistent error shapes.
 **Action taken:** Added `apps/studio/src/lib/api-response.ts` and migrated core studio API endpoints to shared parsing and envelope helpers (`apiJson`, `parseValidatedJsonBody`).
 **Result:** Consumers now get stable metadata (`requestId`, `apiVersion`, `timestamp`) and reusable `errorCode` values while preserving existing resource payload fields (`ok`, history count, session summaries, sync status).
+**Test lock-in:** Route tests for `sensor-ingest`, `camera-metadata-ingest`, `workspace-control-plane`, and `camera-live-session-health` now assert envelope metadata and typed validation/error fields in both success and failure cases.
 **Code anchors:** `apps/studio/src/app/api/sensor-ingest/route.ts`; `apps/studio/src/app/api/camera-metadata-ingest/route.ts`; `apps/studio/src/app/api/workspace-control-plane/route.ts`; `apps/studio/src/app/api/camera-live-session-health/route.ts`; `apps/studio/src/lib/api-response.ts`.
 
 ### Thread 0: Product integrity hardening spine

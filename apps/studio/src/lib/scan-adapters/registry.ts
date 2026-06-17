@@ -3,7 +3,7 @@ import { StubObjectDetectionAdapter } from "@/lib/scan-adapters/adapters/stub-de
 import { StubDepthEstimationAdapter } from "@/lib/scan-adapters/adapters/stub-depth-adapter";
 import { StubScaleAnchoringAdapter } from "@/lib/scan-adapters/adapters/stub-scale-anchoring-adapter";
 import { StubSegmentationAdapter } from "@/lib/scan-adapters/adapters/stub-segmentation-adapter";
-import { DepthAnythingV2Adapter } from "@/lib/scan-adapters/adapters/depth-anything-v2-adapter";
+import { DepthAnythingV2Adapter, createOnnxRuntimeInference } from "@/lib/scan-adapters/adapters/depth-anything-v2-adapter";
 import { VlmObjectDetectionAdapter, VlmStructuralExtractionAdapter } from "@/lib/vlm-pipeline/vlm-adapter";
 
 const stubObjectDetection = new StubObjectDetectionAdapter();
@@ -11,15 +11,49 @@ const stubDepthEstimation = new StubDepthEstimationAdapter();
 const stubScaleAnchoring = new StubScaleAnchoringAdapter();
 const stubSegmentation = new StubSegmentationAdapter();
 
-// The Depth Anything V2 adapter is instantiated lazily so the cost of
-// loading the model file (and the ~25MB ONNX asset) is only paid when
-// an operator explicitly opts into real CV depth estimation.
-let depthAnythingV2Singleton: DepthAnythingV2Adapter | null = null;
+// The Depth Anything V2 adapter is wired lazily so the cost of
+// loading the model file (and the ~3MB onnxruntime-web dependency)
+// is only paid when an operator explicitly opts into real CV
+// depth estimation.
+//
+// The registry returns a stub adapter synchronously. To get the
+// real wired adapter, callers can `await ensureDepthAnythingV2Ready()`
+// before scanning; the resulting adapter is also cached as the
+// singleton that `getDepthAnythingV2Adapter()` returns on
+// subsequent calls.
+const DEPTH_ANYTHING_MODEL_URL =
+  process.env.NEXT_PUBLIC_SENTINELTWIN_DEPTH_MODEL_URL ?? "/models/depth-anything-v2/depth_anything_v2_small.onnx";
+
+let depthAnythingV2AdapterSingleton: DepthAnythingV2Adapter | null = null;
+let depthAnythingV2InitPromise: Promise<DepthAnythingV2Adapter> | null = null;
+
+export async function ensureDepthAnythingV2Ready(): Promise<DepthAnythingV2Adapter> {
+  if (depthAnythingV2AdapterSingleton) return depthAnythingV2AdapterSingleton;
+  if (depthAnythingV2InitPromise) return depthAnythingV2InitPromise;
+  depthAnythingV2InitPromise = (async () => {
+    try {
+      const runInference = await createOnnxRuntimeInference(DEPTH_ANYTHING_MODEL_URL);
+      const adapter = new DepthAnythingV2Adapter({
+        modelUrl: DEPTH_ANYTHING_MODEL_URL,
+        runInference,
+      });
+      depthAnythingV2AdapterSingleton = adapter;
+      return adapter;
+    } catch (error) {
+      // If ONNX runtime fails to load (e.g. SSR, missing file),
+      // we return a stub adapter that produces :fallback
+      // results. The error surfaces via the singleton's
+      // estimateDepth return value.
+      const adapter = new DepthAnythingV2Adapter();
+      depthAnythingV2AdapterSingleton = adapter;
+      return adapter;
+    }
+  })();
+  return depthAnythingV2InitPromise;
+}
+
 function getDepthAnythingV2Adapter(): DepthAnythingV2Adapter {
-  if (!depthAnythingV2Singleton) {
-    depthAnythingV2Singleton = new DepthAnythingV2Adapter();
-  }
-  return depthAnythingV2Singleton;
+  return depthAnythingV2AdapterSingleton ?? new DepthAnythingV2Adapter();
 }
 
 const vlmObjectDetection = new VlmObjectDetectionAdapter();

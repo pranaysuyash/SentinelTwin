@@ -32,6 +32,26 @@ This preserves existing payload semantics (`ok`, `history`, `historyCount`, `syn
 
 **Documentation update path:** This decision is fully documented here and by the corresponding implementation anchors in API route files; no behavior changed in UI or schema docs in this pass.
 
+## D-317 | 2026-06-17 | Lock API envelope contract in route tests for studio endpoints
+
+Decision: Extend the route test suite for shared studio API endpoints to assert the standardized API envelope fields (`requestId`, `apiVersion`, `timestamp`) and machine-readable `errorCode` contracts (`validation_error`, `not_found`) on successful and failing responses.
+
+Rationale:
+- Route responses were migrated to a shared helper, but tests still validated only legacy payload keys, leaving the contract gap only partially observable.
+- Codifying metadata and error-taxonomy assertions prevents silent drift where route handlers keep `apiJson` but callers regress toward permissive or bespoke payload checks.
+- This reinforces first-principles API reliability: every route contract change must be test-visible and documented at the same layer as behavior change.
+
+Alternatives rejected:
+- Keep tests field-by-field on `ok` and domain payload only: rejected because it did not guard metadata consistency and error-machine handling guarantees.
+- Add production-only monitoring only: rejected because test-time contract validation is the cheapest and earliest backstop.
+
+Implementation scope:
+- Updated tests:
+  - `apps/studio/src/app/api/sensor-ingest/__tests__/route.test.ts`
+  - `apps/studio/src/app/api/camera-metadata-ingest/__tests__/route.test.ts`
+  - `apps/studio/src/app/api/workspace-control-plane/__tests__/route.test.ts`
+  - `apps/studio/src/app/api/camera-live-session-health/__tests__/route.test.ts`
+
 ## D-294 | 2026-06-01 | Deterministic seek-aware path replay timing loop
 
 **Decision:** Path replay playback in `PathReplayView.tsx` now uses a requestAnimationFrame-based timeline loop with an explicit time anchor so slider scrubbing while playing reuses the same loop without stutter or timeline drift.

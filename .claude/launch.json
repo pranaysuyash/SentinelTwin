@@ -5,7 +5,8 @@
       "name": "studio-dev",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--dir", "apps/studio", "dev"],
-      "port": 3000
+      "port": 3001,
+      "autoPort": true
     }
   ]
 }

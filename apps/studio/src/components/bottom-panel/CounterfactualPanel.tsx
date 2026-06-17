@@ -533,6 +533,7 @@ export function CounterfactualPanel() {
                       <th className="px-2 py-1.5 text-left">Cost</th>
                       <th className="px-2 py-1.5 text-left">Coverage</th>
                       <th className="px-2 py-1.5 text-left">Blindspot</th>
+                      <th className="px-2 py-1.5 text-left">Adversarial</th>
                       <th className="px-2 py-1.5 text-left">Zone Δ</th>
                       <th className="px-2 py-1.5 text-left">Action</th>
                     </tr>
@@ -548,6 +549,9 @@ export function CounterfactualPanel() {
                         </td>
                         <td className="px-2 py-1.5 font-mono">
                           {c.verifiedDelta?.blindspotPctDelta ?? 0}%
+                        </td>
+                        <td className="px-2 py-1.5 font-mono">
+                          {c.verifiedDelta?.adversarialPathExposureDelta ?? "—"}
                         </td>
                         <td className="px-2 py-1.5">{c.verifiedDelta?.criticalZoneStatusChanges.length ?? 0}</td>
                         <td className="px-2 py-1.5">

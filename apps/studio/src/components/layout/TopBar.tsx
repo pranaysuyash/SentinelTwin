@@ -15,6 +15,7 @@ import {
   Loader2,
   Moon,
   Play,
+  Settings2,
   Shield,
   Plus,
   ScanSearch,
@@ -255,6 +256,16 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
         >
           <LayoutDashboard className="h-3 w-3" />
           <span className="hidden lg:inline">Home</span>
+        </SurfaceButton>
+
+        <SurfaceButton
+          onClick={() => navigateProductView("settings")}
+          title="Open product preferences and consolidated settings"
+          aria-label="Open settings"
+          data-testid="topbar-settings"
+        >
+          <Settings2 className="h-3 w-3" />
+          <span className="hidden lg:inline">Settings</span>
         </SurfaceButton>
 
         <div className="hidden h-5 w-px bg-[#1e2130] xl:block" />
@@ -531,6 +542,15 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           <SlidersHorizontal className="h-3 w-3" />
           <span className="hidden lg:inline">View</span>
         </SurfaceButton>
+
+        <button
+          type="button"
+          aria-label="Open keyboard shortcuts"
+          onClick={() => {}}
+          className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] transition-colors hover:border-[#32384d] hover:text-white"
+        >
+          <Keyboard className="h-3.5 w-3.5" />
+        </button>
 
         {/* Primary CTA */}
         <button type="button"

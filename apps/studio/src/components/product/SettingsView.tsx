@@ -303,6 +303,77 @@ export function SettingsView() {
             </div>
           </section>
 
+          {/* Deep links to other settings surfaces */}
+          <section className="rounded-[24px] border border-[#1f2536] bg-[#0d121c] p-5">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+              <LayoutDashboard className="h-3.5 w-3.5 text-amber-300" />
+              Other Settings Surfaces
+            </div>
+            <p className="mt-3 max-w-2xl text-sm text-[#c8d4ea]">
+              The settings below live in the workspace dock, the right rail, and the bottom panel
+              because they're tied to the active scene or analysis flow. Open them from the place
+              they're most useful — this page is the discovery entry point, not the only path.
+            </p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {[
+                {
+                  id: "project-settings",
+                  title: "Project Settings",
+                  detail: "Scene name, units, source metadata, and project identity. Lives in the launcher Projects section.",
+                  cta: "Open Launcher",
+                  action: () => {
+                    navigate("product_home");
+                  },
+                },
+                {
+                  id: "simulation-assumptions",
+                  title: "Simulation Assumptions",
+                  detail: "Quality model, lighting, target, environment. Lives in the bottom-panel Assumptions tab.",
+                  cta: "Open Tab",
+                  action: () => {
+                    navigate("studio");
+                  },
+                },
+                {
+                  id: "workspace-view",
+                  title: "Workspace View",
+                  detail: "Component visibility, saved layouts, analysis modules, workspace presets. Lives in the View modal.",
+                  cta: "Open View",
+                  action: () => {
+                    toggleViewSettingsOpen();
+                    navigate("studio");
+                  },
+                },
+                {
+                  id: "first-run-guide",
+                  title: "First-Run Guide",
+                  detail: "Show the welcome flow again. Use when handing off to a new operator or refresher training.",
+                  cta: "Reset",
+                  action: () => {
+                    try {
+                      window.localStorage.removeItem("sentineltwin_first_run_guide_seen_v1");
+                    } catch {
+                      // localStorage may be unavailable; ignore.
+                    }
+                  },
+                },
+              ].map((entry) => (
+                <div key={entry.id} className="rounded-xl border border-[#22314b] bg-[#0b0f17] px-3 py-3">
+                  <div className="text-sm font-semibold text-white">{entry.title}</div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-[#7e8aa4]">{entry.detail}</p>
+                  <button
+                    type="button"
+                    onClick={entry.action}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#2d3750] bg-[#11182a] px-2.5 py-1.5 text-[10px] text-[#cfe0ff] transition-colors hover:border-sky-400/30 hover:text-white"
+                    data-testid={`settings-deeplink-${entry.id}`}
+                  >
+                    {entry.cta}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+
           {/* About section */}
           <section className="rounded-[24px] border border-[#1f2536] bg-[#0d121c] p-5">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">

@@ -63,12 +63,13 @@ Implementation scope:
 - `apps/studio/src/app/api/reconstruct/route.ts`
 - `apps/studio/src/app/api/health/route.ts`
 
-This pass standardized `errorCode` on failure paths, wrapped the `draft-scene` heuristic response in the shared metadata envelope, added a `GET` availability contract for `model-eval`, and renamed the health payload's internal timestamp field to avoid colliding with the shared envelope timestamp.
+This pass standardized `errorCode` on failure paths, wrapped the `draft-scene` heuristic response in the shared metadata envelope, added a `GET` availability contract for `model-eval`, renamed the health payload's internal timestamp field to avoid colliding with the shared envelope timestamp, and extended the migration sweep through the remaining already-modified archive/session routes. It also fixed the support-delivery POST handler to await the async summary builder before spreading the response payload.
 
 **Rationale:**
 - The earlier envelope migration was only partially applied; these routes were still mixing legacy `code` fields, bare metadata responses, or field names that conflicted with the shared envelope.
 - `model-eval` already had a contract test that expected a GET availability payload, so the code needed to match the test instead of weakening the assertion.
 - Health should expose a service heartbeat without shadowing the canonical envelope timestamp field.
+- The support-delivery route had an async contract bug where the summary promise was being spread into the response before it resolved; that had to be corrected to preserve the documented payload fields.
 
 **Alternatives rejected:**
 - Leave route-local error keys in place: rejected because it preserves contract drift and makes client handling inconsistent.

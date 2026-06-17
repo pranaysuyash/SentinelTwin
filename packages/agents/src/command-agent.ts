@@ -1,9 +1,9 @@
 import { sceneOperationArraySchema } from "@sentineltwin/core";
-import type { SceneOperation } from "@sentineltwin/core";
-import { PROMPT_REGISTRY } from "@sentineltwin/agents";
-import { validateSceneOperationsAgainstScene } from "@/lib/scene-operation-validator";
-import type { SecurityScene } from "@sentineltwin/core";
-import type { ModelProvider } from "@sentineltwin/agents";
+import type { SceneOperation, SecurityScene } from "@sentineltwin/core";
+
+import { PROMPT_REGISTRY } from "./prompt-registry";
+import type { ModelProvider } from "./providers/ModelProvider";
+import { validateSceneOperationsAgainstScene } from "./scene-operation-validator";
 
 export interface SceneContextSummary {
   cameraNames: string[];

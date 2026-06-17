@@ -69,3 +69,15 @@ export type {
 // Scene Understanding Agent
 export { analyzeSceneUnderstanding, buildSceneUnderstandingSummary } from "./scene-understanding-agent";
 export type { SceneUnderstandingResult } from "./scene-understanding-agent";
+
+// Command Agent
+export { parseCommand, parseCommandDetailed } from "./command-agent";
+export type { SceneContextSummary, CommandParseResult } from "./command-agent";
+
+// Scene Operation Validator (used by CommandAgent and any AI workflow that
+// emits SceneOperation[] against a SecurityScene).
+export { validateSceneOperationsAgainstScene } from "./scene-operation-validator";
+export type {
+  SemanticValidationIssue,
+  SemanticValidationResult,
+} from "./scene-operation-validator";

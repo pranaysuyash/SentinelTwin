@@ -19,7 +19,7 @@ export type {
 import { draftSceneFromPrompt, draftSceneFromPromptWithModel, summarizeDraftResult } from "@/lib/ai-layout-draft";
 import { describeAiProviderGovernance, type AiProviderGovernanceSummary, type AiProviderSelection } from "@sentineltwin/agents";
 import { buildPromptRegistrySnapshot, type PromptRegistrySnapshot } from "@sentineltwin/agents";
-import { parseCommand, type SceneContextSummary } from "@/agents/CommandAgent";
+import { parseCommand, type SceneContextSummary } from "@sentineltwin/agents";
 import { proposeCounterfactuals } from "@sentineltwin/agents";
 import { buildSimulationSummary, generateReport } from "@sentineltwin/agents";
 import type { ModelProvider } from "@sentineltwin/agents";

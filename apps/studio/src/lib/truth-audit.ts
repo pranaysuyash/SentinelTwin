@@ -440,7 +440,7 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
   },
   {
     surface: "Inspector analytics truth labels",
-    file: "src/components/inspector/InspectorPanel.tsx",
+    file: "src/components/inspector/CameraInspector.tsx",
     requiredPhrases: [
       'truthLabel={camResult ? "simulated" : "placeholder"}',
     ],

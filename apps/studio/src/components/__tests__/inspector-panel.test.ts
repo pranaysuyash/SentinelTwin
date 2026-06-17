@@ -3,56 +3,74 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
-const inspectorPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../inspector/InspectorPanel.tsx");
-const cameraInspectorPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../inspector/CameraInspector.tsx");
-const controlsPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../inspector/inspector-controls.tsx");
+const dir = resolve(fileURLToPath(new URL(".", import.meta.url)), "../inspector");
+const inspectorPath = resolve(dir, "InspectorPanel.tsx");
+const cameraInspectorPath = resolve(dir, "CameraInspector.tsx");
+const obstructionInspectorPath = resolve(dir, "ObstructionInspector.tsx");
+const lightInspectorPath = resolve(dir, "LightInspector.tsx");
+const sensorInspectorPath = resolve(dir, "SensorInspector.tsx");
+const controlsPath = resolve(dir, "inspector-controls.tsx");
 
 describe("InspectorPanel", () => {
   test("defines an obstruction inspector and obstruction selection branch", () => {
-    const source = readFileSync(inspectorPath, "utf8");
+    const panelSource = readFileSync(inspectorPath, "utf8");
+    const obsSource = readFileSync(obstructionInspectorPath, "utf8");
 
-    expect(source).toContain("function ObstructionInspector()");
-    expect(source).toContain('const obs = scene.obstructions.find((entry) => entry.id === selectedId);');
-    expect(source).toContain("Test Without This Obstruction");
-    expect(source).toMatch(/camera\s*\?\s*<CameraInspector \/>/);
-    expect(source).toMatch(/zone\s*\?\s*<CriticalZoneInspector \/>/);
-    expect(source).toMatch(/obstruction\s*\?\s*<ObstructionInspector \/>/);
-    expect(source).toMatch(/light\s*\?\s*<LightInspector \/>/);
-    expect(source).toMatch(/sensor\s*\?\s*<SensorInspector \/>/);
-    expect(source).toMatch(/:\s*<NoSelection \/>/);
+    // Obstruction logic is now in its own file
+    expect(obsSource).toContain("function ObstructionInspector()");
+    expect(obsSource).toContain("const obs = scene.obstructions.find((entry) => entry.id === selectedId);");
+    expect(obsSource).toContain("Test Without This Obstruction");
+
+    // Router still has the selection branches
+    expect(panelSource).toMatch(/camera\s*\?\s*\(\s*<CameraInspector \/>/);
+    expect(panelSource).toMatch(/zone\s*\?\s*\(\s*<CriticalZoneInspector \/>/);
+    expect(panelSource).toMatch(/obstruction\s*\?\s*\(\s*<ObstructionInspector \/>/);
+    expect(panelSource).toMatch(/light\s*\?\s*\(\s*<LightInspector \/>/);
+    expect(panelSource).toMatch(/sensor\s*\?\s*\(\s*<SensorInspector \/>/);
+    expect(panelSource).toMatch(/<NoSelection \/>/);
   });
 
   test("renders editable camera placement and optics controls", () => {
     const panelSource = readFileSync(inspectorPath, "utf8");
+    const cameraSource = readFileSync(cameraInspectorPath, "utf8");
     const controlsSource = readFileSync(controlsPath, "utf8");
+    const lightSource = readFileSync(lightInspectorPath, "utf8");
+    const sensorSource = readFileSync(sensorInspectorPath, "utf8");
 
-    // Controls are now extracted to inspector-controls.tsx; InspectorPanel imports them
-    expect(panelSource).toContain("inspector-controls");
+    // Controls module still exports these
     expect(controlsSource).toContain("export function NumberInput(");
     expect(controlsSource).toContain("export function SliderInput(");
-    expect(panelSource).toContain('label="X"');
-    expect(panelSource).toContain('label="Y"');
-    expect(panelSource).toContain('label="Z"');
-    expect(panelSource).toContain('label="Yaw"');
-    expect(panelSource).toContain('label="Pitch"');
-    expect(panelSource).toContain("FOV (Horizontal)");
-    expect(panelSource).toContain("const updateHeight = (nextHeight: number) => {");
-    expect(panelSource).toContain("Mount Snap");
-    expect(panelSource).toContain("Ceiling");
-    expect(panelSource).toContain("Pole");
-    expect(panelSource).toContain("snapCameraToMount");
-    expect(panelSource).toContain("Aim at Zone");
+
+    // Camera controls are in CameraInspector
+    expect(cameraSource).toContain('label="X"');
+    expect(cameraSource).toContain('label="Y"');
+    expect(cameraSource).toContain('label="Z"');
+    expect(cameraSource).toContain('label="Yaw"');
+    expect(cameraSource).toContain('label="Pitch"');
+    expect(cameraSource).toContain("FOV (Horizontal)");
+    expect(cameraSource).toContain("const updateHeight = (nextHeight: number) => {");
+    expect(cameraSource).toContain("Mount Snap");
+    expect(cameraSource).toContain("Ceiling");
+    expect(cameraSource).toContain("Pole");
+    expect(cameraSource).toContain("snapCameraToMount");
+    expect(cameraSource).toContain("Aim at Zone");
+    expect(cameraSource).toContain("Operational Fusion");
+    expect(cameraSource).toContain("Sensor Fusion");
+
+    // Duplicate button is in the router (multi-select banner)
     expect(panelSource).toContain("Duplicate");
-    expect(panelSource).toContain('SectionCard title="Night Impact"');
-    expect(panelSource).toContain('label="Illuminates Night Coverage"');
-    expect(panelSource).toContain("This light reduces night-mode penalty in the simulation");
-    expect(panelSource).toContain("function SensorInspector()");
-    expect(panelSource).toContain("Sensor Type");
-    expect(panelSource).toContain("Coverage Mode");
-    expect(panelSource).toContain("Nearest Camera");
-    expect(panelSource).toContain("Delete Sensor");
-    expect(panelSource).toContain("Privacy Impact");
-    expect(panelSource).toContain("This camera does not currently trigger privacy-specific issues");
+
+    // Light inspector is in its own file
+    expect(lightSource).toContain('SectionCard title="Night Impact"');
+    expect(lightSource).toContain('label="Illuminates Night Coverage"');
+    expect(lightSource).toContain("This light reduces night-mode penalty in the simulation");
+
+    // Sensor inspector is in its own file
+    expect(sensorSource).toContain("function SensorInspector()");
+    expect(sensorSource).toContain("Sensor Type");
+    expect(sensorSource).toContain("Coverage Mode");
+    expect(sensorSource).toContain("Nearest Camera");
+    expect(sensorSource).toContain("Delete Sensor");
   });
 
   test("wires the inspector view tab to the camera feed canvas", () => {

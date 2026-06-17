@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
-import { parseCommandDetailed, type SceneContextSummary } from "@/agents/CommandAgent";
+import { parseCommandDetailed, type SceneContextSummary } from "@sentineltwin/agents";
 import { createModelProvider, describeAiProviderSelection, providerKeyAvailable, type AiProviderSelection } from "@/agents/provider-selection";
 import { corsJson, corsNoContent } from "@/lib/api-cors";
 import type { SecurityScene } from "@/schema/security-scene";

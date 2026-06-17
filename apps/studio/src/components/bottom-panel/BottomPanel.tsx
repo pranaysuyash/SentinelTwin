@@ -48,23 +48,32 @@ const PANEL_EXPLAINERS: Record<BottomTab, string> = {
 const TABS: { id: BottomTab; label: string; hasCount?: boolean }[] = [
   { id: "outcome", label: "SECURITY OUTCOME" },
   { id: "metrics", label: "METRICS" },
-  { id: "sensors", label: "SENSORS" },
   { id: "issues", label: "ISSUES", hasCount: true },
-  { id: "timeline", label: "TIMELINE" },
-  { id: "temporal", label: "24H PROFILE" },
-  { id: "beforeafter", label: "BEFORE / AFTER" },
-  { id: "assumptions", label: "ASSUMPTIONS" },
-  { id: "governance", label: "GOVERNANCE" },
-  { id: "provenance", label: "EVIDENCE TRAIL" },
+  { id: "sensors", label: "SENSORS" },
   { id: "redundancy", label: "REDUNDANCY" },
-  { id: "budgeting", label: "BUDGET" },
   { id: "counterfactual", label: "FIX OPTIONS" },
   { id: "threat", label: "ROUTE EXPOSURE" },
   { id: "novel", label: "ADVANCED RISK SIGNALS" },
+  { id: "budgeting", label: "BUDGET" },
   { id: "report", label: "REPORT LITE" },
+  { id: "assumptions", label: "ASSUMPTIONS" },
+  { id: "governance", label: "GOVERNANCE" },
+  { id: "provenance", label: "EVIDENCE TRAIL" },
+  { id: "timeline", label: "TIMELINE" },
+  { id: "temporal", label: "24H PROFILE" },
+  { id: "beforeafter", label: "BEFORE / AFTER" },
   { id: "help", label: "HELP" },
   { id: "debug", label: "DIAGNOSTICS" },
 ];
+
+const TAB_GROUPS: { label: string; ids: BottomTab[] }[] = [
+  { label: "Analysis", ids: ["outcome", "metrics", "issues", "sensors", "redundancy", "counterfactual", "threat", "novel", "budgeting"] },
+  { label: "Report", ids: ["report", "assumptions", "governance", "provenance"] },
+  { label: "Timeline", ids: ["timeline", "temporal", "beforeafter"] },
+  { label: "Dev", ids: ["help", "debug"] },
+];
+
+const EXCLUSIVE_TABS = new Set<BottomTab>(["counterfactual", "temporal"]);
 
 function getTabLabel(tab: BottomTab) {
   return TABS.find((entry) => entry.id === tab)?.label ?? tab.toUpperCase();
@@ -291,23 +300,37 @@ export function BottomPanel() {
         {/* Scroll fade hint */}
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-8 bg-gradient-to-l from-[#0d1017] to-transparent" />
         <div className="flex min-w-0 items-end gap-0.5 overflow-x-auto scrollbar-none">
-          {enabledTabs.map(({ id, label, hasCount }) => (
-            <button type="button"
-              key={id}
-              onClick={() => setTab(id)}
-              className={cn(
-                "relative flex-shrink-0 rounded-t-lg px-3 py-1.5 text-[10px] font-medium tracking-[0.06em] transition-colors",
-                activeTabSafe === id
-                  ? "bg-[#0b0f17] text-green-300 ring-1 ring-inset ring-[#1f2536]"
-                  : "text-[#59637a] hover:text-[#9da8c0]",
-              )}
-            >
-              <span>{label}</span>
-              {hasCount && issueCount > 0 ? (
-                <span className="ml-1 text-red-400">({issueCount})</span>
-              ) : null}
-            </button>
-          ))}
+          {TAB_GROUPS.flatMap((group, gi) => {
+            const groupTabs = group.ids
+              .map((id) => enabledTabs.find((t) => t.id === id))
+              .filter(Boolean) as typeof enabledTabs;
+            if (groupTabs.length === 0) return [];
+            return [
+              ...(gi > 0 ? [
+                <div key={`sep-${group.label}`} className="mx-1.5 mb-1 self-stretch border-l border-[#1e2130]" />,
+              ] : []),
+              ...groupTabs.map(({ id, label, hasCount }) => (
+                <button type="button"
+                  key={id}
+                  onClick={() => setTab(id)}
+                  className={cn(
+                    "relative flex-shrink-0 rounded-t-lg px-3 py-1.5 text-[10px] font-medium tracking-[0.06em] transition-colors",
+                    activeTabSafe === id
+                      ? "bg-[#0b0f17] text-green-300 ring-1 ring-inset ring-[#1f2536]"
+                      : "text-[#59637a] hover:text-[#9da8c0]",
+                  )}
+                >
+                  <span>{label}</span>
+                  {EXCLUSIVE_TABS.has(id) && (
+                    <span className="ml-0.5 text-[8px] text-amber-400" title="Feature exclusive to SentinelTwin">★</span>
+                  )}
+                  {hasCount && issueCount > 0 ? (
+                    <span className="ml-1 text-red-400">({issueCount})</span>
+                  ) : null}
+                </button>
+              )),
+            ];
+          })}
         </div>
       </div>
 

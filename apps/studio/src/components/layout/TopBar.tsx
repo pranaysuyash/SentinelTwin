@@ -522,9 +522,8 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
       <div className="flex-1" />
 
       <div className="flex min-w-0 shrink-0 items-center gap-1.5">
-        <div className="xl:hidden">
-          <SimStatus />
-        </div>
+        {/* Simulation status — always visible so workspace context is clear */}
+        <SimStatus />
 
         <WorkspacePresetSwitcher />
 
@@ -533,6 +532,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           <span className="hidden lg:inline">View</span>
         </SurfaceButton>
 
+        {/* Primary CTA */}
         <button type="button"
           onClick={runSimulation}
           disabled={running}
@@ -557,71 +557,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           </span>
         </button>
 
-        {/* Secondary actions — collapse into more menu below xl */}
-        <div className="hidden items-center gap-1.5 xl:flex">
-          <SurfaceButton onClick={() => setEnvMode(envMode === "night" ? "day" : "night")} title="Switch between day and night assumptions before running review.">
-            <Moon className="h-3 w-3" />
-            Night
-          </SurfaceButton>
-
-          <SurfaceButton
-            onClick={handleCameraFailure}
-            title="Toggle the selected camera offline to test single-camera outage impact."
-          >
-            <Shield className="h-3 w-3" />
-            Test Outage
-          </SurfaceButton>
-
-          <SurfaceButton
-            onClick={() =>
-              saveSnapshot(
-                `Snapshot ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`,
-              )
-            }
-            title="Save the current site twin state for before/after comparison."
-          >
-            <Copy className="h-3 w-3" />
-            Snapshot
-          </SurfaceButton>
-
-          <SurfaceButton onClick={() => setBottomTab("beforeafter")} title="Compare baseline and proposed fixes with measured deltas.">
-            <Clapperboard className="h-3 w-3" />
-            Compare
-          </SurfaceButton>
-
-          <SurfaceButton onClick={() => setBottomTab("threat")} title="Review authorized route exposure and uncovered route sections.">
-            <Crosshair className="h-3 w-3" />
-            Path Risk
-          </SurfaceButton>
-
-          <SurfaceButton onClick={() => setBottomTab("report")} title="Open the evidence-backed report handoff.">
-            <FileText className="h-3 w-3" />
-            Report
-          </SurfaceButton>
-
-          <SurfaceButton onClick={() => setBottomTab("assumptions")} title="Review the assumptions that qualify simulation and report claims.">
-            <Info className="h-3 w-3" />
-            Assumptions
-          </SurfaceButton>
-
-          <SurfaceButton onClick={() => setBottomTab("provenance")} title="Open the evidence trail behind the current site twin.">
-            <SlidersHorizontal className="h-3 w-3" />
-            Evidence Trail
-          </SurfaceButton>
-
-          {/* Visible keyboard shortcut toggle */}
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent("sentineltwin:toggle-shortcuts"))}
-            aria-label="Open keyboard shortcuts"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] transition-colors hover:border-[#32384d] hover:text-white"
-            title="Keyboard shortcuts (?)"
-          >
-            <Keyboard className="h-3.5 w-3.5" />
-          </button>
-        </div>
-
-        {/* Overflow menu (always visible) — contains secondary actions on narrow viewports + extras */}
+        {/* Overflow menu — all secondary actions live here, organized by function */}
         <div className="relative">
           <button
             type="button"
@@ -637,83 +573,84 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           {moreOpen && (
             <div
               id="topbar-more-menu"
-              className="absolute right-0 top-full z-[420] mt-1 w-44 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+              className="absolute right-0 top-full z-[420] mt-1 w-52 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
               onMouseLeave={() => setMoreOpen(false)}
             >
-              {/* XL-only actions shown in menu for narrow widths */}
-              <div className="xl:hidden">
-                <button type="button"
-                  onClick={() => { setEnvMode(envMode === "night" ? "day" : "night"); setMoreOpen(false); }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
-                >
-                  <Moon className="h-3 w-3" />
-                  Night Mode
-                </button>
-                <button type="button"
-                  onClick={() => { handleCameraFailure(); setMoreOpen(false); }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
-                >
-                  <Shield className="h-3 w-3" />
-                  Test Camera Outage
-                </button>
-                <button type="button"
-                  onClick={() => { saveSnapshot(`Snapshot ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`); setMoreOpen(false); }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
-                >
-                  <Copy className="h-3 w-3" />
-                  Save Snapshot
-                </button>
-                <button type="button"
-                  onClick={() => { setBottomTab("beforeafter"); setMoreOpen(false); }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
-                >
-                  <Clapperboard className="h-3 w-3" />
-                  Compare
-                </button>
-                <button type="button"
-                  onClick={() => { setBottomTab("threat"); setMoreOpen(false); }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
-                >
-                  <Crosshair className="h-3 w-3" />
-                  Path Risk
-                </button>
-                <button type="button"
-                  onClick={() => { setBottomTab("report"); setMoreOpen(false); }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
-                >
-                  <FileText className="h-3 w-3" />
-                  Prepare Report
-                </button>
-                <button type="button"
-                  onClick={() => { setBottomTab("assumptions"); setMoreOpen(false); }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
-                >
-                  <Info className="h-3 w-3" />
-                  Assumptions
-                </button>
-                <button type="button"
-                  onClick={() => { setBottomTab("provenance"); setMoreOpen(false); }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
-                >
-                  <SlidersHorizontal className="h-3 w-3" />
-                  Evidence Trail
-                </button>
-                <div className="my-1 border-t border-[#1e2130]" />
-              </div>
+              {/* Simulation tools */}
+              <div className="px-2.5 pb-1 pt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-[#3d4f6a]">Simulation</div>
               <button type="button"
-                onClick={() => {
-                  setDemoMode(!demoMode);
-                  setMoreOpen(false);
-                }}
+                onClick={() => { setEnvMode(envMode === "night" ? "day" : "night"); setMoreOpen(false); }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <Moon className="h-3 w-3" />
+                Night Mode
+              </button>
+              <button type="button"
+                onClick={() => { handleCameraFailure(); setMoreOpen(false); }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <Shield className="h-3 w-3" />
+                Test Camera Outage
+              </button>
+              <button type="button"
+                onClick={() => { saveSnapshot(`Snapshot ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`); setMoreOpen(false); }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <Copy className="h-3 w-3" />
+                Save Snapshot
+              </button>
+
+              <div className="my-1 border-t border-[#1e2130]" />
+
+              {/* Analysis jump targets */}
+              <div className="px-2.5 pb-1 pt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-[#3d4f6a]">Jump to</div>
+              <button type="button"
+                onClick={() => { setBottomTab("beforeafter"); setMoreOpen(false); }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <Clapperboard className="h-3 w-3" />
+                Compare
+              </button>
+              <button type="button"
+                onClick={() => { setBottomTab("threat"); setMoreOpen(false); }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <Crosshair className="h-3 w-3" />
+                Path Risk
+              </button>
+              <button type="button"
+                onClick={() => { setBottomTab("report"); setMoreOpen(false); }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <FileText className="h-3 w-3" />
+                Prepare Report
+              </button>
+              <button type="button"
+                onClick={() => { setBottomTab("assumptions"); setMoreOpen(false); }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <Info className="h-3 w-3" />
+                Assumptions
+              </button>
+              <button type="button"
+                onClick={() => { setBottomTab("provenance"); setMoreOpen(false); }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <SlidersHorizontal className="h-3 w-3" />
+                Evidence Trail
+              </button>
+
+              <div className="my-1 border-t border-[#1e2130]" />
+
+              {/* Tools */}
+              <button type="button"
+                onClick={() => { setDemoMode(!demoMode); setMoreOpen(false); }}
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
               >
                 {demoMode ? "Exit Guided Walkthrough" : "Start Guided Walkthrough"}
               </button>
               <button type="button"
-                onClick={() => {
-                  toggleViewSettingsOpen();
-                  setMoreOpen(false);
-                }}
+                onClick={() => { toggleViewSettingsOpen(); setMoreOpen(false); }}
                 data-testid="more-view-settings"
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
               >
@@ -721,24 +658,19 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 View Settings
               </button>
               <button type="button"
-                onClick={() => {
-                  handleExportScene();
-                  setMoreOpen(false);
-                }}
+                onClick={() => { handleExportScene(); setMoreOpen(false); }}
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
               >
                 <Download className="h-3 w-3" />
                 Export Site Twin File
               </button>
-              <div className="xl:hidden">
-                <button type="button"
-                  onClick={() => { window.dispatchEvent(new CustomEvent("sentineltwin:toggle-shortcuts")); setMoreOpen(false); }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
-                >
-                  <Keyboard className="h-3 w-3" />
-                  Shortcuts
-                </button>
-              </div>
+              <button type="button"
+                onClick={() => { window.dispatchEvent(new CustomEvent("sentineltwin:toggle-shortcuts")); setMoreOpen(false); }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <Keyboard className="h-3 w-3" />
+                Keyboard Shortcuts
+              </button>
             </div>
           )}
         </div>

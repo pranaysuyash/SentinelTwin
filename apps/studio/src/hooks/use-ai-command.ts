@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import type { SceneContextSummary } from "@/agents/CommandAgent";
+import type { SceneContextSummary } from "@sentineltwin/agents";
 import type { CounterfactualCandidate } from "@/agents/CounterfactualAgent";
 import {
   describeAiProviderHealth,

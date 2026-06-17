@@ -843,27 +843,39 @@ export function CameraInspector() {
         </div>
       </div>
 
-      <div className="flex gap-1 border-b border-[#1e2130] px-2 pt-1.5">
-        {tabs.map((tab) => (
-          <button
-            type="button"
-            key={tab.id}
-            onClick={() => setTab(tab.id)}
-            className={cn(
-              "-mb-px relative rounded-t-lg border-b-2 px-2 py-1.5 text-[10px] font-medium transition-colors",
-              inspectorTab === tab.id
-                ? "border-green-500 text-green-300"
-                : "border-transparent text-[#5a647a] hover:text-[#a1abc1]",
-            )}
-          >
-            {tab.label}
-            {tab.badge !== undefined && tab.badge > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-500 text-[7px] font-bold text-white">
-                {tab.badge > 9 ? "9+" : tab.badge}
-              </span>
-            )}
-          </button>
-        ))}
+      <div className="flex items-end justify-between border-b border-[#1e2130] px-2 pt-1.5">
+        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto scrollbar-none">
+          {tabs.map((tab) => (
+            <button
+              type="button"
+              key={tab.id}
+              onClick={() => setTab(tab.id)}
+              className={cn(
+                "-mb-px relative rounded-t-lg border-b-2 px-2 py-1.5 text-[10px] font-medium transition-colors",
+                inspectorTab === tab.id
+                  ? "border-green-500 text-green-300"
+                  : "border-transparent text-[#5a647a] hover:text-[#a1abc1]",
+              )}
+            >
+              {tab.label}
+              {tab.badge !== undefined && tab.badge > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-500 text-[7px] font-bold text-white">
+                  {tab.badge > 9 ? "9+" : tab.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowLensFovSimulator(true)}
+          title="FOV Lab — compare lens focal length vs. DORI detection ranges"
+          className="mb-0.5 ml-2 flex shrink-0 items-center gap-1 rounded border border-cyan-500/30 bg-cyan-500/8 px-2 py-1 text-[9px] text-cyan-300 transition-colors hover:bg-cyan-500/15"
+        >
+          <Eye className="h-3 w-3" />
+          FOV Lab
+          <span className="text-[8px] text-amber-400" title="Feature exclusive to SentinelTwin">★</span>
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-2.5">
@@ -1805,7 +1817,7 @@ export function CameraInspector() {
 
         {inspectorTab === "analytics" && (
           <div className="space-y-2.5">
-            <SectionCard title="Coverage Performance" helpText="Shows how much usable coverage this camera contributes under the current assumptions and which critical zones pass or fail." helpTitle="Coverage performance help">
+            <SectionCard title="Coverage Performance" helpText="Shows how much usable coverage this camera contributes under the current assumptions and which critical zones pass or fail." helpTitle="Coverage performance help" truthLabel={camResult ? "simulated" : "placeholder"}>
               <div className="grid grid-cols-3 gap-1.5">
                 <SummaryStat label="Coverage"   value={camResult ? `${camResult.coveragePct.toFixed(1)}%` : "--"} accent="text-emerald-300" />
                 <SummaryStat label="Zones Pass" value={camResult ? `${camResult.criticalZonesCovered.length}` : "--"} accent="text-blue-300" />

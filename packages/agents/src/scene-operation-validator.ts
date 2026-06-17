@@ -1,5 +1,4 @@
-import type { SceneOperation } from "@/schema/SceneOperation";
-import type { SecurityScene } from "@/schema/security-scene";
+import type { SceneOperation, SecurityScene } from "@sentineltwin/core";
 
 export type SemanticValidationIssue = {
   code:

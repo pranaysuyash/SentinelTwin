@@ -117,10 +117,10 @@ export function CommandBar() {
           {mode.providerLabel}
         </span>
         <span className={`hidden rounded-full border px-1.5 py-0.5 text-[8px] md:inline ${compactHealthClass}`}>
-          {hasMounted ? (healthStatus === "healthy" ? "Healthy" : healthStatus === "partial" ? "Partial" : "Blocked") : "Syncing"}
+          {hasMounted ? (healthStatus === "healthy" ? "AI online" : healthStatus === "partial" ? "AI partial" : "AI offline") : "Syncing"}
         </span>
         <span className={`hidden rounded-full border px-1.5 py-0.5 text-[8px] md:inline ${compactTelemetryClass}`}>
-          {hasMounted ? (telemetryStatus === "ready" ? "Budget ready" : telemetryStatus === "guarded" ? "Budget guarded" : "Budget blocked") : "Syncing"}
+          {hasMounted ? (telemetryStatus === "ready" ? "AI ready" : telemetryStatus === "guarded" ? "AI limited" : "AI paused") : "Syncing"}
         </span>
         <kbd className="ml-1 hidden rounded border border-[#24283a] bg-[#111521] px-1 py-0.5 text-[8px] text-[#4d566b] sm:inline">
           ⌘K
@@ -151,10 +151,10 @@ export function CommandBar() {
                 {mode.cloudAvailable ? "Cloud review available" : "Local-only"}
               </span>
               <span className={`rounded-full border px-2 py-0.5 text-[8px] ${fullHealthClass}`}>
-                {hasMounted ? (healthStatus === "healthy" ? "Provider healthy" : healthStatus === "partial" ? "Provider partial" : "Provider blocked") : "Provider syncing"}
+                {hasMounted ? (healthStatus === "healthy" ? "AI online" : healthStatus === "partial" ? "AI partial" : "AI offline") : "AI syncing"}
               </span>
               <span className={`rounded-full border px-2 py-0.5 text-[8px] ${fullTelemetryClass}`}>
-                {hasMounted ? (telemetryStatus === "ready" ? "Budget ready" : telemetryStatus === "guarded" ? "Budget guarded" : "Budget blocked") : "Budget syncing"}
+                {hasMounted ? (telemetryStatus === "ready" ? "AI ready" : telemetryStatus === "guarded" ? "AI limited" : "AI paused") : "AI syncing"}
               </span>
             </div>
             <p className="mt-1 text-[10px] leading-snug text-[#8b96ab]">{modeDetail}</p>

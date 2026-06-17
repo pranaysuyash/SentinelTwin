@@ -48,6 +48,7 @@ import type { SupportIngestResponse } from "@/lib/support-ingest";
 import type { SupportIngestHistoryRecord } from "@/lib/support-ingest-history";
 import type { TrustAuditReport } from "@/lib/truth-audit";
 import { OPERATIONAL_EVIDENCE_STORAGE_KEY, useStudioStore } from "@/store/studio-store";
+import { DEBUG_TOGGLE_LABELS } from "@/store/slices/core/debug-toggles-slice";
 
 type TrustAuditPayload = TrustAuditReport & {
   formatted: string;
@@ -138,6 +139,20 @@ export function DebugTab() {
   const setOverlayDensity = useStudioStore((s) => s.setOverlayDensity);
   const autoRecompute = useStudioStore((s) => s.autoRecompute);
   const toggleAutoRecompute = useStudioStore((s) => s.toggleAutoRecompute);
+  const debugToggles = useStudioStore((s) => ({
+    showCoverageGrid: s.showCoverageGrid,
+    showRaycasts: s.showRaycasts,
+    showOcclusionHits: s.showOcclusionHits,
+    showFrustumBounds: s.showFrustumBounds,
+    showPathSamplePoints: s.showPathSamplePoints,
+    showRecomputeTime: s.showRecomputeTime,
+    showVisionColliders: s.showVisionColliders,
+    showPhysicsColliders: s.showPhysicsColliders,
+    showRawPpmValues: s.showRawPpmValues,
+    showBvhRebuildTime: s.showBvhRebuildTime,
+  }));
+  const setDebugToggle = useStudioStore((s) => s.setDebugToggle);
+  const resetDebugToggles = useStudioStore((s) => s.resetDebugToggles);
   const cameraFailures = useStudioStore((s) => s.cameraFailures);
   const simulationDirty = useStudioStore((s) => s.simulationDirty);
   const simulationRunning = useStudioStore((s) => s.simulationRunning);
@@ -1304,6 +1319,43 @@ export function DebugTab() {
                   {branch}
                 </PillButton>
               ))}
+            </div>
+          </div>
+        </Section>
+
+        <Section
+          title="Debug Toggles (spec §11.6)"
+          icon={<Sparkles className="h-3 w-3 text-amber-400" />}
+        >
+          <div className="space-y-1.5">
+            <div className="text-[9px] text-[#74809a]">
+              Each toggle controls one debug overlay from the Camera Studio spec §11.6. Toggles are
+              gated by the master &quot;Debug Overlays&quot; switch above; the per-overlay state lives
+              in the store and can be wired into the 3D viewport by renderer authors.
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {DEBUG_TOGGLE_LABELS.map((entry) => (
+                <span key={entry.key} title={entry.description}>
+                  <PillButton
+                    active={debugToggles[entry.key]}
+                    onClick={() => setDebugToggle(entry.key, !debugToggles[entry.key])}
+                  >
+                    {entry.label} {debugToggles[entry.key] ? "On" : "Off"}
+                  </PillButton>
+                </span>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 pt-1">
+              <PillButton
+                active={false}
+                onClick={resetDebugToggles}
+              >
+                Reset Toggles
+              </PillButton>
+              <span className="text-[9px] text-[#556076]">
+                {DEBUG_TOGGLE_LABELS.filter((entry) => debugToggles[entry.key]).length}
+                {" "}of {DEBUG_TOGGLE_LABELS.length} overlays on
+              </span>
             </div>
           </div>
         </Section>

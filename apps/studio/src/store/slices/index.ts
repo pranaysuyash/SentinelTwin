@@ -10,6 +10,7 @@ export type { LayoutSlice } from "./core/layout-slice";
 export type { SnapshotSlice } from "./core/snapshot-slice";
 export type { ReplaySlice } from "./core/replay-slice";
 export type { ComparisonSlice } from "./core/comparison-slice";
+export type { DebugTogglesSlice } from "./core/debug-toggles-slice";
 
 export { createSceneSlice } from "./core/scene-slice";
 export { createSimulationSlice } from "./core/simulation-slice";
@@ -17,6 +18,7 @@ export { createLayoutSlice } from "./core/layout-slice";
 export { createSnapshotSlice } from "./core/snapshot-slice";
 export { createReplaySlice } from "./core/replay-slice";
 export { createComparisonSlice } from "./core/comparison-slice";
+export { createDebugTogglesSlice, DEBUG_TOGGLE_KEYS, DEBUG_TOGGLE_LABELS } from "./core/debug-toggles-slice";
 
 // Enterprise slices — governance, compliance, telemetry
 export type { WorkflowSlice } from "./enterprise/workflow-slice";

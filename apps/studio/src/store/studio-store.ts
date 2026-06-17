@@ -11,6 +11,7 @@ import {
   createSnapshotSlice,
   createReplaySlice,
   createComparisonSlice,
+  createDebugTogglesSlice,
 } from "./slices";
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
@@ -103,6 +104,7 @@ import type { ComparisonSlice } from "./slices/core/comparison-slice";
 import type { WorkflowSlice } from "./slices/enterprise/workflow-slice";
 import type { GovernanceSlice } from "./slices/enterprise/governance-slice";
 import type { TelemetrySlice } from "./slices/enterprise/telemetry-slice";
+import type { DebugTogglesSlice } from "./slices/core/debug-toggles-slice";
 
 export type StudioStoreState =
   & SceneSlice
@@ -113,7 +115,8 @@ export type StudioStoreState =
   & ComparisonSlice
   & WorkflowSlice
   & GovernanceSlice
-  & TelemetrySlice;
+  & TelemetrySlice
+  & DebugTogglesSlice;
 
 // ─── Store composition ────────────────────────────────────────────────────────
 // Spread order: general defaults first, specific overrides later.
@@ -130,4 +133,5 @@ export const useStudioStore = create<StudioStoreState>()((set, get, store) => ({
   ...createWorkflowSlice(set, get),
   ...createGovernanceSlice(set, get),
   ...createTelemetrySlice(set, get),
+  ...createDebugTogglesSlice(set, get),
 }));

@@ -2,7 +2,7 @@
 
 import { Html, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Camera, Layers, Lightbulb, MousePointer2, RefreshCcw, ScanSearch, Shield, Square } from "lucide-react";
+import { MousePointer2 } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -16,9 +16,13 @@ import {
 } from "@/schema/security-scene";
 import { getYawPitchDirection } from "@sentineltwin/core";
 import { CameraLabelCard } from "@/components/workspace/overlays/CameraLabelCard";
+import { ControlHintBar } from "@/components/workspace/overlays/ControlHintBar";
 import { CriticalZoneLabelCard } from "@/components/workspace/overlays/CriticalZoneLabelCard";
 import { EntryDoorChip } from "@/components/workspace/overlays/EntryDoorChip";
+import { NorthCompass } from "@/components/workspace/overlays/NorthCompass";
 import { ObstructionWarningCard } from "@/components/workspace/overlays/ObstructionWarningCard";
+import { ViewControls } from "@/components/workspace/overlays/ViewControls";
+import { TOOL_GHOST_COLORS, TOOL_ICONS, TOOL_LABELS } from "@/lib/tool-constants";
 import { useStudioStore } from "@/store/studio-store";
 import {
   ENVIRONMENT_THEMES,
@@ -1103,48 +1107,6 @@ function SceneFrameRig() {
   return null;
 }
 
-const TOOL_GHOST_COLORS: Record<string, string> = {
-  select: "#94a3b8",
-  camera: "#60a5fa",
-  obstruction: "#f97316",
-  light: "#eab308",
-  sensor: "#22d3ee",
-  wall: "#22c55e",
-  zone: "#86efac",
-  door_window: "#c084fc",
-  path: "#fb923c",
-  measure: "#f8fafc",
-  comment: "#94a3b8",
-  default: "#60a5fa",
-};
-
-const TOOL_ICONS: Record<string, React.ReactNode> = {
-  select: <MousePointer2 className="h-3 w-3" />,
-  camera: <Camera className="h-3 w-3" />,
-  obstruction: <Square className="h-3 w-3" />,
-  light: <Lightbulb className="h-3 w-3" />,
-  sensor: <ScanSearch className="h-3 w-3" />,
-  wall: <Square className="h-3 w-3" />,
-  zone: <Shield className="h-3 w-3" />,
-  door_window: <Layers className="h-3 w-3" />,
-  path: <RefreshCcw className="h-3 w-3" />,
-  measure: <Layers className="h-3 w-3" />,
-  comment: <Layers className="h-3 w-3" />,
-};
-
-const TOOL_LABELS: Record<string, string> = {
-  select: "Select",
-  camera: "Place Camera",
-  obstruction: "Place Obstruction",
-  light: "Place Light",
-  sensor: "Place Sensor",
-  wall: "Draw Wall",
-  zone: "Draw Zone",
-  door_window: "Place Door / Window",
-  path: "Draw Path",
-  measure: "Measure",
-  comment: "Comment",
-};
 
 const SENSOR_TYPE_LABELS: Record<string, string> = {
   motion: "Motion",
@@ -1860,133 +1822,6 @@ function AimFovWedge({
   );
 }
 
-function NorthCompass() {
-  return (
-    <div className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[#2a3246] bg-[#0e1320]/90">
-      <div className="relative">
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[8px] font-bold text-white">N</span>
-        <div className="h-5 w-0.5 rounded-full bg-gradient-to-b from-red-500 to-transparent" />
-        <div className="absolute top-0 h-5 w-0.5 rotate-180 rounded-full bg-gradient-to-b from-[#4a5568] to-transparent" />
-      </div>
-    </div>
-  );
-}
-
-function ViewControls() {
-  const canvasMode = useStudioStore((s) => s.canvasMode);
-  const setCanvasMode = useStudioStore((s) => s.setCanvasMode);
-  const resetCanvasView = useStudioStore((s) => s.resetCanvasView);
-  const toggleViewSettingsOpen = useStudioStore((s) => s.toggleViewSettingsOpen);
-
-  return (
-    <div className="absolute right-3 top-16 z-10 flex flex-col gap-1">
-      <button
-        type="button"
-        onClick={() => setCanvasMode("orbit_3d")}
-        aria-label="Switch to 3D orbit"
-        title="Switch to 3D orbit"
-        className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-lg border text-[9px] font-bold transition-colors",
-           canvasMode === "orbit_3d"
-             ? "border-sky-400 text-sky-100"
-             : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
-        )}
-        style={canvasMode === "orbit_3d"
-          ? {
-              borderColor: MAP_COLORS.viewport,
-              backgroundColor: "rgba(59, 130, 246, 0.14)",
-            }
-          : undefined}
-      >
-        3D
-      </button>
-      <button
-        type="button"
-        onClick={() => setCanvasMode("topdown_2d")}
-        aria-label="Switch to 2D top-down"
-        title="Switch to 2D top-down"
-        className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-lg border text-[9px] font-bold transition-colors",
-           canvasMode === "topdown_2d"
-             ? "border-emerald-400 text-emerald-100"
-             : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
-        )}
-        style={canvasMode === "topdown_2d"
-          ? {
-              borderColor: MAP_COLORS.viewport,
-              backgroundColor: "rgba(16, 185, 129, 0.14)",
-            }
-          : undefined}
-      >
-        2D
-      </button>
-      <button
-        type="button"
-        onClick={resetCanvasView}
-        aria-label="Reset canvas view"
-        title="Reset canvas view"
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 hover:bg-[#171e30]"
-      >
-        <RefreshCcw className="h-3.5 w-3.5 text-[#6b7280] hover:text-white" />
-      </button>
-      <button
-        type="button"
-        onClick={() => toggleViewSettingsOpen()}
-        aria-label="Open View Settings"
-        title="Open View Settings"
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 hover:bg-[#171e30]"
-      >
-        <Layers className="h-3.5 w-3.5 text-[#6b7280] hover:text-white" />
-      </button>
-    </div>
-  );
-}
-
-function ControlHintBar() {
-  const activeTool = useStudioStore((s) => s.activeTool);
-
-  if (activeTool !== "select") {
-    const toolLabel = TOOL_LABELS[activeTool] ?? "Place";
-    const color = TOOL_GHOST_COLORS[activeTool] ?? TOOL_GHOST_COLORS.default;
-    const toolShortcut: Record<string, string> = {
-    camera: "C",
-    obstruction: "B",
-    light: "L",
-    sensor: "Y",
-    wall: "W",
-    zone: "Z",
-      door_window: "D",
-      path: "P",
-      measure: "M",
-      comment: "T",
-    };
-    return (
-      <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17]/80 px-3 py-1">
-        <span className="text-[8px]" style={{ color }}>◉ {toolLabel}</span>
-        <span className="text-[8px] text-[#2a3246]">•</span>
-        <span className="text-[8px] text-[#4a5568]">Click floor to place</span>
-        <span className="text-[8px] text-[#2a3246]">•</span>
-        <span className="text-[8px] text-[#4a5568]">Press {toolShortcut[activeTool] ?? "Esc"} or Esc to cancel</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17]/80 px-3 py-1">
-      <span className="text-[8px] text-[#4a5568]">Left: Orbit</span>
-      <span className="text-[8px] text-[#2a3246]">•</span>
-      <span className="text-[8px] text-[#4a5568]">Middle: Pan</span>
-      <span className="text-[8px] text-[#2a3246]">•</span>
-      <span className="text-[8px] text-[#4a5568]">Right: Zoom</span>
-      <span className="text-[8px] text-[#2a3246]">•</span>
-      <span className="text-[8px] text-[#4a5568]">Right-click: Object actions</span>
-      <span className="text-[8px] text-[#2a3246]">•</span>
-      <span className="text-[8px] text-[#4a5568]">Scroll: Zoom</span>
-      <span className="text-[8px] text-[#2a3246]">•</span>
-      <span className="text-[8px] text-[#4a5568]">Shift+drag: Box select</span>
-    </div>
-  );
-}
 
 function EditorStatusBanner() {
   const message = useStudioStore((s) => s.editor.feedbackMessage);

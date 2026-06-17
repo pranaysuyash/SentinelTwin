@@ -22,6 +22,7 @@ import { RedundancyTab } from "./RedundancyTab";
 import { CoverageBudgetTab } from "./CoverageBudgetTab";
 import { SensorsTab } from "./SensorsTab";
 import { TemporalProfileView } from "./TemporalProfileView";
+import { ScenarioComparisonPanel } from "./ScenarioComparisonPanel";
 import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
 import { WorkflowChips } from "./WorkflowChips";
 
@@ -40,6 +41,7 @@ const PANEL_EXPLAINERS: Record<BottomTab, string> = {
   counterfactual: "Use this to test a proposed fix before changing the active site twin.",
   threat: "Use this for defensive route exposure review: where an authorized replay route loses usable camera evidence.",
   novel: "Use this for advanced risk signals such as backup coverage, coverage stability, and blind-spot patterns.",
+  scenario: "Use this to compare Day, Night, and Night-No-Lights scenarios against the baseline — and test which assumptions most affect results.",
   report: "Use this to prepare an evidence-backed audit handoff from the same verified simulation.",
   help: "Use this for workflow guidance, glossary definitions, and shortcuts.",
   debug: "Use this only for implementation diagnostics and troubleshooting.",
@@ -55,6 +57,7 @@ const TABS: { id: BottomTab; label: string; hasCount?: boolean }[] = [
   { id: "counterfactual", label: "FIX OPTIONS" },
   { id: "threat", label: "ROUTE EXPOSURE" },
   { id: "novel", label: "ADVANCED RISK SIGNALS" },
+  { id: "scenario", label: "SCENARIO COMPARISON" },
   { id: "budgeting", label: "BUDGET" },
   { id: "report", label: "REPORT LITE" },
   { id: "assumptions", label: "ASSUMPTIONS" },
@@ -68,7 +71,7 @@ const TABS: { id: BottomTab; label: string; hasCount?: boolean }[] = [
 ];
 
 const TAB_GROUPS: { label: string; ids: BottomTab[] }[] = [
-  { label: "Analysis", ids: ["outcome", "metrics", "issues", "sensors", "redundancy", "counterfactual", "threat", "novel", "budgeting"] },
+  { label: "Analysis", ids: ["outcome", "metrics", "issues", "sensors", "redundancy", "counterfactual", "threat", "novel", "scenario", "budgeting"] },
   { label: "Report", ids: ["report", "assumptions", "governance", "provenance"] },
   { label: "Timeline", ids: ["timeline", "temporal", "beforeafter"] },
   { label: "Dev", ids: ["help", "debug"] },
@@ -147,6 +150,8 @@ export function BottomPanel() {
         return <ThreatAnalysisPanel />;
       case "novel":
         return <NovelAlgorithmsTab />;
+      case "scenario":
+        return <ScenarioComparisonPanel />;
       case "report":
         return <ReportLiteTab />;
       case "help":

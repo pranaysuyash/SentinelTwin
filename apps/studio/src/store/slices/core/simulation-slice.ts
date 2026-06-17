@@ -1,6 +1,7 @@
 import type { SecurityScene, SimulationResult, TemporalSecurityProfile, CounterfactualPlan, CounterfactualConstraint, CameraNode, ObstructionNode } from "@/schema/security-scene";
 import { cloneSecurityScene } from "@/schema/security-scene";
-import { simulateStudio, computeTemporalProfile } from "@sentineltwin/simulation";
+import type { ScenarioBatchResult, AssumptionSensitivity } from "@sentineltwin/core";
+import { simulateStudio, computeTemporalProfile, runScenarioBatch, DEFAULT_SCENARIO_STATES, computeAssumptionSensitivity } from "@sentineltwin/simulation";
 import { runStudioSimulation } from "@/lib/simulation-runner";
 import {
   buildOperationalEvidenceEvent,
@@ -147,6 +148,9 @@ export interface SimulationSlice {
   counterfactualPlans: CounterfactualPlan[];
   activeCounterfactualPlanId: string | null;
 
+  scenarioBatchResults: ScenarioBatchResult[] | null;
+  assumptionSensitivityResults: AssumptionSensitivity[] | null;
+
   setSimulationRunning: (running: boolean) => void;
   setSimulationResult: (result: SimulationResult, durationMs: number) => void;
   runSimulation: () => void;
@@ -165,6 +169,9 @@ export interface SimulationSlice {
   previewCounterfactualPlan: (planId: string) => void;
   applyCounterfactualPlan: (planId: string) => void;
   revertCounterfactualPreview: () => void;
+
+  runScenarioComparison: () => void;
+  runAssumptionSensitivity: () => void;
 }
 
 export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
@@ -184,6 +191,9 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
   counterfactualObsId: null,
   counterfactualPlans: [],
   activeCounterfactualPlanId: null,
+
+  scenarioBatchResults: null,
+  assumptionSensitivityResults: null,
 
   setSimulationRunning: (running) => set({ simulationRunning: running }),
 
@@ -489,5 +499,21 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
   revertCounterfactualPreview: () => {
     get().undo();
     set({ activeCounterfactualPlanId: null });
+  },
+
+  runScenarioComparison: () => {
+    const { scene, simulationResult } = get();
+    const baseline = simulationResult ?? scene.simulation;
+    if (!baseline) return;
+    const results = runScenarioBatch(scene, baseline, DEFAULT_SCENARIO_STATES);
+    set({ scenarioBatchResults: results });
+  },
+
+  runAssumptionSensitivity: () => {
+    const { scene, simulationResult } = get();
+    const baseline = simulationResult ?? scene.simulation;
+    if (!baseline) return;
+    const results = computeAssumptionSensitivity(scene, baseline);
+    set({ assumptionSensitivityResults: results });
   },
 });

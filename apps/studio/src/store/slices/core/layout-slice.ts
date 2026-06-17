@@ -64,7 +64,8 @@ export type BottomTab =
   | "governance"
   | "provenance"
   | "novel"
-  | "budgeting";
+  | "budgeting"
+  | "scenario";
 export type OverlayDensity = "all" | "compact" | "minimal";
 export type UiDensity = "compact" | "normal" | "comfortable";
 export type UiTheme = "dark" | "light";
@@ -111,6 +112,7 @@ const ANALYSIS_TAB_ORDER: BottomTab[] = [
   "report",
   "debug",
   "novel",
+  "scenario",
 ];
 
 // ── Storage helpers ──

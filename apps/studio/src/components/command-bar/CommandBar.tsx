@@ -310,7 +310,15 @@ export function CommandBar() {
         </div>
 
         {/* Quick hints */}
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {input.trim().length === 0 ? (
+            <span
+              data-testid="command-bar-sample-prompt"
+              className="rounded-md border border-emerald-500/20 bg-emerald-500/8 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.06em] text-emerald-300"
+            >
+              Try one
+            </span>
+          ) : null}
           {["Move Camera 1 toward the entry", "Switch to night review", "Test Camera 2 outage", "Add a light near the counter"].map((hint) => (
             <button type="button"
               key={hint}
@@ -319,6 +327,7 @@ export function CommandBar() {
                 inputRef.current?.focus();
               }}
               className="rounded-md border border-[#1e2536] bg-[#0d111a] px-2 py-1 text-[9px] text-[#5b667c] transition-colors hover:border-[#2a3146] hover:text-[#9da8c0]"
+              data-testid="command-bar-sample-hint"
             >
               {hint}
             </button>

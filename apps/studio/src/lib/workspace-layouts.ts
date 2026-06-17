@@ -302,6 +302,7 @@ const BASE_ANALYSIS_MODULE_VISIBILITY: Record<BottomTab, boolean> = {
   debug: false,
   novel: true,
   budgeting: true,
+  scenario: true,
 };
 
 export const PRESET_VIEW_MODES: Record<WorkspacePreset, ViewMode> = {

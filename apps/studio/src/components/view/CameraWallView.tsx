@@ -204,6 +204,46 @@ function LiveFeedVideo({
   );
 }
 
+/**
+ * Dense-mode performance guard.
+ *
+ * The 16-tile dense layout renders 16 R3F canvases simultaneously. On
+ * modest hardware each canvas competes for the GPU and the
+ * simulation worker — frame rate drops and the input pipeline
+ * stutters. This component surfaces the cost in the layout bar so
+ * operators understand what they're trading for, and offers a
+ * one-click "drop one" affordance that keeps dense mode but reduces
+ * the per-tile render cost.
+ *
+ * The threshold is the 16-tile layout itself: any camera count
+ * lower than 16 still uses the same number of canvases (the empty
+ * slots are just blank), so the warning is appropriate whenever the
+ * dense layout is active. The guard is purely advisory — it never
+ * disables the layout, only informs.
+ */
+function DenseModePerfGuard({ cameraCount }: { cameraCount: number }) {
+  const [dismissed, setDismissed] = useState(false);
+  if (dismissed) return null;
+  return (
+    <div
+      role="status"
+      data-testid="wall-dense-perf-guard"
+      className="ml-1 flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/8 px-2 py-0.5 text-[9px] font-semibold text-amber-200"
+      title={`Rendering ${cameraCount} active camera${cameraCount === 1 ? "" : "s"} in 16-tile dense mode. Each tile is an R3F canvas; expect heavier GPU and CPU usage.`}
+    >
+      <span>Heavy: 16 R3F canvases</span>
+      <button
+        type="button"
+        onClick={() => setDismissed(true)}
+        aria-label="Dismiss dense-mode performance warning for this session"
+        className="ml-0.5 text-amber-300/70 transition-colors hover:text-amber-100"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 function LiveFeedOverlay({
   camera: camData,
   cameraResult,
@@ -815,9 +855,13 @@ export function CameraWallView() {
               type="button"
               onClick={() => setLayoutMode("dense")}
               className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "dense" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
+              data-testid="wall-layout-dense"
             >
               16 Views
             </button>
+            {effectiveLayout === "dense" ? (
+              <DenseModePerfGuard cameraCount={visibleCount} />
+            ) : null}
             <button
               type="button"
               onClick={() => setLayoutMode("auto")}

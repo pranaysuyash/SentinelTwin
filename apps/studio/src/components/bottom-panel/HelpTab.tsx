@@ -1,6 +1,8 @@
 "use client";
 
 import { TOOL_SHORTCUTS, VIEW_MODE_KEYS } from "@/lib/studio-constants";
+import { resetFirstRunGuideDismissal } from "@/components/layout/FirstRunGuide";
+import { useStudioStore } from "@/store/studio-store";
 
 const WORKFLOW_STEPS = [
   "Start from a blank site, floor plan, guided photo marking, imported site twin, or layout draft.",
@@ -145,12 +147,33 @@ function viewModeSummary() {
 }
 
 export function HelpTab() {
+  const setShowFirstRunGuide = (value: boolean) => {
+    // Bridge: the first-run guide's visibility is owned by StudioShell;
+    // we just toggle the dismissed flag and rely on the next mount cycle
+    // (e.g. tab switch) to re-evaluate it.
+    if (value) {
+      resetFirstRunGuideDismissal();
+    }
+    // No-op for closing here — closing is owned by StudioShell's modal.
+    void useStudioStore.getState();
+  };
   return (
     <div className="h-full overflow-y-auto p-3 text-[12px] text-[#c9d5eb]">
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div className="space-y-3">
           <div className="rounded-xl border border-[#222b3f] bg-[#0d1220] p-3">
-            <div className="text-[12px] font-semibold text-white">Workflow Map</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[12px] font-semibold text-white">Workflow Map</div>
+              <button
+                type="button"
+                onClick={() => setShowFirstRunGuide(true)}
+                data-testid="help-show-first-run-guide"
+                className="rounded border border-[#2d3750] px-2 py-1 text-[10px] text-[#cfe0ff] hover:bg-[#161f31]"
+                title="Clear the dismissed flag so the next session shows the first-run guide"
+              >
+                Show First-Run Guide Again
+              </button>
+            </div>
             <ol className="mt-2 space-y-1 text-[11px] text-[#9fb0ce]">
               {WORKFLOW_STEPS.map((step, index) => (
                 <li key={step}>

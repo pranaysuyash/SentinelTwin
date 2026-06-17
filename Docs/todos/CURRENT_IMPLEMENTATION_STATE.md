@@ -1,12 +1,24 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-31 (session 37: performance hardening for replay clock, hydration stability, and evaluator disposal)
+**Updated:** 2026-06-17 (session 38: temporal simulation hardening, guard patrol deterrence, schedule editor, GDPR compliance report section, WorkspaceCanvas overlay extraction, tool constants extraction, Inspector componentization)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
 before the Phase 2 audit. This doc supersedes the gap analysis for "what exists."
 For the full-vision gap inventory and next-slice sequencing, see
 `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
+
+## Temporal simulation, GDPR report, and component refactors (2026-06-17)
+
+- `WorkspaceCanvas.tsx` overlay components extracted to `workspace/overlays/` — `NorthCompass`, `ViewControls`, `ControlHintBar` are now standalone files; `view-settings-entrypoints.test.ts` updated to assert against the extracted ViewControls source ✅
+- Tool constants (`TOOL_GHOST_COLORS`, `TOOL_ICONS`, `TOOL_LABELS`) extracted from `WorkspaceCanvas.tsx` to `lib/tool-constants.tsx` ✅
+- `InspectorPanel.tsx` (2390 lines) split into 9 focused sub-inspectors plus a thin routing component; no behavioral changes ✅
+- `ScheduleEditor` component added at `components/inspector/ScheduleEditor.tsx` — full site-schedule configuration UI covering interior lights, exterior lights, occupancy periods, guard patrol rounds, and site location for seasonal lighting ✅
+- `SectionCard` extended with optional `icon` prop, wired into the section header ✅
+- `updateTimeSchedule` store action added to `scene-slice.ts` — patches `scene.timeSchedule` via `commitSceneChange` for undo/redo compatibility ✅
+- `TemporalProfileView` now exposes a collapsible `Schedule` toggle that renders `ScheduleEditor` inline so temporal configuration is co-located with the 24h profile viewer ✅
+- Guard patrol deterrence integrated into temporal simulation engine (`packages/simulation/src/temporal.ts`): `getActiveGuardCount()` computes active guard count per time point, `TimeSliceState` extended with `guardPatrolActive` / `activeGuardCount`, adversarial exposure reduced 35% per active guard during patrol rounds, guard patrol round transitions added to the change-timeline optimization ✅
+- GDPR privacy compliance section added to `buildHtmlReport` in `ReportLiteTab.tsx`: `buildPrivacyComplianceSection()` generates a privacy zone inventory table, GDPR Article 25 checklist (Art. 5(1)(c), Art. 25, Art. 25(2), Art. 32, Art. 35), and a camera–restricted-zone matrix with per-camera privacy risk flag ✅
 
 ## Product integrity hardening (2026-05-30)
 

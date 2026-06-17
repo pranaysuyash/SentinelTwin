@@ -9,13 +9,14 @@ interface SectionCardProps {
   className?: string;
   padding?: "sm" | "md" | "none";
   title?: string;
+  icon?: React.ReactNode;
   helpText?: string;
   helpLabel?: string;
   helpTitle?: string;
   truthLabel?: TruthLabel;
 }
 
-export function SectionCard({ children, className, padding = "md", title, helpText, helpLabel, helpTitle, truthLabel }: SectionCardProps) {
+export function SectionCard({ children, className, padding = "md", title, icon, helpText, helpLabel, helpTitle, truthLabel }: SectionCardProps) {
   return (
     <section
       className={cn(
@@ -25,9 +26,10 @@ export function SectionCard({ children, className, padding = "md", title, helpTe
         className,
       )}
     >
-      {(title || helpText || truthLabel) && (
+      {(title || icon || helpText || truthLabel) && (
         <div className="mb-2 flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-1.5">
+            {icon && <span className="text-[#556076]">{icon}</span>}
             {title && <div className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">{title}</div>}
             {helpText && <ExplainBadge text={helpText} label={helpLabel} title={helpTitle} />}
           </div>

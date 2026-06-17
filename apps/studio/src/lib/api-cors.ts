@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-type CorsOptions = {
+export type CorsOptions = {
   methods?: string[];
   allowedHeaders?: string[];
   exposeHeaders?: string[];

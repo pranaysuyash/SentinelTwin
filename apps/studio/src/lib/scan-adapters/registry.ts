@@ -3,12 +3,24 @@ import { StubObjectDetectionAdapter } from "@/lib/scan-adapters/adapters/stub-de
 import { StubDepthEstimationAdapter } from "@/lib/scan-adapters/adapters/stub-depth-adapter";
 import { StubScaleAnchoringAdapter } from "@/lib/scan-adapters/adapters/stub-scale-anchoring-adapter";
 import { StubSegmentationAdapter } from "@/lib/scan-adapters/adapters/stub-segmentation-adapter";
+import { DepthAnythingV2Adapter } from "@/lib/scan-adapters/adapters/depth-anything-v2-adapter";
 import { VlmObjectDetectionAdapter, VlmStructuralExtractionAdapter } from "@/lib/vlm-pipeline/vlm-adapter";
 
 const stubObjectDetection = new StubObjectDetectionAdapter();
 const stubDepthEstimation = new StubDepthEstimationAdapter();
 const stubScaleAnchoring = new StubScaleAnchoringAdapter();
 const stubSegmentation = new StubSegmentationAdapter();
+
+// The Depth Anything V2 adapter is instantiated lazily so the cost of
+// loading the model file (and the ~25MB ONNX asset) is only paid when
+// an operator explicitly opts into real CV depth estimation.
+let depthAnythingV2Singleton: DepthAnythingV2Adapter | null = null;
+function getDepthAnythingV2Adapter(): DepthAnythingV2Adapter {
+  if (!depthAnythingV2Singleton) {
+    depthAnythingV2Singleton = new DepthAnythingV2Adapter();
+  }
+  return depthAnythingV2Singleton;
+}
 
 const vlmObjectDetection = new VlmObjectDetectionAdapter();
 const vlmStructuralExtraction = new VlmStructuralExtractionAdapter();
@@ -17,7 +29,7 @@ export function getDefaultAdapterSet(): ScanAdapterSet {
   return {
     objectDetection: [stubObjectDetection, vlmObjectDetection],
     segmentation: [stubSegmentation],
-    depthEstimation: [stubDepthEstimation],
+    depthEstimation: [stubDepthEstimation, getDepthAnythingV2Adapter()],
     scaleAnchoring: [stubScaleAnchoring],
     multiPhoto: [],
     structuralExtraction: [vlmStructuralExtraction],

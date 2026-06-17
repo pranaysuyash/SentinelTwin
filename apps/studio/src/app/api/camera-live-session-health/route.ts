@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 import { loadCameraLiveSessionRegistry, renewCameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
-import { corsJson, corsNoContent } from "@/lib/api-cors";
+import { API_METHODS, apiJson, parseValidatedJsonBody } from "@/lib/api-response";
+import { corsNoContent } from "@/lib/api-cors";
 
 import { NextRequest } from "next/server";
 
@@ -31,25 +32,37 @@ function getSessionHealthSummary() {
 }
 
 export async function OPTIONS(request: NextRequest) {
-  return corsNoContent(request, { methods: ["GET", "POST", "OPTIONS"] });
+  return corsNoContent(request, { methods: API_METHODS });
 }
 
 export async function GET(request: NextRequest) {
-  return corsJson({ ok: true, ...getSessionHealthSummary() }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
+  return apiJson(request, { ok: true, ...getSessionHealthSummary() }, undefined, { methods: API_METHODS });
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const parsed = RenewRequestSchema.safeParse(body);
-    if (!parsed.success) {
-      return corsJson({ ok: false, error: "Invalid renewal payload.", issues: parsed.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })) }, request, { status: 400 }, { methods: ["GET", "POST", "OPTIONS"] });
-    }
+  const parsed = await parseValidatedJsonBody(request, RenewRequestSchema, {
+    validationErrorMessage: "Invalid renewal payload.",
+    parseErrorMessage: "Failed to parse renewal payload.",
+    methods: API_METHODS,
+  });
+  if (!parsed.ok) {
+    return parsed.response;
+  }
 
+  try {
     const sessions = loadCameraLiveSessionRegistry();
     const target = sessions.find((session) => session.sessionId === parsed.data.sessionId);
     if (!target) {
-      return corsJson({ ok: false, error: "Session not found." }, request, { status: 404 }, { methods: ["GET", "POST", "OPTIONS"] });
+      return apiJson(
+        request,
+        {
+          ok: false,
+          error: "Session not found.",
+          errorCode: "not_found",
+        },
+        { status: 404 },
+        { methods: API_METHODS },
+      );
     }
 
     const now = Date.now();
@@ -94,8 +107,22 @@ export async function POST(request: NextRequest) {
       lastObservedAt: now,
     });
 
-    return corsJson({ ok: true, renewedSessionId: target.sessionId, sessionExpiresAt, ...getSessionHealthSummary() }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
+    return apiJson(
+      request,
+      { ok: true, renewedSessionId: target.sessionId, sessionExpiresAt, ...getSessionHealthSummary() },
+      undefined,
+      { methods: API_METHODS },
+    );
   } catch {
-    return corsJson({ ok: false, error: "Failed to parse renewal payload." }, request, { status: 400 }, { methods: ["GET", "POST", "OPTIONS"] });
+    return apiJson(
+      request,
+      {
+        ok: false,
+        error: "Failed to renew session.",
+        errorCode: "internal_error",
+      },
+      { status: 500 },
+      { methods: API_METHODS },
+    );
   }
 }

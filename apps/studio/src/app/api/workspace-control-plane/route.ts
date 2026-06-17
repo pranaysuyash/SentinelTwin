@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { normalizeWorkspaceAccessState } from "@/lib/workspace-access";
 import { normalizeWorkspaceGovernance, type WorkspaceSceneStatus } from "@/lib/workspace-governance";
 import { normalizeWorkspaceAccountProfile } from "@/lib/workspace-catalog";
-import { corsJson, corsNoContent } from "@/lib/api-cors";
+import { API_METHODS, apiJson, parseValidatedJsonBody } from "@/lib/api-response";
+import { corsNoContent } from "@/lib/api-cors";
 import { db } from "@/lib/backend-database";
 import type { SceneRecord } from "@sentineltwin/core";
 import { mapLocalGovernanceToSceneRecord, generateAuditLogForGovernanceTransition } from "@/lib/governance-backend-mapper";
@@ -20,30 +20,27 @@ const WorkspaceControlPlaneRequestSchema = z.object({
 });
 
 export async function OPTIONS(request: NextRequest) {
-  return corsNoContent(request, { methods: ["GET", "POST", "OPTIONS"] });
+  return corsNoContent(request, { methods: API_METHODS });
 }
 
 export async function GET(request: NextRequest) {
-  return corsJson({ ok: true, message: "Use POST to sync governance state" }, request, undefined, {
-    methods: ["GET", "POST", "OPTIONS"],
+  return apiJson(request, { ok: true, message: "Use POST to sync governance state" }, undefined, {
+    methods: API_METHODS,
   });
 }
 
 export async function POST(request: NextRequest) {
+  const parsed = await parseValidatedJsonBody(request, WorkspaceControlPlaneRequestSchema, {
+    validationErrorMessage: "Invalid control-plane payload.",
+    parseErrorMessage: "Failed to parse control-plane payload.",
+    methods: API_METHODS,
+  });
+  if (!parsed.ok) {
+    return parsed.response;
+  }
+
   try {
-    const body = await request.json();
-    const parsed = WorkspaceControlPlaneRequestSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return corsJson({
-        ok: false,
-        error: "Invalid control-plane payload.",
-        issues: parsed.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })),
-      }, request, { status: 400 }, { methods: ["GET", "POST", "OPTIONS"] });
-    }
-
-    const { sceneId, sceneName, source, access, governance, account } = parsed.data;
-    const normAccess = normalizeWorkspaceAccessState(access);
+    const { sceneId, sceneName, governance, account } = parsed.data;
     const normGov = normalizeWorkspaceGovernance(governance);
     const normAcc = normalizeWorkspaceAccountProfile(account);
 
@@ -96,10 +93,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return corsJson({ ok: true, synced: true, sceneStatus: nextRecord.status }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
+    return apiJson(request, { ok: true, synced: true, sceneStatus: nextRecord.status }, undefined, { methods: API_METHODS });
   } catch (err) {
-    return corsJson({ ok: false, error: "Failed to parse control-plane payload." }, request, { status: 400 }, {
-      methods: ["GET", "POST", "OPTIONS"],
-    });
+    return apiJson(
+      request,
+      {
+        ok: false,
+        error: "Failed to sync control-plane payload.",
+        errorCode: "internal_error",
+      },
+      { status: 500 },
+      {
+        methods: API_METHODS,
+      },
+    );
   }
 }

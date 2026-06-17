@@ -4,6 +4,34 @@
 
 ---
 
+## D-316 | 2026-06-17 | Standardize API response envelope + validation errors for studio ingests and session-control routes
+
+**Decision:** Add `apps/studio/src/lib/api-response.ts` and migrate selected Next.js API routes to a shared contract:
+- shared `apiJson()` envelope helper with `ok`, `apiVersion`, `requestId`, and `timestamp`;
+- shared `parseValidatedJsonBody()` handler for `request.json()` parsing and `Zod` validation;
+- shared `errorCode` values for machine handling (`validation_error`, `parse_error`, `not_found`, `internal_error`);
+- standardized request method list through `API_METHODS = ["GET", "POST", "OPTIONS"]`.
+
+Applied first to:
+- `apps/studio/src/app/api/sensor-ingest/route.ts`
+- `apps/studio/src/app/api/camera-metadata-ingest/route.ts`
+- `apps/studio/src/app/api/workspace-control-plane/route.ts`
+- `apps/studio/src/app/api/camera-live-session-health/route.ts`
+
+This preserves existing payload semantics (`ok`, `history`, `historyCount`, `synced`, `sessionStatus`, etc.) while making contract fields explicit and consistent for future API consumers.
+
+**Rationale:**
+- Existing routes mixed inline parse logic and duplicate error mapping, which produced inconsistent debug semantics (`error` string only, varying payload shape) and made endpoint-level hardening difficult.
+- `api-patterns` guidance (`api-style.md`, `response.md`, `rest.md`) prioritizes a consistent envelope and error taxonomy over route-local patterns.
+- Stable CORS+metadata behavior is now centralized and can be versioned later without changing each handler.
+
+**Alternatives rejected:**
+- Per-route inline parsing: rejected because it preserved drift and duplicated validation mapping logic.
+- Returning raw Zod `issues` arrays to clients: rejected as API-internal details are harder for clients to consume than normalized `{ path, message }` shapes plus error codes.
+- Silent 500 fallbacks for validation parse failures: rejected to keep client-facing input errors on 400.
+
+**Documentation update path:** This decision is fully documented here and by the corresponding implementation anchors in API route files; no behavior changed in UI or schema docs in this pass.
+
 ## D-294 | 2026-06-01 | Deterministic seek-aware path replay timing loop
 
 **Decision:** Path replay playback in `PathReplayView.tsx` now uses a requestAnimationFrame-based timeline loop with an explicit time anchor so slider scrubbing while playing reuses the same loop without stutter or timeline drift.

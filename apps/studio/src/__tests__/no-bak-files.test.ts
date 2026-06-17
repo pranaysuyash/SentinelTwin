@@ -5,7 +5,7 @@ import { resolve, join } from "node:path";
 
 const studioRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
 
-function* walkBaks(dir) {
+function* walkBaks(dir: string): Generator<string> {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     if (entry === "node_modules" || entry === ".next" || entry === "dist") continue;

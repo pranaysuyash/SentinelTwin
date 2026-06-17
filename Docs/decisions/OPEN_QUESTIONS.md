@@ -70,6 +70,8 @@ SAM 3 is Meta's latest segmentation model. Is it available as a hosted API or mu
 If self-hosted, what are the GPU requirements? Is a Hugging Face Space fast enough for demo use?
 **Research needed:** Check HuggingFace model page and Meta's SAM 3 repo for deployment options.
 
+**✅ Resolved 2026-06-17 (D-317):** Browser-side SAM 3 is not viable in 2026 — the image encoder alone is ~1.8 GB and the language encoder is ~1.6 GB, which exceeds browser per-tab memory budgets. The studio's existing SAM 2 small (38 MB, in-browser) is the right default for still-image architectural segmentation; the SAM 3 quality gains are concentrated in video-mode memory gating, which SentinelTwin's scan pipeline doesn't use yet. When SAM 3 is needed, run it server-side: A100 80GB for single-image, H100 80GB for short video, H200 141GB for long video or 4K. HuggingFace Spaces (free tier) is CPU-only and times out. See D-317 in `DECISION_LOG.md` for the full analysis.
+
 ### Q-009: What scale reference do we require for floor plan import?
 When a user uploads a floor plan image, we need to know the real-world scale to position objects
 correctly. Options:

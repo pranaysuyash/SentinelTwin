@@ -5257,3 +5257,54 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 **Verification:** Tier 4 per motto §0.5 — unit tests for the new path (3 new test cases in `seasonal-lighting.test.ts`, plus 2 new cases in `lighting.test.ts` that pass a `currentTime` and verify day vs night lightLevel diverges), then a `pnpm build` + browser run on the production build with the retail reference scene at three `currentTime` values (noon, civil-twilight hour, midnight) to confirm the heatmap and Camera View actually change. Tier 2 fallback if Tier 4 is unavailable.
 
 **Revisit when:** the engine moves to multi-day scheduling or per-light lux attenuation from window-transmitted sunlight.
+
+---
+
+## D-317 | 2026-06-17 | SAM 3 segmentation runs server-side, not in the browser (resolves Q-008)
+
+**Context.** Q-008 (P1 — Must Resolve Before V0.2): "How does SAM 3 run in the browser or backend? Is it available as a hosted API or must we self-host? If self-hosted, what are the GPU requirements? Is a Hugging Face Space fast enough for demo use?"
+
+Meta released SAM 3 (Segment Anything with Concepts) on 2025-11-20. This decision documents the deployment path for SentinelTwin's scan-to-scene pipeline and resolves Q-008.
+
+**Decision.** SAM 3 inference runs **server-side via a self-hosted API** when real CV segmentation is needed. Browser-side SAM 3 is not viable in 2026.
+
+**Rationale.**
+
+1. **Model size is the killer constraint for browser-side inference.** Exported ONNX weights per the SAMExporter pattern (AnyLabeling, 2026-02) are:
+   - `sam3_image_encoder.onnx` + `.data` ≈ **1.8 GB**
+   - `sam3_language_encoder.onnx` + `.data` ≈ **1.6 GB** (only needed for text prompts)
+   - `sam3_decoder.onnx` + `.data` ≈ **116 MB**
+
+   The minimum browser path is image-encoder + decoder = ~1.9 GB. That's outside Chrome's typical per-tab heap (~2 GB effective on 32-bit, ~4 GB on 64-bit with headless limits) and means a full SAM 3 load kills the rest of the studio tab. By contrast, the studio already has a SAM 2 small (38 MB) ONNX adapter in I16 — SAM 3 is a 50× size jump with no quality change that matters for SentinelTwin's use cases (architectural segmentation of walls / doors / furniture).
+
+2. **SAM 2 small is the right browser-side default.** The studio already uses SAM 2 small for in-browser segmentation (I16). The SAM 3 paper claims +3.4 to +4.5 J&F on MOSE/SA-V benchmarks — the gains come from the memory attention gating in *video mode*, which SentinelTwin's scan-to-scene pipeline doesn't use (we process stills). The architectural-segmentation quality is essentially identical between SAM 2 small and SAM 3 for SentinelTwin's input distribution.
+
+3. **Server-side is the right place for SAM 3 when quality matters.** Spheron benchmarks (2026-05):
+   - Single-image inference: **A100 80GB** at ~$1.04/hr, ~10-12 GB VRAM
+   - 1080p video, 5 min clip, single mask: **H100 80GB** at ~$4/hr, ~28 GB VRAM
+   - 4K or multi-track 60-min: **H200 141GB** at ~$4.72/hr, ~80 GB VRAM
+
+   HuggingFace Spaces (zero-G0 / CPU-only) is **not viable** — Spheron notes the Perception Encoder needs an FP16/FP8 GPU at minimum. A free HF Space would time out on the first image.
+
+4. **Triton is the right production pattern.** Co-locate the SAM 3 encoder (TensorRT FP16 engine) and decoder (PyTorch) in a Triton ensemble, with dynamic batching (`max_queue_delay_microseconds=5000`) and an image-embedding cache keyed by SHA-256. This is the pattern that makes annotation pipelines fast: the same scan photo gets queried 10-50 times with different point prompts, and the encoder is the expensive step.
+
+**Alternatives rejected.**
+
+- **Browser-side SAM 3 via onnxruntime-web.** Rejected: 1.9 GB model size exceeds browser memory budgets; the perceived quality gain over SAM 2 small is negligible for still-image architectural segmentation.
+- **Hosted API (Replicate, Roboflow, AWS Rekognition).** Rejected: per-second serverless pricing is incompatible with SAM 3's memory bank in video mode (the bank must persist for the full clip). Per-image pricing (Roboflow) is 10-100× more expensive than a dedicated hourly H100. Lock-in to a single vendor is also a long-term concern given the open-source license.
+- **Self-hosted on a HuggingFace Space.** Rejected: free Spaces are CPU-only and will time out. Dedicated GPU Spaces exist but cost more than a dedicated A100/H100 instance on Spheron or equivalent.
+- **Skip SAM 3 entirely, use only SAM 2.** Acceptable for the current scan-to-scene flow (single still images), but the SAM 3 video mode's memory gating matters for future video-scan features. Decision: keep the door open via the server-side path; revisit if video scan becomes a roadmap item.
+
+**Implications for SentinelTwin.**
+
+- The studio's `SAM2Adapter` (I16) remains the **default** in-browser segmentation path. Operators who enable real CV segmentation in the scan pipeline get SAM 2 small via onnxruntime-web.
+- A new optional path: **server-side SAM 3 endpoint**. Operators can configure `SENTINELTWIN_SAM3_ENDPOINT` in their env to point at a self-hosted Triton instance. The studio's `scan-adapters/registry.ts` will pick this up via a new `RemoteSAM3Adapter` and route segmentation requests to the server. If the endpoint is unreachable, the adapter falls back to SAM 2 small (browser) → stub (no-op).
+- The Hugging Face dependency is now an **operator-provisioned** one, consistent with the I14/I15/I16 model-provisioning pattern. The studio does not bundle model weights.
+- The `.gitignore` already excludes `*.onnx`, `*.bin`, `*.pt`, `*.safetensors`, `*.tflite` from `apps/studio/public/models/` (added in I16), so operators can drop `sam3_image_encoder.onnx` etc. into the public path for the browser adapter if they want browser-side SAM 3 in spite of the size warning. We do not recommend it.
+
+**Verification.** This is a decision-doc-only deliverable (no code). The contract test for the studio's adapter set in I16 will fail if a future commit removes the SAM 2 small fallback or attempts to add a browser-side SAM 3 default. The decision closes Q-008.
+
+**Revisit when:**
+- Browser memory budgets grow past ~4 GB per tab (likely 2027+ on Safari, Chrome on Apple Silicon).
+- The studio gains a video-scan pipeline and SAM 3's memory gating becomes a quality differentiator vs. SAM 2.
+- A self-hosted SAM 3 endpoint pattern becomes standard practice for the studio's deployment story (would then be a default rather than opt-in).

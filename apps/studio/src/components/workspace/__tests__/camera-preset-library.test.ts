@@ -24,9 +24,12 @@ describe("Camera preset library (I21 — spec §14)", () => {
   });
 
   test("matches every spec §14 preset label", () => {
-    const labels = CAMERA_PRESETS.map((p) => p.label);
+    const labels: string[] = CAMERA_PRESETS.map((p) => p.label);
     for (const specLabel of SPEC_PRESET_LABELS) {
-      expect(labels, `Missing label "${specLabel}" from preset library`).toContain(specLabel);
+      expect(
+        labels.includes(specLabel),
+        `Missing label "${specLabel}" from preset library. Found: ${labels.join(", ")}`,
+      ).toBe(true);
     }
   });
 

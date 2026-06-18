@@ -37,6 +37,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
     | { type: "wall-start" | "wall-end"; index: number }
     | null
   >(null);
+  const [lastActionMessage, setLastActionMessage] = useState<string | null>(null);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -47,15 +48,30 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
       setDoorMask(result.doors.map(() => true));
       setWindowMask(result.windows.map(() => true));
       setDragging(null);
+      setLastActionMessage(null);
     });
   }, [result]);
 
+  const [nextWidthM, nextDepthM, nextHeightM] = useMemo(
+    () => [
+      Number(widthM),
+      Number(depthM),
+      Number(heightM),
+    ],
+    [widthM, depthM, heightM],
+  );
   const hasCalibrationChange = useMemo(
     () =>
-      Number(widthM) !== result.roomDimensions.widthM ||
-      Number(depthM) !== result.roomDimensions.depthM ||
-      Number(heightM) !== result.roomDimensions.heightM,
-    [widthM, depthM, heightM, result.roomDimensions.widthM, result.roomDimensions.depthM, result.roomDimensions.heightM],
+      Number.isFinite(nextWidthM) &&
+      Number.isFinite(nextDepthM) &&
+      Number.isFinite(nextHeightM) &&
+      nextWidthM > 0 &&
+      nextDepthM > 0 &&
+      nextHeightM > 0 &&
+      (nextWidthM !== result.roomDimensions.widthM ||
+        nextDepthM !== result.roomDimensions.depthM ||
+        nextHeightM !== result.roomDimensions.heightM),
+    [nextHeightM, nextDepthM, nextWidthM, result.roomDimensions.depthM, result.roomDimensions.heightM, result.roomDimensions.widthM],
   );
   const hasFilteredEdits = useMemo(() => {
     const masksChanged = wallMask.some((v) => !v) || doorMask.some((v) => !v) || windowMask.some((v) => !v);
@@ -89,6 +105,45 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
   const confidenceBand = confidencePct >= 75 ? "high" : confidencePct >= 50 ? "medium" : "low";
   const hasManualCalibration = Boolean(result.manualCalibration);
   const qualityPct = semanticContext ? Math.round(semanticContext.qualityScore * 100) : null;
+  const rawWallSegmentCount = result.rawWallSegmentCount ?? result.walls.length;
+  const shortWallThresholdPx = useMemo(
+    () => Number((Math.max(12, result.scalePixelsPerMeter * 0.35)).toFixed(2)),
+    [result.scalePixelsPerMeter],
+  );
+  const keptWallCount = useMemo(
+    () => draftWalls.reduce((count, _, index) => count + ((wallMask[index] ?? true) ? 1 : 0), 0),
+    [draftWalls, wallMask],
+  );
+  const shortWallIndexes = useMemo(() => {
+    const next: number[] = [];
+    for (let index = 0; index < draftWalls.length; index += 1) {
+      const wall = draftWalls[index];
+      const isKept = wallMask[index] ?? true;
+      const lengthPx = Math.hypot(wall.end.x - wall.start.x, wall.end.y - wall.start.y);
+      if (isKept && lengthPx < shortWallThresholdPx) {
+        next.push(index);
+      }
+    }
+    return next;
+  }, [draftWalls, shortWallThresholdPx, wallMask]);
+  const duplicateWallIndexes = useMemo(() => {
+    const next = new Set<number>();
+    for (let i = 0; i < draftWalls.length; i += 1) {
+      for (let j = i + 1; j < draftWalls.length; j += 1) {
+        if (!areWallsNearlyDuplicate(draftWalls[i], draftWalls[j])) continue;
+        const keepIndex = wallLengthPx(draftWalls[i]) < wallLengthPx(draftWalls[j]) ? i : j;
+        next.add(keepIndex);
+      }
+    }
+    return [...next];
+  }, [draftWalls]);
+  const autoCleanupWallIndexes = useMemo(() => {
+    const next = new Set<number>();
+    shortWallIndexes.forEach((index) => next.add(index));
+    duplicateWallIndexes.forEach((index) => next.add(index));
+    return [...next];
+  }, [duplicateWallIndexes, shortWallIndexes]);
+  const canRunAutoCleanup = autoCleanupWallIndexes.length > 0;
   const previewViewport = useMemo(() => {
     const xs: number[] = [];
     const ys: number[] = [];
@@ -205,6 +260,11 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
             </span>
           </div>
         </div>
+        {lastActionMessage != null ? (
+          <div className="mt-3 rounded-lg border border-sky-500/25 bg-sky-500/10 px-3 py-2 text-[11px] text-sky-200">
+            {lastActionMessage}
+          </div>
+        ) : null}
         <div className="mt-4 grid gap-2 text-[10px] md:grid-cols-3">
           <div className="rounded-xl border border-[#1f2a3e] bg-[#0a101d] px-3 py-2 text-[#9fb2d1]">
             <div className="text-[#6f82a4]">Warnings</div>
@@ -216,7 +276,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
           </div>
           <div className="rounded-xl border border-[#1f2a3e] bg-[#0a101d] px-3 py-2 text-[#9fb2d1]">
             <div className="text-[#6f82a4]">Walls</div>
-            <div>{result.walls.length} detected</div>
+            <div>{keptWallCount} / {rawWallSegmentCount} kept</div>
           </div>
         </div>
       </div>
@@ -251,12 +311,12 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4 text-center">
-          <div className="text-[22px] font-bold text-[#c5ccdb]">
-            {result.walls.length}
+          <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4 text-center">
+            <div className="text-[22px] font-bold text-[#c5ccdb]">
+              {keptWallCount}
+            </div>
+            <div className="text-[11px] text-[#59637a]">Kept Walls</div>
           </div>
-          <div className="text-[11px] text-[#59637a]">Walls Detected</div>
-        </div>
         <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4 text-center">
           <div className="text-[22px] font-bold text-[#c5ccdb]">
             {(result.confidence * 100).toFixed(0)}%
@@ -271,7 +331,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4">
+          <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-medium text-[#9bb0cf]">Detection Details</span>
         </div>
@@ -283,6 +343,16 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
           <div className="flex justify-between gap-3 text-[11px]">
             <span className="text-[#3a4158]">Scale</span>
             <span className="text-[#68738a]">{result.scalePixelsPerMeter} px/m</span>
+          </div>
+          <div className="flex justify-between gap-3 text-[11px]">
+            <span className="text-[#3a4158]">Wall Segments</span>
+            <span className="text-[#68738a]">
+              {rawWallSegmentCount} candidate{rawWallSegmentCount === 1 ? "" : "s"} · {keptWallCount} kept
+            </span>
+          </div>
+          <div className="flex justify-between gap-3 text-[11px]">
+            <span className="text-[#3a4158]">Short wall cutoff</span>
+            <span className="text-[#68738a]">&lt; {shortWallThresholdPx}px {shortWallIndexes.length} pending</span>
           </div>
           <div className="flex justify-between gap-3 text-[11px]">
             <span className="text-[#3a4158]">Doors Detected</span>
@@ -319,6 +389,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
               setDraftDoors(result.doors);
               setDraftWindows(result.windows);
               setDragging(null);
+              setLastActionMessage("Detection state reset to latest extracted geometry.");
             }}
             className="text-[11px] text-[#8ea5c6] hover:text-white"
           >
@@ -329,9 +400,12 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
         <div className="mb-4 rounded-xl border border-[#1b2233] bg-[#0b1220] p-3">
           <div className="mb-1 text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Spatial Preview</div>
           <div className="mb-2 text-[12px] leading-5 text-[#9aaed0]">Preview is zoomed to the extracted geometry so you can inspect the actual draft shell instead of the full uploaded sheet.</div>
+          <div className="mb-2 text-[10px] text-[#7f93b3]">
+            Blue/cyan/green items are kept in the draft. Red items are excluded from the draft shell.
+          </div>
           <svg
             viewBox={`${previewViewport.minX} ${previewViewport.minY} ${previewViewport.width} ${previewViewport.height}`}
-            className="h-64 w-full rounded-xl bg-[#060a12]"
+            className="h-80 w-full rounded-xl bg-[#060a12]"
             preserveAspectRatio="xMidYMid meet"
             onPointerMove={(event) => {
               if (!dragging) return;
@@ -404,6 +478,38 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <button
             type="button"
+            disabled={!canRunAutoCleanup}
+            onClick={() => {
+              if (autoCleanupWallIndexes.length === 0) return;
+              const next = [...wallMask];
+              autoCleanupWallIndexes.forEach((index) => {
+                next[index] = false;
+              });
+              setWallMask(next);
+              setLastActionMessage(`Auto-cleaned ${autoCleanupWallIndexes.length} short/duplicate wall fragments.`);
+            }}
+            className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40"
+          >
+            Auto-clean short + duplicate walls
+          </button>
+          <button
+            type="button"
+            disabled={shortWallIndexes.length === 0}
+            onClick={() => {
+              if (shortWallIndexes.length === 0) return;
+              const next = [...wallMask];
+              shortWallIndexes.forEach((index) => {
+                next[index] = false;
+              });
+              setWallMask(next);
+              setLastActionMessage(`Auto-filtered ${shortWallIndexes.length} short wall fragments shorter than ${shortWallThresholdPx}px.`);
+            }}
+            className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40"
+          >
+            Auto-filter short walls
+          </button>
+          <button
+            type="button"
             onClick={() => {
               const idx = draftWalls.findIndex((_, i) => wallMask[i] ?? true);
               if (idx === -1) return;
@@ -467,13 +573,15 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
           <div>
             <div className="mb-2 flex items-center justify-between">
               <div className="text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Walls</div>
-              <div className="text-[11px] text-[#6d819f]">Checked items stay in the draft</div>
+              <div className="text-[11px] text-[#6d819f]">
+                {keptWallCount} kept · {draftWalls.length - keptWallCount} excluded
+              </div>
             </div>
             <div className="max-h-32 space-y-1.5 overflow-y-auto pr-1">
               {draftWalls.slice(0, 20).map((wall, index) => (
                 <label key={`wall-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
                   <span>
-                    W{index + 1}: ({wall.start.x},{wall.start.y}) → ({wall.end.x},{wall.end.y})
+                    Keep W{index + 1}: ({wall.start.x},{wall.start.y}) → ({wall.end.x},{wall.end.y}) · {wallLengthPx(wall).toFixed(1)}px
                   </span>
                   <input
                     type="checkbox"
@@ -547,6 +655,9 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
                 doors: draftDoors.filter((_, idx) => doorMask[idx]),
                 windows: draftWindows.filter((_, idx) => windowMask[idx]),
               };
+              setLastActionMessage(
+                `Applied corrections: kept ${filtered.walls.length}/${draftWalls.length} walls, ${filtered.doors.length}/${draftDoors.length} doors, ${filtered.windows.length}/${draftWindows.length} openings.`,
+              );
               onUpdateResult(normalizeFloorPlanResult(filtered));
             }}
             className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40"
@@ -588,7 +699,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="text-[11px] leading-5 text-[#7f93b3]">
             {hasManualCalibration
-              ? "Manual calibration is active. Apply new values to replace the locked scene footprint."
+              ? "Manual calibration is active. Re-applying updates locked values and refreshes wall normalization."
               : "Use known room dimensions to lock the scene footprint and refine scale."}
           </span>
           <button type="button"
@@ -597,7 +708,10 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
               const nextDepth = Number(depthM);
               const nextHeight = Number(heightM);
               if (Number.isFinite(nextWidth) && Number.isFinite(nextDepth) && Number.isFinite(nextHeight) && nextWidth > 0 && nextDepth > 0 && nextHeight > 0) {
-                onRecalibrate({ widthM: nextWidth, depthM: nextDepth, heightM: nextHeight });
+                setLastActionMessage(
+                  `Applying known footprint ${result.roomDimensions.widthM.toFixed(2)}×${result.roomDimensions.depthM.toFixed(2)}×${result.roomDimensions.heightM.toFixed(2)}m -> ${nextWidth.toFixed(2)}×${nextDepth.toFixed(2)}×${nextHeight.toFixed(2)}m.`,
+                );
+                onRecalibrate({ widthM: Number(nextWidth.toFixed(2)), depthM: Number(nextDepth.toFixed(2)), heightM: Number(nextHeight.toFixed(2)) });
               }
             }}
             disabled={!hasCalibrationChange}
@@ -659,4 +773,43 @@ function formatGateAction(action: FloorPlanGateDecision["action"]) {
     default:
       return "Ready for Tier 2";
   }
+}
+
+function wallLengthPx(wall: { start: { x: number; y: number }; end: { x: number; y: number } }): number {
+  return Math.sqrt((wall.end.x - wall.start.x) ** 2 + (wall.end.y - wall.start.y) ** 2);
+}
+
+function areWallsNearlyDuplicate(
+  a: { start: { x: number; y: number }; end: { x: number; y: number } },
+  b: { start: { x: number; y: number }; end: { x: number; y: number } },
+): boolean {
+  const aHorizontal = Math.abs(a.start.y - a.end.y) < 3;
+  const bHorizontal = Math.abs(b.start.y - b.end.y) < 3;
+  const aVertical = Math.abs(a.start.x - a.end.x) < 3;
+  const bVertical = Math.abs(b.start.x - b.end.x) < 3;
+  if (aHorizontal !== bHorizontal || aVertical !== bVertical) return false;
+
+  if (aHorizontal && bHorizontal) {
+    const anchorDistance = Math.abs(a.start.y - b.start.y);
+    return anchorDistance <= 6 && intervalsOverlapRatio(
+      [Math.min(a.start.x, a.end.x), Math.max(a.start.x, a.end.x)],
+      [Math.min(b.start.x, b.end.x), Math.max(b.start.x, b.end.x)],
+    ) > 0.8;
+  }
+
+  if (aVertical && bVertical) {
+    const anchorDistance = Math.abs(a.start.x - b.start.x);
+    return anchorDistance <= 6 && intervalsOverlapRatio(
+      [Math.min(a.start.y, a.end.y), Math.max(a.start.y, a.end.y)],
+      [Math.min(b.start.y, b.end.y), Math.max(b.start.y, b.end.y)],
+    ) > 0.8;
+  }
+
+  return false;
+}
+
+function intervalsOverlapRatio(a: [number, number], b: [number, number]): number {
+  const overlap = Math.max(0, Math.min(a[1], b[1]) - Math.max(a[0], b[0]));
+  const shortest = Math.max(1, Math.min(a[1] - a[0], b[1] - b[0]));
+  return overlap / shortest;
 }

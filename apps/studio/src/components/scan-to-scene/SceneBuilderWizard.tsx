@@ -239,9 +239,33 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
     setState(seededState);
   }, [seededState]);
 
+  const isFloorPlan = state.importMethod === "floor_plan";
+  const nextActionLabel =
+    state.step === 2
+      ? isFloorPlan
+        ? "Next: Review and Commit"
+        : "Next"
+      : "Next";
+  const primaryActionLabel = isFloorPlan && state.step === 3 ? "Create Draft Scene" : "Create Scene";
+  const backActionLabel = state.step === 0
+    ? "Cancel"
+    : state.step === 1
+      ? "Back to Room Name"
+    : state.step === 2
+      ? "Back to Method"
+      : "Back to Import Review";
+  const navigationHint =
+    state.step === 2
+      ? isFloorPlan
+        ? "Configure step: validate footprint, prune obvious false positives, then click Next to review commit summary."
+        : "Configure method-specific options, then click Next."
+      : state.step === 3
+        ? "Review step: confirm summary, then create the draft."
+        : "";
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#0b0f17]">
-      {/* Step indicators */}
+        {/* Step indicators */}
       <div className="flex items-center justify-between border-b border-[#1e2130] px-4 py-3">
         <div className="flex items-center gap-2">
           {["Room Setup", "Method", "Configure", "Review"].map((label, i) => (
@@ -275,6 +299,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
           <RotateCcw className="h-3 w-3" /> Reset
         </button>
       </div>
+      {navigationHint ? <div className="border-b border-[#121a29] px-4 py-2 text-[9px] text-[#667390]">{navigationHint}</div> : null}
 
       {/* Step content */}
       <div className="flex-1 overflow-y-auto p-4">
@@ -287,7 +312,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
             onFileUpload={handleFileUpload}
           />
         )}
-        {state.step === 3 && <ReviewStep value={state} />}
+        {state.step === 3 && <ReviewStep value={state} onChange={update} />}
       </div>
 
       {/* Navigation */}
@@ -297,7 +322,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
           className="flex items-center gap-1 rounded-lg border border-[#1e2130] px-3 py-2 text-[11px] text-[#68738a] transition-colors hover:border-[#2a3045] hover:text-white"
         >
           <ArrowLeft className="h-3 w-3" />
-          {state.step > 0 ? "Back" : "Cancel"}
+          {backActionLabel}
         </button>
 
         {state.step < 3 ? (
@@ -306,7 +331,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
             disabled={!canAdvance}
             className="flex items-center gap-1 rounded-lg bg-blue-600 px-4 py-2 text-[11px] font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
           >
-            Next
+            {nextActionLabel}
             <ArrowRight className="h-3 w-3" />
           </button>
         ) : (
@@ -314,7 +339,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
             onClick={handleCreate}
             className="flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-2 text-[11px] font-medium text-white transition-colors hover:bg-emerald-500"
           >
-            <Plus className="h-3 w-3" /> {state.importMethod === "floor_plan" ? "Create Draft Scene" : "Create Scene"}
+            <Plus className="h-3 w-3" /> {primaryActionLabel}
           </button>
         )}
       </div>
@@ -700,8 +725,10 @@ function ConfigureStep({
 
 function ReviewStep({
   value,
+  onChange,
 }: {
   value: WizardState;
+  onChange: (patch: Partial<WizardState>) => void;
 }) {
   const reviewDimensions = value.floorPlanResult?.roomDimensions ?? {
     widthM: value.widthM,
@@ -734,8 +761,19 @@ function ReviewStep({
     <div className="space-y-4">
       <h3 className="text-[12px] font-medium text-[#c5ccdb]">Review & Create</h3>
       <p className="text-[9px] text-[#59637a]">
-        Review the scene configuration below. Click &quot;Create Scene&quot; to build it.
+        Review the scene configuration below. Click the action button below to create this draft.
       </p>
+
+      <label className="block space-y-1 text-[9px] text-[#59637a]">
+        Scene Name
+        <input
+          type="text"
+          value={value.roomName}
+          onChange={(event) => onChange({ roomName: event.target.value })}
+          className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#070a12] px-3 py-2 text-[12px] text-[#c5ccdb] outline-none placeholder:text-[#3a4158] focus:border-blue-500/40"
+          placeholder="Scene name"
+        />
+      </label>
 
       <div className="space-y-2">
         {summary.map((item) => (

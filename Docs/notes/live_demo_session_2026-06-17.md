@@ -240,3 +240,31 @@ Code-grounded explanation:
 - Demo closed with a negative response from the user.
 - User feedback: product felt buggy, complicated, and the imported values were wrong.
 - Presenter outcome: demo ended without purchase interest; key objections were trust in extraction accuracy, calibration behavior, and overall UX clarity.
+
+### Turn 12 (Continuation: implementation fix pass)
+
+Sales rep:
+“I’ve converted the walkthrough findings into concrete, executable behavior adjustments in the floor-plan import controls and demo runbook so we can test the same user journey without rewriting behavior during demo calls.
+
+I completed the following implementation updates from the observed failure mode:
+- Clarified kept-vs-raw wall counts in the review header and metric cards.
+- Added `Auto-filter short walls` and explicit short-wall warnings in detection details.
+- Improved calibration feedback with explicit source→target footprint changes.
+- Added stronger correction action telemetry (`Applied corrections`) and reset confirmation.
+- Kept demo mode contract in the skill so no code changes happen during live walkthroughs.
+
+Outcome action:
+- Next run should continue on imported-plan flow with explicit `Next` vs `Create Draft Scene` guidance, then use `Apply Calibration` with a known plan value, then `Auto-filter short walls`, then `Apply Corrections`, then `Next`.
+- If any metric still looks wrong (`raw count` too high, footprint unstable, or warnings remain high), stop at review and document as explicit blockers.
+
+### Turn 13 (Continuation: live post-fix flow + demo skill)
+
+- We validated the demo-mode contract: `sentineltwin-demo-walkthrough` lives at `/Users/pranay/Projects/skills/sentineltwin-demo-walkthrough` and is surfaced to Codex via symlink at `/Users/pranay/.codex/skills/sentineltwin-demo-walkthrough`.
+- In this run, the sales coach should now call out:
+  - the raw-vs-kept wall split (`1335` raw candidate segments is not the same as kept shell),
+  - the wall cleanup options (`Auto-clean short + duplicate walls`, `Apply Corrections`) before finalizing,
+  - why manual dimensions appear to normalize after recalibration and what to verify after `Apply Calibration`.
+- New implementation support to reduce user confusion in-floor:
+  - `ImportReview` now includes stronger status messaging + cleaner wall summary text (`Keep W…` rows and kept/excluded totals),
+  - auto-clean action for short/duplicate fragments,
+  - importer-side noise-component filter plus raw segment provenance.

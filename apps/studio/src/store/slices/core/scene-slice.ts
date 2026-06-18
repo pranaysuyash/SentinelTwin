@@ -709,7 +709,9 @@ function buildContextualSelectionPatch(
     selectedNodeIds: selectedIds,
     selectedNodeId: nextPrimary,
     selectedCameraId: isCameraSelection ? nextPrimary : stateSelectedCameraId,
-    rightDockCollapsed: hasSelection ? false : stateRightDockCollapsed,
+    // Right panel: open on selection, collapse on deselect (Adobe-style contextual inspector)
+    rightDockCollapsed: hasSelection ? false : true,
+    // Bottom drawer: open on selection, but preserve user's open state on deselect (scene-level metrics persist)
     bottomDockCollapsed: hasSelection ? false : stateBottomDockCollapsed,
     rightPanelMode: hasSelection ? contextualRightPanelMode : stateRightPanelMode,
     inspectorTab: contextualInspectorTab ?? stateInspectorTab,

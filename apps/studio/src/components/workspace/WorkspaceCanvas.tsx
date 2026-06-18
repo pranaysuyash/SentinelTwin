@@ -2155,7 +2155,7 @@ export function WorkspaceCanvas() {
             <button
               type="button"
               className="flex flex-col items-center gap-3 rounded-2xl border border-[#1e2536] bg-[#0b0f1a]/85 px-7 py-5 text-center backdrop-blur-sm transition-colors hover:border-[#2d3a54] hover:bg-[#0f1422]/95"
-              onClick={() => setActiveTool("camera")}
+              onClick={(e) => { e.stopPropagation(); setActiveTool("camera"); }}
             >
               <div className="flex size-11 items-center justify-center rounded-xl border border-[#1e2840] bg-[#111828]">
                 <Camera className="h-5 w-5 text-blue-400" />

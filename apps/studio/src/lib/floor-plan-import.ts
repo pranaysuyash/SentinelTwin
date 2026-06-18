@@ -36,6 +36,7 @@ export interface FloorPlanResult {
   windows: WindowOpening[];
   roomDimensions: { widthM: number; depthM: number; heightM: number };
   scalePixelsPerMeter: number;
+  rawWallSegmentCount?: number;
   confidence: number; // 0-1 estimate of detection quality
   manualCalibration?: { widthM: number; depthM: number; heightM: number } | null;
 }
@@ -90,6 +91,8 @@ const DEFAULT_CONFIG: Required<FloorPlanConfig> = {
   minWallLengthPx: 20,
 };
 const DEFAULT_TIER1_QUALITY_THRESHOLD = 0.45;
+const NOISE_CLEANUP_COMPONENT_TOLERANCE_PX = 12;
+const NOISE_COMPONENT_KEEP_SPAN_PX = 42;
 
 /**
  * Process a floor plan image and extract wall/room geometry.
@@ -107,8 +110,9 @@ export async function extractFloorPlan(
   // Step 2: Detect edges using simple gradient method
   const gradient = detectEdges(gray, width, height, cfg.edgeThreshold);
 
-  // Step 3: Trace wall contours from edges
-  const wallSegments = traceWalls(gradient, width, height, cfg.minWallLengthPx);
+  // Step 3: Trace wall contours from edges, then clean noisy fragments for stable shells.
+  const wallCandidates = traceWalls(gradient, width, height, cfg.minWallLengthPx);
+  const wallSegments = removeNoisyWallComponents(wallCandidates, width, height, cfg.scalePixelsPerMeter);
 
   // Step 4: Detect openings (doors/windows) from wall gaps
   const { doors, windows } = detectOpenings(wallSegments);
@@ -122,6 +126,7 @@ export async function extractFloorPlan(
     walls: wallSegments,
     doors,
     windows,
+    rawWallSegmentCount: wallCandidates.length,
     roomDimensions: dimensions,
     scalePixelsPerMeter: cfg.scalePixelsPerMeter,
     confidence: 0,
@@ -332,6 +337,7 @@ export function normalizeFloorPlanResult(result: FloorPlanResult): FloorPlanResu
     walls: normalizedWalls,
     doors: normalizedDoors,
     windows: normalizedWindows,
+    rawWallSegmentCount: result.rawWallSegmentCount ?? Math.max(result.walls.length, normalizedWalls.length),
     roomDimensions: {
       widthM: nextDimensions.widthM,
       depthM: nextDimensions.depthM,
@@ -641,6 +647,79 @@ function traceWalls(
   return segments;
 }
 
+function removeNoisyWallComponents(
+  walls: WallSegment[],
+  _imageWidth: number,
+  _imageHeight: number,
+  scalePixelsPerMeter: number,
+): WallSegment[] {
+  if (walls.length === 0) return walls;
+
+  const candidateWallIndexes = walls
+    .map((wall, index) => ({ wall, index, lengthPx: wallLengthPx(wall) }))
+    .filter(({ lengthPx }) => lengthPx >= Math.max(12, scalePixelsPerMeter * 0.2));
+
+  if (candidateWallIndexes.length <= 1) return candidateWallIndexes.map((entry) => entry.wall);
+
+  const candidates = candidateWallIndexes.map(({ wall }) => wall);
+  const adjacency: number[][] = new Array(candidates.length).fill(0).map(() => []);
+  for (let i = 0; i < candidates.length; i += 1) {
+    for (let j = i + 1; j < candidates.length; j += 1) {
+      if (!areWallsEndpointConnected(candidates[i], candidates[j], NOISE_CLEANUP_COMPONENT_TOLERANCE_PX)) continue;
+      adjacency[i].push(j);
+      adjacency[j].push(i);
+    }
+  }
+
+  const visited = new Array<boolean>(candidates.length).fill(false);
+  const kept: WallSegment[] = [];
+  const minKeepSpan = Math.max(scalePixelsPerMeter * 0.6, NOISE_COMPONENT_KEEP_SPAN_PX);
+
+  for (let i = 0; i < candidates.length; i += 1) {
+    if (visited[i]) continue;
+
+    const stack = [i];
+    const component: number[] = [];
+    visited[i] = true;
+
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (current === undefined) continue;
+      component.push(current);
+      for (const neighbor of adjacency[current]) {
+        if (!visited[neighbor]) {
+          visited[neighbor] = true;
+          stack.push(neighbor);
+        }
+      }
+    }
+
+    const componentPoints: { x: number; y: number }[] = [];
+    let totalLength = 0;
+    for (const componentIndex of component) {
+      const wall = candidates[componentIndex];
+      totalLength += wallLengthPx(wall);
+      componentPoints.push(wall.start, wall.end);
+    }
+
+    const spanX = Math.max(...componentPoints.map((point) => point.x)) - Math.min(...componentPoints.map((point) => point.x));
+    const spanY = Math.max(...componentPoints.map((point) => point.y)) - Math.min(...componentPoints.map((point) => point.y));
+    const shouldKeep = component.length >= 2 || spanX >= minKeepSpan || spanY >= minKeepSpan || totalLength >= totalLengthThreshold(scalePixelsPerMeter);
+
+    if (shouldKeep) {
+      for (const componentIndex of component) {
+        kept.push(candidates[componentIndex]);
+      }
+    }
+  }
+
+  return kept;
+}
+
+function totalLengthThreshold(scalePixelsPerMeter: number): number {
+  return Math.max(90, scalePixelsPerMeter * 1.4);
+}
+
 function traceHorizontal(
   edges: Uint8Array,
   visited: Uint8Array,
@@ -655,6 +734,23 @@ function traceHorizontal(
     x++;
   }
   return x - 1;
+}
+
+function areWallsEndpointConnected(
+  a: WallSegment,
+  b: WallSegment,
+  tolerancePx: number,
+): boolean {
+  const endpointsA = [a.start, a.end];
+  const endpointsB = [b.start, b.end];
+  for (const p of endpointsA) {
+    for (const q of endpointsB) {
+      const dx = p.x - q.x;
+      const dy = p.y - q.y;
+      if (Math.hypot(dx, dy) <= tolerancePx) return true;
+    }
+  }
+  return false;
 }
 
 function traceVertical(

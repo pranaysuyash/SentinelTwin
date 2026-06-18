@@ -157,3 +157,30 @@ This was not only a styling problem. The trust break came from a deeper contract
 - Consider adding explicit UI guidance for user-provided / hand-drawn floor plans (expected low quality mode, optional preprocessing preset).
 - Add a small "noise cleanup level" control so non-technical users can tune aggressiveness instead of implicitly using fixed thresholds.
 - Replace static wall list cap (`slice(0, 20)`) with search/scrollable full list or filter chips, since large plans become hard to inspect quickly.
+
+### 2026-06-18 Plan-understanding training pass
+
+#### Completed in this pass
+
+- Added explicit import-plan interpretation language in `ImportReview`:
+  - raw candidate vs kept wall counts,
+  - source-profile explanations for `hand_drawn`/`low_res_scan` behavior,
+  - keep/exclude legend for each checkbox,
+  - bulk keep/exclude actions for walls, doors, and windows,
+  - larger preview panel to improve on-canvas understanding.
+- Added calibration framing in `ImportReview` so manual dimension locking is clearly visible:
+  - explicit note that preview anchors remain pixel-stable,
+  - explicit message that recalibration changes scene scale/footprint,
+  - action message now includes the known-before/after dimension delta.
+- Strengthened `SceneBuilderWizard` navigation clarity:
+  - configure label now routes as `Next: Review` and explicitly states this is review-only,
+  - final action remains `Create Draft Scene` on Review step,
+  - review summary now reports kept-vs-raw walls and manual-calibration source.
+- Updated `sentineltwin-demo-walkthrough/SKILL.md` to require explicit review-vs-final workflow narration and transcript output columns.
+
+#### Why this improves actual plan understanding
+
+- Removes the perception that wall counts are arbitrary: user now sees that many detections are candidates before geometry cleanup.
+- Changes checkbox meaning from “mystery toggles” to explicit include/exclude signals.
+- Removes ambiguity on whether `Next` ends the flow or finalizes the draft.
+- Gives the salesperson a reusable spoken script to convert the same UI into a deterministic buyer simulation.

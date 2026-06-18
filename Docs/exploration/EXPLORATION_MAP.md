@@ -15,6 +15,22 @@
 **Test lock-in:** Route tests for `sensor-ingest`, `camera-metadata-ingest`, `workspace-control-plane`, `camera-live-session-health`, `ai/command`, `ai/counterfactuals`, `ai/draft-scene`, `ai/model-eval`, `ai/report`, `reconstruct`, `health`, `support-delivery`, and `truth-audit` now assert envelope metadata and typed validation/error fields in both success and failure cases, with the truth-audit test intentionally checking the report-level boolean rather than assuming PASS.
 **Code anchors:** `apps/studio/src/app/api/sensor-ingest/route.ts`; `apps/studio/src/app/api/camera-metadata-ingest/route.ts`; `apps/studio/src/app/api/workspace-control-plane/route.ts`; `apps/studio/src/app/api/camera-live-session-health/route.ts`; `apps/studio/src/app/api/ai/command/route.ts`; `apps/studio/src/app/api/ai/counterfactuals/route.ts`; `apps/studio/src/app/api/ai/draft-scene/route.ts`; `apps/studio/src/app/api/ai/model-eval/route.ts`; `apps/studio/src/app/api/ai/report/route.ts`; `apps/studio/src/app/api/reconstruct/route.ts`; `apps/studio/src/app/api/health/route.ts`; `apps/studio/src/app/api/support-delivery/route.ts`; `apps/studio/src/app/api/truth-audit/route.ts`; `apps/studio/src/lib/api-response.ts`.
 
+### Thread 11b: Floor-plan comprehension & source-profile tuning (live-demo loop)
+
+**Status:** In progress
+**Problem:** Buyers reading live floor-plan imports cannot tell whether wall counts represent raw detector candidates or kept geometry, and they cannot quickly map plan source quality differences (`architectural` vs `hand_drawn` vs `low_res_scan`).
+
+**2026-06-18 findings and actions:**
+- Added source-profile presets and hints in configure flow (`architectural`, `hand_drawn`, `low_res_scan`) with tuning values passed through extraction config.
+- Preserved and surfaced `rawWallSegmentCount` to show candidate inflation from legends/text.
+- Added explicit keep/exclude copy, pre-filter subtraction, and review-mode guidance in `ImportReview`.
+- Clarified that manual calibration is authoritative and that preview anchors remain image-space; only footprint scale is recalibrated.
+
+**Open follow-up:**
+- Measure how often each source profile improves confidence for real-world hand-drawn plans vs scans.
+- Add a calibration change audit row (before/after values + px/m) so visual confirmation is immediate.
+- Add optional plan-source preprocessing toggles for denoising legend layers and text strokes.
+
 ### Thread 0: Product integrity hardening spine
 **Status:** Implemented in code (2026-05-30).
 **Key findings:**

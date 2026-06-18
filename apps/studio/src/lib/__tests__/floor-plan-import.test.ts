@@ -210,10 +210,30 @@ describe("SceneBuilderWizard floor-plan extraction config", () => {
       getFloorPlanExtractionConfig({
         heightM: 3.2,
         floorPlanScalePixelsPerMeter: 72,
+        sourceProfile: "architectural",
       }),
     ).toEqual({
       roomHeightM: 3.2,
       scalePixelsPerMeter: 72,
+      edgeThreshold: 46,
+      minWallLengthPx: 28,
+    });
+  });
+
+  test("relaxes detection for hand-drawn plans", async () => {
+    const { getFloorPlanExtractionConfig } = await import("@/components/scan-to-scene/floor-plan-extraction-config");
+
+    expect(
+      getFloorPlanExtractionConfig({
+        heightM: 3.2,
+        floorPlanScalePixelsPerMeter: 72,
+        sourceProfile: "hand_drawn",
+      }),
+    ).toEqual({
+      roomHeightM: 3.2,
+      scalePixelsPerMeter: 72,
+      edgeThreshold: 26,
+      minWallLengthPx: 12,
     });
   });
 

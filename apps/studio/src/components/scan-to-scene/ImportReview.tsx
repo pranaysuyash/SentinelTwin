@@ -10,6 +10,7 @@ import {
   type FloorPlanGateDecision,
   type FloorPlanResult,
   type FloorPlanSemanticContext,
+  type FloorPlanSourceProfile,
 } from "@/lib/floor-plan-import";
 
 interface ImportReviewProps {
@@ -20,9 +21,21 @@ interface ImportReviewProps {
   onImageChange: () => void;
   onRecalibrate: (calibration: { widthM?: number; depthM?: number; heightM?: number }) => void;
   onUpdateResult: (result: FloorPlanResult) => void;
+  sourceProfile?: FloorPlanSourceProfile;
+  sourceHint?: string;
 }
 
-export function ImportReview({ result, semanticContext, gateDecision, warnings, onImageChange, onRecalibrate, onUpdateResult }: ImportReviewProps) {
+export function ImportReview({
+  result,
+  semanticContext,
+  gateDecision,
+  warnings,
+  onImageChange,
+  onRecalibrate,
+  onUpdateResult,
+  sourceProfile = "architectural",
+  sourceHint,
+}: ImportReviewProps) {
   const [widthM, setWidthM] = useState(result.roomDimensions.widthM.toString());
   const [depthM, setDepthM] = useState(result.roomDimensions.depthM.toString());
   const [heightM, setHeightM] = useState(result.roomDimensions.heightM.toString());
@@ -106,6 +119,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
   const hasManualCalibration = Boolean(result.manualCalibration);
   const qualityPct = semanticContext ? Math.round(semanticContext.qualityScore * 100) : null;
   const rawWallSegmentCount = result.rawWallSegmentCount ?? result.walls.length;
+  const removedBeforeDraftCount = Math.max(0, rawWallSegmentCount - draftWalls.length);
   const shortWallThresholdPx = useMemo(
     () => Number((Math.max(12, result.scalePixelsPerMeter * 0.35)).toFixed(2)),
     [result.scalePixelsPerMeter],
@@ -204,6 +218,26 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
     }
     return guidance;
   }, [diagnostics.duplicateWallPairs, diagnostics.shortWallCount, diagnostics.unsnappedDoorCount, diagnostics.unsnappedWindowCount, gateDecision?.action]);
+  const calibrationGuidance = useMemo(() => {
+    if (hasManualCalibration) {
+      return "Manual calibration is authoritative now: these values define the scene footprint and scale. The preview stays anchored to image pixels, so geometry looks stable while the room dimensions change underneath.";
+    }
+    return "Enter known dimensions here before final create. The next step is to lock values and scale; it does not move preview anchors.";
+  }, [hasManualCalibration]);
+  const interpretationCopy = useMemo(() => {
+    const copyForProfile = sourceProfile === "hand_drawn"
+      ? "Hand-drawn plans commonly produce extra segments from text strokes and dimension notes."
+      : sourceProfile === "low_res_scan"
+        ? "Low-resolution scans commonly turn every text/line edge into multiple short segments."
+        : "Architectural/CAD plans are usually cleaner, but legends and callouts can still appear as segments.";
+
+    return {
+      wallCounts: rawWallSegmentCount > keptWallCount
+        ? `${rawWallSegmentCount} wall segments were detected. ${keptWallCount} are currently kept in the draft shell and ${removedBeforeDraftCount} were removed as pre-filtered noise or excluded in your edits.`
+        : `${keptWallCount} wall segments are in the working shell. Pre-filter removal is currently low.`,
+      sourceProfile: copyForProfile,
+    };
+  }, [keptWallCount, rawWallSegmentCount, removedBeforeDraftCount, sourceProfile]);
 
   const updateDraggedOpening = (
     event: ReactPointerEvent<SVGSVGElement>,
@@ -235,6 +269,13 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
 
   return (
     <div className="space-y-4">
+      <div className="rounded-2xl border border-[#22314b] bg-[#0b1220] p-3">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9bb0cf]">Plan Source Understanding</div>
+        <div className="mt-1 text-[12px] leading-5 text-[#9aaed0]">
+          The detector is currently tuned for <span className="font-semibold text-[#d6e2f4]">{sourceProfile}</span>.
+          {sourceHint ? <span> {sourceHint}</span> : null}
+        </div>
+      </div>
       <div className="rounded-2xl border border-[#22314b] bg-[#0b1220] p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -277,7 +318,18 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
           <div className="rounded-xl border border-[#1f2a3e] bg-[#0a101d] px-3 py-2 text-[#9fb2d1]">
             <div className="text-[#6f82a4]">Walls</div>
             <div>{keptWallCount} / {rawWallSegmentCount} kept</div>
+            <div className="text-[9px] text-[#6d819f]">
+              {rawWallSegmentCount > keptWallCount ? `${removedBeforeDraftCount} removed by pre-filter` : "No pre-filter removals"}
+            </div>
           </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-[#22314b] bg-[#0f1828] p-4">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9bb0cf]">Plan-understanding notes</div>
+        <div className="mt-2 space-y-1 text-[12px] leading-5 text-[#9aaed0]">
+          <p>{interpretationCopy.wallCounts}</p>
+          <p>{interpretationCopy.sourceProfile}</p>
         </div>
       </div>
 
@@ -405,7 +457,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
           </div>
           <svg
             viewBox={`${previewViewport.minX} ${previewViewport.minY} ${previewViewport.width} ${previewViewport.height}`}
-            className="h-80 w-full rounded-xl bg-[#060a12]"
+            className="h-[22rem] w-full max-h-[48vh] rounded-xl border border-[#1b2233] bg-[#060a12]"
             preserveAspectRatio="xMidYMid meet"
             onPointerMove={(event) => {
               if (!dragging) return;
@@ -570,6 +622,9 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
         </div>
 
         <div className="space-y-3">
+          <div className="rounded-lg border border-[#1f2a3e] bg-[#0a0f18] px-2 py-1.5 text-[10px] text-[#a5b8da]">
+            Checked items are kept in the draft. Unchecked items are excluded.
+          </div>
           <div>
             <div className="mb-2 flex items-center justify-between">
               <div className="text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Walls</div>
@@ -577,14 +632,31 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
                 {keptWallCount} kept · {draftWalls.length - keptWallCount} excluded
               </div>
             </div>
+            <div className="mb-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setWallMask((prev) => prev.map(() => true))}
+                className="rounded border border-[#2a3045] px-2 py-1 text-[10px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+              >
+                Keep all
+              </button>
+              <button
+                type="button"
+                onClick={() => setWallMask((prev) => prev.map(() => false))}
+                className="rounded border border-[#2a3045] px-2 py-1 text-[10px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+              >
+                Exclude all
+              </button>
+            </div>
             <div className="max-h-32 space-y-1.5 overflow-y-auto pr-1">
-              {draftWalls.slice(0, 20).map((wall, index) => (
+              {draftWalls.map((wall, index) => (
                 <label key={`wall-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
                   <span>
-                    Keep W{index + 1}: ({wall.start.x},{wall.start.y}) → ({wall.end.x},{wall.end.y}) · {wallLengthPx(wall).toFixed(1)}px
+                    Keep wall {index + 1}: ({wall.start.x},{wall.start.y}) → ({wall.end.x},{wall.end.y}) · {wallLengthPx(wall).toFixed(1)}px
                   </span>
                   <input
                     type="checkbox"
+                    aria-label={`Keep wall ${index + 1}`}
                     checked={wallMask[index] ?? true}
                     onChange={(event) => {
                       const next = [...wallMask];
@@ -600,6 +672,22 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
           <div className="grid gap-3 md:grid-cols-2">
             <div>
               <div className="mb-2 text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Doors</div>
+              <div className="mb-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDoorMask((prev) => prev.map(() => true))}
+                  className="rounded border border-[#2a3045] px-2 py-1 text-[10px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+                >
+                  Keep all
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDoorMask((prev) => prev.map(() => false))}
+                  className="rounded border border-[#2a3045] px-2 py-1 text-[10px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+                >
+                  Exclude all
+                </button>
+              </div>
               <div className="max-h-24 space-y-1.5 overflow-y-auto pr-1">
                 {result.doors.length === 0 ? (
                   <div className="text-[11px] text-[#4f5a72]">None detected</div>
@@ -608,6 +696,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
                     <span>D{index + 1}: {door.widthM}m @ ({door.position.x},{door.position.y})</span>
                     <input
                       type="checkbox"
+                      aria-label={`Keep door ${index + 1}`}
                       checked={doorMask[index] ?? true}
                       onChange={(event) => {
                         const next = [...doorMask];
@@ -622,6 +711,22 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
 
             <div>
               <div className="mb-2 text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Windows</div>
+              <div className="mb-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setWindowMask((prev) => prev.map(() => true))}
+                  className="rounded border border-[#2a3045] px-2 py-1 text-[10px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+                >
+                  Keep all
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWindowMask((prev) => prev.map(() => false))}
+                  className="rounded border border-[#2a3045] px-2 py-1 text-[10px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+                >
+                  Exclude all
+                </button>
+              </div>
               <div className="max-h-24 space-y-1.5 overflow-y-auto pr-1">
                 {result.windows.length === 0 ? (
                   <div className="text-[11px] text-[#4f5a72]">None detected</div>
@@ -630,6 +735,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
                     <span>Wn{index + 1}: {window.widthM}m @ ({window.position.x},{window.position.y})</span>
                     <input
                       type="checkbox"
+                      aria-label={`Keep window ${index + 1}`}
                       checked={windowMask[index] ?? true}
                       onChange={(event) => {
                         const next = [...windowMask];
@@ -645,7 +751,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="text-[11px] leading-5 text-[#7f93b3]">Uncheck false detections, then apply the cleaned draft.</span>
+          <span className="text-[11px] leading-5 text-[#7f93b3]">Use checkboxes to keep/exclude detections, then apply the cleaned draft.</span>
           <button type="button"
             disabled={!hasFilteredEdits}
             onClick={() => {
@@ -669,6 +775,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
 
       <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4">
         <div className="mb-1.5 text-[11px] font-medium text-[#9bb0cf]">Known Footprint (meters)</div>
+        <p className="mb-3 text-[11px] leading-5 text-[#7f93b3]">{calibrationGuidance}</p>
         <div className="mb-3 text-[12px] leading-5 text-[#9aaed0]">Use the real plan dimensions here. Applying calibration locks the scene footprint to these values instead of the detector-derived estimate.</div>
         <div className="grid gap-3 md:grid-cols-3">
           <label className="text-[11px] text-[#59637a]">
@@ -709,7 +816,7 @@ export function ImportReview({ result, semanticContext, gateDecision, warnings, 
               const nextHeight = Number(heightM);
               if (Number.isFinite(nextWidth) && Number.isFinite(nextDepth) && Number.isFinite(nextHeight) && nextWidth > 0 && nextDepth > 0 && nextHeight > 0) {
                 setLastActionMessage(
-                  `Applying known footprint ${result.roomDimensions.widthM.toFixed(2)}×${result.roomDimensions.depthM.toFixed(2)}×${result.roomDimensions.heightM.toFixed(2)}m -> ${nextWidth.toFixed(2)}×${nextDepth.toFixed(2)}×${nextHeight.toFixed(2)}m.`,
+                  `Applying known footprint ${result.roomDimensions.widthM.toFixed(2)}×${result.roomDimensions.depthM.toFixed(2)}×${result.roomDimensions.heightM.toFixed(2)}m -> ${nextWidth.toFixed(2)}×${nextDepth.toFixed(2)}×${nextHeight.toFixed(2)}m. Preview anchors stay pixel-anchored; dimensions and scale now drive scene size.`,
                 );
                 onRecalibrate({ widthM: Number(nextWidth.toFixed(2)), depthM: Number(nextDepth.toFixed(2)), heightM: Number(nextHeight.toFixed(2)) });
               }

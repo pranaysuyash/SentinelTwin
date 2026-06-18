@@ -28,6 +28,8 @@ export interface WindowOpening {
   orientation: "horizontal" | "vertical";
 }
 
+export type FloorPlanSourceProfile = "architectural" | "hand_drawn" | "low_res_scan";
+
 export interface FloorPlanResult {
   imageWidth: number;
   imageHeight: number;
@@ -39,6 +41,8 @@ export interface FloorPlanResult {
   rawWallSegmentCount?: number;
   confidence: number; // 0-1 estimate of detection quality
   manualCalibration?: { widthM: number; depthM: number; heightM: number } | null;
+  sourceProfile?: FloorPlanSourceProfile;
+  sourceHint?: string;
 }
 
 export interface FloorPlanDiagnostics {
@@ -149,6 +153,8 @@ export function createSceneFromFloorPlan(
 ): SecurityScene {
   const normalized = normalizeFloorPlanResult(result);
   const diagnostics = getFloorPlanDiagnostics(normalized);
+  const sourceProfile = normalized.sourceProfile ?? "architectural";
+  const sourceHint = normalized.sourceHint ?? "Source profile not provided. Detector defaults were used.";
   const now = Date.now();
   let seq = 0;
   const uid = (prefix: string) => `${prefix}_${(now + seq++).toString(36)}`;
@@ -176,7 +182,7 @@ export function createSceneFromFloorPlan(
       visionTransmission: 0,
       source: "import",
       reviewStatus: "unreviewed",
-      sourceTrace: "heuristic-import-v1",
+      sourceTrace: `heuristic-import-v1:${sourceProfile}`,
       geometryValidity: "valid",
     }))
     : createFallbackRectWalls(uid, normalized.roomDimensions.widthM, normalized.roomDimensions.depthM, roomHeight);
@@ -190,7 +196,7 @@ export function createSceneFromFloorPlan(
     state: "closed",
     source: "import",
     reviewStatus: "unreviewed",
-    sourceTrace: "heuristic-import-v1",
+    sourceTrace: `heuristic-import-v1:${sourceProfile}`,
     geometryValidity: "valid",
   }));
 
@@ -204,7 +210,7 @@ export function createSceneFromFloorPlan(
     visionTransmission: 0.85,
     source: "import",
     reviewStatus: "unreviewed",
-    sourceTrace: "heuristic-import-v1",
+    sourceTrace: `heuristic-import-v1:${sourceProfile}`,
     geometryValidity: "valid",
   }));
 
@@ -243,7 +249,7 @@ export function createSceneFromFloorPlan(
     height: roomHeight,
   };
   baseScene.source = "import";
-  baseScene.sourceTrace = "heuristic-import-v1";
+  baseScene.sourceTrace = `heuristic-import-v1:${sourceProfile}`;
   baseScene.geometryValidity = "valid";
   baseScene.reviewStatus = "unreviewed";
 
@@ -276,6 +282,7 @@ export function createSceneFromFloorPlan(
     changeLog: [
       `Floor plan import: ${normalized.walls.length} walls, ${normalized.doors.length} doors, ${normalized.windows.length} windows at ${Math.round(normalized.confidence * 100)}% confidence.`,
       `Floor plan diagnostics: ${diagnostics.duplicateWallPairs} duplicate wall pair${diagnostics.duplicateWallPairs === 1 ? "" : "s"}, ${diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount} off-wall opening${diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount === 1 ? "" : "s"}, ${diagnostics.shortWallCount} short fragment${diagnostics.shortWallCount === 1 ? "" : "s"}, ${Math.round(diagnostics.boundsCoverageRatio * 100)}% bounds coverage.`,
+      `Source profile: ${sourceProfile} · ${sourceHint}`,
       ...(normalized.walls.length === 4 && normalized.doors.length === 0 && normalized.windows.length === 0
         ? ["Floor plan fallback shell preserved because the import produced a bare room outline."]
         : []),

@@ -20,7 +20,12 @@ import { SCENE_TEMPLATES, type SceneTemplate } from "@/lib/scene-templates";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import type { SecurityScene } from "@/schema/security-scene";
 import { ImportReview } from "./ImportReview";
-import { getFloorPlanExtractionConfig } from "./floor-plan-extraction-config";
+import {
+  getFloorPlanExtractionConfig,
+  type FloorPlanSourceProfile,
+  getFloorPlanSourceProfileHint,
+  listFloorPlanSourceProfiles,
+} from "./floor-plan-extraction-config";
 
 type ImportMethod = "blank" | "template" | "floor_plan";
 
@@ -39,6 +44,7 @@ interface WizardState {
   floorPlanFile: File | null;
   isProcessing: boolean;
   importWarnings: string[];
+  floorPlanSourceProfile: FloorPlanSourceProfile;
 }
 
 const initialState: WizardState = {
@@ -56,6 +62,7 @@ const initialState: WizardState = {
   floorPlanFile: null,
   isProcessing: false,
   importWarnings: [],
+  floorPlanSourceProfile: "architectural",
 };
 
 interface SceneBuilderWizardProps {
@@ -120,14 +127,20 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
       const result = await extractFloorPlan(imageData, getFloorPlanExtractionConfig({
         heightM: roomHeightM,
         floorPlanScalePixelsPerMeter,
+        sourceProfile: state.floorPlanSourceProfile,
       }));
+      const sourceHint = getFloorPlanSourceProfileHint(state.floorPlanSourceProfile);
       const validation = validateFloorPlan(result);
       const semanticContext = deriveFloorPlanSemanticContext(result, validation.diagnostics);
       const gateDecision = evaluateFloorPlanTierGate(semanticContext);
       const gateWarning = getFloorPlanTierGateWarning(gateDecision);
       const seededName = state.roomName.trim().length > 0 ? state.roomName : deriveSceneNameFromFile(file.name);
       update({
-        floorPlanResult: result,
+        floorPlanResult: {
+          ...result,
+          sourceProfile: state.floorPlanSourceProfile,
+          sourceHint,
+        },
         floorPlanSemanticContext: semanticContext,
         floorPlanGateDecision: gateDecision,
         importWarnings: gateWarning ? [...validation.warnings, gateWarning] : validation.warnings,
@@ -146,7 +159,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
         importWarnings: [`Failed to process image: ${err instanceof Error ? err.message : "Unknown error"}`],
       });
     }
-  }, [floorPlanScalePixelsPerMeter, roomHeightM, state.roomName, update]);
+  }, [floorPlanScalePixelsPerMeter, roomHeightM, state.floorPlanSourceProfile, state.roomName, update]);
 
   const handleCreate = useCallback(() => {
     let scene;
@@ -243,7 +256,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
   const nextActionLabel =
     state.step === 2
       ? isFloorPlan
-        ? "Next: Review and Commit"
+        ? "Next: Review"
         : "Next"
       : "Next";
   const primaryActionLabel = isFloorPlan && state.step === 3 ? "Create Draft Scene" : "Create Scene";
@@ -257,7 +270,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
   const navigationHint =
     state.step === 2
       ? isFloorPlan
-        ? "Configure step: validate footprint, prune obvious false positives, then click Next to review commit summary."
+        ? "Floor-plan review step: validate footprint, prune obvious false positives, then click Next to open the review summary."
         : "Configure method-specific options, then click Next."
       : state.step === 3
         ? "Review step: confirm summary, then create the draft."
@@ -551,12 +564,57 @@ function ConfigureStep({
   }
 
   if (value.importMethod === "floor_plan") {
+    const sourceProfiles = listFloorPlanSourceProfiles();
+
     return (
       <div className="space-y-4">
         <h3 className="text-[12px] font-medium text-[#c5ccdb]">Upload Floor Plan</h3>
         <p className="text-[9px] text-[#59637a]">
-          Upload a floor plan image. Walls will be detected automatically.
+          Upload a floor plan image. Walls are detected automatically, then you review structure + calibration before creating.
+          If counts feel inflated, treat this as "detected candidates vs kept structure" and clean before final create.
         </p>
+        <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
+          <div className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#8090a8]">Plan Source Profile</div>
+          <p className="mt-0.5 text-[8px] text-[#59637a]">Choose the source family once to tune detection behavior.</p>
+          <div className="mt-2 grid gap-2 md:grid-cols-3">
+            {sourceProfiles.map((entry) => {
+              const isActive = value.floorPlanSourceProfile === entry.profile;
+              return (
+                <button
+                  type="button"
+                  key={entry.profile}
+                  className={`rounded-lg border px-2 py-1.5 text-left transition-colors ${
+                    isActive
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-[#dbe7f8]"
+                      : "border-[#1e2130] bg-[#0a0f18] text-[#8ea5c6] hover:border-[#2a3045]"
+                  }`}
+                  onClick={() => {
+                    onChange({
+                      floorPlanSourceProfile: entry.profile,
+                      floorPlanResult: null,
+                      floorPlanFile: null,
+                      floorPlanSemanticContext: null,
+                      floorPlanGateDecision: null,
+                      importWarnings: [],
+                    });
+                  }}
+                >
+                  <div className="text-[9px] font-medium text-[#c5ccdb]">{entry.label}</div>
+                  <div className="mt-1 text-[8px] text-[#6f82a4]">{entry.hint}</div>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 rounded border border-[#1f2a3e] bg-[#0a0f18] px-2 py-1.5 text-[9px] text-[#9bb0ce]">
+            {getFloorPlanSourceProfileHint(value.floorPlanSourceProfile)}
+          </div>
+        </div>
+
+        {value.floorPlanResult == null ? (
+          <div className="rounded-lg border border-[#22314b] bg-[#0f1828] p-2 text-[9px] text-[#9bb0ce]">
+            Navigation note: after upload you are still in configuration. Stay in review mode here and click <span className="font-semibold text-[#cdd9ee]">Next: Review</span> once checks pass.
+          </div>
+        ) : null}
 
         {value.floorPlanResult ? (
           <div className="space-y-3">
@@ -612,6 +670,8 @@ function ConfigureStep({
                   heightM: nextResult.roomDimensions.heightM,
                 });
               }}
+              sourceProfile={value.floorPlanSourceProfile}
+              sourceHint={getFloorPlanSourceProfileHint(value.floorPlanSourceProfile)}
             />
           </div>
         ) : (
@@ -742,13 +802,16 @@ function ReviewStep({
       { label: "Method", value: value.importMethod === "blank" ? "Blank Canvas" : value.importMethod === "template" ? `Template: ${value.selectedTemplate?.name ?? "None"}` : "Floor Plan Import" },
     ];
 
-    if (value.selectedTemplate) {
-      lines.push({ label: "Cameras", value: `${value.selectedTemplate.suggestedCameras} (pre-configured)` });
-    }
+      if (value.selectedTemplate) {
+        lines.push({ label: "Cameras", value: `${value.selectedTemplate.suggestedCameras} (pre-configured)` });
+      }
 
-    if (value.floorPlanResult) {
-      lines.push({ label: "Detected Walls", value: `${value.floorPlanResult.walls.length}` });
+      if (value.floorPlanResult) {
+      const raw = value.floorPlanResult.rawWallSegmentCount ?? value.floorPlanResult.walls.length;
+      const kept = value.floorPlanResult.walls.length;
+      lines.push({ label: "Detected Walls", value: `${kept} kept · ${raw} raw candidates` });
       lines.push({ label: "Confidence", value: `${(value.floorPlanResult.confidence * 100).toFixed(0)}%` });
+      lines.push({ label: "Source profile", value: value.floorPlanSourceProfile });
       if (value.floorPlanGateDecision) {
         lines.push({ label: "Tier 1 Gate", value: formatGateAction(value.floorPlanGateDecision.action) });
       }

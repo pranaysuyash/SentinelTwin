@@ -27,6 +27,7 @@ import {
   Redo2,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { SurfaceButton } from "@/components/shared/SurfaceButton";
 import { ExplainBadge } from "@/components/shared/ExplainBadge";
@@ -37,6 +38,7 @@ import { BranchSwitcher } from "@/components/top-bar/BranchSwitcher";
 import { FixSandboxBar } from "@/components/top-bar/FixSandboxBar";
 import type { CriticalZoneNode, SecurityScene } from "@/schema/security-scene";
 import { bakeoffToSecurityScene } from "@/lib/bakeoff-bridge";
+import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 
 const TARGET_TYPE_OPTIONS: Array<{
   value: CriticalZoneNode["targetType"];
@@ -97,9 +99,10 @@ function SimStatus() {
   );
 }
 
-
 export function TopBar() {
   const navigateProductView = useProductViewStore((s) => s.navigate);
+  const router = useRouter();
+  const pathname = usePathname();
   const runSimulation = useStudioStore((s) => s.runSimulation);
   const envMode = useStudioStore((s) => s.environmentMode);
   const setEnvMode = useStudioStore((s) => s.setEnvironmentMode);
@@ -131,9 +134,27 @@ export function TopBar() {
   const currentTargetType = targetTypes.size === 1 ? [...targetTypes][0] ?? null : null;
   const currentTargetLabel = currentTargetType ? TARGET_TYPE_LABELS[currentTargetType] : TARGET_TYPE_LABELS[criticalZoneTargetType];
 
+  // When at /studio (direct route), ProductViewRouter isn't mounted.
+  // Navigate to root first so ProductViewRouter picks up the store change.
+  const openFloorPlanImport = useCallback(() => {
+    navigateProductView("floor_plan_import");
+    if (pathname !== "/") router.push("/");
+  }, [navigateProductView, pathname, router]);
+
+  const openManualBuilder = useCallback(() => {
+    navigateProductView("manual_builder");
+    if (pathname !== "/") router.push("/");
+  }, [navigateProductView, pathname, router]);
+
   const [sceneOpen, setSceneOpen] = useState(false);
   const [targetOpen, setTargetOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+
+  const handleNewBlankScene = useCallback(() => {
+    setScene(createBlankSecurityScene());
+    setSceneOpen(false);
+  }, [setScene]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const handleCameraFailure = useCallback(() => {
@@ -274,19 +295,61 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
 
         <div className="flex flex-shrink-0 items-center gap-1">
           <SurfaceButton
-            onClick={() => navigateProductView("manual_builder")}
+            onClick={openManualBuilder}
             title="Create a new site twin"
           >
             <Plus className="h-3 w-3" />
             <span className="hidden md:inline">Create</span>
           </SurfaceButton>
-          <SurfaceButton
-            onClick={handleImportScene}
-            title="Import a site twin file"
-          >
-            <Upload className="h-3 w-3" />
-            <span className="hidden lg:inline">Import</span>
-          </SurfaceButton>
+          <div className="relative">
+            <div className="flex items-center">
+              <SurfaceButton
+                onClick={openFloorPlanImport}
+                title="Import a floor plan image"
+                className="rounded-r-none border-r-0"
+              >
+                <Upload className="h-3 w-3" />
+                <span className="hidden lg:inline">Import</span>
+              </SurfaceButton>
+              <button
+                type="button"
+                onClick={() => setImportOpen((o) => !o)}
+                title="More import options"
+                className="inline-flex h-7 items-center justify-center rounded-r-lg border border-[#24283a] bg-[#111521] px-1.5 text-[#6b7280] transition-colors hover:border-[#32384d] hover:text-white"
+              >
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </div>
+            {importOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setImportOpen(false)} />
+                <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] rounded-xl border border-[#1f2536] bg-[#0d1117] py-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] text-[#c7d0e4] hover:bg-[#161b26] hover:text-white"
+                    onClick={() => { setImportOpen(false); openFloorPlanImport(); }}
+                  >
+                    <Upload className="h-3.5 w-3.5 text-sky-400 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium">Floor Plan</div>
+                      <div className="text-[10px] text-[#6b7280]">Image → auto-generate walls</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] text-[#c7d0e4] hover:bg-[#161b26] hover:text-white"
+                    onClick={() => { setImportOpen(false); handleImportScene(); }}
+                  >
+                    <FileText className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium">Scene File</div>
+                      <div className="text-[10px] text-[#6b7280]">.json exported site twin</div>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="mr-1 hidden h-4 w-px flex-shrink-0 bg-[#1e2130] md:block" />
@@ -446,14 +509,21 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   Scan a Site...
                 </button>
                 <button type="button"
+                  onClick={handleNewBlankScene}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <Plus className="h-3 w-3" />
+                  New Blank Scene
+                </button>
+                <button type="button"
                   onClick={() => {
-                    navigateProductView("manual_builder");
+                    openManualBuilder();
                     setSceneOpen(false);
                   }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Plus className="h-3 w-3" />
-                  New Site Twin...
+                  New Site Twin (Guided)...
                 </button>
                 <button type="button"
                   onClick={() => {

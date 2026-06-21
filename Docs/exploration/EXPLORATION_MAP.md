@@ -30,6 +30,7 @@
 - Measure how often each source profile improves confidence for real-world hand-drawn plans vs scans.
 - Add a calibration change audit row (before/after values + px/m) so visual confirmation is immediate.
 - Add optional plan-source preprocessing toggles for denoising legend layers and text strokes.
+- 2026-06-19: added in-session review-clarity pass for checklist scalability (`Show all` toggles) and explicit flow boundary copy (`Next: Review and Commit` vs `Create Draft Scene`).
 
 ### Thread 0: Product integrity hardening spine
 **Status:** Implemented in code (2026-05-30).
@@ -7344,3 +7345,71 @@ pass.
 - Zoom geometry review to the extracted draft shell, not the entire upload canvas.
 - Add plain-language next-step guidance that translates diagnostics into operator actions.
 - Use draft-honest CTA language throughout any import path that still requires downstream verification.
+
+## 2026-06-19 - First-principles UI review
+
+### Thread 130: UI legibility, trust surface, and density — the buyer-trust frame
+
+*(Thread number corrected from an earlier "Thread 12" label — Thread 12 is already "Retail Loss Prevention" at line 338. Latest UI thread is 130, following 120-129.)*
+
+**Status:** Documented (review only; no code change).
+**Source:** `Docs/review/UI_REVIEW_2026-06-19.md` (full) + `Docs/notes/UI_REVIEW_2026-06-19_EXEC_SUMMARY.md` (summary).
+
+**Reframe:** The 2026-06-17 buyer-demo failure and its 06-18/06-19 follow-ups establish that the UI's #1 problem is not the feature gap inventory (large but tracked separately). The #1 problem is **cognitive load and trust surface area**: the UI shows everything the system can do instead of the one thing the operator currently needs to know. This thread weights findings by operator legibility and trust, not by feature completeness.
+
+**Key findings (Tier 1, verified against source):**
+- Bottom panel exposes **19 tabs** across 4 groups (`apps/studio/src/components/bottom-panel/BottomPanel.tsx:51-77`). The grouping (`TAB_GROUPS` lines 73-77) already maps cleanly onto a 3-plane split (Analysis → Risk, Report+Dev → Evidence), so the structural fix is mostly navigational, not inventive.
+- Studio dashboard home carries **11 toggleable sections** (`apps/studio/src/components/launcher/StudioDashboardHome.tsx:99-111`) plus 4 competing navigation lists (NAV_ITEMS, WORKSPACE_MODE_ITEMS, quick-start, library). The shipped dashboard is denser than the design-pack target (`StudioDashboardHome_CurrentWorkspacePreview_RiskStatusPanel.png`).
+- **Three independent navigation grammars** coexist: `ProductView` (14 states, `apps/studio/src/store/product-view-store.ts:11-25`), `ViewMode` (7 studio modes), and the 19-tab bottom panel. The design pack imagined one left rail + one mode strip. *Clarification:* this is a reconciliation problem (unify three real routing vocabularies into one), not a deletion problem — all three carry real routing responsibility.
+- **The contextual surfacing infrastructure already exists in the store — the gap is that the rendering layer renders tabs flat instead of honoring this layer.** This is the single most important correction to the "too many tabs" framing: the system already knows which tabs/features matter for the current context; the chrome doesn't reflect it. Verified infrastructure:
+  - `enabledAnalysisModules` (`apps/studio/src/store/slices/core/layout-slice.ts:208`) — per-tab enable/disable is already a store field.
+  - `buildContextualSelectionPatch` (`apps/studio/src/store/slices/core/scene-slice.ts:686-737`) — routes inspector tab, right-panel mode, *and bottom tab* by selected node type. Camera selected → camera-relevant tab; zone selected → zone-relevant tab. Mapping exists; chrome doesn't reflect it.
+  - `contextualBottomTabForNode` (`scene-slice.ts:624`) + `getFirstEnabledAnalysisTab` (`scene-slice.ts:681`) — node-type → bottom-tab resolution implemented.
+  - `dockAttention` (`layout-slice.ts:317`) — per-dock attention flag already in place.
+  - `visibleComponents` + `VIEW_MODE_PRESETS` (`lib/studio-constants.ts:15`) — per-view-mode component visibility already wired.
+  - `WorkspacePresetSwitcher` (`apps/studio/src/components/dock/WorkspacePresetSwitcher.tsx:51`) — already reads `enabledAnalysisModules`.
+  - **Implication:** the "too complicated" objection is answered by *arrangement and contextual visibility*, not feature removal. Operator-grade surfaces (Governance, ONVIF, Provider Governance, Model Eval, Support Delivery, Identity Conflict, Sensors) should appear/surface when their trigger context is active and remain reachable on demand otherwise — never removed, always arranged.
+- `DockPanel` collapsed state fully hides the panel (`apps/studio/src/components/dock/DockPanel.tsx:42`, `if (collapsed) return null`), diverging from the design-pack MiniMap board which specifies collapsed = **icon rail**, not invisible.
+- Ad-hoc Tailwind color literals (`text-emerald-400`, `bg-sky-500/10`, etc.) coexist with `MAP_COLORS.*` in primary chrome (`ViewModeBar.tsx`), violating the canonical map token board contract (`DesignSystem_MapLayerVisualLanguage_CanonicalTokens.png`).
+- Single binary compact-viewport breakpoint (`StudioShell.tsx:124-130`, `max-width: 720px`); no field-tablet story for on-site intake.
+
+**Inherited findings (from demo notes, not re-verified in this pass):**
+- `100% confidence` next to severe warnings (Group A1, `Docs/notes/sentineltwin_issue_review_2026-06-18.md:42-52`). Confidence is a scalar with no source decomposition and no unresolved-warning gating.
+- Truth labels (`Truth: Simulated/Computed/Live`) wired but visually under-weighted (Group A2).
+- User-locked vs system-derived values share the same visual treatment in floor-plan calibration (Group A3).
+- No live edit-delta after recompute (Group C1); the `DeltaMetricsBar` pattern exists in `CompareView.tsx` but is not ambient in Map View.
+- Recommendations in `IssuesTab` not causally threaded to the edit that triggered them (Group C2).
+- "AI proposes, simulation verifies" has no visual grammar — AI proposals look identical to manual edits (Group C3).
+- Three competing intake surfaces: `SiteIntakeHub`, `StudioDashboardHome` quick-start, `ProjectStartLauncher` (Group D1).
+- `ScanSiteWizard` built looser than the approved 10-step design (`ScanSiteWizard_GuidedCapture_RoomDimensionsOverviewPhotos.png`) (Group D2).
+- Floor-plan correction UX is still checkbox-list / "Show all" toggles — engineer UI shipping as buyer UI (Group D3).
+
+**Long-term direction options (not committed — all feature-preserving):**
+1. **3-plane re-architecture (Risk / Authoring / Evidence)** — collapses the 19-tab problem structurally. Maps onto existing `TAB_GROUPS`. Bold, staged. Remains a valid longer-term evolution.
+2. **Tab consolidation only** — two-level group nav. Cheapest; treats symptom not cause.
+3. **Workspace presets as primary navigator** — per-mode tab manifests. Studio-only; doesn't fix dashboard density.
+4. **Contextual priority (recommended first move)** — *don't re-architect.* Make the 19-tab strip render contextually-prioritized tabs (foreground = relevant to current selection/mode/workflow; "more" affordance for the rest, never deleted). The contextual computation already exists (`scene-slice.ts:686`, `contextualBottomTabForNode`, `dockAttention`); only the display layer needs to honor it. Lowest disruption, highest fidelity to existing architecture, scales as new features land.
+
+**Improvement passes (prioritized — feature-preserving by construction):**
+- **Trust Pass:** T1 honest confidence renderer (banded + source-tagged, ban `100%` under warnings) — *smallest change, largest effect*; T2 visual lock treatment for user-authoritative values; T3 AI-proposal visual grammar.
+- **Density Pass (arrangement, not deletion):** D1 render tabs by contextual priority (foreground relevant / "more" for the rest) — Option 4; D2 unify three navigation grammars (reconciliation, not removal); D3 operator-grade surfaces surface contextually and remain reachable on demand — never removed, always arranged.
+- **Loop Pass:** L1 ambient edit-delta chips (reuse `DeltaMetricsBar`); L2 causal issue threading.
+- **Intake Pass:** I1 single intake surface; I2 build ScanSiteWizard as designed; I3 buyer-grade floor-plan correction (canvas-direct keep/drop, not checkboxes).
+- **Visual Pass:** V1 lint-enforce canonical map tokens; V2 three-state DockPanel collapse (icon rail); V3 documented type scale.
+
+**Recommended sequencing:** If only one ships next → **T1**. If two → **T1 + I3** (closes both halves of the 06-17 trust break). Density Pass is highest leverage for the "too complicated" objection; Option 4 (contextual priority) should be tried first because it requires no re-architecture and no feature removal. Options 1/2/3 remain available as later evolutions if Option 4 proves insufficient.
+
+**Status update 2026-06-20 — Density Pass D1 / Option 4 IMPLEMENTED.** The bottom-panel tab strip now renders a contextually-prioritized foreground cluster + "More" overflow (feature-preserving; every tab reachable). The same pass consolidated three divergent copies of `ANALYSIS_TAB_ORDER` / `viewModeToBottomTab` / `getFirstEnabledAnalysisTab` into a canonical `@/lib/contextual-tabs` module (§11 parallel-truth fix), shipped the `pendingTabAttention` plumbing for Loop Pass L2, and fixed a pre-existing `bottomDockCollapsed` bug found in the blast radius. Acceptance contract: `Docs/review/BUILD_LOG_2026-06-20_contextual_tabs.md`. Remaining Density work: D2 (navigation grammar unification), D3 (dashboard/operator-grade surface contextualization).
+
+**Open questions raised (→ `OPEN_QUESTIONS_ADDENDUM.md` OQ-UI-01..04):**
+- Primary persona (operator daily vs buyer/consultant handoff) — different default UIs.
+- Should "AI proposes, sim verifies" be a visible UI state or behind-the-scenes contract?
+- Try Option 4 (contextual priority) first, or commit to Option 1/2/3 before Density Pass scoping? All feature-preserving.
+- Field-tablet form factor — V1 commitment or V2+?
+
+**Code anchors:** `apps/studio/src/components/layout/StudioShell.tsx`; `apps/studio/src/components/view/ViewModeBar.tsx`; `apps/studio/src/components/dock/DockPanel.tsx`; `apps/studio/src/components/launcher/StudioDashboardHome.tsx`; `apps/studio/src/components/site-intake/SiteIntakeHub.tsx`; `apps/studio/src/components/product/ProductViewRouter.tsx`; `apps/studio/src/components/bottom-panel/BottomPanel.tsx`; `apps/studio/src/store/product-view-store.ts`; `apps/studio/src/components/map/map-colors.ts`.
+
+**Non-findings worth recording:**
+- The simulation engine is not the problem (~10.8ms / 40×28 / 2 cameras, golden-claim tests, deterministic). The UI under-leverages a strong engine.
+- The `truth-audit` harness is good and should be extended to catch confidence-language violations (T1) so the 06-17 failure cannot regress.
+- Parallel-agent density is visible in the codebase: many operator-grade surfaces (ONVIF, Model Eval, Support Delivery, Identity Conflict) read like defensible parallel work that was all surfaced simultaneously. Cure = contextual arrangement (D3 / Option 4), not deletion or static hiding (per `motto_v3 §11`).

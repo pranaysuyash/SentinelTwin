@@ -65,7 +65,13 @@ export function bindSensorToScene(sensorId: string, scene: SecurityScene): Senso
                scene.doors.find(d => d.id === sensorId || d.label === sensorId);
 
   if (node) {
-    return { sensorId, nodeId: node.id, confidence: 1.0 };
+    // Trust Pass T1 — a live sensor binding is high-confidence (the sensor
+    // exists and the node match resolved) but not absolute certainty: the
+    // match could be by-label (ambiguous), the sensor could be misreporting,
+    // or the binding could be stale. 0.95 communicates "verified high" without
+    // the "100%" lie that the old `1.0` produced. See
+    // `Docs/review/UI_REVIEW_2026-06-19.md` Trust Pass T1 / `motto_v3 §0.2`.
+    return { sensorId, nodeId: node.id, confidence: 0.95 };
   }
 
   return null;

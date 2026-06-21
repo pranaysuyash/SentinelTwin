@@ -80,3 +80,6 @@ apps/studio/public/models/**/*.bin
 apps/studio/public/models/**/*.pt
 apps/studio/public/models/**/*.safetensors
 apps/studio/public/models/**/*.tflite
+
+# Local agent/skill caches (not source)
+.codexx/

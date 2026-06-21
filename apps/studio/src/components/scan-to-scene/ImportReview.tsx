@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, ImageUp, RotateCcw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ImageUp, Lock, RotateCcw } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -12,6 +12,12 @@ import {
   type FloorPlanSemanticContext,
   type FloorPlanSourceProfile,
 } from "@/lib/floor-plan-import";
+// Trust Pass T1 — canonical confidence renderer. Enforces warning-gating
+// (never 100% when unresolved warnings exist) and carries a source tag.
+import {
+  CONFIDENCE_TONE_CLASSES,
+  renderConfidence,
+} from "@/lib/confidence-display";
 
 interface ImportReviewProps {
   result: FloorPlanResult;
@@ -45,6 +51,9 @@ export function ImportReview({
   const [windowMask, setWindowMask] = useState<boolean[]>(result.windows.map(() => true));
   const [draftDoors, setDraftDoors] = useState(result.doors);
   const [draftWindows, setDraftWindows] = useState(result.windows);
+  const [showAllWallRows, setShowAllWallRows] = useState(false);
+  const [showAllDoorRows, setShowAllDoorRows] = useState(false);
+  const [showAllWindowRows, setShowAllWindowRows] = useState(false);
   const [dragging, setDragging] = useState<
     | { type: "door" | "window"; index: number }
     | { type: "wall-start" | "wall-end"; index: number }
@@ -114,8 +123,20 @@ export function ImportReview({
   }, [result, draftWalls, wallMask, doorMask, windowMask, draftDoors, draftWindows]);
   const diagnostics = useMemo(() => getFloorPlanDiagnostics(result), [result]);
   const unresolvedCount = warnings.length;
-  const confidencePct = Math.round(result.confidence * 100);
-  const confidenceBand = confidencePct >= 75 ? "high" : confidencePct >= 50 ? "medium" : "low";
+  // Trust Pass T1 — confidence now flows through the canonical
+  // `renderConfidence` helper (`@/lib/confidence-display`), which enforces
+  // the warning-gating rule (never 100% when unresolved warnings exist) and
+  // carries a source decomposition. This replaces the local 0.75/0.50 band
+  // map that drifted from the rest of the codebase and produced the 06-17
+  // "100% next to severe warnings" trust break. See
+  // `Docs/review/UI_REVIEW_2026-06-19.md` Trust Pass T1.
+  const renderedConfidence = renderConfidence({
+    confidence: result.confidence,
+    unresolvedWarningCount: unresolvedCount,
+    detectorCandidateCount: result.rawWallSegmentCount ?? result.walls.length,
+  });
+  const confidencePct = renderedConfidence.pct;
+  const confidenceBand = renderedConfidence.band;
   const hasManualCalibration = Boolean(result.manualCalibration);
   const qualityPct = semanticContext ? Math.round(semanticContext.qualityScore * 100) : null;
   const rawWallSegmentCount = result.rawWallSegmentCount ?? result.walls.length;
@@ -140,6 +161,11 @@ export function ImportReview({
     }
     return next;
   }, [draftWalls, shortWallThresholdPx, wallMask]);
+  const wallListLimit = 24;
+  const doorWindowListLimit = 16;
+  const visibleWallRows = useMemo(() => (showAllWallRows ? draftWalls : draftWalls.slice(0, wallListLimit)), [draftWalls, showAllWallRows]);
+  const visibleDoorRows = useMemo(() => (showAllDoorRows ? draftDoors : draftDoors.slice(0, doorWindowListLimit)), [draftDoors, showAllDoorRows]);
+  const visibleWindowRows = useMemo(() => (showAllWindowRows ? draftWindows : draftWindows.slice(0, doorWindowListLimit)), [draftWindows, showAllWindowRows]);
   const duplicateWallIndexes = useMemo(() => {
     const next = new Set<number>();
     for (let i = 0; i < draftWalls.length; i += 1) {
@@ -224,6 +250,12 @@ export function ImportReview({
     }
     return "Enter known dimensions here before final create. The next step is to lock values and scale; it does not move preview anchors.";
   }, [hasManualCalibration]);
+  const calibrationSourceCopy = useMemo(() => {
+    if (!hasManualCalibration) {
+      return "Scene footprint is currently detector-derived. Enter exact dimensions below and apply to lock authoritative size.";
+    }
+    return "Manual calibration is active. Wall preview anchors remain in image pixels; only final scene scale and dimensions come from the override.";
+  }, [hasManualCalibration]);
   const interpretationCopy = useMemo(() => {
     const copyForProfile = sourceProfile === "hand_drawn"
       ? "Hand-drawn plans commonly produce extra segments from text strokes and dimension notes."
@@ -289,15 +321,14 @@ export function ImportReview({
               </span>
             ) : null}
             <span
+              title={renderedConfidence.source + (renderedConfidence.gated ? " · capped below 100% due to unresolved warnings" : "")}
               className={`rounded border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${
-                confidenceBand === "high"
-                  ? "border-emerald-500/30 bg-emerald-500/12 text-emerald-200"
-                  : confidenceBand === "medium"
-                    ? "border-amber-500/30 bg-amber-500/12 text-amber-100"
-                    : "border-red-500/30 bg-red-500/12 text-red-200"
+                CONFIDENCE_TONE_CLASSES[renderedConfidence.tone].border
+                + " " + CONFIDENCE_TONE_CLASSES[renderedConfidence.tone].bg
+                + " " + CONFIDENCE_TONE_CLASSES[renderedConfidence.tone].text
               }`}
             >
-              Import trust {confidencePct}%
+              Import trust {confidencePct}% · {renderedConfidence.band}
             </span>
           </div>
         </div>
@@ -369,17 +400,51 @@ export function ImportReview({
             </div>
             <div className="text-[11px] text-[#59637a]">Kept Walls</div>
           </div>
-        <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4 text-center">
-          <div className="text-[22px] font-bold text-[#c5ccdb]">
-            {(result.confidence * 100).toFixed(0)}%
+        <div
+          className={`rounded-2xl border bg-[#070a12] p-4 text-center ${
+            renderedConfidence.gated ? "border-amber-500/40" : "border-[#1e2130]"
+          }`}
+          title={renderedConfidence.source}
+        >
+          <div className={`text-[22px] font-bold ${
+            renderedConfidence.tone === "emerald" ? "text-emerald-300"
+              : renderedConfidence.tone === "amber" ? "text-amber-200"
+                : "text-rose-300"
+          }`}>
+            {confidencePct}%
           </div>
-          <div className="text-[11px] text-[#59637a]">Import Trust</div>
+          <div className="text-[11px] text-[#59637a]">
+            Import Trust
+            {unresolvedCount > 0 ? (
+              <span className="ml-1 text-amber-300">· {unresolvedCount} warning{unresolvedCount === 1 ? "" : "s"}</span>
+            ) : null}
+          </div>
+          <div className="mt-0.5 text-[9px] leading-tight text-[#4a5568]">{renderedConfidence.source}</div>
         </div>
-        <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4 text-center">
-          <div className="text-[22px] font-bold text-[#c5ccdb]">
-            {result.roomDimensions.widthM}×{result.roomDimensions.depthM}
+        <div
+          className={
+            "rounded-2xl border bg-[#070a12] p-4 text-center transition-colors " +
+            // Trust Pass T2 — distinct visual grammar for user-authoritative
+            // (locked) values vs system-derived values. A locked dimension
+            // carries an emerald border + value color + lock icon so the buyer
+            // can tell at a glance which numbers they own and which the system
+            // derived. The prior identical typography was the 06-17 trust-break
+            // enabler ("manually entered values were replaced by 12.5 x 7.9
+            // after apply" — the UI gave no signal that the value had changed
+            // source). See `Docs/review/UI_REVIEW_2026-06-19.md` Trust Pass T2.
+            (hasManualCalibration
+              ? "border-emerald-500/50 bg-emerald-500/5 shadow-[0_0_0_1px_rgba(16,185,129,0.18)]"
+              : "border-[#1e2130]")
+          }
+          title={hasManualCalibration ? "User-authoritative dimensions — these define the scene footprint and scale. The detector cannot overwrite them." : "System-derived dimensions from detector output — not yet locked."}
+        >
+          <div className={"flex items-center justify-center gap-1.5 text-[22px] font-bold " + (hasManualCalibration ? "text-emerald-300" : "text-[#c5ccdb]")}>
+            {hasManualCalibration ? <Lock className="h-3.5 w-3.5 text-emerald-400" /> : null}
+            <span>{result.roomDimensions.widthM}×{result.roomDimensions.depthM}</span>
           </div>
-          <div className="text-[11px] text-[#59637a]">{hasManualCalibration ? "Scene Footprint (locked)" : "Scene Footprint (m)"}</div>
+          <div className={"text-[11px] " + (hasManualCalibration ? "text-emerald-400/80 font-medium" : "text-[#59637a]")}>
+            {hasManualCalibration ? "User-locked footprint" : "Scene Footprint (m)"}
+          </div>
         </div>
       </div>
 
@@ -457,7 +522,7 @@ export function ImportReview({
           </div>
           <svg
             viewBox={`${previewViewport.minX} ${previewViewport.minY} ${previewViewport.width} ${previewViewport.height}`}
-            className="h-[22rem] w-full max-h-[48vh] rounded-xl border border-[#1b2233] bg-[#060a12]"
+            className="h-[28rem] w-full min-h-[360px] max-h-[60vh] rounded-xl border border-[#1b2233] bg-[#060a12]"
             preserveAspectRatio="xMidYMid meet"
             onPointerMove={(event) => {
               if (!dragging) return;
@@ -623,7 +688,7 @@ export function ImportReview({
 
         <div className="space-y-3">
           <div className="rounded-lg border border-[#1f2a3e] bg-[#0a0f18] px-2 py-1.5 text-[10px] text-[#a5b8da]">
-            Checked items are kept in the draft. Unchecked items are excluded.
+            Checkbox = keep/exclude. Checked keeps an item in the draft shell, unchecked excludes it from the shell.
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -648,8 +713,8 @@ export function ImportReview({
                 Exclude all
               </button>
             </div>
-            <div className="max-h-32 space-y-1.5 overflow-y-auto pr-1">
-              {draftWalls.map((wall, index) => (
+            <div className="max-h-40 space-y-1.5 overflow-y-auto pr-1">
+              {visibleWallRows.map((wall, index) => (
                 <label key={`wall-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
                   <span>
                     Keep wall {index + 1}: ({wall.start.x},{wall.start.y}) → ({wall.end.x},{wall.end.y}) · {wallLengthPx(wall).toFixed(1)}px
@@ -666,6 +731,20 @@ export function ImportReview({
                   />
                 </label>
               ))}
+              {draftWalls.length > wallListLimit ? (
+                <div className="pt-1 text-[10px] text-[#6f82a4]">
+                  {showAllWallRows
+                    ? "Showing all wall rows."
+                    : `${draftWalls.length - wallListLimit} additional walls are hidden.`}
+                  <button
+                    type="button"
+                    className="ml-1 inline text-[#9bb0cf] underline decoration-dotted underline-offset-2 hover:text-white"
+                    onClick={() => setShowAllWallRows((prev) => !prev)}
+                  >
+                    {showAllWallRows ? "Show first rows only" : "Show all"}
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -689,9 +768,9 @@ export function ImportReview({
                 </button>
               </div>
               <div className="max-h-24 space-y-1.5 overflow-y-auto pr-1">
-                {result.doors.length === 0 ? (
+                {visibleDoorRows.length === 0 ? (
                   <div className="text-[11px] text-[#4f5a72]">None detected</div>
-                ) : draftDoors.map((door, index) => (
+                ) : visibleDoorRows.map((door, index) => (
                   <label key={`door-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
                     <span>D{index + 1}: {door.widthM}m @ ({door.position.x},{door.position.y})</span>
                     <input
@@ -706,6 +785,18 @@ export function ImportReview({
                     />
                   </label>
                 ))}
+                {draftDoors.length > doorWindowListLimit ? (
+                  <div className="pt-1 text-[10px] text-[#6f82a4]">
+                    {showAllDoorRows ? "Showing all door rows." : `${draftDoors.length - doorWindowListLimit} additional doors are hidden.`}
+                    <button
+                      type="button"
+                      className="ml-1 inline text-[#9bb0cf] underline decoration-dotted underline-offset-2 hover:text-white"
+                      onClick={() => setShowAllDoorRows((prev) => !prev)}
+                    >
+                      {showAllDoorRows ? "Show first rows only" : "Show all"}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -728,9 +819,9 @@ export function ImportReview({
                 </button>
               </div>
               <div className="max-h-24 space-y-1.5 overflow-y-auto pr-1">
-                {result.windows.length === 0 ? (
+                {visibleWindowRows.length === 0 ? (
                   <div className="text-[11px] text-[#4f5a72]">None detected</div>
-                ) : draftWindows.map((window, index) => (
+                ) : visibleWindowRows.map((window, index) => (
                   <label key={`window-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
                     <span>Wn{index + 1}: {window.widthM}m @ ({window.position.x},{window.position.y})</span>
                     <input
@@ -745,6 +836,18 @@ export function ImportReview({
                     />
                   </label>
                 ))}
+                {draftWindows.length > doorWindowListLimit ? (
+                  <div className="pt-1 text-[10px] text-[#6f82a4]">
+                    {showAllWindowRows ? "Showing all window rows." : `${draftWindows.length - doorWindowListLimit} additional windows are hidden.`}
+                    <button
+                      type="button"
+                      className="ml-1 inline text-[#9bb0cf] underline decoration-dotted underline-offset-2 hover:text-white"
+                      onClick={() => setShowAllWindowRows((prev) => !prev)}
+                    >
+                      {showAllWindowRows ? "Show first rows only" : "Show all"}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -775,8 +878,18 @@ export function ImportReview({
 
       <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4">
         <div className="mb-1.5 text-[11px] font-medium text-[#9bb0cf]">Known Footprint (meters)</div>
-        <p className="mb-3 text-[11px] leading-5 text-[#7f93b3]">{calibrationGuidance}</p>
-        <div className="mb-3 text-[12px] leading-5 text-[#9aaed0]">Use the real plan dimensions here. Applying calibration locks the scene footprint to these values instead of the detector-derived estimate.</div>
+        <p className="mb-2 text-[11px] leading-5 text-[#7f93b3]">{calibrationGuidance}</p>
+        <p className="mb-2 text-[11px] leading-5 text-[#9aaed0]">{calibrationSourceCopy}</p>
+        {hasManualCalibration ? (
+          <div className="mb-3 flex items-start gap-1.5 rounded border border-emerald-500/30 bg-emerald-500/8 px-2 py-1.5 text-[10px] leading-5 text-emerald-100">
+            <Lock className="mt-0.5 h-3 w-3 flex-shrink-0 text-emerald-400" />
+            <span>
+              <span className="font-semibold text-emerald-200">User-locked footprint:</span>{" "}
+              {result.roomDimensions.widthM.toFixed(2)}m × {result.roomDimensions.depthM.toFixed(2)}m × {result.roomDimensions.heightM.toFixed(2)}m
+              {" "}at {result.scalePixelsPerMeter.toFixed(2)} px/m. The detector cannot overwrite these values.
+            </span>
+          </div>
+        ) : null}
         <div className="grid gap-3 md:grid-cols-3">
           <label className="text-[11px] text-[#59637a]">
             Width

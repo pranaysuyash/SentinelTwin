@@ -1060,47 +1060,23 @@ export type CrowdChokepoint = {
   occlusionProbability: number; // 0–1
 };
 
-// Reused per-frame scratch objects — allocated once, never inside render loops
-const _cpPos = new THREE.Vector3();
-const _cpQuat = new THREE.Quaternion();
-const _cpScale = new THREE.Vector3();
-// No rotation: CylinderGeometry is already horizontal (Y-axis up) so the ring
-// appears flat on the floor without any quaternion rotation.
-_cpQuat.identity();
-
 export function CrowdChokepointOverlay({ chokepoints }: { chokepoints: CrowdChokepoint[] }) {
-  const meshRef = useRef<THREE.InstancedMesh>(null!);
-  const col = useRef(new THREE.Color());
-
-  useEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    mesh.count = chokepoints.length;
-    chokepoints.forEach((cp, i) => {
-      // Scale ring radius with occlusion probability so highest-risk spots are biggest
-      const scale = 0.18 + cp.occlusionProbability * 0.22;
-      _cpPos.set(cp.x, 0.03, cp.z);
-      _cpScale.set(scale, 1, scale);
-      const mat = new THREE.Matrix4();
-      mat.compose(_cpPos, _cpQuat, _cpScale);
-      mesh.setMatrixAt(i, mat);
-      // Amber at P=0.4, deep red at P=1.0
-      const t = Math.min(1, Math.max(0, (cp.occlusionProbability - 0.4) / 0.6));
-      col.current.setRGB(1, 0.55 - t * 0.37, 0.08 - t * 0.05);
-      mesh.setColorAt(i, col.current);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [chokepoints]);
-
   if (chokepoints.length === 0) return null;
-
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, Math.max(1, chokepoints.length)]} renderOrder={3}>
-      {/* Open cylinder = flat horizontal ring. radiusTop=radiusBottom=1, very thin height, openEnded=true */}
-      <cylinderGeometry args={[1, 1, 0.04, 32, 1, true]} />
-      <meshBasicMaterial vertexColors transparent opacity={0.78} depthWrite={false} side={THREE.DoubleSide} />
-    </instancedMesh>
+    <group renderOrder={3}>
+      {chokepoints.map((cp, i) => {
+        const scale = 0.18 + cp.occlusionProbability * 0.22;
+        const t = Math.min(1, Math.max(0, (cp.occlusionProbability - 0.4) / 0.6));
+        const color = new THREE.Color(1, 0.55 - t * 0.37, 0.08 - t * 0.05);
+        return (
+          <mesh key={i} position={[cp.x, 0.08, cp.z]} scale={[scale, 1, scale]} renderOrder={3}>
+            <cylinderGeometry args={[1, 1, 0.14, 32, 1, true]} />
+            {/* depthTest=false: rings are a coverage overlay and must be readable through scene geometry */}
+            <meshBasicMaterial color={color} transparent opacity={0.82} depthWrite={false} depthTest={false} side={THREE.DoubleSide} />
+          </mesh>
+        );
+      })}
+    </group>
   );
 }
 

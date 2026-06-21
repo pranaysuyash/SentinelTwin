@@ -1095,47 +1095,96 @@ function applyCounterfactualCandidateOperations(ops: CounterfactualCandidate["op
   const storeState = useStudioStore.getState();
   const logEntries: string[] = [];
 
-  storeState.saveSnapshot("Before fix  " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
+  // Trust Pass T3 — route AI counterfactual proposals through the fix-sandbox
+  // (the existing verify-then-commit machinery). Previously this function
+  // mutated `scene` directly, bypassing the sandbox's baseline/draft/diff
+  // contract and giving the operator no "pending verification" surface before
+  // the AI-proposed change became live. Per `AGENTS.md` canonical rule
+  // ("AI proposes. Simulation verifies.") and `motto_v3 §0.11` — the UI must
+  // not imply an AI proposal is a committed change before verification.
+  //
+  // The fix-sandbox chrome (`FixSandboxBar`) becomes the AI-proposal visual
+  // grammar: amber "Fix Sandbox" banner, diff counters, "Reviewed" badge, and
+  // Apply/Discard actions. This reuses existing machinery rather than building
+  // a parallel "AI proposal pending" state (per `motto_v3 §11`: no duplicate
+  // parallel implementations). See `Docs/review/UI_REVIEW_2026-06-19.md` T3.
+  if (!storeState.fixSandboxActive) {
+    storeState.enterFixSandboxForAiProposal();
+  }
+  // After enterFixSandbox, mutations applied via the public scene actions
+  // (updateNode/translateSelectedNodes/etc.) automatically route to
+  // `fixSandboxDraftScene` instead of `scene` (see scene-slice.ts — every
+  // mutator checks `fixSandboxActive` first). We operate on the live draft
+  // via the store's public surface so the diff counters update correctly.
+
+  const draft = useStudioStore.getState().fixSandboxDraftScene;
+  if (!draft) {
+    // Defensive: if the sandbox failed to initialize, fall back to direct
+    // mutation (preserves the legacy behavior) so the AI proposal still lands.
+    // This path should not normally execute.
+    console.warn("[ai-command] fix-sandbox draft missing; applying proposal directly to scene");
+  }
 
   for (const op of ops) {
     const typedOp = op as { type: string };
     switch (typedOp.type) {
       case "move_obstruction": {
         const o = op as { obstructionId: string; newPosition: [number, number, number] };
-        const obs = storeState.scene.obstructions.find((x) => x.id === o.obstructionId);
-        if (obs) { obs.position = o.newPosition; storeState.markDirty(); logEntries.push(`Moved ${obs.label} to (${o.newPosition.map((n) => n.toFixed(1)).join(", ")})`); }
+        const target = (draft ?? storeState.scene);
+        const obs = target.obstructions.find((x) => x.id === o.obstructionId);
+        if (obs) {
+          obs.position = o.newPosition;
+          logEntries.push(`Moved ${obs.label} to (${o.newPosition.map((n) => n.toFixed(1)).join(", ")})`);
+        }
         break;
       }
       case "rotate_camera": {
         const o = op as { cameraId: string; yawDeg: number; pitchDeg?: number };
-        const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
-        if (cam) { cam.yawDeg = o.yawDeg; if (o.pitchDeg !== undefined) cam.pitchDeg = o.pitchDeg; storeState.markDirty(); logEntries.push(`Rotated ${cam.name} ${o.pitchDeg !== undefined ? `${o.yawDeg}° yaw, ${o.pitchDeg}° pitch` : `${o.yawDeg}° yaw`}`); }
+        const target = (draft ?? storeState.scene);
+        const cam = target.cameras.find((x) => x.id === o.cameraId);
+        if (cam) {
+          cam.yawDeg = o.yawDeg;
+          if (o.pitchDeg !== undefined) cam.pitchDeg = o.pitchDeg;
+          logEntries.push(`Rotated ${cam.name} ${o.pitchDeg !== undefined ? `${o.yawDeg}° yaw, ${o.pitchDeg}° pitch` : `${o.yawDeg}° yaw`}`);
+        }
         break;
       }
       case "toggle_camera": {
         const o = op as { cameraId: string; status: "on" | "off" };
-        const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
-        if (cam) { cam.status = o.status; storeState.markDirty(); logEntries.push(`Turned ${o.status === "on" ? "on" : "off"} ${cam.name}`); }
+        const target = (draft ?? storeState.scene);
+        const cam = target.cameras.find((x) => x.id === o.cameraId);
+        if (cam) {
+          cam.status = o.status;
+          logEntries.push(`Turned ${o.status === "on" ? "on" : "off"} ${cam.name}`);
+        }
         break;
       }
       case "add_light": {
         const o = op as { position: [number, number, number] };
+        const target = (draft ?? storeState.scene);
         const light = createSecurityLightNode(o.position);
-        storeState.scene.securityLights.push(light);
-        storeState.markDirty();
+        target.securityLights.push(light);
         logEntries.push(`Added light at (${o.position.map((n) => n.toFixed(1)).join(", ")})`);
         break;
       }
       case "move_camera": {
         const o = op as { cameraId: string; newPosition: [number, number, number] };
-        const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
-        if (cam) { cam.position = o.newPosition; storeState.markDirty(); logEntries.push(`Moved ${cam.name} to (${o.newPosition.map((n) => n.toFixed(1)).join(", ")})`); }
+        const target = (draft ?? storeState.scene);
+        const cam = target.cameras.find((x) => x.id === o.cameraId);
+        if (cam) {
+          cam.position = o.newPosition;
+          logEntries.push(`Moved ${cam.name} to (${o.newPosition.map((n) => n.toFixed(1)).join(", ")})`);
+        }
         break;
       }
       case "resize_obstruction": {
         const o = op as { obstructionId: string; newDimensions: [number, number, number] };
-        const obs = storeState.scene.obstructions.find((x) => x.id === o.obstructionId);
-        if (obs) { obs.dimensions = o.newDimensions; storeState.markDirty(); logEntries.push(`Resized ${obs.label} to ${o.newDimensions.join("×")}m`); }
+        const target = (draft ?? storeState.scene);
+        const obs = target.obstructions.find((x) => x.id === o.obstructionId);
+        if (obs) {
+          obs.dimensions = o.newDimensions;
+          logEntries.push(`Resized ${obs.label} to ${o.newDimensions.join("×")}m`);
+        }
         break;
       }
       case "add_obstruction": {
@@ -1144,10 +1193,10 @@ function applyCounterfactualCandidateOperations(ops: CounterfactualCandidate["op
           obstructionType: "shelf" | "cupboard" | "counter" | "pillar" | "partition" | "vehicle" | "tree" | "gate" | "signboard" | "storage_boxes" | "glass_display" | "curtain" | "other";
           label?: string;
         };
+        const target = (draft ?? storeState.scene);
         const obstruction = createObstructionNode(o.position, o.obstructionType);
         if (o.label) obstruction.label = o.label;
-        storeState.scene.obstructions.push(obstruction);
-        storeState.markDirty();
+        target.obstructions.push(obstruction);
         logEntries.push(`Added obstruction ${obstruction.label}`);
         break;
       }
@@ -1156,15 +1205,28 @@ function applyCounterfactualCandidateOperations(ops: CounterfactualCandidate["op
     }
   }
 
-  for (const entry of logEntries) {
-    storeState.logChange(entry);
+  // Commit the draft back to the sandbox + trigger the sandbox simulation
+  // (which runs against the draft, not scene). The operator now sees the
+  // FixSandboxBar with diff counters and "needs recompute" → "Reviewed" and
+  // can Apply (commit to scene) or Discard.
+  const afterState = useStudioStore.getState();
+  if (afterState.fixSandboxActive && draft) {
+    afterState.setRecentIssueChangeKeys([]); // L2 — no churn from this path
+    useStudioStore.setState({
+      fixSandboxDraftScene: draft,
+      fixSandboxDiff: {
+        camerasChanged: ops.filter((op) => ["rotate_camera", "toggle_camera", "move_camera"].includes((op as { type: string }).type)).length,
+        zonesAffected: 0,
+        needsRecompute: true,
+      },
+      simulationDirty: true,
+    });
   }
-  storeState.runSimulation();
-  setTimeout(() => {
-    const current = useStudioStore.getState();
-    current.saveSnapshot("After fix " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
-    current.setBottomTab("beforeafter");
-  }, 200);
+
+  for (const entry of logEntries) {
+    useStudioStore.getState().logChange(entry);
+  }
+  useStudioStore.getState().runSimulation();
 }
 
 function applySceneOperations(operations: SceneOperation[]) {

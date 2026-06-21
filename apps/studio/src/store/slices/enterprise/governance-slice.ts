@@ -69,6 +69,10 @@ import {
 } from "@/lib/report-catalog";
 import { buildSceneIntelligenceGraph, type SceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
 import type { BottomTab } from "../core/layout-slice";
+// Canonical first-enabled resolver (single source of truth — see
+// `@/lib/contextual-tabs`). The local duplicate (with its own divergent
+// `ANALYSIS_TAB_ORDER` that omitted `scenario`) is removed below.
+import { getFirstEnabledAnalysisTab } from "@/lib/contextual-tabs";
 import {
   createDefaultEnabledAnalysisModules,
   createDefaultVisibleComponents,
@@ -210,36 +214,14 @@ const WORKSPACE_PRESETS: WorkspaceLayoutRecord["workspacePreset"][] = [
   "focus",
 ];
 
-const ANALYSIS_TAB_ORDER = [
-  "metrics",
-  "issues",
-  "sensors",
-  "timeline",
-  "temporal",
-  "beforeafter",
-  "assumptions",
-  "governance",
-  "provenance",
-  "redundancy",
-  "counterfactual",
-  "threat",
-  "report",
-  "debug",
-  "novel",
-  "outcome",
-  "help",
-  "budgeting",
-] as const;
-
-type AnalysisTab = (typeof ANALYSIS_TAB_ORDER)[number];
-
-function getFirstEnabledAnalysisTab(
-  enabledAnalysisModules: Record<string, boolean>,
-  preferred?: string | null,
-): AnalysisTab {
-  if (preferred && enabledAnalysisModules[preferred]) return preferred as AnalysisTab;
-  return ANALYSIS_TAB_ORDER.find((tab) => enabledAnalysisModules[tab]) ?? "metrics";
-}
+// `ANALYSIS_TAB_ORDER`, the local `AnalysisTab` type, and the local
+// `getFirstEnabledAnalysisTab` are removed — consolidated into
+// `@/lib/contextual-tabs` (imported above). The local copy had diverged from
+// the layout-slice and scene-slice copies (this one omitted `scenario`),
+// which is the parallel-truth defect the consolidation fixes. The call site
+// in `applySavedLayout` already casts to `Record<BottomTab, boolean>` and
+// passes a `BottomTab | null` preferred, so it is directly compatible with
+// the canonical typed helper.
 
 function buildLayoutStatePatch(layout: any): any {
   return {
@@ -376,6 +358,20 @@ export interface GovernanceSlice {
   fixSandboxBaselineScene: SecurityScene | null;
   fixSandboxDraftScene: SecurityScene | null;
   fixSandboxDiff: { camerasChanged: number; zonesAffected: number; needsRecompute: boolean; };
+  /**
+   * Origin of the current fix-sandbox session — Trust Pass T3.
+   *   - `"operator"`: the operator opened the sandbox via the "Test Changes"
+   *     button (FixSandboxBar) to test their own edits.
+   *   - `"ai_proposal"`: an AI counterfactual proposal opened the sandbox
+   *     (via `applyCounterfactualCandidateOperations` in use-ai-command). The
+   *     FixSandboxBar surfaces this so the operator sees "AI proposed —
+   *     verify before committing" rather than ambiguous operator framing.
+   *   - `null`: no active sandbox.
+   *
+   * Per `AGENTS.md` canonical rule ("AI proposes. Simulation verifies.") and
+   * `Docs/review/UI_REVIEW_2026-06-19.md` Trust Pass T3.
+   */
+  fixSandboxOrigin: "operator" | "ai_proposal" | null;
 
   savedLayouts: any[];
 
@@ -436,6 +432,13 @@ export interface GovernanceSlice {
   setArchiveHandoffRequest: (request: ArchiveHandoffRequest | null) => void;
 
   enterFixSandbox: () => void;
+  /**
+   * Enter the fix-sandbox in AI-proposal mode (Trust Pass T3). Used by
+   * `applyCounterfactualCandidateOperations` so AI counterfactual proposals
+   * flow through the verify-then-commit contract and the FixSandboxBar labels
+   * them as "AI proposed" rather than operator-initiated.
+   */
+  enterFixSandboxForAiProposal: () => void;
   exitFixSandbox: () => void;
   applyFixSandbox: () => void;
 
@@ -482,6 +485,7 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
     fixSandboxBaselineScene: null,
     fixSandboxDraftScene: null,
     fixSandboxDiff: { camerasChanged: 0, zonesAffected: 0, needsRecompute: true },
+    fixSandboxOrigin: null,
 
     savedLayouts: initialSavedLayouts,
 
@@ -1234,6 +1238,26 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
         fixSandboxActive: true, fixSandboxBaselineScene: baselineClone,
         fixSandboxDraftScene: draftClone,
         fixSandboxDiff: { camerasChanged: 0, zonesAffected: 0, needsRecompute: true },
+        fixSandboxOrigin: "operator",
+      });
+      persistFixSandboxState(true, baselineClone, draftClone);
+    },
+
+    enterFixSandboxForAiProposal: () => {
+      // Trust Pass T3 — AI proposals enter the same sandbox as operator edits
+      // but carry origin="ai_proposal" so the FixSandboxBar surfaces the
+      // "AI proposed — verify before committing" framing. If a sandbox is
+      // already active (operator-initiated), preserve its origin rather than
+      // silently relabeling.
+      const { scene, fixSandboxActive } = get();
+      if (fixSandboxActive) return;
+      const baselineClone = cloneSecurityScene(scene);
+      const draftClone = cloneSecurityScene(scene);
+      set({
+        fixSandboxActive: true, fixSandboxBaselineScene: baselineClone,
+        fixSandboxDraftScene: draftClone,
+        fixSandboxDiff: { camerasChanged: 0, zonesAffected: 0, needsRecompute: true },
+        fixSandboxOrigin: "ai_proposal",
       });
       persistFixSandboxState(true, baselineClone, draftClone);
     },
@@ -1244,6 +1268,7 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
         fixSandboxActive: false, fixSandboxBaselineScene: null,
         fixSandboxDraftScene: null,
         fixSandboxDiff: { camerasChanged: 0, zonesAffected: 0, needsRecompute: true },
+        fixSandboxOrigin: null,
       });
       persistFixSandboxState(false, null, null);
       if (fixSandboxBaselineScene) {
@@ -1252,7 +1277,7 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
     },
 
     applyFixSandbox: () => {
-      const { fixSandboxDraftScene, scene, simulationResult, snapshots } = get();
+      const { fixSandboxDraftScene, scene, simulationResult, snapshots, fixSandboxOrigin } = get();
       if (!fixSandboxDraftScene) return;
       const appliedScene = cloneSecurityScene(fixSandboxDraftScene);
       const snapshotLabel = `Fix sandbox applied ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
@@ -1265,9 +1290,12 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
       appliedScene.snapshots = nextSnapshots;
       const evidenceEvent = buildOperationalEvidenceEvent({
         kind: "scene_updated",
-        title: "Fix sandbox applied",
-        details: "Draft changes from fix sandbox committed to the scene.",
-        actor: "user", source: appliedScene.source,
+        title: fixSandboxOrigin === "ai_proposal" ? "AI-proposed fix applied" : "Fix sandbox applied",
+        details: fixSandboxOrigin === "ai_proposal"
+          ? "AI-proposed draft changes verified by simulation and committed to the scene."
+          : "Draft changes from fix sandbox committed to the scene.",
+        actor: fixSandboxOrigin === "ai_proposal" ? "ai" : "user",
+        source: appliedScene.source,
         sceneId: appliedScene.id, sceneName: appliedScene.name,
         revisionDepth: get().historyPast.length, affectedNodeIds: [],
         confidence: 0.92,
@@ -1282,6 +1310,7 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
         fixSandboxActive: false, fixSandboxBaselineScene: null,
         fixSandboxDraftScene: null,
         fixSandboxDiff: { camerasChanged: 0, zonesAffected: 0, needsRecompute: true },
+        fixSandboxOrigin: null,
         snapshots: nextSnapshots, simulationDirty: true,
         operationalEvidenceEvents: nextEvents,
         sceneIntelligenceGraph: buildGraphState(appliedScene, simulationResult, get().historyPast.length, nextSnapshots.length),
@@ -1340,16 +1369,6 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
       set({ savedLayouts });
     },
   };
-}
-
-function viewModeToBottomTab(mode: string): string {
-  switch (mode) {
-    case "replay":
-    case "camera_view": return "timeline";
-    case "compare": return "beforeafter";
-    case "report": return "report";
-    default: return "metrics";
-  }
 }
 
 function makeDuplicateSceneId(sceneId: string, existingIds: Set<string>) {

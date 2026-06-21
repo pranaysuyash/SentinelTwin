@@ -253,10 +253,13 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
   }, [seededState]);
 
   const isFloorPlan = state.importMethod === "floor_plan";
+  const floorPlanStepLabels = ["Room Setup", "Method", "Floor-Plan Review", "Review"];
+  const defaultStepLabels = ["Room Setup", "Method", "Configure", "Review"];
+  const stepLabels = isFloorPlan ? floorPlanStepLabels : defaultStepLabels;
   const nextActionLabel =
     state.step === 2
       ? isFloorPlan
-        ? "Next: Review"
+        ? "Next: Review and Commit"
         : "Next"
       : "Next";
   const primaryActionLabel = isFloorPlan && state.step === 3 ? "Create Draft Scene" : "Create Scene";
@@ -265,15 +268,17 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
     : state.step === 1
       ? "Back to Room Name"
     : state.step === 2
-      ? "Back to Method"
+      ? isFloorPlan
+        ? "Back to Method"
+        : "Back to Method"
       : "Back to Import Review";
   const navigationHint =
     state.step === 2
       ? isFloorPlan
-        ? "Floor-plan review step: validate footprint, prune obvious false positives, then click Next to open the review summary."
+        ? "This is the floor-plan review lane. Keep the flow here until geometry is credible, then click Next: Review and Commit."
         : "Configure method-specific options, then click Next."
       : state.step === 3
-        ? "Review step: confirm summary, then create the draft."
+        ? "Review step: confirm the final summary, then use Create Draft Scene."
         : "";
 
   return (
@@ -281,7 +286,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
         {/* Step indicators */}
       <div className="flex items-center justify-between border-b border-[#1e2130] px-4 py-3">
         <div className="flex items-center gap-2">
-          {["Room Setup", "Method", "Configure", "Review"].map((label, i) => (
+          {stepLabels.map((label, i) => (
             <div key={label} className="flex items-center gap-1.5">
               <div
                 className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-medium ${
@@ -612,7 +617,7 @@ function ConfigureStep({
 
         {value.floorPlanResult == null ? (
           <div className="rounded-lg border border-[#22314b] bg-[#0f1828] p-2 text-[9px] text-[#9bb0ce]">
-            Navigation note: after upload you are still in configuration. Stay in review mode here and click <span className="font-semibold text-[#cdd9ee]">Next: Review</span> once checks pass.
+            You are in the floor-plan review lane. Complete trust checks here, then click <span className="font-semibold text-[#cdd9ee]">Next: Review and Commit</span> when ready for final summary.
           </div>
         ) : null}
 
@@ -795,6 +800,8 @@ function ReviewStep({
     depthM: value.depthM,
     heightM: value.heightM,
   };
+  const rawWallCandidateCount = value.floorPlanResult?.rawWallSegmentCount ?? value.floorPlanResult?.walls.length ?? 0;
+  const keptWallCount = value.floorPlanResult?.walls.length ?? 0;
   const summary = useMemo(() => {
     const lines: { label: string; value: string }[] = [
       { label: "Name", value: value.roomName || "Untitled Scene" },
@@ -809,7 +816,7 @@ function ReviewStep({
       if (value.floorPlanResult) {
       const raw = value.floorPlanResult.rawWallSegmentCount ?? value.floorPlanResult.walls.length;
       const kept = value.floorPlanResult.walls.length;
-      lines.push({ label: "Detected Walls", value: `${kept} kept · ${raw} raw candidates` });
+      lines.push({ label: "Detected Wall Candidates", value: `${raw} raw candidates · ${kept} kept` });
       lines.push({ label: "Confidence", value: `${(value.floorPlanResult.confidence * 100).toFixed(0)}%` });
       lines.push({ label: "Source profile", value: value.floorPlanSourceProfile });
       if (value.floorPlanGateDecision) {
@@ -863,7 +870,7 @@ function ReviewStep({
             <div>Tier 1 quality: <span className="text-[#c5ccdb]">{value.floorPlanSemanticContext ? `${Math.round(value.floorPlanSemanticContext.qualityScore * 100)}%` : "—"}</span></div>
             <div>Doors: <span className="text-[#c5ccdb]">{value.floorPlanResult.doors.length}</span></div>
             <div>Windows: <span className="text-[#c5ccdb]">{value.floorPlanResult.windows.length}</span></div>
-            <div>Walls: <span className="text-[#c5ccdb]">{value.floorPlanResult.walls.length}</span></div>
+            <div>Walls: <span className="text-[#c5ccdb]">{keptWallCount} kept of {rawWallCandidateCount} candidates</span></div>
             <div>Scale: <span className="text-[#c5ccdb]">{value.floorPlanResult.scalePixelsPerMeter} px/m</span></div>
           </div>
           {value.floorPlanGateDecision?.reason ? (

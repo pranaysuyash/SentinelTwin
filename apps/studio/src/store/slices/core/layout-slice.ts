@@ -10,6 +10,14 @@ import {
   PRESET_VIEW_MODES,
   type WorkspaceLayoutSnapshot,
 } from "@/lib/workspace-layouts";
+// Canonical contextual-tab helpers (single source of truth). See
+// `@/lib/contextual-tabs` for the consolidation rationale — these were
+// previously duplicated across layout-slice, scene-slice, and governance-slice
+// with divergent orderings (a parallel-truth defect per motto_v3 §11).
+import {
+  viewModeToBottomTab,
+  getFirstEnabledAnalysisTab,
+} from "@/lib/contextual-tabs";
 
 export type ViewMode = "map" | "wall" | "replay" | "camera_view" | "compare" | "report" | "analytics";
 export type CanvasMode = "orbit_3d" | "topdown_2d";
@@ -96,24 +104,10 @@ const UI_DENSITY_STORAGE_KEY = "sentineltwin_ui_density";
 
 const DEFAULT_DOCK_SIZES = PRESET_LAYOUT_SIZES.edit;
 
-const ANALYSIS_TAB_ORDER: BottomTab[] = [
-  "metrics",
-  "issues",
-  "sensors",
-  "timeline",
-  "temporal",
-  "beforeafter",
-  "assumptions",
-  "governance",
-  "provenance",
-  "redundancy",
-  "counterfactual",
-  "threat",
-  "report",
-  "debug",
-  "novel",
-  "scenario",
-];
+// `ANALYSIS_TAB_ORDER` and the helpers below were consolidated into
+// `@/lib/contextual-tabs`. The local copies (which had diverged from the
+// scene-slice and governance-slice copies) are removed; the canonical
+// `ANALYSIS_TAB_ORDER` lives there and is imported where needed.
 
 // ── Storage helpers ──
 
@@ -152,24 +146,9 @@ function viewModeToPreset(mode: ViewMode): WorkspacePreset {
   return match?.[0] ?? "edit";
 }
 
-function viewModeToBottomTab(mode: ViewMode): BottomTab {
-  switch (mode) {
-    case "map":
-      return "metrics";
-    case "replay":
-    case "camera_view":
-      return "timeline";
-    case "compare":
-      return "beforeafter";
-    case "report":
-      return "report";
-    case "analytics":
-      return "metrics";
-    case "wall":
-    default:
-      return "metrics";
-  }
-}
+// `viewModeToBottomTab` is imported from `@/lib/contextual-tabs` (canonical copy).
+// The local duplicate (which the scene-slice copy had diverged from — it omitted
+// the `analytics` case) is removed.
 
 function dockSizeKey(side: DockSide): "leftDockSizePx" | "rightDockSizePx" | "bottomDockSizePx" {
   return side === "left"
@@ -187,13 +166,9 @@ function dockCollapsedKey(side: DockSide): "leftDockCollapsed" | "rightDockColla
       : "bottomDockCollapsed";
 }
 
-function getFirstEnabledAnalysisTab(
-  enabledAnalysisModules: Record<BottomTab, boolean>,
-  preferred?: BottomTab | null,
-): BottomTab {
-  if (preferred && enabledAnalysisModules[preferred]) return preferred;
-  return ANALYSIS_TAB_ORDER.find((tab) => enabledAnalysisModules[tab]) ?? "metrics";
-}
+// `getFirstEnabledAnalysisTab` is imported from `@/lib/contextual-tabs` (canonical
+// copy). The local duplicate (with its shorter `ANALYSIS_TAB_ORDER` that omitted
+// outcome/help/budgeting) is removed.
 
 function snapshotLayout(state: {
   viewMode: ViewMode;
@@ -325,6 +300,33 @@ export interface LayoutSlice {
   previousLayout: DockSnapshot | null;
   visibleComponents: Record<WorkspaceComponentId, boolean>;
   enabledAnalysisModules: Record<BottomTab, boolean>;
+  /**
+   * Tabs the contextual layer has flagged as wanting the operator's attention
+   * but which are currently behind the bottom-panel "More" overflow. Drives
+   * the amber count badge on the More button and the amber dot inside the
+   * menu. Seed of Loop Pass L2 (causal issue threading) — see
+   * `Docs/review/UI_REVIEW_2026-06-19.md`.
+   *
+   * Empty by default. Populated by `buildContextualSelectionPatch`
+   * (scene-slice) when a selection change surfaces a contextual tab that
+   * differs from the operator's currently-active tab and is currently in the
+   * overflow set. Cleared per-tab when the operator opens that tab via
+   * `setBottomTab`.
+   */
+  pendingTabAttention: BottomTab[];
+  /**
+   * Stable fingerprints (`issueFingerprint` from `@/lib/contextual-tabs`) of
+   * the issues that changed in the most recent simulation recompute. Drives
+   * the "changed by last edit" tag in IssuesTab (Loop Pass L2) — changed
+   * issues float to the top of the list so the operator sees the causal
+   * consequence of their last edit immediately.
+   *
+   * Populated by the L2 producer in `runSimulation` (simulation-slice) and
+   * cleared when the operator opens the Issues tab (or any recompute that
+   * produces no diff). Seed of Loop Pass L2; see
+   * `Docs/review/UI_REVIEW_2026-06-19.md`.
+   */
+  recentIssueChangeKeys: string[];
   layerVisibility: LayerVisibility;
   overlayDensity: OverlayDensity;
   uiDensity: UiDensity;
@@ -355,6 +357,13 @@ export interface LayoutSlice {
   toggleVisibleComponent: (component: WorkspaceComponentId) => void;
   setAnalysisModuleEnabled: (moduleId: BottomTab, enabled: boolean) => void;
   toggleAnalysisModule: (moduleId: BottomTab) => void;
+  /**
+   * Replace the pending-tab-attention list. Called by the contextual selection
+   * patch (scene-slice) when a selection change surfaces an overflow tab.
+   */
+  setPendingTabAttention: (tabs: BottomTab[]) => void;
+  /** Replace the recent-issue-change fingerprint list. L2 producer-only. */
+  setRecentIssueChangeKeys: (keys: string[]) => void;
   setOverlayDensity: (density: OverlayDensity) => void;
   setUiDensity: (density: UiDensity) => void;
   setUiTheme: (theme: UiTheme) => void;
@@ -401,6 +410,8 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
     viewSettingsOpen: false,
     visibleComponents: _initialLayout.visibleComponents,
     enabledAnalysisModules: _initialLayout.enabledAnalysisModules,
+    pendingTabAttention: [],
+    recentIssueChangeKeys: [],
     clientDemoOptions: _initialLayout.clientDemoOptions,
 
     setViewMode: (mode) => {
@@ -515,16 +526,27 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
       }),
 
     setBottomTab: (tab) =>
-      set((state: any) => ({
-        bottomTab: getFirstEnabledAnalysisTab(state.enabledAnalysisModules, tab),
-        pinnedAnalysisModule:
-          state.bottomDrawerMode === "single_module"
-            ? getFirstEnabledAnalysisTab(state.enabledAnalysisModules, tab)
-            : state.pinnedAnalysisModule,
-        dockAttention: state.bottomDockCollapsed
-          ? { ...state.dockAttention, bottom: true }
-          : state.dockAttention,
-      })),
+      set((state: any) => {
+        const resolvedTab = getFirstEnabledAnalysisTab(state.enabledAnalysisModules, tab);
+        // Opening a tab clears it from pending attention — the operator has
+        // now seen what the contextual layer wanted them to see.
+        const pendingTabAttention = state.pendingTabAttention.filter((t: BottomTab) => t !== resolvedTab);
+        // Opening the Issues tab also clears the recent-change fingerprints —
+        // the operator has now seen the causal consequence of their last edit.
+        const recentIssueChangeKeys = resolvedTab === "issues" ? [] : state.recentIssueChangeKeys;
+        return {
+          bottomTab: resolvedTab,
+          pinnedAnalysisModule:
+            state.bottomDrawerMode === "single_module"
+              ? getFirstEnabledAnalysisTab(state.enabledAnalysisModules, tab)
+              : state.pinnedAnalysisModule,
+          dockAttention: state.bottomDockCollapsed
+            ? { ...state.dockAttention, bottom: true }
+            : state.dockAttention,
+          pendingTabAttention,
+          recentIssueChangeKeys,
+        };
+      }),
 
     toggleLayer: (layer) =>
       set((s: any) => ({ layerVisibility: { ...s.layerVisibility, [layer]: !s.layerVisibility[layer] } })),
@@ -570,6 +592,21 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
             : state.pinnedAnalysisModule;
         return { enabledAnalysisModules, bottomTab, pinnedAnalysisModule };
       }),
+
+    setPendingTabAttention: (tabs) =>
+      set(() => ({
+        // Dedupe while preserving order. Callers (buildContextualSelectionPatch)
+        // already restrict to enabled tabs that computed into the overflow set.
+        pendingTabAttention: Array.from(new Set(tabs)),
+      })),
+
+    setRecentIssueChangeKeys: (keys) =>
+      set(() => ({
+        // Dedupe while preserving order. Producer (runSimulation) passes the
+        // fresh diff each recompute; the list is cleared when the operator
+        // opens the Issues tab via setBottomTab.
+        recentIssueChangeKeys: Array.from(new Set(keys)),
+      })),
 
     setOverlayDensity: (density) => set({ overlayDensity: density }),
 

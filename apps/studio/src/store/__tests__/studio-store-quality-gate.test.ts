@@ -275,4 +275,32 @@ describe("studio store quality gate", () => {
 
     expect(useStudioStore.getState().simulationDirty).toBe(true);
   });
+
+  test("pendingTabAttention defaults to empty and clears when a flagged tab is opened", () => {
+    // Mirrors the dockAttention default assertion above. The attention list is
+    // the seed of Loop Pass L2 (see Docs/review/UI_REVIEW_2026-06-19.md) and
+    // must start empty so the More button shows no spurious badge on first
+    // load. Populated later by simulation-result listeners; cleared per-tab
+    // when the operator opens that tab.
+    useStudioStore.setState(useStudioStore.getInitialState(), true);
+    expect(useStudioStore.getState().pendingTabAttention).toEqual([]);
+
+    // Simulate the L2 path: someone (e.g. an issue listener) populates the
+    // list with a couple of tabs.
+    useStudioStore.getState().setPendingTabAttention(["threat", "governance"]);
+    expect(useStudioStore.getState().pendingTabAttention).toEqual(["threat", "governance"]);
+
+    // Dedupe is preserved on set.
+    useStudioStore.getState().setPendingTabAttention(["threat", "threat", "governance"]);
+    expect(useStudioStore.getState().pendingTabAttention).toEqual(["threat", "governance"]);
+
+    // Opening `threat` clears only that entry — governance stays flagged.
+    useStudioStore.getState().setBottomTab("threat");
+    expect(useStudioStore.getState().pendingTabAttention).toEqual(["governance"]);
+
+    // Opening `governance` (if enabled) clears it too. Governance is enabled
+    // in the baseline preset, so the open succeeds and the list empties.
+    useStudioStore.getState().setBottomTab("governance");
+    expect(useStudioStore.getState().pendingTabAttention).toEqual([]);
+  });
 });

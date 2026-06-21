@@ -10,6 +10,8 @@ import type { SiteIntakeSession, ActionableWarning, SiteTwinDraft, SuggestedNext
 import { canRunBaselineSimulation, compileToSiteTwinDraft, SITE_SOURCE_MATURITY } from "@/lib/site-compiler";
 import type { SecurityScene } from "@/schema/security-scene";
 import { type WorkspaceRole } from "@/lib/workspace-governance";
+// Trust Pass T1 — canonical confidence renderer (warning-gated, source-tagged).
+import { renderConfidence, CONFIDENCE_BAND_LABEL } from "@/lib/confidence-display";
 
 const severityIcon: Record<ActionableWarning["severity"], React.ReactNode> = {
   blocking: <XCircle className="h-3.5 w-3.5 text-red-400" />,
@@ -374,8 +376,19 @@ export function SiteDraftReview({
   const readiness = draft.readiness;
   const hasReviewRequired = readiness.level === "review-required";
   const isInsufficient = readiness.level === "insufficient";
-  const confidencePct = Math.round(draft.confidence * 100);
-  const confidenceColor = draft.confidenceLabel === "high" ? "text-emerald-300" : draft.confidenceLabel === "medium" ? "text-amber-300" : "text-red-300";
+  // Trust Pass T1 — route through the canonical renderer so the displayed
+  // percentage is warning-gated and source-decomposed. Replaces the local
+  // color map that produced ungated `100%` displays.
+  const renderedConfidence = renderConfidence({
+    confidence: draft.confidence,
+    unresolvedWarningCount: draft.warnings.length,
+    sourceDetail: `${draft.source} source · ${draft.warnings.length} warning${draft.warnings.length === 1 ? "" : "s"}`,
+  });
+  const confidencePct = renderedConfidence.pct;
+  const confidenceColor =
+    renderedConfidence.tone === "emerald" ? "text-emerald-300"
+      : renderedConfidence.tone === "amber" ? "text-amber-300"
+        : "text-rose-300";
   const sourceInfo = SITE_SOURCE_MATURITY[draft.source];
   const personaPolicy = resolvePersonaPolicy(activeRole);
   const isScenarioEscalation = isTemporaryScenarioEscalation(draft.scene) || draft.warnings.some((warning) => warning.code === "SCENARIO_ESCALATION_REQUIRED");
@@ -417,7 +430,7 @@ export function SiteDraftReview({
             <div className="mt-1 flex items-center gap-3 text-[13px] leading-5 text-[color:var(--text-muted)]">
               <span>{draft.warnings.length} warning{draft.warnings.length !== 1 ? "s" : ""}</span>
               <span className="text-[color:var(--border)]">·</span>
-              <span className={confidenceColor}>{confidencePct}% confidence ({draft.confidenceLabel})</span>
+              <span className={confidenceColor}>{confidencePct}% confidence ({CONFIDENCE_BAND_LABEL[renderedConfidence.band]})</span>
               <span className="text-[color:var(--border)]">·</span>
               <span>{draft.entityCounts.walls}w {draft.entityCounts.cameras}c {draft.entityCounts.criticalZones}z {draft.entityCounts.entryPoints}e</span>
             </div>
@@ -529,7 +542,7 @@ export function SiteDraftReview({
                 <div>Label: <span className="text-white">{draft.provenance.sourceLabel}</span></div>
                 <div>Status: <span className={sourceInfo.status === "Working" ? "text-emerald-300" : "text-violet-300"}>{sourceInfo.status}</span></div>
                 <div className="pt-1 text-[10px] leading-5 text-[color:var(--text-dim)]">{sourceInfo.description}</div>
-                <div className="pt-1">Confidence: <span className={confidenceColor}>{confidencePct}% ({draft.confidenceLabel})</span></div>
+                <div className="pt-1">Confidence: <span className={confidenceColor}>{confidencePct}% ({CONFIDENCE_BAND_LABEL[renderedConfidence.band]})</span></div>
                 <div>Baseline sim: <span className={canBaseline ? "text-emerald-300" : "text-amber-300"}>{canBaseline ? "Ready" : "Not ready"}</span></div>
                 <div>
                   Readiness:{" "}

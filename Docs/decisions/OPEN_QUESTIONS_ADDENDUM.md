@@ -107,3 +107,56 @@ if no, keep distributed and re-evaluate at V0.3.
 **Priority:** P1 — affects architecture cleanliness but not shipping.
 **Source:** `apps/studio/src/components/site-intake/` + `scan-to-scene/` + `product/`
 component directory listing.
+
+## New Questions — Added 2026-06-19 (UI review, `Docs/review/UI_REVIEW_2026-06-19.md`)
+
+### OQ-UI-01 [P0]: Primary persona — operator (daily, known site) or buyer/consultant (one-time author + handoff)?
+The current UI tries to serve both and serves neither. A daily operator needs fast
+re-entry into a known site with ambient risk status. A buyer/consultant needs a
+trustworthy one-time authoring flow that produces a defensible handoff artifact.
+These imply different *default contextual surfacing* (not different feature sets — the
+features stay; what changes is which are foregrounded by default), different density
+defaults, and different trigger contexts for operator-grade surfaces (Governance, ONVIF,
+Sensors, Model Eval).
+**Decision needed before:** Density Pass D1/D2/D3 scoping (`Docs/review/UI_REVIEW_2026-06-19.md`).
+**Priority:** P0 — sets the default-foreground target for every subsequent density decision.
+**Source:** UI review Group B/D, `StudioDashboardHome.tsx`, `SiteIntakeHub.tsx`.
+
+### OQ-UI-02 [P1]: Should "AI proposes, simulation verifies" be a visible UI state or a behind-the-scenes contract?
+The canonical rule (`AGENTS.md` → Canonical Rules) and the product's primary differentiator
+say AI output is always a *proposal* pending verification. The current UI treats AI-suggested
+scene changes identically to manual edits — no distinct pending state, no "verify now" affordance.
+Making it visible (Trust Pass T3) strengthens the differentiator but adds interaction weight.
+**Decision needed before:** Trust Pass T3 (`Docs/review/UI_REVIEW_2026-06-19.md`).
+**Priority:** P1 — product-decision, not engineering. Affects `use-ai-command.ts`,
+`AiLayoutDraftView.tsx`, counterfactual preview surfaces.
+**Source:** UI review Group C3.
+
+### OQ-UI-03 [P1]: Density direction — contextual priority (Option 4), 3-plane re-architecture (Option 1), tab consolidation (Option 2), or workspace presets (Option 3)?
+The UI review documents four options for the 19-tab / three-navigation-grammar density problem.
+*All four are feature-preserving* — none delete features or logic; the question is how features
+are arranged and surfaced.
+- **Option 4 (contextual priority)** is the recommended first move: connect the rendering layer
+  to the contextual layer the store already computes (`scene-slice.ts:686`, `contextualBottomTabForNode`,
+  `enabledAnalysisModules`, `dockAttention`). Tabs render contextually-prioritized (foreground =
+  relevant to current selection/mode/workflow; "more" for the rest, never deleted). No re-architecture.
+- **Option 1 (3-plane)** remains a valid later evolution *on top of* Option 4 if contextual priority
+  proves insufficient. Bold; changes product visual identity.
+- **Option 2 (tab consolidation)** cheapest; treats symptom not cause.
+- **Option 3 (workspace presets)** studio-only; doesn't fix dashboard density.
+**Decision needed before:** Density Pass D1 implementation. Recommended path: try Option 4 first
+(lowest disruption, highest fidelity to existing architecture), keep Option 1 available as a
+later evolution. Should be confirmed via a dedicated brainstorm, not an implementation pass.
+**Priority:** P1 — blocks the highest-leverage Density work but does not block Trust/Intake passes.
+**Source:** UI review Part 3; `BottomPanel.tsx:51-77` (TAB_GROUPS); `scene-slice.ts:686`
+(contextual infrastructure already exists).
+
+### OQ-UI-04 [P2]: Field-tablet form factor — V1 commitment or V2+?
+On-site tablet intake is the primary real-world intake context (operator scanning the site).
+The current responsive story is phone (≤720px, canvas-only) + desktop. There is no tablet /
+field-tablet layout. If tablet is V1, the responsive system needs a third breakpoint and the
+ScanSiteWizard guided flow (I2) needs a tablet-first layout.
+**Decision needed before:** Intake Pass I2 layout decisions; Visual Pass V3 type scale (may need
+tablet-aware sizes).
+**Priority:** P2 — affects Intake Pass layout but does not block Trust Pass.
+**Source:** UI review Group F1; `StudioShell.tsx:124-130` (single compact-viewport breakpoint).

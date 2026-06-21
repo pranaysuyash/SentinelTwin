@@ -13,6 +13,11 @@ import {
 import { serializeOperationalEvidenceJournal } from "@/lib/operational-evidence-journal";
 import { buildSceneIntelligenceGraph, type SceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
 import { generateAndRankCounterfactuals } from "@/simulation/counterfactual-runner";
+// Loop Pass L2 producer — diff the issue set across a simulation recompute and
+// flag the tabs whose findings changed. See `@/lib/contextual-tabs` and
+// `Docs/review/UI_REVIEW_2026-06-19.md` Loop Pass L2.
+import { diffIssuesForAttention } from "@/lib/contextual-tabs";
+import type { BottomTab } from "./layout-slice";
 
 const OPERATIONAL_EVIDENCE_STORAGE_KEY = "sentineltwin_operational_evidence_v1";
 
@@ -287,14 +292,38 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
         }
 
         const current = get();
-        const evidenceEvent = buildSimulationEvidenceEvent(current.scene, result, durationMs, current.historyPast.length, current.simulationResult);
+        const previousResult = current.simulationResult;
+        const evidenceEvent = buildSimulationEvidenceEvent(current.scene, result, durationMs, current.historyPast.length, previousResult);
         const nextState = buildSimulationState(current.scene, result, durationMs, current.historyPast.length, current.snapshots.length, current.operationalEvidenceEvents, temporalProfile);
         const nextSceneSnapshot = cloneSecurityScene(nextState.scene);
         const nextEvents = [...current.operationalEvidenceEvents, evidenceEvent];
         persistOperationalEvidenceEvents(nextEvents);
+
+        // Loop Pass L2 — causal issue threading. Diff the issue set across
+        // this recompute and flag the tabs whose findings changed (appeared
+        // OR disappeared) so the bottom-panel "More" button lights up. Skips
+        // the operator's currently-active tab (already foregrounded), disabled
+        // tabs, and tabs already flagged. Merges with any existing pending
+        // attention so prior unresolved signals aren't clobbered. Also captures
+        // the changed-issue fingerprints for IssuesTab's "changed by last edit"
+        // float-to-top. See `Docs/review/UI_REVIEW_2026-06-19.md` Loop Pass L2
+        // and `@/lib/contextual-tabs` `diffIssuesForAttention`.
+        const issueDiff = diffIssuesForAttention({
+          previousIssues: previousResult?.issues,
+          currentIssues: result.issues,
+          excludeTab: current.bottomTab,
+          currentAttention: current.pendingTabAttention,
+          enabledAnalysisModules: current.enabledAnalysisModules,
+        });
+        const mergedAttention: BottomTab[] = issueDiff.tabsToFlag.length > 0
+          ? Array.from(new Set([...current.pendingTabAttention, ...issueDiff.tabsToFlag]))
+          : current.pendingTabAttention;
+
         set({
           ...nextState,
           operationalEvidenceEvents: nextEvents,
+          pendingTabAttention: mergedAttention,
+          recentIssueChangeKeys: issueDiff.changedIssueKeys,
           scene: {
             ...nextSceneSnapshot,
             changeLog: [...nextState.scene.changeLog, evidenceLogLine(evidenceEvent)],

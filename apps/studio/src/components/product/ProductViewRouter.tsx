@@ -282,15 +282,18 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
 
   // Manual Builder — full product view
   if (productView === "manual_builder") {
+    let buildCompleted = false;
     return (
       <div className="h-full w-full overflow-hidden" style={{ background: "var(--bg)" }}>
         <SceneBuilderWizard
           onBuild={(scene) => {
-            handlers.createDraftFromScene(scene, "manual");
-            navigate("site_draft_review");
+            buildCompleted = true;
+            handlers.openScene(scene);
           }}
           onClose={() => {
-            navigate("site_intake");
+            // The wizard calls onClose immediately after onBuild — skip navigation
+            // in that case since openScene already navigated to studio.
+            if (!buildCompleted) navigate("site_intake");
           }}
         />
       </div>

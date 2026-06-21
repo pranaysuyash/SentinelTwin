@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import {
-  CircleHelp,
-  LayoutDashboard,
   ShieldCheck,
   ArrowRight,
   FileUp,
@@ -11,9 +9,15 @@ import {
   ScanSearch,
   Sparkles,
   Square,
-  Blocks,
+  Video,
+  LayoutDashboard,
+  FolderOpen,
+  BarChart3,
+  AlertTriangle,
+  Film,
+  Puzzle,
+  Settings,
   CheckCircle2,
-  Video
 } from "lucide-react";
 import type { SiteIntakeSource } from "@/lib/site-compiler";
 
@@ -42,104 +46,127 @@ export type SiteIntakeHubProps = {
   }>;
 };
 
-type SiteIntakeSourceCard = {
+type SourceCard = {
   id: SiteIntakeSource;
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
   status: "Working" | "Preview" | "Planned";
   description: string;
   output: string;
-  review: string;
-  icon: typeof Square;
+  review: "Required" | "Optional";
   recommended?: boolean;
-  tone: "sky" | "violet" | "amber" | "slate" | "emerald" | "rose";
-  detail: {
-    bestFor: string;
-    description: string;
-    outputDetail: string;
-    steps: string[];
-    limitations: string[];
-    timeEstimate: string;
-    confidence: string;
-    ctaLabel: string;
+  accent: {
+    border: string;
+    iconBg: string;
+    iconColor: string;
+    badge: string;
+    cta: string;
+    ctaText: string;
   };
-  onClickAction: keyof SiteIntakeHubProps;
+  detail: {
+    headline: string;
+    steps: string[];
+    /** Optional honest-maturity limitations (truth-audit surface). */
+    limitations?: string[];
+    cta: string;
+  };
+  action: keyof SiteIntakeHubProps;
 };
 
-const cards: SiteIntakeSourceCard[] = [
+const SOURCES: SourceCard[] = [
   {
     id: "scan",
+    icon: ScanSearch,
     title: "Scan Site Photos",
     status: "Working",
-    description: "Guided capture + manual review from phone photos.",
+    // Truth-audit surface — the maturity tagline is enforced by
+    // `src/lib/truth-audit.ts` ("Site intake hub truthful maturity"). The
+    // phrase set is the honest disclosure buyers need to see before choosing
+    // this path: it is guided capture + manual review, not automatic
+    // reconstruction. Per `motto_v3 §0.11`: do not let UI copy imply stronger
+    // capabilities than the system has.
+    description: "Guided capture + manual review from phone photos. Mark entry, cameras, and zones.",
     output: "Site Twin",
     review: "Required",
-    icon: ScanSearch,
     recommended: true,
-    tone: "sky",
+    accent: {
+      border: "border-l-sky-500",
+      iconBg: "bg-sky-500/10",
+      iconColor: "text-sky-400",
+      badge: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
+      cta: "bg-sky-500/10 border-sky-500/30 hover:bg-sky-500/18 text-sky-300",
+      ctaText: "Start Scan Intake",
+    },
     detail: {
-      bestFor: "Existing shops, lobbies, offices, warehouses without CAD.",
-      description: "Capture your site using guided steps. You'll mark key elements in photos and create a trusted site twin draft.",
-      outputDetail: "Site Twin draft from reviewed photo markers.",
+      headline: "Capture your site with guided steps. Mark key elements in photos and compile a trusted site twin.",
       steps: [
         "Set room dimensions",
         "Upload overview photos",
         "Mark entry, cameras, zones, obstructions",
         "Review candidates and warnings",
-        "Compile to Site Twin draft",
+        "Compile to site twin",
         "Run baseline simulation",
       ],
+      // Honest-maturity limitations. Required by the truth-audit manifest;
+      // surfaced in the detail panel so buyers see them before starting.
       limitations: [
-        "Automatic segmentation/depth reconstruction is still rolling out; candidate confirmation is required."
+        "Best-effort wall/opening extraction",
+        "Automatic segmentation/depth reconstruction is still rolling out; candidate confirmation is required.",
+        "Draft-gated — the compiled twin is a draft until reviewed.",
+        "No product-grade video/stream verification yet",
+        "Local-only mode is available",
       ],
-      timeEstimate: "15–30 minutes",
-      confidence: "Available after compile",
-      ctaLabel: "Start Scan Intake",
+      cta: "Start Scan Intake",
     },
-    onClickAction: "onStartScan",
+    action: "onStartScan",
   },
   {
     id: "ai_prompt",
+    icon: Sparkles,
     title: "Describe with AI",
     status: "Preview",
-    description: "Draft a site from text description. Review required before trust.",
-    output: "Draft Site Twin",
+    description: "Draft a layout from a text description. Review required before use.",
+    output: "Draft",
     review: "Required",
-    icon: Sparkles,
-    tone: "violet",
+    accent: {
+      border: "border-l-violet-500",
+      iconBg: "bg-violet-500/10",
+      iconColor: "text-violet-400",
+      badge: "border-violet-500/25 bg-violet-500/10 text-violet-300",
+      cta: "bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/18 text-violet-300",
+      ctaText: "Start Layout Draft",
+    },
     detail: {
-      bestFor: "Drafting a site from text before real measurements are available.",
-      description: "Describe the space, generate a layout draft, then review it before it can become the active site twin.",
-      outputDetail: "Draft Site Twin from text plus model or heuristic layout generation.",
+      headline: "Describe the space and generate a layout draft. Review before activating as the site twin.",
       steps: [
         "Write a description of the space",
         "Generate a draft layout",
         "Review entities and layout",
         "Edit if needed",
-        "Approve draft for the current workspace",
+        "Approve draft for workspace",
       ],
-      limitations: [
-        "Layout is approximate — expect adjustments after import.",
-        "Review required before trusting as the active site twin.",
-      ],
-      timeEstimate: "1–2 minutes",
-      confidence: "Low (Draft layout)",
-      ctaLabel: "Start Layout Draft",
+      cta: "Start Layout Draft",
     },
-    onClickAction: "onStartAiDraft",
+    action: "onStartAiDraft",
   },
   {
     id: "floor_plan",
+    icon: ImageIcon,
     title: "Upload Floor Plan",
     status: "Working",
-    description: "Best-effort wall/opening extraction from blueprints or images. Manual correction required.",
+    description: "Extract walls from blueprints, PDFs, or images. Manual correction may be needed.",
     output: "Scene Shell",
     review: "Required",
-    icon: ImageIcon,
-    tone: "amber",
+    accent: {
+      border: "border-l-amber-500",
+      iconBg: "bg-amber-500/10",
+      iconColor: "text-amber-400",
+      badge: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
+      cta: "bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/18 text-amber-300",
+      ctaText: "Upload Plan",
+    },
     detail: {
-      bestFor: "Blueprints, rough plans, screenshots, PDFs, and site images.",
-      description: "Upload a floor plan, review the extracted shell, then send the result through draft review before activation.",
-      outputDetail: "Scene shell draft from reviewed floor-plan extraction.",
+      headline: "Upload a floor plan, review the extracted shell, then send the result through draft review before activation.",
       steps: [
         "Upload a floor plan image",
         "Review wall extraction and scale",
@@ -147,59 +174,57 @@ const cards: SiteIntakeSourceCard[] = [
         "Confirm scene shell",
         "Enter Studio to add cameras and zones",
       ],
-      limitations: [
-        "Wall extraction is best-effort; manual correction may be needed.",
-        "Furniture, fixtures, and details are not extracted.",
-      ],
-      timeEstimate: "5–10 minutes",
-      confidence: "Medium (Scale dependent)",
-      ctaLabel: "Upload Plan",
+      cta: "Upload Plan",
     },
-    onClickAction: "onImportFloorPlan",
+    action: "onImportFloorPlan",
   },
   {
     id: "json",
+    icon: FileUp,
     title: "Import Site Twin",
     status: "Working",
-    description: "Import a full site twin data file as a reviewable draft.",
-    output: "Draft Site Twin",
+    description: "Import a full site twin data file. Validates automatically before review.",
+    output: "Site Twin",
     review: "Required",
-    icon: FileUp,
-    tone: "slate",
+    accent: {
+      border: "border-l-slate-500",
+      iconBg: "bg-white/5",
+      iconColor: "text-slate-400",
+      badge: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
+      cta: "bg-white/5 border-white/10 hover:bg-white/8 text-slate-300",
+      ctaText: "Import Data",
+    },
     detail: {
-      bestFor: "Existing exports, shared site twins, and approved handoff files.",
-      description: "Import a valid site twin data file, validate it, then review the draft before it becomes active.",
-      outputDetail: "Validated Site Twin draft from data import.",
+      headline: "Import a validated site twin data file. Review the draft before it becomes the active workspace.",
       steps: [
-        "Select a Site Twin data file",
+        "Select a site twin data file",
         "File validation runs automatically",
-        "Open Site Twin Draft Review",
-        "Approve to activate the imported site twin",
+        "Open site twin draft review",
+        "Approve to activate",
         "Enter Studio and run review",
       ],
-      limitations: [
-        "Only valid site twin export files are accepted.",
-        "Older schema exports may require migration before import.",
-      ],
-      timeEstimate: "< 1 minute",
-      confidence: "High (validated draft)",
-      ctaLabel: "Import Site Twin Data",
+      cta: "Import Data",
     },
-    onClickAction: "onImportJson",
+    action: "onImportJson",
   },
   {
     id: "manual",
+    icon: Square,
     title: "Build Manually",
     status: "Working",
-    description: "Start with a blank canvas and build your site.",
+    description: "Start from a blank canvas. Draw walls, place cameras, define zones.",
     output: "Site Twin",
     review: "Optional",
-    icon: Square,
-    tone: "emerald",
+    accent: {
+      border: "border-l-emerald-500",
+      iconBg: "bg-emerald-500/10",
+      iconColor: "text-emerald-400",
+      badge: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
+      cta: "bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/18 text-emerald-300",
+      ctaText: "Open Manual Builder",
+    },
     detail: {
-      bestFor: "Starting from a blank canvas and drawing the site by hand.",
-      description: "Draw the site yourself, then approve the manual draft before opening it as the active site twin.",
-      outputDetail: "Site Twin draft from manual authoring.",
+      headline: "Draw the site yourself. No files needed — build the space and place every element by hand.",
       steps: [
         "Open the manual builder",
         "Draw walls to define the space",
@@ -208,29 +233,28 @@ const cards: SiteIntakeSourceCard[] = [
         "Add paths for replay analysis",
         "Run simulation to validate coverage",
       ],
-      limitations: [
-        "Fully manual — no automation or extraction.",
-        "Requires familiarity with the editor tools.",
-      ],
-      timeEstimate: "30+ minutes",
-      confidence: "High (Manual input)",
-      ctaLabel: "Open Manual Builder",
+      cta: "Open Manual Builder",
     },
-    onClickAction: "onBuildManually",
+    action: "onBuildManually",
   },
   {
     id: "camera_evidence",
+    icon: Video,
     title: "Verify from Footage",
     status: "Preview",
-    description: "Preview: static/reference-frame alignment only. No product-grade video/stream verification yet.",
+    description: "Compare virtual cameras against reference evidence. Static alignment only.",
     output: "Evidence",
     review: "Required",
-    icon: Video,
-    tone: "rose",
+    accent: {
+      border: "border-l-rose-500",
+      iconBg: "bg-rose-500/10",
+      iconColor: "text-rose-400",
+      badge: "border-violet-500/25 bg-violet-500/10 text-violet-300",
+      cta: "bg-rose-500/10 border-rose-500/30 hover:bg-rose-500/18 text-rose-300",
+      ctaText: "Verify Footage",
+    },
     detail: {
-      bestFor: "Future/live camera footage alignment and verification.",
-      description: "Compare virtual cameras against reference evidence before locking verified camera state.",
-      outputDetail: "Evidence review for the current site twin.",
+      headline: "Compare virtual cameras against reference evidence before locking verified camera state.",
       steps: [
         "Connect live stream or video file",
         "Map stream to virtual camera",
@@ -238,334 +262,341 @@ const cards: SiteIntakeSourceCard[] = [
         "Adjust FOV and obstruction zones",
         "Lock verified camera state",
       ],
-      limitations: [
-        "Currently limited to static occlusion mapping.",
-        "No product-grade video or stream verification yet.",
-        "Requires active ONVIF/RTSP feeds for live mode.",
-      ],
-      timeEstimate: "10–20 minutes",
-      confidence: "Verified (Real world)",
-      ctaLabel: "Verify Footage",
+      cta: "Verify Footage",
     },
-    onClickAction: "onVerifyFootage",
+    action: "onVerifyFootage",
   },
 ];
 
-const toneClasses: Record<SiteIntakeSourceCard["tone"], { border: string; glow: string; text: string; bg: string }> = {
-  sky: { border: "border-sky-500", glow: "shadow-[0_0_20px_rgba(14,165,233,0.15)]", text: "text-sky-400", bg: "bg-sky-500/10" },
-  violet: { border: "border-violet-500", glow: "shadow-[0_0_20px_rgba(139,92,246,0.15)]", text: "text-violet-400", bg: "bg-violet-500/10" },
-  amber: { border: "border-amber-500", glow: "shadow-[0_0_20px_rgba(245,158,11,0.15)]", text: "text-amber-400", bg: "bg-amber-500/10" },
-  slate: { border: "border-slate-500", glow: "shadow-[0_0_20px_rgba(100,116,139,0.15)]", text: "text-slate-400", bg: "bg-slate-500/10" },
-  emerald: { border: "border-emerald-500", glow: "shadow-[0_0_20px_rgba(16,185,129,0.15)]", text: "text-emerald-400", bg: "bg-emerald-500/10" },
-  rose: { border: "border-rose-500", glow: "shadow-[0_0_20px_rgba(244,63,94,0.15)]", text: "text-rose-400", bg: "bg-rose-500/10" },
+const riskColor: Record<string, string> = {
+  "Low Risk": "text-emerald-400",
+  "Medium Risk": "text-amber-400",
+  "High Risk": "text-rose-400",
+  "Baseline Required": "text-sky-400",
 };
 
+const riskDot: Record<string, string> = {
+  "Low Risk": "bg-emerald-400",
+  "Medium Risk": "bg-amber-400",
+  "High Risk": "bg-rose-400",
+  "Baseline Required": "bg-sky-400",
+};
+
+const NAV_ITEMS = [
+  { label: "Create Site Twin", icon: LayoutDashboard, active: true },
+  { label: "Workspaces", icon: FolderOpen, active: false },
+  { label: "Projects", icon: Puzzle, active: false },
+  { label: "Reports", icon: BarChart3, active: false },
+  { label: "Issues & Actions", icon: AlertTriangle, active: false },
+  { label: "Evidence", icon: Film, active: false },
+  { label: "Integrations", icon: Puzzle, active: false },
+  { label: "Settings", icon: Settings, active: false },
+];
+
 export function SiteIntakeHub(props: SiteIntakeHubProps) {
-  const [selectedSourceId, setSelectedSourceId] = useState<SiteIntakeSource>("scan");
-  
-  const selected = cards.find(c => c.id === selectedSourceId) || cards[0];
-  const tClasses = toneClasses[selected.tone];
+  const [selectedId, setSelectedId] = useState<SiteIntakeSource>("scan");
+  const selected = SOURCES.find((s) => s.id === selectedId) ?? SOURCES[0];
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#08101a] text-slate-200">
-      <aside className="flex w-[248px] flex-none flex-col justify-between border-r border-white/8 bg-[#07111b] px-3 py-4">
-        <div>
-          <div className="flex items-center gap-2 px-2 py-1 text-[17px] font-medium tracking-tight text-white">
-            <ShieldCheck className="h-6 w-6 text-sky-400" />
-            <span>SentinelTwin</span>
+    <div className="flex h-screen w-full overflow-hidden bg-[#08101a] text-white">
+      {/* ── Left nav ───────────────────────────────────────────────────── */}
+      <aside className="flex w-[220px] flex-none flex-col border-r border-[#1a2030] bg-[#060e17]">
+        {/* Logo */}
+        <div className="flex items-center gap-2.5 border-b border-[#1a2030] px-5 py-4">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15 ring-1 ring-emerald-500/25">
+            <ShieldCheck className="h-4 w-4 text-emerald-400" />
           </div>
+          <span className="text-[14px] font-semibold tracking-tight text-white">SentinelTwin</span>
+        </div>
 
-          <nav className="mt-7 space-y-2">
-            {[
-              { label: "Create Site Twin", icon: LayoutDashboard, active: true },
-              { label: "Studio", icon: Blocks, active: false },
-            ].map((item) => {
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto px-3 py-3">
+          <div className="space-y-0.5">
+            {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.label}
                   type="button"
-                  onClick={item.label === "Studio" ? props.onEnterStudio : undefined}
                   disabled={item.active}
+                  onClick={item.label === "Workspaces" ? props.onEnterStudio : undefined}
                   className={[
-                    "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] transition-colors",
-                    item.active ? "bg-sky-500/12 text-sky-400 ring-1 ring-sky-500/20" : "text-slate-300 hover:bg-white/4 hover:text-white",
+                    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] transition-colors",
+                    item.active
+                      ? "bg-sky-500/10 text-sky-300 ring-1 ring-sky-500/20"
+                      : "text-[#6b7a99] hover:bg-white/4 hover:text-[#c7d0e4]",
                   ].join(" ")}
                 >
-                  <Icon className="h-[18px] w-[18px] flex-none" />
-                  <span>{item.label}</span>
+                  <Icon className="h-4 w-4 flex-none" />
+                  {item.label}
                 </button>
               );
             })}
-          </nav>
-        </div>
+          </div>
+        </nav>
 
-        <div className="space-y-4">
-          <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
-            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/82">Reference Baseline</div>
-            <div className="overflow-hidden rounded-lg border border-white/6 bg-[radial-gradient(ellipse_at_top,rgba(14,165,233,0.25),transparent_50%),linear-gradient(180deg,#0b192e,#09101d)]">
-              <div className="flex h-[82px] items-center justify-center">
-                <span className="rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-sky-200">Reference</span>
-              </div>
+        {/* Reference demo */}
+        <div className="border-t border-[#1a2030] p-3">
+          <div className="rounded-xl border border-[#1a2030] bg-[#0b1420] p-3">
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#4a5568]">
+              Reference Scenes
             </div>
-            <div className="mt-3 text-[15px] font-medium text-white">Retail Store Reference</div>
-            <p className="mt-1 max-w-[170px] text-[13px] leading-5 text-slate-300">Explore a complete site twin example</p>
+            <div className="text-[12px] font-medium text-white">Reference Demo</div>
+            <p className="mt-0.5 text-[11px] leading-4 text-[#5a6882]">
+              Small retail shop example
+            </p>
             <button
               type="button"
               onClick={props.onOpenDemo}
-              className="mt-3 flex h-10 w-full items-center justify-center rounded-xl border border-sky-500/40 bg-sky-500/10 text-[15px] text-sky-300 transition-colors hover:bg-sky-500/16"
+              className="mt-2.5 flex h-7 w-full items-center justify-center gap-1 rounded-lg border border-sky-500/20 bg-sky-500/8 text-[11px] text-sky-400 hover:bg-sky-500/14"
             >
-              Open Reference
+              Open demo
+              <ArrowRight className="h-3 w-3" />
             </button>
-          </div>
-
-          <div className="flex items-center gap-3 rounded-xl px-2 py-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500/15 text-sm font-medium text-sky-300">
-              ST
-            </div>
-            <div>
-              <div className="text-[14px] text-white">SentinelTwin</div>
-              <div className="text-[12px] text-slate-400">Security Simulation</div>
-            </div>
           </div>
         </div>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(37,78,140,0.14),_transparent_32%),linear-gradient(180deg,#08101a_0%,#071019_100%)]">
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto px-5 pb-5 pt-7 lg:px-7">
-          <div className="flex items-start justify-between gap-4">
-            <div className="max-w-[720px]">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/12 text-sky-400 ring-1 ring-sky-500/20">
-                  <LayoutDashboard className="h-6 w-6" />
-                </div>
-                <h1 className="text-[50px] font-semibold tracking-[-0.04em] text-white">Create Site Twin</h1>
-              </div>
-              <p className="mt-4 text-[19px] leading-7 text-slate-300">
-                Turn a physical site into a trusted, editable site twin.
-              </p>
-              <p className="text-[19px] leading-7 text-slate-300">Choose the source that best matches what you already have.</p>
-            </div>
-
-            <div className="mt-1 flex h-12 items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-4 text-[15px] text-slate-300">
-              <CircleHelp className="h-4 w-4" />
-              <span>Review model and source limits</span>
-            </div>
+      {/* ── Main ────────────────────────────────────────────────────────── */}
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6 py-6">
+          {/* Page header */}
+          <div className="mb-5">
+            <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-white">Create Site Twin</h1>
+            <p className="mt-1 text-[14px] text-[#7a8baa]">
+              Turn a physical site into a trusted, editable security model. Choose how you want to start.
+            </p>
           </div>
 
-          <div className="mt-10 grid min-h-0 flex-1 gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
-            <section className="min-w-0">
-              <div className="grid gap-4 md:grid-cols-2">
-                {cards.map((card) => {
-                  const isSelected = selectedSourceId === card.id;
-                  const Icon = card.icon;
-                  return (
-                    <button
-                      key={card.id}
-                      type="button"
-                      onClick={() => setSelectedSourceId(card.id)}
-                      className={[
-                        "relative overflow-hidden rounded-3xl border p-5 text-left transition-all duration-200",
-                        isSelected
-                          ? `${toneClasses[card.tone].border} ${toneClasses[card.tone].bg} ${toneClasses[card.tone].glow}`
-                          : "border-white/10 bg-white/[0.015] hover:border-white/16 hover:bg-white/[0.03]",
-                      ].join(" ")}
-                    >
-                      {isSelected ? (
-                        <div className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-sky-500 text-white">
-                          <CheckCircle2 className="h-5 w-5" />
-                        </div>
-                      ) : null}
-                      <div className="flex items-start gap-4">
-                        <div className={[
-                          "flex h-[56px] w-[56px] flex-none items-center justify-center rounded-xl ring-1",
-                          isSelected ? toneClasses[card.tone].bg : "bg-white/[0.05] ring-white/6",
-                        ].join(" ")}>
-                          <Icon className={`h-7 w-7 ${isSelected ? toneClasses[card.tone].text : "text-slate-400"}`} />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-[22px] font-medium tracking-[-0.02em] text-white">{card.title}</div>
-                          <span className={[
-                            "mt-2 inline-flex rounded-lg border px-2.5 py-1 text-[12px] font-medium uppercase tracking-[0.14em]",
-                            card.status === "Working" ? "border-emerald-500/20 bg-emerald-500/12 text-emerald-300" : "border-violet-500/20 bg-violet-500/12 text-violet-300",
-                          ].join(" ")}>
-                            {card.status}
-                          </span>
-                          <p className="mt-4 max-w-[260px] text-[16px] leading-6 text-slate-300">{card.description}</p>
-                        </div>
+          {/* ── Grid + detail panel ──────────────────────────────────────── */}
+          <div className="flex min-h-0 flex-1 gap-5">
+            {/* Card grid */}
+            <div className="grid min-w-0 flex-1 auto-rows-min grid-cols-2 gap-3 content-start">
+              {SOURCES.map((card) => {
+                const isSelected = card.id === selectedId;
+                const Icon = card.icon;
+                return (
+                  <button
+                    key={card.id}
+                    type="button"
+                    onClick={() => setSelectedId(card.id)}
+                    className={[
+                      "relative flex flex-col rounded-xl border-l-2 border border-[#1a2030] bg-[#0b1420] p-4 text-left transition-all",
+                      card.accent.border,
+                      isSelected
+                        ? "border-[#232d40] bg-[#0d1828] ring-1 ring-white/8"
+                        : "hover:border-[#232d40] hover:bg-[#0d1828]",
+                    ].join(" ")}
+                  >
+                    {isSelected && (
+                      <div className="absolute right-3 top-3 text-sky-400">
+                        <CheckCircle2 className="h-4 w-4" />
                       </div>
-                      <div className="mt-7 border-t border-white/8 pt-4 text-[14px] text-slate-400">
-                        <div className="flex items-center justify-between gap-3">
-                          <span>
-                            <span className="text-slate-300">Output:</span> {card.output}
-                          </span>
-                          <span>
-                            <span className="text-slate-300">Review:</span> {card.review}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
+                    )}
 
-            <aside className="min-w-0 rounded-[28px] border border-white/8 bg-white/[0.02] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
-              <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-9 w-9 flex-none items-center justify-center rounded-lg ${card.accent.iconBg}`}>
+                        <Icon className={`h-4 w-4 ${card.accent.iconColor}`} />
+                      </div>
+                      <div className="min-w-0 flex-1 pr-5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[14px] font-medium text-white">{card.title}</span>
+                          {card.recommended && (
+                            <span className="rounded-md border border-sky-500/20 bg-sky-500/8 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-sky-300">
+                              Recommended
+                            </span>
+                          )}
+                        </div>
+                        <span className={[
+                          "mt-1 inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em]",
+                          card.status === "Working"
+                            ? card.accent.badge
+                            : "border-violet-500/20 bg-violet-500/8 text-violet-300",
+                        ].join(" ")}>
+                          {card.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="mt-3 text-[13px] leading-5 text-[#7a8baa]">{card.description}</p>
+
+                    <div className="mt-3 flex items-center gap-3 border-t border-[#1a2030] pt-3 text-[11px] text-[#4a5568]">
+                      <span>Output: <span className="text-[#7a8baa]">{card.output}</span></span>
+                      <span className="text-[#2a3040]">·</span>
+                      <span>Review: <span className="text-[#7a8baa]">{card.review}</span></span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Detail panel */}
+            <aside className="w-[340px] flex-none">
+              <div className="sticky top-0 rounded-2xl border border-[#1a2030] bg-[#0b1420] p-5">
                 <div className="flex items-start gap-3">
-                  <div className={[
-                    "flex h-12 w-12 items-center justify-center rounded-xl ring-1",
-                    tClasses.bg,
-                  ].join(" ")}>
-                    <selected.icon className={`h-6 w-6 ${tClasses.text}`} />
+                  <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl ${selected.accent.iconBg}`}>
+                    <selected.icon className={`h-5 w-5 ${selected.accent.iconColor}`} />
                   </div>
                   <div>
-                    <h2 className="text-[30px] font-medium tracking-[-0.03em] text-white">{selected.title}</h2>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[16px] text-emerald-300">
-                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                      <span>Draft-gated · {selected.status}</span>
+                    <div className="text-[16px] font-semibold text-white">{selected.title}</div>
+                    <div className="mt-1 flex items-center gap-2 text-[12px] text-[#5a6882]">
+                      <span className="inline-flex items-center gap-1">
+                        <span className={[
+                          "rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em]",
+                          selected.status === "Working"
+                            ? selected.accent.badge
+                            : "border-violet-500/20 bg-violet-500/8 text-violet-300",
+                        ].join(" ")}>
+                          {selected.status}
+                        </span>
+                      </span>
+                      {selected.recommended && (
+                        <span className="text-sky-400">· Recommended</span>
+                      )}
                     </div>
                   </div>
                 </div>
-                {selected.recommended ? (
-                  <span className="rounded-xl border border-sky-500/20 bg-sky-500/8 px-4 py-2 text-[15px] text-sky-300">Recommended</span>
-                ) : null}
-              </div>
 
-              <p className="mt-6 max-w-[560px] text-[17px] leading-7 text-slate-300">
-                {selected.detail.description}
-              </p>
+                <p className="mt-4 text-[13px] leading-5 text-[#8ca3c8]">
+                  {selected.detail.headline}
+                </p>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/8 bg-[#0c1420] p-4">
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8ca3c8]">Best for</div>
-                  <div className="mt-2 text-[15px] leading-6 text-slate-200">{selected.detail.bestFor}</div>
-                </div>
-                <div className="rounded-2xl border border-white/8 bg-[#0c1420] p-4">
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8ca3c8]">Output</div>
-                  <div className="mt-2 text-[15px] leading-6 text-slate-200">{selected.detail.outputDetail}</div>
-                </div>
-                <div className="rounded-2xl border border-white/8 bg-[#0c1420] p-4">
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8ca3c8]">Review level</div>
-                  <div className="mt-2 text-[15px] leading-6 text-slate-200">{selected.review}</div>
-                </div>
-                <div className="rounded-2xl border border-white/8 bg-[#0c1420] p-4">
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8ca3c8]">Average time</div>
-                  <div className="mt-2 text-[15px] leading-6 text-slate-200">{selected.detail.timeEstimate}</div>
-                </div>
-              </div>
-
-              <div className="grid gap-5 py-6">
-                <div>
-                  <div className="mb-4 text-[17px] font-medium text-white">What you&apos;ll do</div>
-                  <ol className="space-y-3">
-                    {selected.detail.steps.map((step, index) => (
-                      <li key={step} className="flex items-start gap-4 text-[15px] text-slate-300">
-                        <span className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full bg-sky-500 text-[14px] font-medium text-white">
-                          {index + 1}
+                <div className="mt-5">
+                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.13em] text-[#4a5568]">
+                    What you&apos;ll do
+                  </div>
+                  <ol className="space-y-2">
+                    {selected.detail.steps.map((step, i) => (
+                      <li key={step} className="flex items-start gap-3 text-[13px] text-[#8ca3c8]">
+                        <span className="mt-px flex h-5 w-5 flex-none items-center justify-center rounded-full bg-sky-500/10 text-[11px] font-semibold text-sky-400 ring-1 ring-sky-500/20">
+                          {i + 1}
                         </span>
-                        <span className="leading-6">{step}</span>
+                        <span className="leading-5">{step}</span>
                       </li>
                     ))}
                   </ol>
                 </div>
 
-                <div className="rounded-2xl border border-white/8 bg-[#0c1420] p-4">
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8ca3c8]">Before you start</div>
-                  <div className="mt-3 grid gap-4 text-[14px] text-slate-300 sm:grid-cols-2">
-                    <div>
-                      <div className="text-white">Confidence</div>
-                      <div className="mt-1 leading-6">{selected.detail.confidence}</div>
+                {/* Honest-maturity limitations. Required by the truth-audit
+                    manifest and surfaced so buyers see what the path can and
+                    cannot do before they commit to it. Per `motto_v3 §0.11`. */}
+                {selected.detail.limitations && selected.detail.limitations.length > 0 ? (
+                  <div className="mt-5">
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-amber-500/80">
+                      Maturity &amp; limits
                     </div>
-                    <div>
-                      <div className="text-white">Limitations</div>
-                      <div className="mt-1 leading-6 text-slate-300">{selected.detail.limitations[0]}</div>
-                    </div>
+                    <ul className="space-y-1.5">
+                      {selected.detail.limitations.map((limitation) => (
+                        <li key={limitation} className="flex items-start gap-2 text-[12px] leading-5 text-[#7a8aa8]">
+                          <span className="mt-1.5 h-1 w-1 flex-none rounded-full bg-amber-500/60" />
+                          <span>{limitation}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                </div>
-              </div>
+                ) : null}
 
-              <button
-                type="button"
-                onClick={() => {
-                  const action = props[selected.onClickAction] as (() => void) | undefined;
-                  if (action) action();
-                }}
-                className={`mt-2 flex h-14 w-full items-center justify-center gap-3 rounded-2xl border text-[18px] font-medium text-white transition-transform hover:scale-[1.01] active:scale-[0.99] ${tClasses.bg} ${tClasses.border}`}
-              >
-                <span>{selected.detail.ctaLabel}</span>
-                <ArrowRight className="h-5 w-5" />
-              </button>
-              {selected.id === "json" ? (
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <a
-                    href={SAMPLE_SECURITY_SCENE_IMPORT_URL}
-                    download="sample-security-scene-import.json"
-                    className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-center text-[14px] text-slate-200 transition-colors hover:bg-white/[0.06]"
-                  >
-                    <FileUp className="h-4 w-4 flex-none" />
-                    <span>Sample JSON</span>
-                  </a>
-                  <a
-                    href={JEWELRY_STORE_SITE_TWIN_IMPORT_URL}
-                    download="jewelry-store-site-twin.json"
-                    className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-center text-[14px] text-slate-200 transition-colors hover:bg-white/[0.06]"
-                  >
-                    <FileUp className="h-4 w-4 flex-none" />
-                    <span>Jewelry sample</span>
-                  </a>
-                </div>
-              ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const action = props[selected.action] as (() => void) | undefined;
+                    if (action) action();
+                  }}
+                  className={[
+                    "mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-xl border text-[14px] font-medium transition-colors",
+                    selected.accent.cta,
+                  ].join(" ")}
+                >
+                  {selected.detail.cta}
+                  <ArrowRight className="h-4 w-4" />
+                </button>
 
-              <div className="mt-3 flex items-center gap-2 text-[14px] text-slate-400">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 text-[11px] text-slate-500">🛡</span>
-                <span>Local-only mode is available. Cloud-backed AI actions are explicitly labeled before use.</span>
+                {selected.id === "json" && (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <a
+                      href={SAMPLE_SECURITY_SCENE_IMPORT_URL}
+                      download="sample-security-scene-import.json"
+                      className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#1a2030] bg-white/[0.02] text-[12px] text-[#7a8baa] transition-colors hover:bg-white/[0.04] hover:text-white"
+                    >
+                      <FileUp className="h-3.5 w-3.5" />
+                      Sample JSON
+                    </a>
+                    <a
+                      href={JEWELRY_STORE_SITE_TWIN_IMPORT_URL}
+                      download="jewelry-store-site-twin.json"
+                      className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#1a2030] bg-white/[0.02] text-[12px] text-[#7a8baa] transition-colors hover:bg-white/[0.04] hover:text-white"
+                    >
+                      <FileUp className="h-3.5 w-3.5" />
+                      Jewelry sample
+                    </a>
+                  </div>
+                )}
+
+                <p className="mt-4 text-[11px] leading-4 text-[#3a4560]">
+                  Local-only mode is available. Cloud-backed AI actions are explicitly labeled before use.
+                </p>
               </div>
             </aside>
           </div>
 
-          <section className="mt-6 rounded-[24px] border border-white/8 bg-white/[0.02] p-5">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <div className="text-[18px] font-medium text-white">Recent Site Twins</div>
-              <button type="button" onClick={props.onEnterStudio} className="text-[15px] text-sky-400 hover:text-sky-300">Open Studio Library</button>
-            </div>
-            <div className="flex gap-4 overflow-x-auto pb-1">
-              {props.recentSites.slice(0, 3).map((site) => (
+          {/* ── Recent site twins ──────────────────────────────────────────── */}
+          {props.recentSites.length > 0 && (
+            <div className="mt-6">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#4a5568]">
+                  Recent Site Twins
+                </div>
                 <button
-                  key={site.id}
                   type="button"
-                  onClick={() => props.onOpenRecentSite?.(site.id) ?? props.onEnterStudio()}
-                  className="flex w-[285px] flex-none items-center gap-4 rounded-2xl border border-white/8 bg-[#0e1520] p-3 text-left transition-colors hover:border-white/16 hover:bg-[#111926]"
+                  onClick={props.onEnterStudio}
+                  className="text-[12px] text-sky-400 hover:text-sky-300"
                 >
-                  <div
-                    className="h-[76px] w-[108px] flex-none rounded-xl bg-gradient-to-br from-sky-500/15 to-slate-700/20 flex items-center justify-center"
+                  View all →
+                </button>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {props.recentSites.slice(0, 4).map((site) => (
+                  <button
+                    key={site.id}
+                    type="button"
+                    onClick={() =>
+                      props.onOpenRecentSite
+                        ? props.onOpenRecentSite(site.id)
+                        : props.onEnterStudio()
+                    }
+                    className="group flex w-[240px] flex-none items-center gap-3 rounded-xl border border-[#1a2030] bg-[#0b1420] p-3 text-left transition-all hover:border-[#232d40] hover:bg-[#0d1828]"
                   >
-                    <div className="rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-slate-300">Site</div>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate text-[15px] font-medium text-white">{site.name}</div>
-                    <div className="mt-1 text-[14px] text-slate-400">{site.updatedLabel}</div>
-                    <div className={`mt-2 text-[14px] ${site.riskLabel === "Low Risk" ? "text-emerald-300" : site.riskLabel === "Medium Risk" ? "text-amber-300" : site.riskLabel === "Baseline Required" ? "text-sky-300" : "text-rose-300"}`}>
-                      ● {site.riskLabel}
+                    <div className="flex h-[60px] w-[90px] flex-none items-center justify-center rounded-lg bg-gradient-to-br from-sky-500/10 to-slate-700/10 ring-1 ring-white/5">
+                      <ShieldCheck className="h-5 w-5 text-[#2a3a50]" />
                     </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-[13px] font-medium text-white">{site.name}</div>
+                      <div className="mt-0.5 text-[11px] text-[#4a5568]">{site.updatedLabel}</div>
+                      <div className={`mt-1.5 flex items-center gap-1.5 text-[11px] font-medium ${riskColor[site.riskLabel]}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${riskDot[site.riskLabel]}`} />
+                        {site.riskLabel}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+
+                {/* Quick import slot */}
+                <button
+                  type="button"
+                  onClick={props.onImportJson}
+                  className="flex w-[240px] flex-none items-center gap-3 rounded-xl border border-dashed border-[#1a2030] bg-transparent p-3 text-left transition-all hover:border-sky-500/20 hover:bg-sky-500/4"
+                >
+                  <div className="flex h-[60px] w-[90px] flex-none items-center justify-center rounded-lg border border-dashed border-[#1a2030]">
+                    <FileUp className="h-5 w-5 text-[#2a3a50]" />
+                  </div>
+                  <div>
+                    <div className="text-[13px] font-medium text-[#7a8baa]">Quick Import</div>
+                    <div className="mt-0.5 text-[11px] text-[#4a5568]">Import site twin JSON</div>
                   </div>
                 </button>
-              ))}
-              <button
-                type="button"
-                onClick={props.onImportJson}
-                className="flex w-[285px] flex-none items-center gap-4 rounded-2xl border border-dashed border-white/12 bg-transparent p-3 text-left transition-colors hover:border-sky-400/35 hover:bg-sky-500/6"
-              >
-                <div className="flex h-[76px] w-[108px] items-center justify-center rounded-xl border border-white/10 bg-white/[0.02] text-white">
-                  <FileUp className="h-8 w-8" />
-                </div>
-                <div>
-                  <div className="text-[15px] font-medium text-white">Quick Import</div>
-                  <div className="mt-1 text-[14px] text-slate-400">Import Site Twin JSON</div>
-                </div>
-              </button>
+              </div>
             </div>
-          </section>
+          )}
         </div>
       </main>
     </div>

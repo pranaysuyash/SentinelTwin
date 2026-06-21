@@ -8,6 +8,11 @@ import { Badge } from "@/components/shared/Badge";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import type { BlindRegionResult, SecurityIssue } from "@/schema/security-scene";
 import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-outcome-selectors";
+// Loop Pass L2 — `issueFingerprint` is the canonical identity for matching
+// issues across recomputes; `recentIssueChangeKeys` carries the most-recent
+// diff so changed findings can float to the top with a "changed by last edit"
+// tag. See `@/lib/contextual-tabs` and `Docs/review/UI_REVIEW_2026-06-19.md`.
+import { issueFingerprint } from "@/lib/contextual-tabs";
 
 function SeverityBadge({ severity }: { severity: SecurityIssue["severity"] }) {
   const map: Record<SecurityIssue["severity"], { variant: "red" | "amber" | "blue" | "gray"; label: string }> = {
@@ -54,6 +59,11 @@ export function IssuesTab() {
   const updateNode = useStudioStore((s) => s.updateNode);
   const runSimulation = useStudioStore((s) => s.runSimulation);
   const selectNode = useStudioStore((s) => s.selectNode);
+  // Loop Pass L2 — fingerprints of issues that changed in the most recent
+  // recompute. Drives the float-to-top + "changed by last edit" tag so the
+  // operator sees the causal consequence of their last edit immediately.
+  const recentIssueChangeKeys = useStudioStore((s) => s.recentIssueChangeKeys);
+  const recentChangeSet = new Set(recentIssueChangeKeys);
   const outcome = selectSecurityOutcomeFromStore({ scene, simulationResult: result, activePathId });
   const [previewStateByRecKey, setPreviewStateByRecKey] = useState<Record<string, Record<string, unknown>>>({});
 
@@ -109,6 +119,20 @@ export function IssuesTab() {
   const blindRegions = result.blindRegions ?? [];
   const criticalBlindRegions = blindRegions.filter((r) => r.severity === "critical" || r.severity === "high");
 
+  // Loop Pass L2 — stable-sort issues so findings whose fingerprint appears in
+  // `recentIssueChangeKeys` (i.e. appeared or disappeared in the most recent
+  // recompute) float to the top. Preserves engine order within each partition
+  // (changed vs unchanged) so the diff is non-disruptive when nothing changed.
+  // Per `motto_v3 §0.2`: only reorders when there's actual signal, never when
+  // `recentIssueChangeKeys` is empty (no edit-driven churn).
+  const sortedIssues = recentChangeSet.size > 0
+    ? [...result.issues].sort((a, b) => {
+        const aChanged = recentChangeSet.has(issueFingerprint(a)) ? 0 : 1;
+        const bChanged = recentChangeSet.has(issueFingerprint(b)) ? 0 : 1;
+        return aChanged - bChanged;
+      })
+    : result.issues;
+
   if (!hasIssues && blindRegions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-2">
@@ -129,13 +153,29 @@ export function IssuesTab() {
           Outcome status: {outcome.summary.status.replace(/_/g, " ")}
           {outcome.summary.primaryRisk ? ` · Primary risk: ${outcome.summary.primaryRisk}` : ""}
         </div>
-        {result.issues.map((issue) => (
-          <div key={`${issue.category}-${issue.description}`} className="flex gap-2.5 p-2.5 bg-[#0d0f17] border border-[#1e2130] rounded-lg hover:border-[#2a3045] transition-colors group">
+        {sortedIssues.map((issue) => {
+          const isRecentlyChanged = recentChangeSet.has(issueFingerprint(issue));
+          return (
+          <div
+            key={`${issue.category}-${issue.description}`}
+            className={
+              "flex gap-2.5 p-2.5 bg-[#0d0f17] border rounded-lg hover:border-[#2a3045] transition-colors group " +
+              (isRecentlyChanged ? "border-amber-500/40 shadow-[0_0_0_1px_rgba(251,191,36,0.15)]" : "border-[#1e2130]")
+            }
+          >
             <SeverityIcon severity={issue.severity} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-[11px] font-semibold text-[#c0c8da] leading-tight">{issue.description}</span>
                 <SeverityBadge severity={issue.severity} />
+                {isRecentlyChanged ? (
+                  <span
+                    title="This finding appeared, disappeared, or changed in the most recent simulation recompute"
+                    className="ml-auto inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-amber-200"
+                  >
+                    Changed by last edit
+                  </span>
+                ) : null}
               </div>
               <div className="text-[9px] text-[#68738a] capitalize">{issue.category.replace(/_/g, " ")}</div>
               {issue.affectedZones.length > 0 && (
@@ -162,7 +202,8 @@ export function IssuesTab() {
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {privacyIssues.length > 0 && (
           <div className="mt-3">

@@ -1,4 +1,4 @@
-import { rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import type { SecurityScene } from "@/schema/security-scene";
 import type { DirectorsCutSequence } from "@/lib/directors-cut";
 
@@ -17,10 +17,10 @@ type CellStyle = {
 };
 
 type PdfWriterFonts = {
-  regular: any;
-  medium: any;
-  bold: any;
-  mono: any;
+  regular: PDFFont;
+  medium: PDFFont;
+  bold: PDFFont;
+  mono: PDFFont;
 };
 
 type PdfWriterColors = {
@@ -606,17 +606,16 @@ class PdfWriter {
 }
 
 async function createWriter(title: string, subtitle?: string) {
-  const pdfLib = await import("pdf-lib");
-  const pdfDoc = await pdfLib.PDFDocument.create();
+  const pdfDoc = await PDFDocument.create();
   const [regular, medium, bold, mono] = await Promise.all([
-    pdfDoc.embedFont(pdfLib.StandardFonts.Helvetica),
-    pdfDoc.embedFont(pdfLib.StandardFonts.Helvetica),
-    pdfDoc.embedFont(pdfLib.StandardFonts.HelveticaBold),
-    pdfDoc.embedFont(pdfLib.StandardFonts.Courier),
+    pdfDoc.embedFont(StandardFonts.Helvetica),
+    pdfDoc.embedFont(StandardFonts.Helvetica),
+    pdfDoc.embedFont(StandardFonts.HelveticaBold),
+    pdfDoc.embedFont(StandardFonts.Courier),
   ]);
   const colors = createColors();
   const writer = new PdfWriter(pdfDoc, { regular, medium, bold, mono }, { title, subtitle, colors });
-  return { pdfLib, writer };
+  return { writer };
 }
 
 function downloadBlob(blob: Blob, filename: string) {

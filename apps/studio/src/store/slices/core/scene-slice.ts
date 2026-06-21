@@ -67,6 +67,26 @@ function persistFixSandboxState(active: boolean, baseline: any, draft: any) {
   } catch {}
 }
 import type { BottomTab, RightPanelMode, ViewMode, WorkspacePreset, LayerId } from "./layout-slice";
+// Canonical contextual-tab helpers (single source of truth — see
+// `@/lib/contextual-tabs`). These were previously duplicated locally with a
+// divergent `ANALYSIS_TAB_ORDER` that omitted outcome/help/budgeting/scenario
+// and an orphaned `viewModeToBottomTab` (defined but never called here);
+// consolidated to remove the parallel-truth defect per motto_v3 §11.
+//
+// Note: `computeForegroundTabs` is intentionally NOT imported here.
+// `buildContextualSelectionPatch` already auto-moves `bottomTab` to the
+// contextual tab on selection, which means the contextual tab is always the
+// active tab — and the active tab is always foregrounded by the rendering
+// layer. So selection-driven attention would be a no-op (or specious when the
+// contextual tab is disabled). The `pendingTabAttention` plumbing (field +
+// setter + clear-on-open + BottomPanel reader) ships in this pass so that
+// Loop Pass L2 (issue/event-driven attention) can populate it from
+// simulation-result listeners without further store changes. See
+// `Docs/review/UI_REVIEW_2026-06-19.md` and the acceptance report.
+import {
+  contextualBottomTabForNode,
+  getFirstEnabledAnalysisTab,
+} from "@/lib/contextual-tabs";
 
 // ---------------------------------------------------------------------------
 // Types lifted from the main store (cannot import directly from studio-store.ts)
@@ -125,23 +145,9 @@ const DEFAULT_MAP_STATE: MapState = {
 const OPERATIONAL_EVIDENCE_STORAGE_KEY = "sentineltwin_operational_evidence_v1";
 const WORKSPACE_GOVERNANCE_STORAGE_KEY = "sentineltwin_workspace_governance_v1";
 
-const ANALYSIS_TAB_ORDER: BottomTab[] = [
-  "metrics",
-  "issues",
-  "sensors",
-  "timeline",
-  "temporal",
-  "beforeafter",
-  "assumptions",
-  "governance",
-  "provenance",
-  "redundancy",
-  "counterfactual",
-  "threat",
-  "report",
-  "debug",
-  "novel",
-];
+// `ANALYSIS_TAB_ORDER` consolidated into `@/lib/contextual-tabs`. The local
+// copy (which had diverged from layout-slice's and governance-slice's copies —
+// this one omitted outcome/help/budgeting/scenario) is removed.
 
 // ---------------------------------------------------------------------------
 // Collection key sets
@@ -621,18 +627,8 @@ function contextualRightPanelModeForNode(scene: SecurityScene, id: string | null
   return "inspector";
 }
 
-function contextualBottomTabForNode(scene: SecurityScene, id: string | null): BottomTab | null {
-  const nodeType = resolveSelectedNodeType(scene, id);
-  if (nodeType === "camera") return "metrics";
-  if (nodeType === "path") return "timeline";
-  if (nodeType === "sensor") return "sensors";
-  if (nodeType === "security_light") return "metrics";
-  if (nodeType === "obstruction") return "issues";
-  if (nodeType === "critical_zone" || nodeType === "privacy_zone") return "issues";
-  if (nodeType === "door" || nodeType === "window" || nodeType === "entry_point") return "threat";
-  if (nodeType === "wall") return "assumptions";
-  return null;
-}
+// `contextualBottomTabForNode` is imported from `@/lib/contextual-tabs`
+// (canonical copy). The local duplicate is removed.
 
 function contextualToolForNode(scene: SecurityScene, id: string | null): ActiveTool | null {
   const nodeType = resolveSelectedNodeType(scene, id);
@@ -678,10 +674,8 @@ function resolveSelectedNodeType(scene: SecurityScene, id: string | null) {
   return null;
 }
 
-function getFirstEnabledAnalysisTab(enabledAnalysisModules: Record<BottomTab, boolean>, preferred?: BottomTab | null): BottomTab {
-  if (preferred && enabledAnalysisModules[preferred]) return preferred;
-  return ANALYSIS_TAB_ORDER.find((tab) => enabledAnalysisModules[tab]) ?? "metrics";
-}
+// `getFirstEnabledAnalysisTab` is imported from `@/lib/contextual-tabs`
+// (canonical copy). The local duplicate is removed.
 
 function buildContextualSelectionPatch(
   state: Record<string, unknown>,
@@ -695,6 +689,10 @@ function buildContextualSelectionPatch(
   const contextualRightPanelMode = contextualRightPanelModeForNode(scene, nextPrimary);
   const hasSelection = Boolean(nextPrimary);
   const isCameraSelection = hasSelection && scene.cameras.some((camera) => camera.id === nextPrimary);
+  // High-value nodes are objects users actively configure: cameras, paths, zones, sensors.
+  // Structural nodes (walls, obstructions) are placed-and-forgotten — selecting them shouldn't
+  // force-open panels and disrupt the editing flow.
+  const isHighValueSelection = hasSelection && contextualRightPanelMode !== "inspector";
   const stateSelectedCameraId = state.selectedCameraId as string | null;
   const stateDockAttention = state.dockAttention as Record<string, boolean>;
   const stateRightDockCollapsed = state.rightDockCollapsed as boolean;
@@ -709,10 +707,18 @@ function buildContextualSelectionPatch(
     selectedNodeIds: selectedIds,
     selectedNodeId: nextPrimary,
     selectedCameraId: isCameraSelection ? nextPrimary : stateSelectedCameraId,
-    // Right panel: open on selection, collapse on deselect (Adobe-style contextual inspector)
-    rightDockCollapsed: hasSelection ? false : true,
-    // Bottom drawer: open on selection, but preserve user's open state on deselect (scene-level metrics persist)
-    bottomDockCollapsed: hasSelection ? false : stateBottomDockCollapsed,
+    // Right panel: open for high-value nodes (cameras, paths, zones, sensors, access points).
+    // Structural nodes (walls, obstructions) just get selected without forcing the panel open —
+    // collapse on deselect so the canvas stays clean when nothing is selected.
+    rightDockCollapsed: isHighValueSelection ? false : (hasSelection ? stateRightDockCollapsed : true),
+    // Bottom drawer: same high-value rule as the right panel. Structural nodes
+    // are placed-and-forgotten and shouldn't yank the analysis drawer open; but
+    // selecting a camera/path/zone/sensor is an active configuration moment and
+    // the operator expects the contextual analysis surface. (Prior working-tree
+    // edit had this unconditionally preserving state, which broke the
+    // high-value-selection contract — selecting a camera no longer opened the
+    // dock. Mirroring rightDockCollapsed's logic restores the intent.)
+    bottomDockCollapsed: isHighValueSelection ? false : (hasSelection ? stateBottomDockCollapsed : true),
     rightPanelMode: hasSelection ? contextualRightPanelMode : stateRightPanelMode,
     inspectorTab: contextualInspectorTab ?? stateInspectorTab,
     bottomTab: hasSelection
@@ -740,22 +746,10 @@ function findNodeInScene(scene: SecurityScene, id: string): AnyNode | null {
   return null;
 }
 
-function viewModeToBottomTab(mode: ViewMode): BottomTab {
-  switch (mode) {
-    case "map":
-      return "metrics";
-    case "replay":
-    case "camera_view":
-      return "timeline";
-    case "compare":
-      return "beforeafter";
-    case "report":
-      return "report";
-    case "wall":
-    default:
-      return "metrics";
-  }
-}
+// `viewModeToBottomTab` is imported from `@/lib/contextual-tabs` (canonical
+// copy). The local duplicate (which diverged — it omitted the `analytics`
+// case that layout-slice's copy had) is removed. Consolidation fixes the
+// silent divergence.
 
 function viewModeToPreset(mode: ViewMode): WorkspacePreset {
   const presets: Record<string, WorkspacePreset> = {

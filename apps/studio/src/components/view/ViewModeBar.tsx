@@ -25,8 +25,8 @@ const PRIMARY_VIEW_OPTIONS: ViewTabOption[] = [
 ];
 
 const SECONDARY_VIEW_OPTIONS: ViewTabOption[] = [
-  { mode: "compare", label: "Compare View", description: "Measure before/after impact.", shortcut: "5", icon: <GitCompare className="h-3.5 w-3.5" /> },
-  { mode: "report", label: "Report View", description: "Prepare the evidence handoff.", shortcut: "6", icon: <FileText className="h-3.5 w-3.5" /> },
+  { mode: "compare", label: "Compare", description: "Measure before/after impact.", shortcut: "5", icon: <GitCompare className="h-3.5 w-3.5" /> },
+  { mode: "report", label: "Report", description: "Prepare the evidence handoff.", shortcut: "6", icon: <FileText className="h-3.5 w-3.5" /> },
   { mode: "analytics", label: "Analytics", description: "Inspect operational trends.", shortcut: "7", icon: <BarChart3 className="h-3.5 w-3.5" /> },
 ];
 
@@ -34,11 +34,6 @@ const tabVariants = {
   idle: { scale: 1 },
   hover: { scale: 1.04 },
   tap: { scale: 0.96 },
-};
-
-const iconVariants = {
-  idle: { rotate: 0 },
-  hover: { rotate: [0, -8, 8, 0] },
 };
 
 /** Context chip shown next to the active mode tab to orient the user */
@@ -162,19 +157,23 @@ function ContextChip() {
   return null;
 }
 
-function ModeButton({ mode, label, description, shortcut, icon, active, onClick }: ViewTabOption & { active: boolean; onClick: () => void }) {
+function ModeButton({
+  mode, label, description, shortcut, icon, active, disabled, disabledReason, onClick,
+}: ViewTabOption & { active: boolean; disabled: boolean; disabledReason: string; onClick: () => void }) {
   return (
     <motion.button
       type="button"
       variants={tabVariants}
       initial="idle"
-      whileHover="hover"
-      whileTap="tap"
-      onClick={onClick}
+      whileHover={disabled ? undefined : "hover"}
+      whileTap={disabled ? undefined : "tap"}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
       aria-pressed={active}
-      aria-label={`Switch to ${label} mode`}
-      title={`${label} · ${description}`}
-      className="pointer-events-auto relative flex min-w-[4.5rem] flex-shrink-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-[10px] font-medium md:min-w-[6.5rem] md:px-3"
+      aria-label={disabled ? `${label} — ${disabledReason}` : `Switch to ${label} mode`}
+      title={disabled ? disabledReason : `${label} · ${description}`}
+      className="pointer-events-auto relative flex min-w-0 flex-shrink-0 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left text-[10px] font-medium transition-opacity"
+      style={{ opacity: disabled ? 0.38 : 1, cursor: disabled ? "default" : "pointer" }}
       transition={{ type: "spring", stiffness: 400, damping: 24 }}
     >
       {active && (
@@ -185,25 +184,23 @@ function ModeButton({ mode, label, description, shortcut, icon, active, onClick 
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
         />
       )}
-      <motion.span
-        variants={iconVariants}
-        initial="idle"
-        whileHover="hover"
-        transition={{ duration: 0.4, ease: "easeInOut" }}
-        className={`relative z-10 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border transition-colors duration-200 ${
-          active ? "border-white/10 bg-white/5 text-white" : "border-transparent bg-transparent text-[#5b667c] hover:text-[#8b96ab]"
+      <span
+        className={`relative z-10 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg border transition-colors duration-200 ${
+          active ? "border-white/10 bg-white/5 text-white" : "border-transparent bg-transparent text-[#5b667c]"
         }`}
         style={active ? { color: MAP_COLORS.viewport } : undefined}
       >
         {icon}
-      </motion.span>
-      <span className="relative z-10 flex min-w-0 flex-1 flex-col leading-tight">
-        <span className={`truncate ${active ? "text-white" : "text-[#c7d0e4]"}`} style={active ? { color: MAP_COLORS.viewport } : undefined}>
+      </span>
+      <span className="relative z-10 flex min-w-0 flex-col leading-tight">
+        <span
+          className={`truncate text-[10px] ${active ? "text-white" : "text-[#c7d0e4]"}`}
+          style={active ? { color: MAP_COLORS.viewport } : undefined}
+        >
           {label}
         </span>
-        <span className="hidden truncate text-[9px] text-[#6f7c93] md:block">{description}</span>
       </span>
-      <span className="relative z-10 hidden rounded-md border border-[#2a3246] bg-[#0b0f17] px-1.5 py-0.5 text-[9px] text-[#8b96ab] md:inline-flex">
+      <span className="relative z-10 hidden rounded-md border border-[#2a3246] bg-[#0b0f17] px-1 py-0.5 text-[9px] text-[#6b7280] sm:inline-flex">
         {shortcut}
       </span>
     </motion.button>
@@ -215,51 +212,69 @@ export function ViewModeBar() {
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const visible = useStudioStore((s) => s.visibleComponents.view_mode_bar);
+  const scene = useStudioStore((s) => s.scene);
+  const result = useStudioStore((s) => s.simulationResult);
 
   if (!visible) return null;
+
+  const cameraCount = scene.cameras.length;
+  const pathCount = scene.paths?.length ?? 0;
+  const hasResult = !!result;
+
+  // Contextual availability per mode
+  const availability: Record<ViewMode, { ok: boolean; reason: string }> = {
+    map:         { ok: true,               reason: "" },
+    camera_view: { ok: cameraCount >= 1,   reason: "Place a camera first" },
+    wall:        { ok: cameraCount >= 2,   reason: `Need ≥2 cameras (have ${cameraCount})` },
+    replay:      { ok: pathCount >= 1,     reason: "Add an adversarial path first" },
+    compare:     { ok: hasResult,          reason: "Run simulation first" },
+    report:      { ok: hasResult,          reason: "Run simulation first" },
+    analytics:   { ok: hasResult,          reason: "Run simulation first" },
+  };
+
+  function activate(mode: ViewMode) {
+    setWorkspacePreset(VIEW_MODE_PRESETS[mode]);
+    setViewMode(mode);
+  }
 
   return (
     <motion.div
       initial={{ y: -8, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 26, delay: 0.05 }}
-      className="pointer-events-none absolute left-1/2 top-3 z-20 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 flex-wrap items-center gap-1.5 overflow-x-auto rounded-2xl border border-[#1f2536] bg-[#0b0f17]/90 px-1.5 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)]"
+      className="pointer-events-none absolute left-1/2 top-3 z-20 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-0.5 overflow-x-auto rounded-2xl border border-[#1f2536] bg-[#0b0f17]/90 px-1.5 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)]"
     >
-      <div className="pointer-events-auto hidden rounded-full border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] uppercase tracking-[0.18em] text-[#6f7c93] sm:block">
-        Workspaces
-      </div>
+      {PRIMARY_VIEW_OPTIONS.map((option) => {
+        const { ok, reason } = availability[option.mode];
+        return (
+          <ModeButton
+            key={option.mode}
+            {...option}
+            active={viewMode === option.mode}
+            disabled={!ok}
+            disabledReason={reason}
+            onClick={() => activate(option.mode)}
+          />
+        );
+      })}
 
-      {PRIMARY_VIEW_OPTIONS.map((option) => (
-        <ModeButton
-          key={option.mode}
-          {...option}
-          active={viewMode === option.mode}
-          onClick={() => {
-            setWorkspacePreset(VIEW_MODE_PRESETS[option.mode]);
-            setViewMode(option.mode);
-          }}
-        />
-      ))}
+      <div className="pointer-events-none mx-1 h-5 w-px flex-shrink-0 bg-[#1f2536]" aria-hidden />
 
-      <div className="pointer-events-auto mx-0.5 hidden h-5 w-px flex-shrink-0 bg-[#1f2536] lg:block" aria-hidden />
+      {SECONDARY_VIEW_OPTIONS.map((option) => {
+        const { ok, reason } = availability[option.mode];
+        return (
+          <ModeButton
+            key={option.mode}
+            {...option}
+            active={viewMode === option.mode}
+            disabled={!ok}
+            disabledReason={reason}
+            onClick={() => activate(option.mode)}
+          />
+        );
+      })}
 
-      <div className="pointer-events-auto hidden rounded-full border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] uppercase tracking-[0.18em] text-[#6f7c93] sm:block">
-        Review
-      </div>
-
-      {SECONDARY_VIEW_OPTIONS.map((option) => (
-        <ModeButton
-          key={option.mode}
-          {...option}
-          active={viewMode === option.mode}
-          onClick={() => {
-            setWorkspacePreset(VIEW_MODE_PRESETS[option.mode]);
-            setViewMode(option.mode);
-          }}
-        />
-      ))}
-
-      {/* Context chip: shows camera name / path / coverage depending on active mode */}
+      {/* Context chip: dynamic status for the current mode */}
       <ContextChip />
     </motion.div>
   );

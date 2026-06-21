@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { MoreHorizontal } from "lucide-react";
 
 import { cn } from "@/lib/cn";
+import { computeForegroundTabs } from "@/lib/contextual-tabs";
 import { useStudioStore, type BottomTab } from "@/store/studio-store";
 import { AssumptionsTab } from "./AssumptionsTab";
 import { BeforeAfterTab } from "./BeforeAfterTab";
@@ -25,6 +27,7 @@ import { TemporalProfileView } from "./TemporalProfileView";
 import { ScenarioComparisonPanel } from "./ScenarioComparisonPanel";
 import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
 import { WorkflowChips } from "./WorkflowChips";
+import { AmbientEditDelta } from "./AmbientEditDelta";
 
 const PANEL_EXPLAINERS: Record<BottomTab, string> = {
   outcome: "Use this first after a run. It translates the simulation into the current security verdict, top failures, camera responsibility, redundancy, and next actions.",
@@ -109,14 +112,37 @@ export function BottomPanel() {
   const bottomDrawerMode = useStudioStore((s) => s.bottomDrawerMode);
   const pinnedAnalysisModule = useStudioStore((s) => s.pinnedAnalysisModule);
   const result = useStudioStore((s) => s.simulationResult);
+  // Contextual-priority inputs (see `@/lib/contextual-tabs`). The strip's
+  // foreground cluster is derived from these — pure rendering, no store
+  // mutation. The operator's active tab is always foregrounded regardless.
+  const scene = useStudioStore((s) => s.scene);
+  const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
+  const pendingTabAttention = useStudioStore((s) => s.pendingTabAttention);
   const issueCount = result?.issues.length ?? 0;
   const [showPanelExplain, setShowPanelExplain] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const enabledTabs = TABS.filter((tab) => enabledAnalysisModules[tab.id]);
   const activeTabSafe = enabledAnalysisModules[activeTab] ? activeTab : enabledTabs[0]?.id ?? "metrics";
   const singleModuleTab = pinnedAnalysisModule && enabledAnalysisModules[pinnedAnalysisModule]
     ? pinnedAnalysisModule
     : activeTabSafe;
   const panelExplainer = PANEL_EXPLAINERS[activeTabSafe] ?? "Analysis module details.";
+
+  // Foreground vs overflow split. Derived purely from contextual inputs; the
+  // operator's active tab is always foregrounded (active-tab override) so the
+  // strip never hides what the operator is looking at.
+  const { foreground, overflow, attentionInOverflow } = useMemo(
+    () =>
+      computeForegroundTabs({
+        viewMode,
+        scene,
+        selectedNodeId,
+        bottomTab: activeTabSafe,
+        enabledAnalysisModules,
+        pendingTabAttention,
+      }),
+    [viewMode, scene, selectedNodeId, activeTabSafe, enabledAnalysisModules, pendingTabAttention],
+  );
 
   const renderTab = (tab: BottomTab) => {
     switch (tab) {
@@ -286,6 +312,10 @@ export function BottomPanel() {
           </div>
         </div>
         <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
+          {/* Loop Pass L1 — ambient edit-delta chips. Announces the headline
+              metric changes from the most recent simulation recompute, then
+              fades. Renders null when there's no delta to show. */}
+          <AmbientEditDelta />
           <button
             type="button"
             onClick={() => setShowPanelExplain((state) => !state)}
@@ -307,41 +337,131 @@ export function BottomPanel() {
       </div>
 
       <div className="relative flex min-w-0 items-end gap-0.5 border-b border-[#1e2130] px-1.5 pt-1.5">
-        {/* Scroll fade hint */}
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-8 bg-gradient-to-l from-[#0d1017] to-transparent" />
+        {/* Foreground cluster — contextually-prioritized tabs (always-core ∪
+            view-mode primary ∪ selection-contextual ∪ active tab). The rest
+            of the enabled tabs live behind the "More" overflow button below.
+            See `@/lib/contextual-tabs` and `Docs/review/UI_REVIEW_2026-06-19.md`
+            Density Pass D1 / Option 4. */}
         <div className="flex min-w-0 items-end gap-0.5 overflow-x-auto scrollbar-none">
-          {TAB_GROUPS.flatMap((group, gi) => {
-            const groupTabs = group.ids
-              .map((id) => enabledTabs.find((t) => t.id === id))
-              .filter(Boolean) as typeof enabledTabs;
-            if (groupTabs.length === 0) return [];
-            return [
-              ...(gi > 0 ? [
-                <div key={`sep-${group.label}`} className="mx-1.5 mb-1 self-stretch border-l border-[#1e2130]" />,
-              ] : []),
-              ...groupTabs.map(({ id, label, hasCount }) => (
-                <button type="button"
-                  key={id}
-                  onClick={() => setTab(id)}
-                  className={cn(
-                    "relative flex-shrink-0 rounded-t-lg px-3 py-1.5 text-[10px] font-medium tracking-[0.06em] transition-colors",
-                    activeTabSafe === id
-                      ? "bg-[#0b0f17] text-green-300 ring-1 ring-inset ring-[#1f2536]"
-                      : "text-[#59637a] hover:text-[#9da8c0]",
-                  )}
-                >
-                  <span>{label}</span>
-                  {EXCLUSIVE_TABS.has(id) && (
-                    <span className="ml-0.5 text-[8px] text-amber-400" title="Feature exclusive to SentinelTwin">★</span>
-                  )}
-                  {hasCount && issueCount > 0 ? (
-                    <span className="ml-1 text-red-400">({issueCount})</span>
-                  ) : null}
-                </button>
-              )),
-            ];
+          {foreground.map((id) => {
+            const tab = TABS.find((t) => t.id === id);
+            if (!tab) return null;
+            const { label, hasCount } = tab;
+            return (
+              <button type="button"
+                key={id}
+                onClick={() => setTab(id)}
+                className={cn(
+                  "relative flex-shrink-0 rounded-t-lg px-3 py-1.5 text-[10px] font-medium tracking-[0.06em] transition-colors",
+                  activeTabSafe === id
+                    ? "bg-[#0b0f17] text-green-300 ring-1 ring-inset ring-[#1f2536]"
+                    : "text-[#59637a] hover:text-[#9da8c0]",
+                )}
+              >
+                <span>{label}</span>
+                {EXCLUSIVE_TABS.has(id) && (
+                  <span className="ml-0.5 text-[8px] text-amber-400" title="Feature exclusive to SentinelTwin">★</span>
+                )}
+                {hasCount && issueCount > 0 ? (
+                  <span className="ml-1 text-red-400">({issueCount})</span>
+                ) : null}
+              </button>
+            );
           })}
         </div>
+
+        {/* Overflow — every enabled tab not in foreground, grouped by
+            Analysis / Report / Timeline / Dev. The "More" button shows an
+            amber count when the contextual layer has flagged attention tabs
+            behind it (seed of Loop Pass L2). Reuses the TopBar "More" idiom:
+            aria-haspopup, onMouseLeave dismiss, z-[420] above the strip's
+            scroll-fade hint. */}
+        {overflow.length > 0 ? (
+          <div className="relative ml-auto flex items-end" onMouseLeave={() => setMoreOpen(false)}>
+            <button
+              type="button"
+              onClick={() => setMoreOpen((prev) => !prev)}
+              aria-haspopup="menu"
+              aria-expanded={moreOpen}
+              aria-controls="bottom-panel-more-menu"
+              title={attentionInOverflow.length > 0
+                ? `${attentionInOverflow.length} tab${attentionInOverflow.length === 1 ? "" : "s"} want attention`
+                : `${overflow.length} more analysis modules`}
+              className={cn(
+                "relative mb-0.5 ml-1 flex flex-shrink-0 items-center gap-1 rounded-t-lg border border-[#1e2130] bg-[#0b0f17] px-2.5 py-1.5 text-[10px] font-medium tracking-[0.06em] transition-colors",
+                moreOpen
+                  ? "text-[#9da8c0] ring-1 ring-inset ring-[#1f2536]"
+                  : "text-[#59637a] hover:text-[#9da8c0]",
+              )}
+            >
+              <MoreHorizontal className="h-3 w-3" aria-hidden="true" />
+              <span>More</span>
+              {attentionInOverflow.length > 0 ? (
+                <span className="ml-0.5 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full border border-amber-500/40 bg-amber-500/15 px-1 text-[9px] font-semibold text-amber-200">
+                  {attentionInOverflow.length}
+                </span>
+              ) : null}
+            </button>
+            {moreOpen ? (
+              <div
+                id="bottom-panel-more-menu"
+                role="menu"
+                className="absolute bottom-full right-0 z-[420] mb-1 w-64 max-h-80 overflow-y-auto rounded-md border border-[#1e2130] bg-[#0d1017] py-1 shadow-2xl shadow-black/60"
+              >
+                {TAB_GROUPS.flatMap((group) => {
+                  const groupTabs = group.ids
+                    .map((id) => ({ id, tab: TABS.find((t) => t.id === id) }))
+                    .filter((entry): entry is { id: BottomTab; tab: { id: BottomTab; label: string; hasCount?: boolean } } =>
+                      Boolean(entry.tab) && overflow.includes(entry.id),
+                    );
+                  if (groupTabs.length === 0) return [];
+                  return [
+                    <div key={`group-${group.label}`} className="px-2 pt-1.5 pb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6f8e]">
+                      {group.label}
+                    </div>,
+                    ...groupTabs.map(({ id, tab }) => {
+                      const wantsAttention = attentionInOverflow.includes(id);
+                      return (
+                        <button
+                          type="button"
+                          key={id}
+                          role="menuitem"
+                          onClick={() => {
+                            setTab(id);
+                            setMoreOpen(false);
+                          }}
+                          className={cn(
+                            "flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] transition-colors",
+                            activeTabSafe === id
+                              ? "bg-[#111521] text-green-300"
+                              : "text-[#9da8c0] hover:bg-[#111521] hover:text-white",
+                          )}
+                        >
+                          <span className="flex-1 truncate">
+                            {tab.label}
+                            {EXCLUSIVE_TABS.has(id) && (
+                              <span className="ml-0.5 text-[8px] text-amber-400" title="Feature exclusive to SentinelTwin">★</span>
+                            )}
+                          </span>
+                          {tab.hasCount && issueCount > 0 ? (
+                            <span className="text-red-400">({issueCount})</span>
+                          ) : null}
+                          {wantsAttention ? (
+                            <span
+                              title="Contextual layer suggests this tab"
+                              className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-400"
+                            />
+                          ) : null}
+                        </button>
+                      );
+                    }),
+                    <div key={`sep-${group.label}`} className="my-0.5 border-t border-[#1e2130]" />,
+                  ];
+                })}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {showPanelExplain ? (

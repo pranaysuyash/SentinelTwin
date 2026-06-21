@@ -30,20 +30,20 @@ import { QUALITY_RANK, QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import { clampPathDuration, sortTimelineEvents } from "@/components/view/camera-view-utils";
 import type { SceneSnapshot, SimulationResult } from "@/schema/security-scene";
+// Canonical metrics reduction + delta/format helpers (Loop Pass L1 extraction).
+// Previously local to this file; consolidated to `@/lib/simulation-metrics`
+// per motto_v3 §11 so the ambient edit-delta strip and any future consumer
+// share one source of truth.
+import {
+  computeMetrics,
+  computeMetricDeltas,
+  formatPct as formatPctShared,
+  formatDelta as formatDeltaShared,
+  type Metrics,
+} from "@/lib/simulation-metrics";
 
 type CoverageCell = SimulationResult["coverageCells"][number];
 type SceneNodeLike = { id?: string };
-
-type Metrics = {
-  covered: number;
-  recognition: number;
-  blindspot: number;
-  cameras: number;
-  critZonePct: number;
-  critZoneTotal: number;
-  visiblePathPct: number;
-  lostPathPct: number;
-};
 
 type DoriThresholds = {
   detection: number;
@@ -64,41 +64,18 @@ function computeCameraDoriRanges(camera: SceneSnapshot["scene"]["cameras"][numbe
   };
 }
 
-function computeMetrics(sim: SimulationResult | undefined, cells: CoverageCell[]): Metrics | null {
-  if (!sim && cells.length === 0) return null;
-
-  const covered = cells.length > 0 ? (cells.filter((c) => c.quality !== "none").length / cells.length) * 100 : 0;
-  const recognition = cells.length > 0
-    ? (cells.filter((c) => qualityToScore(c.quality) >= qualityToScore("recognition")).length / cells.length) * 100
-    : 0;
-  const blindspot = sim?.blindspotPct ?? (cells.length > 0 ? 100 - covered : 0);
-  const cameras = sim?.cameraResults.length ?? 0;
-  const critZonePass = sim ? sim.criticalZoneResults.filter((z) => z.status === "pass").length : 0;
-  const critZoneTotal = sim?.criticalZoneResults.length ?? 0;
-  const critZonePct = critZoneTotal > 0 ? (critZonePass / critZoneTotal) * 100 : 0;
-  const visiblePathPct = sim
-    ? (sim.pathResults.reduce((acc, path) => {
-      const safeDurationS = clampPathDuration(path.totalDurationS);
-      return acc + (safeDurationS > 0 ? (path.visibleDurationS / safeDurationS) * 100 : 0);
-    }, 0) / Math.max(sim.pathResults.length, 1))
-    : 0;
-  const lostPathPct = sim
-    ? (sim.pathResults.reduce((acc, path) => {
-      const safeDurationS = clampPathDuration(path.totalDurationS);
-      return acc + (safeDurationS > 0 ? (path.lostDurationS / safeDurationS) * 100 : 0);
-    }, 0) / Math.max(sim.pathResults.length, 1))
-    : 0;
-  return { covered, recognition, blindspot, cameras, critZonePct, critZoneTotal, visiblePathPct, lostPathPct };
-}
+// `computeMetrics`, `computeMetricDeltas`, and the `Metrics` type are imported
+// from `@/lib/simulation-metrics` (canonical owner — Loop Pass L1 extraction).
+// The local `formatPct`/`formatDelta` wrappers below delegate to the shared
+// helpers so the ~10 existing call sites in this file don't churn; future
+// surfaces should import the shared helpers directly.
 
 function formatPct(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return "--";
-  return `${Math.round(value)}%`;
+  return formatPctShared(value);
 }
 
 function formatDelta(value: number) {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(1)}%`;
+  return formatDeltaShared(value);
 }
 
 function qualityLabel(value: string) {

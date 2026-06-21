@@ -184,3 +184,26 @@ This was not only a styling problem. The trust break came from a deeper contract
 - Changes checkbox meaning from “mystery toggles” to explicit include/exclude signals.
 - Removes ambiguity on whether `Next` ends the flow or finalizes the draft.
 - Gives the salesperson a reusable spoken script to convert the same UI into a deterministic buyer simulation.
+
+## 2026-06-19 follow-up execution (post hardening)
+
+### Implemented in this continuation
+
+- `ImportReview.tsx`
+  - Added `Show all` toggles for wall/door/window correction lists so long detections remain navigable.
+  - Increased preview viewport height and kept explicit keep/exclude legend copy adjacent to checklists.
+  - Added persistent calibration lock card and clearer source-of-truth messaging for dimensions.
+- `SceneBuilderWizard.tsx`
+  - Used explicit floor-plan step labels and `Next: Review and Commit` button copy.
+  - Updated in-flow instruction text to treat `Create Draft Scene` as final step only.
+  - Review summary now reports raw wall candidates before kept geometry and includes kept-vs-raw framing.
+- Product docs
+  - Added 2026-06-19 transcript and follow-up notes in:
+    - `Docs/notes/live_demo_session_2026-06-19.md`
+    - `Docs/product/DEMO_RUNS.md`
+
+### Remaining issues to address next
+
+- Pre-detection denoising controls for legend/text-heavy plans (e.g., line removal, text blocking pass) still needed to reduce candidate volume.
+- Add floor-plan-specific warning severity tiers with stronger copy for hand-drawn and low-res source profiles.
+- Provide a compact calibration audit row in preview area (from/to dimensions + effective px/m) to avoid interpretation ambiguity.

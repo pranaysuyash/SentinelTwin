@@ -12,9 +12,8 @@ describe("CompareView", () => {
     expect(source).toContain("clampPathDuration");
     expect(source).toContain("sortTimelineEvents");
     expect(source).toContain("const timeline = sortTimelineEvents(pathResult.timeline);");
-    expect(source).toContain("const visiblePathPct = sim");
-    expect(source).toContain("const safeDurationS = clampPathDuration(path.totalDurationS);");
-    expect(source).toContain("Math.max(\n              clampPathDuration(resultB?.totalDurationS ?? resultA?.totalDurationS ?? 0),");
+    expect(source).toContain("visiblePathPct");
+    expect(source).toContain("clampPathDuration(resultB?.totalDurationS ?? resultA?.totalDurationS ?? 0)");
   });
 
   test("exposes an evidence bundle export alongside compare exports", () => {

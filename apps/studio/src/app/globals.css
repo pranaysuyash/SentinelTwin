@@ -117,14 +117,22 @@ body { min-width: 0; }
 
    Minimum readable text size: the canonical reference for UI text.
    New components should target the caption step (10px) or above.
+
+   Visual Pass V3 — extended to a full 8-tier scale (micro / caption / body-sm /
+   body / label / heading / display / kpi) and made tablet-aware per OQ-UI-04.
+   The TS projection lives in `@/lib/design-tokens` (`TYPE_SCALE`); the two
+   stay in sync — change a size here once, every consumer updates.
 */
 :root {
   --fs-min:     10px;
-  --fs-caption:  10px;
-  --fs-label:    11px;
-  --fs-body:     13px;
-  --fs-heading:  15px;
-  --fs-display:  18px;
+  --fs-micro:   9px;    /* V3 — shortcut chips, super-dense dots */
+  --fs-caption: 10px;   /* tab labels, badge text, KPI sublabels */
+  --fs-body-sm: 11px;   /* V3 — issue descriptions, secondary text */
+  --fs-label:   11px;   /* legacy alias of body-sm — kept for back-compat */
+  --fs-body:    13px;
+  --fs-heading: 15px;
+  --fs-display: 18px;
+  --fs-kpi:     22px;   /* V3 — big metric values (Import Trust, footprint) */
   --lh-tight:    1.15;
   --lh-body:     1.4;
   --lh-loose:    1.55;
@@ -133,6 +141,28 @@ body { min-width: 0; }
      All-caps labels:  0.12-0.16em
      Compact labels:   0.08em
   */
+}
+
+/*
+   Visual Pass V3 / OQ-UI-04 — field-tablet type scale.
+   On-site scan is the primary real-world intake context (operator with a
+   tablet). At ≤1024px width, bump every tier up ~1px so the scale stays
+   legible at arm's length on a touch device, without per-component media
+   queries. Components that consume TYPE_SCALE via the CSS var get this
+   automatically; those still using `text-[10px]` literals do not (another
+   reason the V1 lint rule matters).
+*/
+@media (max-width: 1024px) {
+  :root {
+    --fs-micro:   10px;
+    --fs-caption: 11px;
+    --fs-body-sm: 12px;
+    --fs-label:   12px;
+    --fs-body:    14px;
+    --fs-heading: 16px;
+    --fs-display: 19px;
+    --fs-kpi:     24px;
+  }
 }
 /* Use data attributes for tracking presets */
 [data-ts="compact"] { letter-spacing: 0.08em; }

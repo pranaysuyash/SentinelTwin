@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const importReviewPath = "./src/components/scan-to-scene/ImportReview.tsx";
+const importReviewPath = join(import.meta.dir, "../..", "components/scan-to-scene/ImportReview.tsx");
 
 describe("ImportReview", () => {
   test("exposes detection correction controls for walls, doors, and windows", () => {
@@ -24,6 +25,6 @@ describe("ImportReview", () => {
     expect(source).toContain("Tier 1 Gate");
     expect(source).toContain("Preview is zoomed to the extracted geometry");
     expect(source).toContain("What to check before continuing");
-    expect(source).toContain("Applying calibration locks the scene footprint");
+    expect(source).toContain("Use known room dimensions to lock the scene footprint and refine scale.");
   });
 });

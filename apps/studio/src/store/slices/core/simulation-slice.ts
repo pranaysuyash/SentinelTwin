@@ -1,7 +1,8 @@
 import type { SecurityScene, SimulationResult, TemporalSecurityProfile, CounterfactualPlan, CounterfactualConstraint, CameraNode, ObstructionNode } from "@/schema/security-scene";
 import { cloneSecurityScene } from "@/schema/security-scene";
 import type { ScenarioBatchResult, AssumptionSensitivity } from "@sentineltwin/core";
-import { simulateStudio, computeTemporalProfile, runScenarioBatch, DEFAULT_SCENARIO_STATES, computeAssumptionSensitivity } from "@sentineltwin/simulation";
+import { simulateStudio, computeTemporalProfile, runScenarioBatch, DEFAULT_SCENARIO_STATES, computeAssumptionSensitivity, computePostureScore } from "@sentineltwin/simulation";
+import type { PostureScoreResult } from "@sentineltwin/simulation";
 import { runStudioSimulation } from "@/lib/simulation-runner";
 import {
   buildOperationalEvidenceEvent,
@@ -79,17 +80,20 @@ function buildSimulationState(
   snapshotCount: number,
   operationalEvidenceEvents: OperationalEvidenceEvent[],
   precomputedTemporalProfile?: TemporalSecurityProfile | null,
+  previousPostureScore?: number | null,
 ) {
   const nextScene = cloneSecurityScene(scene);
   nextScene.previousSimulation = scene.simulation;
   nextScene.simulation = result;
   nextScene.updatedAt = Date.now();
   const temporalProfile = precomputedTemporalProfile ?? computeTemporalProfile(nextScene as never);
+  const postureScore = computePostureScore(result, temporalProfile, previousPostureScore);
 
   return {
     scene: nextScene,
     simulationResult: result,
     temporalProfile,
+    postureScore,
     simulationDirty: false,
     simulationRunning: false,
     simulationProgress: null,
@@ -156,6 +160,8 @@ export interface SimulationSlice {
   scenarioBatchResults: ScenarioBatchResult[] | null;
   assumptionSensitivityResults: AssumptionSensitivity[] | null;
 
+  postureScore: PostureScoreResult | null;
+
   setSimulationRunning: (running: boolean) => void;
   setSimulationResult: (result: SimulationResult, durationMs: number) => void;
   runSimulation: () => void;
@@ -200,12 +206,14 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
   scenarioBatchResults: null,
   assumptionSensitivityResults: null,
 
+  postureScore: null,
+
   setSimulationRunning: (running) => set({ simulationRunning: running }),
 
   setSimulationResult: (result, durationMs) =>
     set((s: any) => {
       const evidenceEvent = buildSimulationEvidenceEvent(s.scene, result, durationMs, s.historyPast.length, s.simulationResult);
-      const nextState = buildSimulationState(s.scene, result, durationMs, s.historyPast.length, s.snapshots.length, s.operationalEvidenceEvents);
+      const nextState = buildSimulationState(s.scene, result, durationMs, s.historyPast.length, s.snapshots.length, s.operationalEvidenceEvents, undefined, s.postureScore?.score);
       const nextSceneSnapshot = cloneSecurityScene(nextState.scene);
       const nextEvents = [...s.operationalEvidenceEvents, evidenceEvent];
       persistOperationalEvidenceEvents(nextEvents);
@@ -294,7 +302,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
         const current = get();
         const previousResult = current.simulationResult;
         const evidenceEvent = buildSimulationEvidenceEvent(current.scene, result, durationMs, current.historyPast.length, previousResult);
-        const nextState = buildSimulationState(current.scene, result, durationMs, current.historyPast.length, current.snapshots.length, current.operationalEvidenceEvents, temporalProfile);
+        const nextState = buildSimulationState(current.scene, result, durationMs, current.historyPast.length, current.snapshots.length, current.operationalEvidenceEvents, temporalProfile, current.postureScore?.score);
         const nextSceneSnapshot = cloneSecurityScene(nextState.scene);
         const nextEvents = [...current.operationalEvidenceEvents, evidenceEvent];
         persistOperationalEvidenceEvents(nextEvents);

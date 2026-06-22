@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const coverageLegendPath = "./src/components/workspace/CoverageLegend.tsx";
+const coverageLegendPath = join(import.meta.dir, "../../..", "components/workspace/CoverageLegend.tsx");
 
 describe("CoverageLegend shell semantics", () => {
   test("uses explicit accessibility hooks and shared map tokens", () => {

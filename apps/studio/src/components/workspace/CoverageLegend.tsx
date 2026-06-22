@@ -131,6 +131,7 @@ const FILTER_OPTIONS: { id: OverlayFilterId; label: string }[] = [
   { id: "obstructionWarnings", label: "Obstructions" },
   { id: "entryChips", label: "Entry Points" },
   { id: "pathLabels", label: "Path Labels" },
+  { id: "adversaryShadow", label: "Adversary Shadow" },
 ];
 
 export function CoverageLegend() {

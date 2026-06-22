@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const issuesTabPath = "./src/components/bottom-panel/IssuesTab.tsx";
+const issuesTabPath = join(import.meta.dir, "../..", "components/bottom-panel/IssuesTab.tsx");
 
 describe("IssuesTab", () => {
   test("supports preview/apply/revert recommendation actions", () => {

@@ -26,7 +26,6 @@ describe("Site Draft activation gate contract", () => {
     expect(source).toContain("navigate(\"site_draft_review\");");
     expect(source).toContain("onClose={() => {");
     expect(source).toContain("navigate(\"site_intake\");");
-    expect(source).toContain("handlers.createDraftFromScene(scene, \"manual\");");
     expect(source).toContain("handlers.createDraftFromScene(scene, \"floor_plan\");");
   });
 

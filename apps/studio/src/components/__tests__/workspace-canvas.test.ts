@@ -26,7 +26,7 @@ describe("WorkspaceCanvas obstruction selection", () => {
     expect(sharedSceneSource).toContain("handleSelect(obs.id);");
     // Selection must yield to active placement tools so objects cannot swallow placement clicks.
     expect(sharedSceneSource).toContain("if (placementToolActive()) return;");
-    expect(sharedSceneSource).toContain('emissive={isSelected ? "#1e3a5f" : "#000000"}');
+    expect(sharedSceneSource).toContain('const emissive = isSelected ? "#1e3a5f" : "#000000";');
     expect(sharedSceneSource).toContain("<lineSegments>");
   });
 

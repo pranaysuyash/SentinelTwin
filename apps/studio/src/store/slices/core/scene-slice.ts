@@ -812,6 +812,7 @@ export interface SceneSlice {
   updateAssumptions: (patch: Partial<import("@/schema/security-scene").SimulationAssumptions>) => void;
   updateTimeSchedule: (patch: Partial<import("@/schema/security-scene").TimeSchedule>) => void;
   updateCrowdProfiles: (profiles: import("@/schema/security-scene").CrowdProfile[]) => void;
+  updateEventConfig: (config: import("@/schema/security-scene").EventConfig | undefined) => void;
   addFenceSegment: (fence: import("@/schema/security-scene").FenceSegment) => void;
   updateFenceSegment: (id: string, patch: Partial<import("@/schema/security-scene").FenceSegment>) => void;
   addGateNode: (gate: import("@/schema/security-scene").GateNode) => void;
@@ -1249,6 +1250,13 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
     get().commitSceneChange((scene: SecurityScene) => ({
       ...scene,
       crowdProfiles: profiles,
+    }));
+  },
+
+  updateEventConfig: (config) => {
+    get().commitSceneChange((scene: SecurityScene) => ({
+      ...scene,
+      eventConfig: config,
     }));
   },
 

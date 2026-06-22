@@ -1,0 +1,38 @@
+=== WIDE-OPEN BRAINSTORM — SentinelTwin ===
+
+PRODUCT: SentinelTwin — AI-native physical security simulation platform
+AUDIENCE: Security consultants doing site audits, physical security system designers, enterprise security directors, compliance/insurance teams needing documentation
+CORE OUTCOME: Replace static camera-coverage diagrams and gut-feel security audits with a live deterministic simulation model that verifies every claim, generates GDPR/compliance evidence, and finds adversarial paths no human auditor would catch.
+EMOTIONAL FLAVOR: Hospital diagnostic instrument meets intelligence platform. The AI is a co-pilot, not an assistant. Rigorous enough to present to a regulator. Startling enough that the consultant says "whoa, it found that blindspot."
+
+WHAT EXISTS NOW (V0 alpha, fully working):
+- 3D/2D scene editor: cameras, walls, doors, windows, obstructions, security zones, sensors, paths, guard patrols
+- BVH-accelerated raycasting coverage engine with DORI quality scoring per floor cell
+- Adversarial path simulation: Dijkstra minimum-exposure pathfinding — finds the exact route an intruder would take through any space to minimize detection probability. GENUINELY NOVEL. No competitor has this.
+- 24-hour temporal simulation: coverage varies by light schedules / occupancy periods / guard patrol rounds; detects vulnerability windows (e.g., "2AM–4AM, loading bay gate unmonitored")
+- AI command bar: natural language → scene operations, counterfactual proposals ("what if Camera 3 had a 90° FOV?"), report generation
+- Multi-audience report export: operator, auditor, insurer, installer, privacy reviewer — different framing per audience
+- Governance/provenance spine: operational evidence ledger, checkpoint restore, RBAC surface, approval workflow
+- ONVIF camera live connection + sensor fusion surface
+- GDPR/privacy compliance report section (Article 25, DPIA evidence, privacy zone inventory)
+- Scene intake: blank, JSON, floor-plan import, manual-assisted scan wizard, AI layout draft
+
+THE CORE INTERACTION LOOP:
+  Edit scene → coverage recomputes live → risk map updates → AI explains what changed → cheapest fix recommended → report updates
+
+ARCHITECTURE PRINCIPLE: AI proposes. Simulation verifies. AI explains.
+The simulation engine is deterministic geometry (BVH raycasting). AI NEVER returns coverage numbers directly.
+
+STRATEGIC DIRECTION:
+- V0.1: standalone planning/simulation tool for security consultants
+- V1+: simulation verification layer feeding into live PSIM platforms (Genetec, Milestone, Hanwha) — not a competitor, a co-pilot
+- V2+: SOAR playbook validation — does the existing playbook actually cover the breach scenario it claims to?
+
+COMPETITIVE GAP:
+- Competitors: static "place cameras and check overlap circles" desktop tools, or live video management systems (VMSs)
+- None do adversarial path simulation
+- None do temporal coverage profiling
+- None are AI-native with verified simulation output
+- ISO/IEC 30173 digital twin standard → enterprise procurement checkbox competitors can't clear
+
+PERMISSION: Be practical, silly, weird, and ambitious. All altitudes welcome.

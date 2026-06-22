@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const wizardPath = "./src/components/scan-to-scene/SceneBuilderWizard.tsx";
+const wizardPath = join(import.meta.dir, "../..", "components/scan-to-scene/SceneBuilderWizard.tsx");
 
 describe("SceneBuilderWizard floor-plan Tier 1 gate", () => {
   test("renders gate status and blocks progression for rescan-required imports", () => {

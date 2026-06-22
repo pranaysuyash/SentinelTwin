@@ -52,6 +52,10 @@ export { computeCoveragePostureVariation } from "./coverage-posture";
 export { computeCoverageTimeBudget } from "./coverage-time-budget";
 export { computeCoverageUncertainty } from "./coverage-uncertainty";
 
+// Posture Score (300-850 composite security credit score)
+export { computePostureScore, FACTOR_WEIGHTS, SCORE_MIN, SCORE_MAX } from "./posture-score";
+export type { PostureScoreResult, PostureScoreFactors } from "./posture-score";
+
 // Redundancy
 export { computeKRobustness } from "./k-robustness";
 

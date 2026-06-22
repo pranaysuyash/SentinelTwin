@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const studioShellPath = "./src/components/layout/StudioShell.tsx";
+const studioShellPath = join(import.meta.dir, "../..", "components/layout/StudioShell.tsx");
 
 describe("Studio shell launcher handoff", () => {
   test("surfaces launcher results after AI draft entry", () => {

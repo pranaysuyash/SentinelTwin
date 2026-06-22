@@ -18,6 +18,8 @@ import {
   CONFIDENCE_TONE_CLASSES,
   renderConfidence,
 } from "@/lib/confidence-display";
+// Intake Pass I3 — canvas-direct wall picker replaces the checkbox list.
+import { WallCanvasPicker } from "./WallCanvasPicker";
 
 interface ImportReviewProps {
   result: FloorPlanResult;
@@ -693,59 +695,39 @@ export function ImportReview({
           <div>
             <div className="mb-2 flex items-center justify-between">
               <div className="text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Walls</div>
-              <div className="text-[11px] text-[#6d819f]">
-                {keptWallCount} kept · {draftWalls.length - keptWallCount} excluded
+              <div className="text-[10px] text-[#6d819f]">Click a segment on the canvas to keep / exclude</div>
+            </div>
+            {/* Intake Pass I3 — buyer-grade wall correction. The checkbox list
+                was the 06-17 trust-break moment ("1335 walls detected?" +
+                "large wall lists rely on manual scrolling"). Replaced with a
+                canvas-direct picker: click a wall segment to toggle keep/drop,
+                running stats above, bulk actions below. See
+                `Docs/review/UI_REVIEW_2026-06-19.md` I3. */}
+            <WallCanvasPicker
+              walls={visibleWallRows}
+              mask={wallMask}
+              sourceWidthPx={result.imageWidth}
+              sourceHeightPx={result.imageHeight}
+              onToggle={(index) => {
+                const next = [...wallMask];
+                next[index] = !(next[index] ?? true);
+                setWallMask(next);
+              }}
+            />
+            {draftWalls.length > wallListLimit ? (
+              <div className="pt-1 text-[10px] text-[#6f82a4]">
+                {showAllWallRows
+                  ? "Showing all wall segments on the canvas."
+                  : `${draftWalls.length - wallListLimit} additional walls are off-canvas.`}
+                <button
+                  type="button"
+                  className="ml-1 inline text-[#9bb0cf] underline decoration-dotted underline-offset-2 hover:text-white"
+                  onClick={() => setShowAllWallRows((prev) => !prev)}
+                >
+                  {showAllWallRows ? "Show first segments only" : "Show all on canvas"}
+                </button>
               </div>
-            </div>
-            <div className="mb-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setWallMask((prev) => prev.map(() => true))}
-                className="rounded border border-[#2a3045] px-2 py-1 text-[10px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
-              >
-                Keep all
-              </button>
-              <button
-                type="button"
-                onClick={() => setWallMask((prev) => prev.map(() => false))}
-                className="rounded border border-[#2a3045] px-2 py-1 text-[10px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
-              >
-                Exclude all
-              </button>
-            </div>
-            <div className="max-h-40 space-y-1.5 overflow-y-auto pr-1">
-              {visibleWallRows.map((wall, index) => (
-                <label key={`wall-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
-                  <span>
-                    Keep wall {index + 1}: ({wall.start.x},{wall.start.y}) → ({wall.end.x},{wall.end.y}) · {wallLengthPx(wall).toFixed(1)}px
-                  </span>
-                  <input
-                    type="checkbox"
-                    aria-label={`Keep wall ${index + 1}`}
-                    checked={wallMask[index] ?? true}
-                    onChange={(event) => {
-                      const next = [...wallMask];
-                      next[index] = event.target.checked;
-                      setWallMask(next);
-                    }}
-                  />
-                </label>
-              ))}
-              {draftWalls.length > wallListLimit ? (
-                <div className="pt-1 text-[10px] text-[#6f82a4]">
-                  {showAllWallRows
-                    ? "Showing all wall rows."
-                    : `${draftWalls.length - wallListLimit} additional walls are hidden.`}
-                  <button
-                    type="button"
-                    className="ml-1 inline text-[#9bb0cf] underline decoration-dotted underline-offset-2 hover:text-white"
-                    onClick={() => setShowAllWallRows((prev) => !prev)}
-                  >
-                    {showAllWallRows ? "Show first rows only" : "Show all"}
-                  </button>
-                </div>
-              ) : null}
-            </div>
+            ) : null}
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">

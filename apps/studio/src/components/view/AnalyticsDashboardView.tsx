@@ -771,7 +771,7 @@ export function AnalyticsDashboardView() {
           </SectionCard>
 
           {simulationResult?.crowdOcclusion && (
-            <SectionCard title="Crowd Impact" subtitle="dynamic occlusion model" icon={<Users className="h-3.5 w-3.5" />}>
+            <SectionCard title="Crowd Impact" subtitle="people blocking camera views" icon={<Users className="h-3.5 w-3.5" />}>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">Agents at hour {simulationResult.crowdOcclusion.hour}:00</span>
@@ -1042,7 +1042,7 @@ export function AnalyticsDashboardView() {
 
         {simulationResult?.adversarialPath?.accessControlBarriers &&
           simulationResult.adversarialPath.accessControlBarriers.length > 0 && (
-          <SectionCard title="Access Control on Adversarial Route" icon={<ShieldAlert className="h-3.5 w-3.5" />} subtitle="doors the attacker must breach">
+          <SectionCard title="Access Control on Route" icon={<ShieldAlert className="h-3.5 w-3.5" />} subtitle="barriers the intruder must pass">
             <div className="text-[10px] text-[#7a86a0]">
               {simulationResult.adversarialPath.accessControlBarriers.length} barrier{simulationResult.adversarialPath.accessControlBarriers.length !== 1 ? "s" : ""} add{" "}
               {simulationResult.adversarialPath.accessControlBarriers.reduce((s, b) => s + b.breachTimeS, 0)}s breach time to the route.
@@ -1063,6 +1063,9 @@ export function AnalyticsDashboardView() {
                 </li>
               ))}
             </ul>
+            <div className="mt-2">
+              <TruthBadge label="simulated" />
+            </div>
           </SectionCard>
         )}
 

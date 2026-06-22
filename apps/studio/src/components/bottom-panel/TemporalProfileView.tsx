@@ -219,6 +219,106 @@ function AnomalyCard({ anomaly }: { anomaly: TemporalAnomalyWindow }) {
   );
 }
 
+type ForecastCondition = "clear" | "fair" | "degraded" | "watch" | "storm";
+
+const FORECAST_STYLE: Record<ForecastCondition, { bg: string; border: string; text: string; label: string; icon: typeof Sun }> = {
+  clear:    { bg: "bg-sky-950/30",    border: "border-sky-500/30",    text: "text-sky-300",    label: "Clear Skies",          icon: Sun },
+  fair:     { bg: "bg-green-950/30",  border: "border-green-500/30",  text: "text-green-300",  label: "Fair",                 icon: Shield },
+  degraded: { bg: "bg-yellow-950/30", border: "border-yellow-500/30", text: "text-yellow-300", label: "Degraded",             icon: AlertTriangle },
+  watch:    { bg: "bg-orange-950/30", border: "border-orange-500/30", text: "text-orange-300", label: "Watch",                icon: ShieldAlert },
+  storm:    { bg: "bg-red-950/40",    border: "border-red-500/40",    text: "text-red-300",    label: "Storm Warning",        icon: ShieldAlert },
+};
+
+function coverageToCondition(pct: number, highSeverityWindows: number): ForecastCondition {
+  if (highSeverityWindows > 0) return "storm";
+  if (pct >= 85) return "clear";
+  if (pct >= 70) return "fair";
+  if (pct >= 50) return "degraded";
+  return "watch";
+}
+
+function ForecastStrip({
+  snapshots,
+  vulnerabilityWindows,
+  currentHour,
+  currentMinute,
+}: {
+  snapshots: HourlySecuritySnapshot[];
+  vulnerabilityWindows: VulnerabilityWindow[];
+  currentHour: number;
+  currentMinute: number;
+}) {
+  const currentSnap = snapshots.find((s) => s.hour === currentHour && s.minute === currentMinute)
+    ?? snapshots.find((s) => s.hour === currentHour);
+  const currentCoverage = currentSnap?.overallCoveragePct ?? 0;
+  const highCount = vulnerabilityWindows.filter((w) => w.severity === "high").length;
+  const condition = coverageToCondition(currentCoverage, highCount);
+  const style = FORECAST_STYLE[condition];
+  const ForecastIcon = style.icon;
+
+  const currentTimeMinutes = currentHour * 60 + currentMinute;
+  const nextWindow = vulnerabilityWindows
+    .map((w) => ({ ...w, startMin: w.startHour * 60 + w.startMinute }))
+    .filter((w) => w.startMin > currentTimeMinutes)
+    .sort((a, b) => a.startMin - b.startMin)[0];
+
+  const leadTimeMinutes = nextWindow ? nextWindow.startMin - currentTimeMinutes : null;
+  const activeWindow = vulnerabilityWindows.find((w) => {
+    const start = w.startHour * 60 + w.startMinute;
+    const end = w.endHour * 60 + w.endMinute;
+    return currentTimeMinutes >= start && currentTimeMinutes < end;
+  });
+
+  return (
+    <div className={`flex items-center gap-3 rounded-lg border ${style.border} ${style.bg} px-3 py-2`}>
+      <ForecastIcon className={`w-5 h-5 flex-shrink-0 ${style.text}`} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2">
+          <span className={`text-[11px] font-bold ${style.text}`}>{style.label}</span>
+          <span className="text-[9px] font-mono text-[#68738a]">
+            {Math.round(currentCoverage)}% coverage at {hourToTime(currentHour, currentMinute)}
+            {currentSnap?.crowdAgentCount != null && currentSnap.crowdAgentCount > 0 && (
+              <> · {currentSnap.crowdAgentCount} people on site</>
+            )}
+          </span>
+        </div>
+        <div className="text-[9px] text-[#8090a8] mt-0.5">
+          {activeWindow ? (
+            <span className="text-red-300">
+              Vulnerability window active. Duration: {(() => {
+                const end = activeWindow.endHour * 60 + activeWindow.endMinute;
+                const remaining = end - currentTimeMinutes;
+                return remaining > 60 ? `${(remaining / 60).toFixed(0)}h ${remaining % 60}min` : `${remaining} minutes`;
+              })()}{" "}remaining.
+            </span>
+          ) : nextWindow && leadTimeMinutes != null && leadTimeMinutes <= 120 ? (
+            <span className="text-amber-300">
+              Vulnerability window opens in {leadTimeMinutes > 60
+                ? `${Math.floor(leadTimeMinutes / 60)}h ${leadTimeMinutes % 60}min`
+                : `${leadTimeMinutes} minutes`}.
+              Duration: {(() => {
+                const dur = (nextWindow.endHour * 60 + nextWindow.endMinute) - nextWindow.startMin;
+                return dur > 60 ? `${Math.floor(dur / 60)}h ${dur % 60}min` : `${dur} minutes`;
+              })()}.
+            </span>
+          ) : condition === "clear" ? (
+            "All clear. No vulnerability windows approaching."
+          ) : condition === "fair" ? (
+            "Coverage nominal. Monitor for changes."
+          ) : (
+            `${vulnerabilityWindows.length} vulnerability window${vulnerabilityWindows.length !== 1 ? "s" : ""} in the 24h forecast.`
+          )}
+        </div>
+      </div>
+      {condition === "storm" && (
+        <span className="flex-shrink-0 rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-red-300 animate-pulse">
+          Severe
+        </span>
+      )}
+    </div>
+  );
+}
+
 function StateTransitionMap({ snapshots }: { snapshots: HourlySecuritySnapshot[] }) {
   // Show unique state labels with their time ranges
   const states = useMemo(() => {
@@ -408,6 +508,16 @@ export function TemporalProfileView() {
               </div>
               <div className="text-[8px] text-[#3a4158] mt-0.5">periods with full coverage</div>
             </div>
+          </div>
+
+          {/* ── FORECAST strip ── */}
+          <div className="px-3 py-2 border-b border-[#1e2130]">
+            <ForecastStrip
+              snapshots={temporalProfile.hourlySnapshots}
+              vulnerabilityWindows={temporalProfile.peakVulnerabilityWindows}
+              currentHour={temporalScrubHour}
+              currentMinute={temporalScrubMinute}
+            />
           </div>
 
           {/* ── Current time indicator ── */}

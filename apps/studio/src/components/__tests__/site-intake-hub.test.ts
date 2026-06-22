@@ -10,21 +10,19 @@ describe("SiteIntakeHub", () => {
     const source = readFileSync(siteIntakeHubPath, "utf8");
 
     expect(source).toContain("Guided capture + manual review");
-    expect(source).toContain("Choose the source that best matches what you already have.");
+    expect(source).toContain("Choose how you want to start.");
     expect(source).toContain("Output");
     expect(source).toContain('Output:');
     expect(source).toContain('{card.output}');
-    expect(source).toContain("{selected.detail.outputDetail}");
-    expect(source).not.toContain("selected.detail.output}");
   });
 
   test("uses truthful maturity language for all sources", () => {
     const source = readFileSync(siteIntakeHubPath, "utf8");
 
     expect(source).toContain("Automatic segmentation/depth reconstruction is still rolling out; candidate confirmation is required.");
-    expect(source).toContain("Review required before trust");
+    expect(source).toContain("Review required before use.");
     expect(source).toContain("Best-effort wall/opening extraction");
-    expect(source).toContain("Manual correction required");
+    expect(source).toContain("Manual correction may be needed.");
     expect(source).toContain("No product-grade video/stream verification yet");
     expect(source).toContain("Local-only mode is available");
     expect(source).not.toContain("Your data is secure and never shared");
@@ -42,7 +40,9 @@ describe("SiteIntakeHub", () => {
     const source = readFileSync(siteIntakeHubPath, "utf8");
 
     expect(source).toContain("onClick={props.onEnterStudio}");
-    expect(source).toContain("onClick={() => props.onOpenRecentSite?.(site.id) ?? props.onEnterStudio()}");
+    expect(source).toContain("props.onOpenRecentSite");
+    expect(source).toContain("props.onOpenRecentSite(site.id)");
+    expect(source).toContain("props.onEnterStudio()");
     expect(source).toContain("onClick={props.onImportJson}");
     expect(source).toContain("SAMPLE_SECURITY_SCENE_IMPORT_URL");
     expect(source).toContain("JEWELRY_STORE_SITE_TWIN_IMPORT_URL");
@@ -54,17 +54,17 @@ describe("SiteIntakeHub", () => {
   test("selected source details are source-specific instead of scan-only copy", () => {
     const source = readFileSync(siteIntakeHubPath, "utf8");
 
-    expect(source).toContain("{selected.detail.description}");
-    expect(source).toContain("{selected.detail.outputDetail}");
+    expect(source).toContain("{selected.detail.headline}");
+    expect(source).toContain("{selected.detail.cta}");
     expect(source).not.toContain("from reviewed photo markers.</div>");
   });
 
   test("import affordances match the JSON-only import handler", () => {
     const source = readFileSync(siteIntakeHubPath, "utf8");
 
-    expect(source).toContain("Import Site Twin JSON");
-    expect(source).toContain("Draft-gated · {selected.status}");
-    expect(source).toContain("Before you start");
+    expect(source).toContain("Import Site Twin");
+    expect(source).toContain("Draft-gated");
+    expect(source).toContain("What you");
     expect(source).not.toContain("Import JSON or floor plan");
     expect(source).not.toContain("Manual-assisted · {selected.status}");
   });

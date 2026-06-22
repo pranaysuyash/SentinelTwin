@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { SectionCard } from "@/components/shared/SectionCard";
 import { CrowdProfileEditor } from "@/components/inspector/CrowdProfileEditor";
+import { EventConfigPanel } from "@/components/inspector/EventConfigPanel";
 import type { OccupancyPeriod, PatrolSchedule, TimeSchedule } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -358,6 +359,9 @@ export function ScheduleEditor() {
       <SectionCard title="Crowd & NPC Simulation" icon={<Users className="h-3.5 w-3.5" />}>
         <CrowdProfileEditor />
       </SectionCard>
+
+      {/* ── Event / Temporary Site ── */}
+      <EventConfigPanel />
 
       {/* ── Clock icon hint ── */}
       <div className="flex items-center gap-1 text-[8px] text-[#3a4158]">

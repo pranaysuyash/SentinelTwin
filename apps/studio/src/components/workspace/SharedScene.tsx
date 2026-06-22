@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useEffect, useCallback } from "react";
-import { Html } from "@react-three/drei";
+import { Html, ContactShadows } from "@react-three/drei";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -159,6 +159,173 @@ function makeSceneNodeHandlers({
   };
 }
 
+// ── Procedural texture generators (canvas-based, no external assets) ──
+
+function createFloorTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#e2dbd0";
+  ctx.fillRect(0, 0, size, size);
+
+  const tileSize = 128;
+  const groutWidth = 2;
+  ctx.strokeStyle = "#cdc5b8";
+  ctx.lineWidth = groutWidth;
+
+  for (let x = 0; x <= size; x += tileSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, size);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= size; y += tileSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(size, y);
+    ctx.stroke();
+  }
+
+  for (let tx = 0; tx < size / tileSize; tx++) {
+    for (let ty = 0; ty < size / tileSize; ty++) {
+      const brightness = 0.92 + Math.random() * 0.08;
+      ctx.fillStyle = `rgba(${Math.floor(226 * brightness)}, ${Math.floor(219 * brightness)}, ${Math.floor(208 * brightness)}, 0.6)`;
+      ctx.fillRect(tx * tileSize + groutWidth, ty * tileSize + groutWidth, tileSize - groutWidth * 2, tileSize - groutWidth * 2);
+
+      for (let i = 0; i < 40; i++) {
+        const px = tx * tileSize + groutWidth + Math.random() * (tileSize - groutWidth * 2);
+        const py = ty * tileSize + groutWidth + Math.random() * (tileSize - groutWidth * 2);
+        const gray = 160 + Math.random() * 60;
+        ctx.fillStyle = `rgba(${gray}, ${gray - 10}, ${gray - 20}, ${0.04 + Math.random() * 0.06})`;
+        ctx.fillRect(px, py, 1 + Math.random() * 2, 1 + Math.random() * 2);
+      }
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(1, 1);
+  return texture;
+}
+
+function createFloorNormalMap(): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#8080ff";
+  ctx.fillRect(0, 0, size, size);
+
+  const tileSize = 128;
+  const groutWidth = 3;
+
+  for (let x = 0; x <= size; x += tileSize) {
+    ctx.fillStyle = "#6060ff";
+    ctx.fillRect(x - groutWidth / 2, 0, groutWidth, size);
+  }
+  for (let y = 0; y <= size; y += tileSize) {
+    ctx.fillStyle = "#6060ff";
+    ctx.fillRect(0, y - groutWidth / 2, size, groutWidth);
+  }
+
+  for (let i = 0; i < 200; i++) {
+    const px = Math.random() * size;
+    const py = Math.random() * size;
+    const r = 128 + (Math.random() - 0.5) * 12;
+    const g = 128 + (Math.random() - 0.5) * 12;
+    ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, 255, 0.15)`;
+    ctx.fillRect(px, py, 2 + Math.random() * 4, 2 + Math.random() * 4);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(1, 1);
+  return texture;
+}
+
+function createWallTexture(): THREE.CanvasTexture {
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#eaecf0";
+  ctx.fillRect(0, 0, size, size);
+
+  for (let i = 0; i < 300; i++) {
+    const px = Math.random() * size;
+    const py = Math.random() * size;
+    const gray = 220 + Math.random() * 30;
+    ctx.fillStyle = `rgba(${gray}, ${gray + 2}, ${gray + 5}, ${0.08 + Math.random() * 0.12})`;
+    ctx.fillRect(px, py, 1 + Math.random() * 3, 1 + Math.random() * 3);
+  }
+
+  for (let y = 0; y < size; y += 64) {
+    ctx.fillStyle = `rgba(200, 204, 212, ${0.02 + Math.random() * 0.03})`;
+    ctx.fillRect(0, y, size, 1);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
+function createWallNormalMap(): THREE.CanvasTexture {
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#8080ff";
+  ctx.fillRect(0, 0, size, size);
+
+  for (let i = 0; i < 150; i++) {
+    const px = Math.random() * size;
+    const py = Math.random() * size;
+    const r = 128 + (Math.random() - 0.5) * 8;
+    const g = 128 + (Math.random() - 0.5) * 8;
+    ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, 255, 0.12)`;
+    ctx.fillRect(px, py, 1 + Math.random() * 3, 1 + Math.random() * 3);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
+let _floorTexture: THREE.CanvasTexture | null = null;
+let _floorNormal: THREE.CanvasTexture | null = null;
+let _wallTexture: THREE.CanvasTexture | null = null;
+let _wallNormal: THREE.CanvasTexture | null = null;
+
+function getFloorTexture(): THREE.CanvasTexture {
+  if (!_floorTexture) _floorTexture = createFloorTexture();
+  return _floorTexture;
+}
+function getFloorNormal(): THREE.CanvasTexture {
+  if (!_floorNormal) _floorNormal = createFloorNormalMap();
+  return _floorNormal;
+}
+function getWallTexture(): THREE.CanvasTexture {
+  if (!_wallTexture) _wallTexture = createWallTexture();
+  return _wallTexture;
+}
+function getWallNormal(): THREE.CanvasTexture {
+  if (!_wallNormal) _wallNormal = createWallNormalMap();
+  return _wallNormal;
+}
+
 // ── Environment themes ──
 
 export const ENVIRONMENT_THEMES = {
@@ -271,11 +438,28 @@ export function SceneFloor({
   const safeSectionsMultiplier = Math.max(1, Math.round(resolveSafeNumber(gridSectionsMultiplier, 4)));
   const maxDimension = Math.max(safeWidth, safeDepth);
   const gridDivisions = Math.max(2, Math.max(1, Math.floor((maxDimension + 2) / safeCellSize)) * safeSectionsMultiplier);
+
+  const [floorMap, floorNormalMap] = useMemo(() => {
+    const map = getFloorTexture();
+    const normal = getFloorNormal();
+    const repeatX = Math.max(1, Math.round(safeWidth / 2));
+    const repeatY = Math.max(1, Math.round(safeDepth / 2));
+    map.repeat.set(repeatX, repeatY);
+    normal.repeat.set(repeatX, repeatY);
+    return [map, normal];
+  }, [safeWidth, safeDepth]);
+
   return (
     <>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[safeWidth / 2, -0.0015, safeDepth / 2]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[safeWidth / 2, -0.0015, safeDepth / 2]} receiveShadow>
         <planeGeometry args={[safeWidth, safeDepth]} />
-        <meshStandardMaterial color="#ede5d8" roughness={0.85} />
+        <meshStandardMaterial
+          map={floorMap}
+          normalMap={floorNormalMap}
+          normalScale={new THREE.Vector2(0.15, 0.15)}
+          roughness={0.82}
+          metalness={0.02}
+        />
       </mesh>
       {showGrid && (
         <gridHelper
@@ -301,6 +485,11 @@ export function SceneWalls({
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectedNodeIdSet = useSelectedNodeIdSet();
+
+  const [wallMap, wallNormalMap] = useMemo(() => {
+    return [getWallTexture(), getWallNormal()];
+  }, []);
+
   return (
     <>
       {walls.map((wall) => {
@@ -317,6 +506,7 @@ export function SceneWalls({
         const cz = (start[1] + end[1]) / 2;
         const isGlass = wall.material === "glass";
         const isSelected = selectedNodeIdSet.has(wall.id);
+        const wallHeight = clampPositiveNumber(wall.heightM, 0.02, 1);
         const interactionHandlers = makeSceneNodeHandlers({
           nodeId: wall.id,
           selectable,
@@ -327,25 +517,52 @@ export function SceneWalls({
         return (
           <group
             key={wall.id}
-            position={[cx, clampPositiveNumber(wall.heightM, 0.02, 1) / 2, cz]}
+            position={[cx, wallHeight / 2, cz]}
             rotation={[0, -angle, 0]}
             {...interactionHandlers}
           >
-            <mesh>
-            <boxGeometry args={[length, clampPositiveNumber(wall.heightM, 0.02, 1), 0.18]} />
-            <meshStandardMaterial
-              color={isSelected ? WALL_MATERIAL.selected : isGlass ? WALL_MATERIAL.glass : WALL_MATERIAL.solid}
-              transparent={isGlass}
-              opacity={isGlass ? 0.22 : isSelected ? 0.96 : 1}
-              roughness={isGlass ? 0.08 : 0.65}
-              metalness={isGlass ? 0.28 : 0.0}
-              emissive={isSelected ? "#1d4ed8" : "#000000"}
-              emissiveIntensity={isSelected ? 0.18 : 0}
-            />
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[length, wallHeight, 0.18]} />
+              {isGlass ? (
+                <meshStandardMaterial
+                  color={isSelected ? WALL_MATERIAL.selected : WALL_MATERIAL.glass}
+                  transparent
+                  opacity={0.22}
+                  roughness={0.08}
+                  metalness={0.28}
+                  emissive={isSelected ? "#1d4ed8" : "#000000"}
+                  emissiveIntensity={isSelected ? 0.18 : 0}
+                />
+              ) : (
+                <meshStandardMaterial
+                  map={isSelected ? null : wallMap}
+                  normalMap={isSelected ? null : wallNormalMap}
+                  normalScale={new THREE.Vector2(0.12, 0.12)}
+                  color={isSelected ? WALL_MATERIAL.selected : WALL_MATERIAL.solid}
+                  roughness={0.72}
+                  metalness={0.0}
+                  emissive={isSelected ? "#1d4ed8" : "#000000"}
+                  emissiveIntensity={isSelected ? 0.18 : 0}
+                />
+              )}
             </mesh>
+            {/* Baseboard trim */}
+            {!isGlass && (
+              <mesh position={[0, -wallHeight / 2 + 0.04, 0.092]} castShadow>
+                <boxGeometry args={[length, 0.08, 0.02]} />
+                <meshStandardMaterial color="#c8c0b4" roughness={0.6} metalness={0.05} />
+              </mesh>
+            )}
+            {/* Top cap */}
+            {!isGlass && (
+              <mesh position={[0, wallHeight / 2, 0]} castShadow>
+                <boxGeometry args={[length + 0.02, 0.02, 0.2]} />
+                <meshStandardMaterial color="#d8d4cc" roughness={0.55} metalness={0.02} />
+              </mesh>
+            )}
             {isSelected && (
               <lineSegments>
-                <edgesGeometry args={[new THREE.BoxGeometry(length * 1.03, clampPositiveNumber(wall.heightM, 0.02, 1) * 1.03, 0.22)]} />
+                <edgesGeometry args={[new THREE.BoxGeometry(length * 1.03, wallHeight * 1.03, 0.22)]} />
                 <lineBasicMaterial color="#93c5fd" transparent opacity={0.9} />
               </lineSegments>
             )}
@@ -377,6 +594,11 @@ export function SceneDoors({
         const isOpen = door.state === "open";
         const isLocked = door.state === "locked";
         const isSelected = selectedNodeIdSet.has(door.id);
+        const safeThickness = Math.max(thickness, 0.08);
+        const frameWidth = 0.06;
+        const frameDepth = safeThickness + 0.04;
+        const doorColor = isSelected ? DOOR_MATERIAL.selected : isLocked ? DOOR_MATERIAL.locked : DOOR_MATERIAL.default;
+        const frameColor = "#5c4a3a";
         const interactionHandlers = makeSceneNodeHandlers({
           nodeId: door.id,
           selectable,
@@ -386,32 +608,53 @@ export function SceneDoors({
         });
 
         return (
-        <group
+          <group
             key={door.id}
-          position={sanitizePoint3D(door.position, [width / 2, height / 2, thickness / 2])}
+            position={sanitizePoint3D(door.position, [width / 2, height / 2, thickness / 2])}
             {...interactionHandlers}
-        >
-            <mesh rotation={[0, 0, 0]} castShadow receiveShadow visible={!isOpen}>
-              <boxGeometry args={[width, height, Math.max(thickness, 0.08)]} />
+          >
+            {/* Door frame — left jamb */}
+            <mesh position={[-width / 2 - frameWidth / 2, 0, 0]} castShadow receiveShadow>
+              <boxGeometry args={[frameWidth, height + frameWidth, frameDepth]} />
+              <meshStandardMaterial color={frameColor} roughness={0.65} metalness={0.05} />
+            </mesh>
+            {/* Door frame — right jamb */}
+            <mesh position={[width / 2 + frameWidth / 2, 0, 0]} castShadow receiveShadow>
+              <boxGeometry args={[frameWidth, height + frameWidth, frameDepth]} />
+              <meshStandardMaterial color={frameColor} roughness={0.65} metalness={0.05} />
+            </mesh>
+            {/* Door frame — header */}
+            <mesh position={[0, height / 2 + frameWidth / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[width + frameWidth * 2, frameWidth, frameDepth]} />
+              <meshStandardMaterial color={frameColor} roughness={0.65} metalness={0.05} />
+            </mesh>
+            {/* Door panel */}
+            <mesh castShadow receiveShadow visible={!isOpen}>
+              <boxGeometry args={[width, height, safeThickness]} />
               <meshStandardMaterial
-                color={isSelected ? DOOR_MATERIAL.selected : isLocked ? DOOR_MATERIAL.locked : DOOR_MATERIAL.default}
+                color={doorColor}
                 roughness={0.72}
                 metalness={0.08}
-                transparent
-                opacity={isSelected ? 0.98 : 0.92}
                 emissive={isSelected ? "#1d4ed8" : "#000000"}
                 emissiveIntensity={isSelected ? 0.16 : 0}
               />
             </mesh>
+            {/* Door handle */}
+            {!isOpen && (
+              <mesh position={[width / 2 - 0.08, 0, safeThickness / 2 + 0.01]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                <cylinderGeometry args={[0.012, 0.012, 0.1, 8]} />
+                <meshStandardMaterial color="#888" roughness={0.3} metalness={0.7} />
+              </mesh>
+            )}
             {isSelected && (
               <lineSegments>
-                <edgesGeometry args={[new THREE.BoxGeometry(width * 1.04, height * 1.04, Math.max(thickness, 0.08) * 1.2)]} />
+                <edgesGeometry args={[new THREE.BoxGeometry(width * 1.04, height * 1.04, safeThickness * 1.2)]} />
                 <lineBasicMaterial color="#93c5fd" transparent opacity={0.88} />
               </lineSegments>
             )}
             {isOpen && (
               <mesh position={[width * 0.12, 0, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
-                <boxGeometry args={[thickness, height, width]} />
+                <boxGeometry args={[safeThickness, height, width]} />
                 <meshStandardMaterial color="#6b7280" roughness={0.55} metalness={0.1} transparent opacity={0.35} />
               </mesh>
             )}
@@ -445,6 +688,9 @@ export function SceneWindows({
         const isReflective = window.state === "reflective";
         const opacity = isOpen ? 0.1 : isCurtain ? 0.22 : isReflective ? 0.38 : 0.24;
         const isSelected = selectedNodeIdSet.has(window.id);
+        const safeThickness = Math.max(thickness, 0.05);
+        const frameWidth = 0.04;
+        const frameColor = "#8a9ab0";
         const interactionHandlers = makeSceneNodeHandlers({
           nodeId: window.id,
           selectable,
@@ -454,26 +700,55 @@ export function SceneWindows({
         });
 
         return (
-        <group
+          <group
             key={window.id}
-          position={sanitizePoint3D(window.position, [width / 2, height / 2, 0])}
+            position={sanitizePoint3D(window.position, [width / 2, height / 2, 0])}
             {...interactionHandlers}
-        >
+          >
+            {/* Window frame — outer border */}
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[width + frameWidth * 2, height + frameWidth * 2, safeThickness + 0.02]} />
+              <meshStandardMaterial
+                color={isSelected ? WINDOW_MATERIAL.selected : frameColor}
+                roughness={0.4}
+                metalness={0.35}
+                emissive={isSelected ? "#1d4ed8" : "#000000"}
+                emissiveIntensity={isSelected ? 0.12 : 0}
+              />
+            </mesh>
+            {/* Glass pane */}
             <mesh castShadow receiveShadow visible={!isOpen}>
-            <boxGeometry args={[width, height, Math.max(thickness, 0.05)]} />
-            <meshStandardMaterial
-              color={isSelected ? WINDOW_MATERIAL.selected : isReflective ? WINDOW_MATERIAL.reflective : WINDOW_MATERIAL.default}
-              transparent
-              opacity={isSelected ? Math.min(0.45, opacity + 0.1) : opacity}
-              roughness={isReflective ? 0.05 : 0.15}
-              metalness={isReflective ? 0.4 : 0.12}
-              emissive={isSelected ? "#1d4ed8" : "#000000"}
-              emissiveIntensity={isSelected ? 0.12 : 0}
-            />
+              <boxGeometry args={[width - frameWidth, height - frameWidth, safeThickness]} />
+              <meshStandardMaterial
+                color={isSelected ? WINDOW_MATERIAL.selected : isReflective ? WINDOW_MATERIAL.reflective : WINDOW_MATERIAL.default}
+                transparent
+                opacity={isSelected ? Math.min(0.45, opacity + 0.1) : opacity}
+                roughness={isReflective ? 0.05 : 0.15}
+                metalness={isReflective ? 0.4 : 0.12}
+              />
+            </mesh>
+            {/* Center mullion (vertical divider) */}
+            {width > 0.8 && (
+              <mesh position={[0, 0, safeThickness / 2 + 0.005]} castShadow>
+                <boxGeometry args={[0.02, height - frameWidth * 2, 0.015]} />
+                <meshStandardMaterial color={frameColor} roughness={0.4} metalness={0.35} />
+              </mesh>
+            )}
+            {/* Horizontal divider for tall windows */}
+            {height > 0.9 && (
+              <mesh position={[0, 0, safeThickness / 2 + 0.005]} castShadow>
+                <boxGeometry args={[width - frameWidth * 2, 0.02, 0.015]} />
+                <meshStandardMaterial color={frameColor} roughness={0.4} metalness={0.35} />
+              </mesh>
+            )}
+            {/* Sill */}
+            <mesh position={[0, -height / 2 - frameWidth / 2, safeThickness / 2 + 0.02]} castShadow>
+              <boxGeometry args={[width + frameWidth * 4, frameWidth, 0.06]} />
+              <meshStandardMaterial color="#c0c8d4" roughness={0.5} metalness={0.15} />
             </mesh>
             {isSelected && (
               <lineSegments>
-                <edgesGeometry args={[new THREE.BoxGeometry(width * 1.04, height * 1.04, Math.max(thickness, 0.05) * 1.2)]} />
+                <edgesGeometry args={[new THREE.BoxGeometry((width + frameWidth * 2) * 1.04, (height + frameWidth * 2) * 1.04, safeThickness * 1.2)]} />
                 <lineBasicMaterial color="#93c5fd" transparent opacity={0.88} />
               </lineSegments>
             )}
@@ -484,15 +759,226 @@ export function SceneWindows({
   );
 }
 
-// ── Obstructions (full — type colors, selection, shelf boards, click) ──
+// ── Obstructions (full — type-specific geometry, selection, click) ──
 
 const OBSTRUCTION_COLORS: Record<string, string> = {
   shelf: "#5c4324",
   cupboard: "#624633",
   counter: "#786552",
   storage_boxes: "#5b4428",
+  pillar: "#9ca3af",
+  glass_display: "#e8f0ff",
+  partition: "#6b7280",
+  vehicle: "#374151",
+  tree: "#3d6b3d",
   other: "#414456",
 };
+
+function ObstructionGeometry({ type, w, h, d, color, isSelected }: {
+  type: string; w: number; h: number; d: number; color: string; isSelected: boolean;
+}) {
+  const selColor = "#60a5fa";
+  const emissive = isSelected ? "#1e3a5f" : "#000000";
+  const emissiveIntensity = isSelected ? 0.4 : 0;
+  const baseColor = isSelected ? selColor : color;
+
+  switch (type) {
+    case "shelf":
+      return (
+        <>
+          {/* Side panels */}
+          <mesh position={[-w / 2 + 0.015, 0, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.03, h, d]} />
+            <meshStandardMaterial color={baseColor} roughness={0.82} metalness={0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          <mesh position={[w / 2 - 0.015, 0, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.03, h, d]} />
+            <meshStandardMaterial color={baseColor} roughness={0.82} metalness={0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          {/* Back panel */}
+          <mesh position={[0, 0, -d / 2 + 0.01]} castShadow receiveShadow>
+            <boxGeometry args={[w - 0.06, h, 0.02]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#4a3520"} roughness={0.85} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          {/* Shelf boards */}
+          {[0.95, 0.72, 0.48, 0.24, 0.0].map((frac, i) => (
+            <mesh key={i} position={[0, frac * h - h / 2, 0]} castShadow>
+              <boxGeometry args={[w - 0.04, 0.025, d * 0.96]} />
+              <meshStandardMaterial color={isSelected ? selColor : "#6d522f"} roughness={0.82} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+            </mesh>
+          ))}
+        </>
+      );
+
+    case "counter":
+      return (
+        <>
+          {/* Countertop */}
+          <mesh position={[0, h / 2 - 0.025, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w + 0.04, 0.05, d + 0.02]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#a09080"} roughness={0.45} metalness={0.1} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          {/* Body */}
+          <mesh position={[0, -0.025, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, h - 0.05, d]} />
+            <meshStandardMaterial color={baseColor} roughness={0.78} metalness={0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          {/* Front kickplate recess */}
+          <mesh position={[0, -h / 2 + 0.04, d / 2 - 0.025]}>
+            <boxGeometry args={[w - 0.06, 0.08, 0.05]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#3a3025"} roughness={0.9} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+        </>
+      );
+
+    case "cupboard":
+      return (
+        <>
+          {/* Main body */}
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[w, h, d]} />
+            <meshStandardMaterial color={baseColor} roughness={0.78} metalness={0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          {/* Door seam (vertical line) */}
+          <mesh position={[0, 0, d / 2 + 0.002]}>
+            <boxGeometry args={[0.01, h * 0.88, 0.004]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#3a3025"} roughness={0.9} />
+          </mesh>
+          {/* Left door handle */}
+          <mesh position={[-0.04, h * 0.08, d / 2 + 0.012]} castShadow>
+            <boxGeometry args={[0.015, 0.1, 0.015]} />
+            <meshStandardMaterial color="#888" roughness={0.3} metalness={0.7} />
+          </mesh>
+          {/* Right door handle */}
+          <mesh position={[0.04, h * 0.08, d / 2 + 0.012]} castShadow>
+            <boxGeometry args={[0.015, 0.1, 0.015]} />
+            <meshStandardMaterial color="#888" roughness={0.3} metalness={0.7} />
+          </mesh>
+          {/* Top crown */}
+          <mesh position={[0, h / 2 + 0.01, 0]} castShadow>
+            <boxGeometry args={[w + 0.02, 0.02, d + 0.02]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#55402e"} roughness={0.7} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+        </>
+      );
+
+    case "pillar":
+      return (
+        <mesh castShadow receiveShadow>
+          <cylinderGeometry args={[Math.min(w, d) / 2, Math.min(w, d) / 2, h, 16]} />
+          <meshStandardMaterial color={baseColor} roughness={0.55} metalness={0.1} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+        </mesh>
+      );
+
+    case "glass_display":
+      return (
+        <>
+          {/* Base cabinet */}
+          <mesh position={[0, -h / 4, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, h / 2, d]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#555"} roughness={0.6} metalness={0.15} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          {/* Glass top */}
+          <mesh position={[0, h / 4, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, h / 2, d]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#dde8f8"} transparent opacity={0.2} roughness={0.05} metalness={0.35} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          {/* Frame edges */}
+          {[[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sz], i) => (
+            <mesh key={i} position={[sx * (w / 2 - 0.01), h / 4, sz * (d / 2 - 0.01)]} castShadow>
+              <boxGeometry args={[0.02, h / 2, 0.02]} />
+              <meshStandardMaterial color={isSelected ? selColor : "#777"} roughness={0.4} metalness={0.4} />
+            </mesh>
+          ))}
+        </>
+      );
+
+    case "partition":
+      return (
+        <>
+          {/* Thin panel */}
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[w, h, Math.max(d, 0.04)]} />
+            <meshStandardMaterial color={baseColor} roughness={0.7} metalness={0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          {/* Feet */}
+          {[-1, 1].map((sx, i) => (
+            <mesh key={i} position={[sx * (w / 3), -h / 2 + 0.02, 0]} castShadow>
+              <boxGeometry args={[0.15, 0.04, 0.25]} />
+              <meshStandardMaterial color={isSelected ? selColor : "#555"} roughness={0.5} metalness={0.3} />
+            </mesh>
+          ))}
+        </>
+      );
+
+    case "vehicle":
+      return (
+        <>
+          {/* Body */}
+          <mesh position={[0, -h * 0.1, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, h * 0.6, d]} />
+            <meshStandardMaterial color={baseColor} roughness={0.5} metalness={0.4} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          {/* Cabin */}
+          <mesh position={[0, h * 0.2, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w * 0.85, h * 0.4, d * 0.65]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#4a5568"} roughness={0.4} metalness={0.3} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          {/* Windshield */}
+          <mesh position={[0, h * 0.2, d * 0.33]}>
+            <boxGeometry args={[w * 0.82, h * 0.35, 0.02]} />
+            <meshStandardMaterial color="#b8d4f0" transparent opacity={0.4} roughness={0.05} metalness={0.2} />
+          </mesh>
+          {/* Wheels */}
+          {[[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sz], i) => (
+            <mesh key={i} position={[sx * (w / 2 + 0.02), -h / 2 + 0.08, sz * (d * 0.3)]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.08, 0.08, 0.04, 12]} />
+              <meshStandardMaterial color="#1a1a1a" roughness={0.9} />
+            </mesh>
+          ))}
+        </>
+      );
+
+    case "tree":
+      return (
+        <>
+          {/* Trunk */}
+          <mesh position={[0, -h * 0.25, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[Math.min(w, d) * 0.08, Math.min(w, d) * 0.12, h * 0.5, 8]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#5a3a1a"} roughness={0.9} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          {/* Canopy — layered spheres */}
+          <mesh position={[0, h * 0.15, 0]} castShadow>
+            <sphereGeometry args={[Math.max(w, d) * 0.42, 12, 10]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#2d6b2d"} roughness={0.85} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          <mesh position={[w * 0.12, h * 0.28, d * 0.08]} castShadow>
+            <sphereGeometry args={[Math.max(w, d) * 0.32, 10, 8]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#3a7a3a"} roughness={0.85} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          <mesh position={[-w * 0.1, h * 0.25, -d * 0.06]} castShadow>
+            <sphereGeometry args={[Math.max(w, d) * 0.28, 10, 8]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#358035"} roughness={0.85} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+        </>
+      );
+
+    default:
+      return (
+        <>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[w, h, d]} />
+            <meshStandardMaterial color={baseColor} roughness={0.82} metalness={0.08} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+          {/* Top surface */}
+          <mesh position={[0, h / 2 - 0.025, 0]} castShadow>
+            <boxGeometry args={[w * 0.96, 0.05, d * 0.92]} />
+            <meshStandardMaterial color={isSelected ? selColor : "#8f7a64"} roughness={0.72} metalness={0.06} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+        </>
+      );
+  }
+}
 
 export function SceneObstructions({
   obstructions,
@@ -502,7 +988,6 @@ export function SceneObstructions({
 }: {
   obstructions: ObstructionNode[];
   selectedId?: string | null;
-  /** Optional click handler. If not provided, uses store's selectNode. */
   onSelect?: (id: string) => void;
   onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
@@ -515,7 +1000,6 @@ export function SceneObstructions({
       {obstructions.map((obs) => {
         const [w, d, h] = sanitizeDimensions(obs.dimensions, [1.2, 1, 1]);
         const isSelected = selectedId === obs.id || selectedNodeIdSet.has(obs.id);
-        const isShelf = obs.obstructionType === "shelf";
         const color = OBSTRUCTION_COLORS[obs.obstructionType] ?? OBSTRUCTION_COLORS.other;
         const highlightBox = new THREE.BoxGeometry(w * 1.02, h * 1.02, d * 1.02);
         const placementToolActive = () => {
@@ -559,36 +1043,13 @@ export function SceneObstructions({
             }}
             {...interactionHandlers}
           >
-            <mesh castShadow receiveShadow>
-              <boxGeometry args={[w, h, d]} />
-              <meshStandardMaterial
-                color={isSelected ? "#60a5fa" : color}
-                roughness={0.82}
-                metalness={0.08}
-                emissive={isSelected ? "#1e3a5f" : "#000000"}
-                emissiveIntensity={isSelected ? 0.4 : 0}
-              />
-            </mesh>
+            <ObstructionGeometry type={obs.obstructionType} w={w} h={h} d={d} color={color} isSelected={isSelected} />
             {isSelected && (
               <lineSegments>
                 <edgesGeometry args={[highlightBox]} />
                 <lineBasicMaterial color="#60a5fa" transparent opacity={0.8} />
               </lineSegments>
             )}
-            {/* Shelf boards for shelf type */}
-            {isShelf
-              ? [0.78, 0.42, 0.06].map((fraction, i) => (
-                  <mesh key={i} /* stable order */ position={[0, fraction * h - h / 2, 0]} castShadow>
-                    <boxGeometry args={[w * 0.95, 0.03, d * 0.94]} />
-                    <meshStandardMaterial color="#6d522f" roughness={0.86} />
-                  </mesh>
-                ))
-              : (
-                <mesh position={[0, h / 2 - 0.03, 0]} castShadow>
-                  <boxGeometry args={[w * 0.96, 0.05, d * 0.92]} />
-                  <meshStandardMaterial color="#8f7a64" roughness={0.72} metalness={0.06} />
-                </mesh>
-              )}
           </group>
         );
       })}
@@ -1008,7 +1469,7 @@ const QUALITY_SEGMENT_COLORS: Partial<Record<DoriQuality, string>> = {
 
 type LineSegment = { line: THREE.Line; key: number };
 
-export function CoverageSegmentPath({ waypoints }: { waypoints: CoverageSegmentWaypoint[] }) {
+export function CoverageSegmentPath({ waypoints, ghosted }: { waypoints: CoverageSegmentWaypoint[]; ghosted?: boolean }) {
   const segments = useMemo((): LineSegment[] => {
     const safeWaypoints = waypoints.filter((waypoint) => sanitizePoint2D(waypoint.position).every(Number.isFinite));
     if (safeWaypoints.length < 2) return [];
@@ -1016,18 +1477,18 @@ export function CoverageSegmentPath({ waypoints }: { waypoints: CoverageSegmentW
     safeWaypoints.slice(0, -1).forEach((curr, i) => {
       const next = safeWaypoints[i + 1];
       if (!next) return;
-      const color = QUALITY_SEGMENT_COLORS[curr.detectionQuality] ?? "#ef4444";
+      const color = ghosted ? "#ef4444" : (QUALITY_SEGMENT_COLORS[curr.detectionQuality] ?? "#ef4444");
       const arr = new Float32Array([
         curr.position[0], 0.045, curr.position[1],
         next.position[0], 0.045, next.position[1],
       ]);
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.BufferAttribute(arr, 3));
-      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color }));
+      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent: !!ghosted, opacity: ghosted ? 0.35 : 1 }));
       result.push({ line, key: i });
     });
     return result;
-  }, [waypoints]);
+  }, [waypoints, ghosted]);
 
   useEffect(() => {
     return () => {
@@ -1294,5 +1755,75 @@ export function ScenePathLine({
         </SceneHtml>
       )}
     </group>
+  );
+}
+
+// ── Contact Shadows (grounds objects on the floor) ──
+
+export function SceneContactShadows({ width, depth }: { width: number; depth: number }) {
+  const safeWidth = clampPositiveNumber(width, 0.1, 0.1);
+  const safeDepth = clampPositiveNumber(depth, 0.1, 0.1);
+  return (
+    <ContactShadows
+      position={[safeWidth / 2, 0.001, safeDepth / 2]}
+      width={safeWidth + 2}
+      height={safeDepth + 2}
+      far={4}
+      opacity={0.35}
+      blur={2.5}
+      resolution={512}
+      color="#1a1a2e"
+    />
+  );
+}
+
+// ── Environment Sphere (depth beyond the room) ──
+
+export function SceneEnvironmentSphere({ theme, visible = true }: {
+  theme: EnvironmentTheme | keyof typeof SCENE_LIGHT_PRESETS;
+  visible?: boolean;
+}) {
+  if (!visible) return null;
+  const safeTheme = resolveTheme(theme);
+  const bgColor = useMemo(() => new THREE.Color(safeTheme.background), [safeTheme.background]);
+  const topColor = useMemo(() => {
+    const c = bgColor.clone();
+    c.offsetHSL(0, 0, 0.06);
+    return c;
+  }, [bgColor]);
+
+  return (
+    <mesh scale={[-1, 1, 1]}>
+      <sphereGeometry args={[50, 32, 16]} />
+      <shaderMaterial
+        side={THREE.BackSide}
+        depthWrite={false}
+        uniforms={{
+          topColor: { value: topColor },
+          bottomColor: { value: bgColor },
+          offset: { value: 10 },
+          exponent: { value: 0.6 },
+        }}
+        vertexShader={`
+          varying vec3 vWorldPosition;
+          void main() {
+            vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+            vWorldPosition = worldPosition.xyz;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `}
+        fragmentShader={`
+          uniform vec3 topColor;
+          uniform vec3 bottomColor;
+          uniform float offset;
+          uniform float exponent;
+          varying vec3 vWorldPosition;
+          void main() {
+            float h = normalize(vWorldPosition + offset).y;
+            gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+          }
+        `}
+      />
+    </mesh>
   );
 }

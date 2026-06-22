@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const cameraFeedCanvasPath = "./src/components/inspector/CameraFeedCanvas.tsx";
+const cameraFeedCanvasPath = join(import.meta.dir, "../..", "components/inspector/CameraFeedCanvas.tsx");
 
 describe("CameraFeedCanvas", () => {
   test("exposes the inspector DORI overlay, live rig, and actor/noise cues", () => {

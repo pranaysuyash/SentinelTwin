@@ -34,6 +34,7 @@ import {
   windowStrokeColor,
 } from "./map-colors";
 import { getCameraColorForId } from "@/lib/camera-colors";
+import { useStudioStore } from "@/store/studio-store";
 
 type MapMode = "mini" | "path" | "overview" | "picker";
 
@@ -217,6 +218,7 @@ export function MapLayers({
   showNodeLabels,
   showReplayPath,
 }: MapLayersProps) {
+  const adversaryShadowOn = useStudioStore((s) => s.overlayFilters.adversaryShadow);
   const cells = result?.coverageCells ?? [];
   const criticalById = new Map(result?.criticalZoneResults?.map((entry) => [entry.zoneId, entry]));
   const nodeLabelLookup = new Map<string, string>();
@@ -782,12 +784,13 @@ export function MapLayers({
         </g>
       )}
 
-      {result?.adversarialPath && layers.paths ? (
+      {result?.adversarialPath && (layers.paths || adversaryShadowOn) ? (
         <g>
           {result.adversarialPath.waypoints.slice(1).map((wp, index) => {
             const prev = result.adversarialPath?.waypoints[index]?.position ?? [0, 0];
             const a = projection.sceneToSvg([prev[0], prev[1]]);
             const b = projection.sceneToSvg([wp.position[0], wp.position[1]]);
+            const ghosted = adversaryShadowOn && !layers.paths;
             return (
               <line
                 key={`adv-${wp.position[0].toFixed(2)}-${wp.position[1].toFixed(2)}`}
@@ -795,10 +798,11 @@ export function MapLayers({
                 y1={a.y}
                 x2={b.x}
                 y2={b.y}
-                stroke={qualityColor(wp.detectionQuality)}
-                strokeWidth={1.5}
+                stroke={ghosted ? "#ef4444" : qualityColor(wp.detectionQuality)}
+                strokeWidth={ghosted ? 1.2 : 1.5}
                 strokeLinecap="round"
-                opacity={0.85}
+                opacity={ghosted ? 0.35 : 0.85}
+                strokeDasharray={ghosted ? "4 3" : undefined}
               />
             );
           })}

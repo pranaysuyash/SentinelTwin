@@ -48,6 +48,7 @@ import { useStudioStore } from "@/store/studio-store";
 import { buildReportSummaryLines } from "@/lib/report-summary";
 import { buildOutcomeDrivenReportMarkdown } from "@/lib/report-outcome-markdown";
 import { truthLabelDetail } from "@/lib/truth-labels";
+import { buildPlainLanguageReport, formatPlainLanguageMarkdown } from "@/lib/report-plain-language";
 
 type InfrastructureEstimate = {
   cameraCount: number;
@@ -101,7 +102,8 @@ export function ReportLiteTab() {
   const { runReportGeneration } = useAiCommand();
   const [aiReport, setAiReport] = useState<SecurityReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [reportMode, setReportMode] = useState<"single" | "compare">(compareReportSelection ? "compare" : "single");
+  const [reportMode, setReportMode] = useState<"single" | "compare" | "plain">(compareReportSelection ? "compare" : "single");
+  const postureScore = useStudioStore((s) => s.postureScore);
   const defaultTemplateId: ReportStandardTemplateId = scene.assumptions.doriStandard === "oodpcvs_2025" ? "oodpcvs-audit" : "dori-audit";
   const [reportCatalogState, setReportCatalogState] = useState<ReportCatalogState>(() => loadReportCatalogState());
   const [reportAudience, setReportAudience] = useState<ReportAudience>(() => getDefaultReportAudience(workspaceGovernance.activeRole));
@@ -312,9 +314,16 @@ export function ReportLiteTab() {
     [compareReport, reportVisibility],
   );
   const compareMarkdown = compareExportReport ? exportCompareAsMarkdown(compareExportReport) : "";
+  const plainLanguageMarkdown = useMemo(() => {
+    if (!result) return "";
+    const plain = buildPlainLanguageReport(scene, result, { temporalProfile, postureScore });
+    return formatPlainLanguageMarkdown(plain);
+  }, [result, scene, temporalProfile, postureScore]);
   const currentReportMarkdown = reportMode === "compare"
     ? (hasCompareSimulation ? compareMarkdown : "Select two simulated snapshots to preview compare markdown.")
-    : (singleExportReport ? exportAsMarkdown(singleExportReport) : singleSceneMarkdown);
+    : reportMode === "plain"
+      ? plainLanguageMarkdown
+      : (singleExportReport ? exportAsMarkdown(singleExportReport) : singleSceneMarkdown);
 
   useEffect(() => {
     if (compareReportSelection) {
@@ -537,7 +546,13 @@ export function ReportLiteTab() {
               onClick={() => setReportMode("single")}
               className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "single" ? "bg-[#1d2738] text-white" : "text-[#8090a8]"}`}
             >
-              Single Scene
+              Technical
+            </button>
+            <button type="button"
+              onClick={() => setReportMode("plain")}
+              className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "plain" ? "bg-[#1d2738] text-white" : "text-[#8090a8]"}`}
+            >
+              Plain Language
             </button>
             <button type="button"
               onClick={() => setReportMode("compare")}

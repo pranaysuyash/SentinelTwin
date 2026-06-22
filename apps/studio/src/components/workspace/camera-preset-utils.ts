@@ -1,5 +1,7 @@
 import type { CameraNode } from "@/schema/security-scene";
 
+export type CameraPresetCategory = "generic" | "manufacturer";
+
 export interface CameraPreset {
   id: CameraPresetId;
   label: string;
@@ -12,9 +14,13 @@ export interface CameraPreset {
   nightMode: "none" | "ir" | "low_light" | "thermal";
   ptz: boolean;
   irRangeM: number;
+  category: CameraPresetCategory;
+  manufacturer?: string;
+  modelNumber?: string;
+  focalLengthMm?: number;
 }
 
-export const CAMERA_PRESET_IDS = [
+export const GENERIC_PRESET_IDS = [
   "dome_indoor",
   "bullet_outdoor",
   "ptz_professional",
@@ -25,9 +31,32 @@ export const CAMERA_PRESET_IDS = [
   "panoramic_wide",
 ] as const;
 
+export const MANUFACTURER_PRESET_IDS = [
+  "hik_ds2cd2143g2is",
+  "hik_ds2cd2t85fwd_i5",
+  "hik_ds2de4425iw_de",
+  "dahua_hdbw3441e",
+  "dahua_hfw2841t_zas",
+  "dahua_sd49425gbn",
+  "axis_p3245v",
+  "axis_q6135le",
+  "axis_m3116lve",
+  "hanwha_xnv8080r",
+  "hanwha_xno8080r",
+  "hanwha_pnm9000vq",
+  "bosch_flexidome5100i",
+  "bosch_dinion7100i",
+  "vivotek_fd9391ehtv",
+] as const;
+
+export const CAMERA_PRESET_IDS = [
+  ...GENERIC_PRESET_IDS,
+  ...MANUFACTURER_PRESET_IDS,
+] as const;
+
 export type CameraPresetId = (typeof CAMERA_PRESET_IDS)[number];
 
-export const CAMERA_PRESETS = [
+const GENERIC_PRESETS: ReadonlyArray<CameraPreset> = [
   {
     id: "dome_indoor",
     label: "2MP Indoor Dome",
@@ -40,6 +69,7 @@ export const CAMERA_PRESETS = [
     nightMode: "ir",
     ptz: false,
     irRangeM: 10,
+    category: "generic",
   },
   {
     id: "panoramic_wide",
@@ -53,6 +83,7 @@ export const CAMERA_PRESETS = [
     nightMode: "ir",
     ptz: false,
     irRangeM: 12,
+    category: "generic",
   },
   {
     id: "bullet_outdoor",
@@ -66,6 +97,7 @@ export const CAMERA_PRESETS = [
     nightMode: "ir",
     ptz: false,
     irRangeM: 25,
+    category: "generic",
   },
   {
     id: "ptz_professional",
@@ -79,6 +111,7 @@ export const CAMERA_PRESETS = [
     nightMode: "low_light",
     ptz: true,
     irRangeM: 30,
+    category: "generic",
   },
   {
     id: "thermal_perimeter",
@@ -92,6 +125,7 @@ export const CAMERA_PRESETS = [
     nightMode: "thermal",
     ptz: false,
     irRangeM: 0,
+    category: "generic",
   },
   {
     id: "low_light_indoor",
@@ -105,6 +139,7 @@ export const CAMERA_PRESETS = [
     nightMode: "low_light",
     ptz: false,
     irRangeM: 12,
+    category: "generic",
   },
   {
     id: "fisheye_360",
@@ -118,6 +153,7 @@ export const CAMERA_PRESETS = [
     nightMode: "ir",
     ptz: false,
     irRangeM: 8,
+    category: "generic",
   },
   {
     id: "license_plate",
@@ -131,8 +167,278 @@ export const CAMERA_PRESETS = [
     nightMode: "ir",
     ptz: false,
     irRangeM: 20,
+    category: "generic",
   },
-] as const satisfies ReadonlyArray<CameraPreset>;
+];
+
+const MANUFACTURER_PRESETS: ReadonlyArray<CameraPreset> = [
+  // ── Hikvision ──────────────────────────────────────────────────────────
+  {
+    id: "hik_ds2cd2143g2is",
+    label: "Hikvision DS-2CD2143G2-IS",
+    description: "4MP AcuSense dome, 2.8mm fixed, 103° HFOV, 30m IR, ceiling mount",
+    manufacturer: "Hikvision",
+    modelNumber: "DS-2CD2143G2-IS",
+    fovHorizontalDeg: 103,
+    focalLengthMm: 2.8,
+    mountType: "ceiling",
+    lensType: "fixed",
+    resolutionMP: 4,
+    rangeM: 20,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 30,
+    category: "manufacturer",
+  },
+  {
+    id: "hik_ds2cd2t85fwd_i5",
+    label: "Hikvision DS-2CD2T85FWD-I5",
+    description: "8MP bullet, 2.8mm fixed, 102° HFOV, 50m IR, wall mount",
+    manufacturer: "Hikvision",
+    modelNumber: "DS-2CD2T85FWD-I5",
+    fovHorizontalDeg: 102,
+    focalLengthMm: 2.8,
+    mountType: "wall",
+    lensType: "fixed",
+    resolutionMP: 8,
+    rangeM: 35,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 50,
+    category: "manufacturer",
+  },
+  {
+    id: "hik_ds2de4425iw_de",
+    label: "Hikvision DS-2DE4425IW-DE",
+    description: "4MP PTZ, 4.8–120mm 25× zoom, 57.6°–2.4° HFOV, 100m IR",
+    manufacturer: "Hikvision",
+    modelNumber: "DS-2DE4425IW-DE",
+    fovHorizontalDeg: 57.6,
+    focalLengthMm: 4.8,
+    mountType: "pole",
+    lensType: "varifocal",
+    resolutionMP: 4,
+    rangeM: 60,
+    nightMode: "ir",
+    ptz: true,
+    irRangeM: 100,
+    category: "manufacturer",
+  },
+  // ── Dahua ──────────────────────────────────────────────────────────────
+  {
+    id: "dahua_hdbw3441e",
+    label: "Dahua DH-IPC-HDBW3441E-AS",
+    description: "4MP AI dome, 2.8mm fixed, 101° HFOV, 30m IR, ceiling mount",
+    manufacturer: "Dahua",
+    modelNumber: "DH-IPC-HDBW3441E-AS",
+    fovHorizontalDeg: 101,
+    focalLengthMm: 2.8,
+    mountType: "ceiling",
+    lensType: "fixed",
+    resolutionMP: 4,
+    rangeM: 20,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 30,
+    category: "manufacturer",
+  },
+  {
+    id: "dahua_hfw2841t_zas",
+    label: "Dahua DH-IPC-HFW2841T-ZAS",
+    description: "8MP bullet, 2.7–13.5mm motorized, 106°–30° HFOV, 60m IR",
+    manufacturer: "Dahua",
+    modelNumber: "DH-IPC-HFW2841T-ZAS",
+    fovHorizontalDeg: 106,
+    focalLengthMm: 2.7,
+    mountType: "wall",
+    lensType: "varifocal",
+    resolutionMP: 8,
+    rangeM: 40,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 60,
+    category: "manufacturer",
+  },
+  {
+    id: "dahua_sd49425gbn",
+    label: "Dahua SD49425GB-HNR",
+    description: "4MP PTZ, 5–125mm 25× zoom, 58°–2.5° HFOV, 100m IR",
+    manufacturer: "Dahua",
+    modelNumber: "SD49425GB-HNR",
+    fovHorizontalDeg: 58,
+    focalLengthMm: 5,
+    mountType: "pole",
+    lensType: "varifocal",
+    resolutionMP: 4,
+    rangeM: 60,
+    nightMode: "ir",
+    ptz: true,
+    irRangeM: 100,
+    category: "manufacturer",
+  },
+  // ── Axis ───────────────────────────────────────────────────────────────
+  {
+    id: "axis_p3245v",
+    label: "Axis P3245-V",
+    description: "2MP indoor dome, 3–9mm varifocal, 100°–34° HFOV, Lightfinder 2.0",
+    manufacturer: "Axis",
+    modelNumber: "P3245-V",
+    fovHorizontalDeg: 100,
+    focalLengthMm: 3,
+    mountType: "ceiling",
+    lensType: "varifocal",
+    resolutionMP: 2,
+    rangeM: 20,
+    nightMode: "low_light",
+    ptz: false,
+    irRangeM: 0,
+    category: "manufacturer",
+  },
+  {
+    id: "axis_q6135le",
+    label: "Axis Q6135-LE",
+    description: "2MP PTZ, 4.3–129mm 30× zoom, 59.5°–2.3° HFOV, 250m OptimizedIR",
+    manufacturer: "Axis",
+    modelNumber: "Q6135-LE",
+    fovHorizontalDeg: 59.5,
+    focalLengthMm: 4.3,
+    mountType: "pole",
+    lensType: "varifocal",
+    resolutionMP: 2,
+    rangeM: 80,
+    nightMode: "ir",
+    ptz: true,
+    irRangeM: 250,
+    category: "manufacturer",
+  },
+  {
+    id: "axis_m3116lve",
+    label: "Axis M3116-LVE",
+    description: "4MP mini dome, 2.4mm fixed, 105° HFOV, 20m IR, outdoor",
+    manufacturer: "Axis",
+    modelNumber: "M3116-LVE",
+    fovHorizontalDeg: 105,
+    focalLengthMm: 2.4,
+    mountType: "ceiling",
+    lensType: "fixed",
+    resolutionMP: 4,
+    rangeM: 15,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 20,
+    category: "manufacturer",
+  },
+  // ── Hanwha (Wisenet) ───────────────────────────────────────────────────
+  {
+    id: "hanwha_xnv8080r",
+    label: "Hanwha XNV-8080R",
+    description: "5MP vandal dome, 3.7mm fixed, 97.5° HFOV, 30m IR, IK10",
+    manufacturer: "Hanwha",
+    modelNumber: "XNV-8080R",
+    fovHorizontalDeg: 97.5,
+    focalLengthMm: 3.7,
+    mountType: "ceiling",
+    lensType: "fixed",
+    resolutionMP: 5,
+    rangeM: 25,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 30,
+    category: "manufacturer",
+  },
+  {
+    id: "hanwha_xno8080r",
+    label: "Hanwha XNO-8080R",
+    description: "5MP bullet, 3.7mm fixed, 97.5° HFOV, 30m IR, outdoor",
+    manufacturer: "Hanwha",
+    modelNumber: "XNO-8080R",
+    fovHorizontalDeg: 97.5,
+    focalLengthMm: 3.7,
+    mountType: "wall",
+    lensType: "fixed",
+    resolutionMP: 5,
+    rangeM: 25,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 30,
+    category: "manufacturer",
+  },
+  {
+    id: "hanwha_pnm9000vq",
+    label: "Hanwha PNM-9000VQ",
+    description: "4×5MP multi-sensor panoramic, 4×2.8mm, 4×108° HFOV, 30m IR",
+    manufacturer: "Hanwha",
+    modelNumber: "PNM-9000VQ",
+    fovHorizontalDeg: 108,
+    focalLengthMm: 2.8,
+    mountType: "ceiling",
+    lensType: "panoramic",
+    resolutionMP: 20,
+    rangeM: 20,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 30,
+    category: "manufacturer",
+  },
+  // ── Bosch ──────────────────────────────────────────────────────────────
+  {
+    id: "bosch_flexidome5100i",
+    label: "Bosch FLEXIDOME IP 5100i",
+    description: "2MP indoor dome, 3–10mm varifocal, 95°–31° HFOV, 30m IR",
+    manufacturer: "Bosch",
+    modelNumber: "FLEXIDOME IP 5100i",
+    fovHorizontalDeg: 95,
+    focalLengthMm: 3,
+    mountType: "ceiling",
+    lensType: "varifocal",
+    resolutionMP: 2,
+    rangeM: 20,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 30,
+    category: "manufacturer",
+  },
+  {
+    id: "bosch_dinion7100i",
+    label: "Bosch DINION IP 7100i",
+    description: "2MP bullet, 3.2–10mm varifocal, 99°–31° HFOV, 30m IR, outdoor",
+    manufacturer: "Bosch",
+    modelNumber: "DINION IP 7100i",
+    fovHorizontalDeg: 99,
+    focalLengthMm: 3.2,
+    mountType: "wall",
+    lensType: "varifocal",
+    resolutionMP: 2,
+    rangeM: 25,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 30,
+    category: "manufacturer",
+  },
+  // ── Vivotek ────────────────────────────────────────────────────────────
+  {
+    id: "vivotek_fd9391ehtv",
+    label: "Vivotek FD9391-EHTV",
+    description: "8MP dome, 3.9–10mm motorized, 86°–38° HFOV, 30m IR, -50°C rated",
+    manufacturer: "Vivotek",
+    modelNumber: "FD9391-EHTV",
+    fovHorizontalDeg: 86,
+    focalLengthMm: 3.9,
+    mountType: "ceiling",
+    lensType: "varifocal",
+    resolutionMP: 8,
+    rangeM: 25,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 30,
+    category: "manufacturer",
+  },
+];
+
+export const CAMERA_PRESETS: ReadonlyArray<CameraPreset> = [
+  ...GENERIC_PRESETS,
+  ...MANUFACTURER_PRESETS,
+];
 
 const CAMERA_PRESET_BY_ID = CAMERA_PRESETS.reduce((acc, preset) => {
   acc[preset.id] = preset;
@@ -179,7 +485,7 @@ export function findBestCameraPreset(camera: CameraNode): CameraPreset | null {
 }
 
 export function cameraPresetIcon(presetId: CameraPresetId): string {
-  const icons: Record<CameraPresetId, string> = {
+  const icons: Partial<Record<CameraPresetId, string>> = {
     dome_indoor: "\u25D4",
     bullet_outdoor: "\u25B6",
     ptz_professional: "\u2699",
@@ -189,7 +495,15 @@ export function cameraPresetIcon(presetId: CameraPresetId): string {
     license_plate: "\u2691",
     panoramic_wide: "\u2B21",
   };
-  return icons[presetId] ?? "\u25CB";
+  if (icons[presetId]) return icons[presetId]!;
+  const preset = CAMERA_PRESETS.find((p) => p.id === presetId);
+  if (!preset) return "\u25CB";
+  if (preset.ptz) return "\u2699";
+  if (preset.nightMode === "thermal") return "\u26A1";
+  if (preset.lensType === "fisheye") return "\u25C9";
+  if (preset.mountType === "ceiling") return "\u25D4";
+  if (preset.mountType === "wall") return "\u25B6";
+  return "\u25CB";
 }
 
 export function describeCameraPreset(preset: CameraPreset): string {
@@ -204,7 +518,7 @@ export function getCameraPreset(cameraPresetId: CameraPresetId | null | undefine
 
 export function applyCameraPreset(preset: CameraPreset | null): Partial<CameraNode> {
   if (!preset) return {};
-  return {
+  const patch: Partial<CameraNode> = {
     presetId: preset.id,
     fovHorizontalDeg: preset.fovHorizontalDeg,
     mountType: preset.mountType as "wall" | "ceiling" | "pole" | "corner" | "desk",
@@ -215,4 +529,26 @@ export function applyCameraPreset(preset: CameraPreset | null): Partial<CameraNo
     ptz: preset.ptz,
     irRangeM: preset.irRangeM,
   };
+  if (preset.focalLengthMm != null) patch.focalLengthMm = preset.focalLengthMm;
+  return patch;
+}
+
+export function getGenericPresets(): ReadonlyArray<CameraPreset> {
+  return GENERIC_PRESETS;
+}
+
+export function getManufacturerPresets(): ReadonlyArray<CameraPreset> {
+  return MANUFACTURER_PRESETS;
+}
+
+export function getManufacturerNames(): string[] {
+  const names = new Set<string>();
+  for (const p of MANUFACTURER_PRESETS) {
+    if (p.manufacturer) names.add(p.manufacturer);
+  }
+  return Array.from(names).sort();
+}
+
+export function getPresetsByManufacturer(manufacturer: string): ReadonlyArray<CameraPreset> {
+  return MANUFACTURER_PRESETS.filter((p) => p.manufacturer === manufacturer);
 }

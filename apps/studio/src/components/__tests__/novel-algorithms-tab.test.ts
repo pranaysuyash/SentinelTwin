@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const novelAlgorithmsPath = "./src/components/bottom-panel/NovelAlgorithmsTab.tsx";
+const novelAlgorithmsPath = join(import.meta.dir, "../..", "components/bottom-panel/NovelAlgorithmsTab.tsx");
 
 describe("NovelAlgorithmsTab", () => {
   test("exposes a coverage time budget surface", () => {

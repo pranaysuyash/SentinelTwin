@@ -36,6 +36,8 @@ import {
   CoverageHeatmapInstanced,
   ScenePrivacyZones,
   CrowdChokepointOverlay,
+  SceneContactShadows,
+  SceneEnvironmentSphere,
 } from "./SharedScene";
 import { makeSnapEngine } from "./editing/SnapEngine";
 import { PathDrawTool } from "./editing/PathDrawTool";
@@ -915,16 +917,21 @@ function SceneGeometry({
 
   const heatmapMode = useStudioStore((s) => s.heatmapMode);
   const pathLabelsVisible = useStudioStore((s) => s.overlayFilters.pathLabels);
+  const adversaryShadowVisible = useStudioStore((s) => s.overlayFilters.adversaryShadow);
   // Data-driven: one warning per blindspot issue, positioned above the matched obstruction.
   // Obstruction matching first prefers the canonical parsed label, then robust fallback heuristics.
   const blockingIssues = result?.issues.filter((issue) => issue.category === "blindspot") ?? [];
   const entryDoor = scene.entryPoints[0];
+  const canvasMode = useStudioStore((s) => s.canvasMode);
+  const is3D = canvasMode === "orbit_3d";
 
   return (
     <>
+      <SceneEnvironmentSphere theme="day" visible={is3D} />
       {layers.walls_floors && (
         <>
           <SceneFloor width={width} depth={depth} showGrid={false} />
+          <SceneContactShadows width={width} depth={depth} />
           <AccentSurface position={[width / 2, 0.002, depth / 2]} size={[width * 0.94, depth * 0.94]} color="#5b677d" opacity={0.06} />
           <AccentSurface position={[5, 0.0025, 5.58]} size={[2.5, 1.45]} color="#d7c542" opacity={0.16} />
           <AccentSurface position={[5, 0.003, 6.56]} size={[2, 0.34]} color="#7e8797" opacity={0.18} />
@@ -1018,8 +1025,8 @@ function SceneGeometry({
         ))
         : null}
 
-      {layers.paths && pathLabelsVisible && result?.adversarialPath ? (
-        <CoverageSegmentPath waypoints={result.adversarialPath.waypoints} />
+      {(adversaryShadowVisible || (layers.paths && pathLabelsVisible)) && result?.adversarialPath ? (
+        <CoverageSegmentPath waypoints={result.adversarialPath.waypoints} ghosted={adversaryShadowVisible && !(layers.paths && pathLabelsVisible)} />
       ) : null}
 
       {layers.privacy_zones && scene.privacyZones.length > 0 ? (

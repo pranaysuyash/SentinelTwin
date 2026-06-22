@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const sceneFeedPath = "./src/components/view/SceneFeedCanvas.tsx";
+const sceneFeedPath = join(import.meta.dir, "../..", "components/view/SceneFeedCanvas.tsx");
 
 describe("SceneFeedCanvas camera rigs", () => {
   test("keeps wall camera rig synchronized to live camera transforms", () => {

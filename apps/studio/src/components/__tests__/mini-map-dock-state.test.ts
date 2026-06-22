@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const miniMapPath = "./src/components/map/MiniMap.tsx";
+const miniMapPath = join(import.meta.dir, "../..", "components/map/MiniMap.tsx");
 
 describe("MiniMap dock state behavior", () => {
   test("syncs collapsed/compact modes with left dock state", () => {

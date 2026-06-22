@@ -1,13 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const files = [
-  "./src/components/bottom-panel/MetricsTab.tsx",
-  "./src/components/bottom-panel/IssuesTab.tsx",
-  "./src/components/bottom-panel/RedundancyTab.tsx",
-  "./src/components/bottom-panel/NovelAlgorithmsTab.tsx",
-  "./src/components/bottom-panel/CameraStatusSummaryPanel.tsx",
-  "./src/components/security-outcome/OutcomeEmptyState.tsx",
+  join(import.meta.dir, "../..", "components/bottom-panel/MetricsTab.tsx"),
+  join(import.meta.dir, "../..", "components/bottom-panel/IssuesTab.tsx"),
+  join(import.meta.dir, "../..", "components/bottom-panel/RedundancyTab.tsx"),
+  join(import.meta.dir, "../..", "components/bottom-panel/NovelAlgorithmsTab.tsx"),
+  join(import.meta.dir, "../..", "components/bottom-panel/CameraStatusSummaryPanel.tsx"),
+  join(import.meta.dir, "../..", "components/security-outcome/OutcomeEmptyState.tsx"),
 ];
 
 describe("analysis empty states", () => {

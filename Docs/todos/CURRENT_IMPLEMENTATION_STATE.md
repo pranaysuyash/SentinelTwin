@@ -1,6 +1,41 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-06-17 (session 38: temporal simulation hardening, guard patrol deterrence, schedule editor, GDPR compliance report section, WorkspaceCanvas overlay extraction, tool constants extraction, Inspector componentization)
+**Updated:** 2026-06-21 (session 39+40+41: brainstorm convergent features — camera model library, posture score + store + UI, adversary shadow, FORECAST, temporal-crowd integration, analytics dedup, fix ranker audit, Thread 147 audit)
+
+## Brainstorm-driven features (2026-06-21)
+
+### Camera Model Library
+15 real manufacturer models from Hikvision (3), Dahua (3), Axis (3), Hanwha (3), Bosch (2), Vivotek (1) added alongside the 8 generic presets. `CameraPreset` interface extended with `manufacturer`, `modelNumber`, `focalLengthMm`, `category` fields. `getGenericPresets()`, `getManufacturerPresets()`, `getManufacturerNames()`, `getPresetsByManufacturer()` helpers added. `applyCameraPreset()` now passes `focalLengthMm` through. Tests: 13 tests covering generic spec compliance + manufacturer model invariants ✅
+
+### Camera Preset Picker UI
+Now groups presets by category (Generic Profiles / per-manufacturer groups) with collapsible sections and manufacturer model number display ✅
+
+### Posture Score (300-850)
+`packages/simulation/src/posture-score.ts` — pure computation from `SimulationResult` fields. Five weighted factors: Coverage Completeness (25%), Temporal Resilience (20%), Adversarial Path Resistance (25%), Redundancy Depth (15%), Response Window (15%). Score maps to bands: poor/fair/good/excellent/exceptional. Supports delta tracking. Fixed to use correct schema field names (`peakVulnerabilityWindows`, `overallCoveragePct`, `waypoints`/`detectionQuality` on adversarial path). Tests: 12 tests ✅
+
+**Store wiring:** `postureScore` field added to `SimulationSlice`. Computed automatically via `buildSimulationState()` after every simulation run (both `setSimulationResult` and `runSimulation` paths). Previous score passed through for delta tracking ✅
+
+**UI:** `PostureScoreCard` component added to `MetricsTab` as headline metric. Shows score (300-850) with band label, delta from previous run, progress bar, and all 5 factor sub-scores. Band-colored styling (violet/green/blue/amber/red) ✅
+
+### Adversary Shadow (always-on adversarial path overlay)
+New `adversaryShadow` overlay filter (default: on) added to `OverlayFilterId`. Adversarial path now renders independently of the `layers.paths` toggle in both 3D WorkspaceCanvas and 2D MapLayers. When shown as shadow (paths layer off), renders as ghosted red dashed line at 35% opacity. When paths layer is also on, shows full quality-colored segments at normal opacity. Toggle available in CoverageLegend overlay filters ✅
+
+### FORECAST (weather-metaphor temporal dashboard)
+`ForecastStrip` component added to `TemporalProfileView` — weather-style summary at top of temporal panel. Conditions: Clear Skies (≥85% coverage, no high-severity windows), Fair (≥70%), Degraded (≥50%), Watch (<50%), Storm Warning (any high-severity windows). Provides lead-time countdown to next vulnerability window ("opens in 47 minutes, duration: 23 minutes") and active-window remaining-time display. Non-expert-readable plain-language copy ✅
+
+### Fix Ranker (audit — already complete)
+`CounterfactualPanel` in bottom panel already implements the full Fix Ranker concept: deterministic sim scan generates ranked fix candidates (rotate camera, move obstruction, add camera, add light) with cost tiers (free/low/medium/high), coverage delta verification via full simulation, Preview/Apply/Revert workflow, batch compare table, and Before/After snapshot flow. No new implementation needed ✅
+
+### Thread 147 Crowd/Populated Scenes (audit — already complete)
+Full audit confirmed all layers are wired: simulation engine (Poisson model), 4 archetypes, schema (Rule 5), pipeline integration, store action, CrowdProfileEditor UI with zone picker and 24h scrubber, Analytics Dashboard crowd impact section, CrowdChokepointOverlay on canvas, truth audit registration. The Poisson statistical model is the correct first-principles approach for coverage analysis. 7 tests ✅
+
+### Temporal-Crowd Integration Fix
+`temporal.ts` now passes `currentTime` (hour/minute) to `simulateStudio` so crowd profiles sample at the correct hour instead of defaulting to 12:00. `overallCoveragePct` in temporal snapshots is now crowd-adjusted (effective coverage). Added `geometricCoveragePct` and `crowdAgentCount` fields to hourly snapshots in both `packages/core` and `apps/studio` schema copies (Rule 5 compliance). FORECAST strip now shows crowd agent count when available ✅
+
+### Analytics Deduplication
+Removed redundant `computeCrowdOcclusion` sweep from `buildTemporalAnalytics` in `security-analytics.ts`. The temporal engine now handles crowd integration directly — analytics reads `overallCoveragePct` (crowd-adjusted) and `geometricCoveragePct` (baseline) from hourly snapshots instead of recomputing. Eliminated unused `CrowdProfile`, `CoverageCellResult` imports and simplified function signature ✅
+
+## Temporal simulation, GDPR report, and component refactors (2026-06-17)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
@@ -1475,8 +1510,25 @@ Implemented 2026-06-17.
 - `truth-audit.ts`: "Director's Cut PDF export" surface added
 - `tsc --noEmit` clean; 1050/1051 tests pass (1 pre-existing env-key failure unrelated to this work)
 
+### Thread 147/149/152 audit and hardening (D-318)
+
+Implemented 2026-06-22.
+
+Audit confirmed Threads 147 (crowd sim), 149 (perimeter integrity), and 152 (access control) were already fully implemented in a prior session:
+- `packages/simulation/src/crowd-sim.ts` — Poisson-process crowd occlusion engine (8 tests passing)
+- `packages/simulation/src/simulate-studio.ts` — calls `computeCrowdOcclusion` + `computePerimeterIntegrity`; `accessControlBarriers` wired in adversarial path
+- `apps/studio/src/components/inspector/CrowdProfileEditor.tsx` — crowd profile editor in ScheduleEditor
+- `AnalyticsDashboardView.tsx` — Crowd Impact, Perimeter Integrity, and Access Control cards all render from simulation result
+
+Hardening pass:
+- Thread 154 operator-language: "dynamic occlusion model" → "people blocking camera views" (Crowd Impact subtitle)
+- Thread 154 operator-language: "Access Control on Adversarial Route" / "doors the attacker must breach" → "Access Control on Route" / "barriers the intruder must pass"
+- Added missing `TruthBadge label="simulated"` to Access Control card
+- Added trust-audit surfaces: "Perimeter Integrity analytics card" and "Access Control on adversarial route card"
+
 ### Next item
 
-- Thread 147 (NPC/crowd sim for dynamic occlusion) — highest architectural leverage remaining; all of Threads 149-153 become richer once crowds are in
-- Thread 149 (perimeter/outdoor — fencing, LPR, CPTED lighting) — schema design needed
-- Thread 151 (audio layer — PA, gunshot/glass-break) — sibling of existing multi-sensor work
+- Thread 151 (audio layer — PA/gunshot/glass-break) — research-stage, needs domain validation before commitment per EXPLORATION_MAP
+- Thread 150 (VR walkthrough) — gated on C8 (first-person walk mode)
+- Thread 153 (event/temporary site) — go-to-market packaging decision, low technical risk
+- Pre-existing `tsc` errors in `camera-preset-utils.ts:502` (thermalCapable) and `SharedScene.tsx:645` (rotation on CylinderGeometry) — unrelated to Threads 147-154

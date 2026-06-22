@@ -66,10 +66,10 @@ describe("provider selection", () => {
 
     expect(telemetry.activeCostTier).toBe("low");
     expect(telemetry.activeLatencyTier).toBe("fast");
-    // Without API keys configured, all stages are blocked
-    expect(telemetry.overallStatus).toBe("ready");
-    expect(telemetry.stagePolicies.find((stage) => stage.stage === "command")?.ready).toBe(true);
-    expect(telemetry.stagePolicies.find((stage) => stage.stage === "draft")?.ready).toBe(true);
+    // Without API keys configured, all stages are blocked (cloudAvailable is false)
+    expect(telemetry.overallStatus).toBe("blocked");
+    expect(telemetry.stagePolicies.find((stage) => stage.stage === "command")?.ready).toBe(false);
+    expect(telemetry.stagePolicies.find((stage) => stage.stage === "draft")?.ready).toBe(false);
     expect(telemetry.providers.some((provider) => provider.costTier === "free")).toBe(true);
   });
 });

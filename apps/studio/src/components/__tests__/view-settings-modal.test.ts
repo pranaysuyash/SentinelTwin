@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const viewSettingsPath = "./src/components/layout/ViewSettingsModal.tsx";
+const viewSettingsPath = join(import.meta.dir, "../..", "components/layout/ViewSettingsModal.tsx");
 
 describe("ViewSettingsModal", () => {
   test("surfaces the AI provider selection alongside layout controls", () => {

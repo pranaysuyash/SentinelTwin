@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const counterfactualPanelPath = "./src/components/bottom-panel/CounterfactualPanel.tsx";
+const counterfactualPanelPath = join(import.meta.dir, "../..", "components/bottom-panel/CounterfactualPanel.tsx");
 
 describe("CounterfactualPanel", () => {
   test("supports batch comparison and adversarial delta display", () => {

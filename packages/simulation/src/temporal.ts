@@ -329,9 +329,35 @@ function collectScheduleTransitionHours(scene: SecurityScene): number[] {
     hours.add(entry.hour < 24 ? entry.hour : 0);
   }
 
+  // Event phase transitions
+  const ec = scene.eventConfig;
+  if (ec?.isActive && ec.phases.length > 0) {
+    for (const phase of ec.phases) {
+      hours.add(phase.startHour);
+      hours.add(phase.endHour < 24 ? phase.endHour : 0);
+    }
+  }
+
   hours.add(0);
   return Array.from(hours).sort((a, b) => a - b);
 }
+
+function getActiveEventPhase(scene: SecurityScene, hour: number): import("@sentineltwin/core").EventPhase | null {
+  const ec = scene.eventConfig;
+  if (!ec?.isActive || ec.phases.length === 0) return null;
+  return ec.phases.find((p) => {
+    if (p.endHour > p.startHour) return hour >= p.startHour && hour < p.endHour;
+    return hour >= p.startHour || hour < p.endHour;
+  }) ?? null;
+}
+
+const OCCUPANCY_CROWD_SCALE: Record<string, number> = {
+  empty: 0,
+  low: 0.15,
+  medium: 0.5,
+  high: 0.8,
+  peak: 1.0,
+};
 
 function buildChangeTimeline(scene: SecurityScene): StateTransition[] {
   const hours = collectScheduleTransitionHours(scene);
@@ -372,6 +398,28 @@ function patchSceneForTimeSlice(
       }
       return door;
     });
+  }
+
+  // Event phase crowd scaling: when an event is active, scale crowd profiles
+  // based on the phase's expected occupancy relative to peak attendance.
+  const activePhase = getActiveEventPhase(scene, state.hour);
+  if (activePhase && scene.eventConfig?.expectedPeakAttendance) {
+    const scale = OCCUPANCY_CROWD_SCALE[activePhase.expectedOccupancy] ?? 0.5;
+    const peakCount = scene.eventConfig.expectedPeakAttendance;
+    if (patched.crowdProfiles && patched.crowdProfiles.length > 0) {
+      patched.crowdProfiles = patched.crowdProfiles.map((profile) => ({
+        ...profile,
+        archetypes: profile.archetypes.map((arch) => ({
+          ...arch,
+          countByHour: arch.countByHour.map((count, h) => {
+            if (h >= activePhase.startHour && h < activePhase.endHour) {
+              return Math.round(peakCount * scale / Math.max(1, profile.archetypes.length));
+            }
+            return count;
+          }),
+        })),
+      }));
+    }
   }
 
   return patched;
@@ -502,7 +550,7 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
     const state = computeTimeSliceState(transition.hour, transition.minute, scene);
 
     const patchedScene = patchSceneForTimeSlice(scene, state);
-    const result = simulateStudio(patchedScene);
+    const result = simulateStudio(patchedScene, { hour: state.hour, minute: state.minute });
 
     const rawExposure = result.adversarialPath?.totalExposureScore ?? 0;
     // Guard patrol deterrence: each active guard reduces adversarial exposure by 35%.
@@ -510,10 +558,17 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
       ? rawExposure * Math.max(0, 1 - 0.35 * state.activeGuardCount)
       : rawExposure;
 
+    // Use crowd-adjusted effective coverage when crowd profiles produce occlusion data
+    const effectiveCoverage = result.crowdOcclusion
+      ? result.crowdOcclusion.effectiveCoveragePct
+      : result.totalCoveragePct;
+
     hourlySnapshots.push({
       hour: state.hour,
       minute: state.minute,
-      overallCoveragePct: result.totalCoveragePct,
+      overallCoveragePct: effectiveCoverage,
+      geometricCoveragePct: result.crowdOcclusion ? result.totalCoveragePct : undefined,
+      crowdAgentCount: result.crowdOcclusion?.totalAgentCount,
       criticalZonePassCount: result.criticalZoneResults.filter((z) => z.status === "pass").length,
       criticalZoneTotalCount: result.criticalZoneResults.length,
       criticalZoneStatuses: Object.fromEntries(
@@ -552,6 +607,8 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
           hour: h,
           minute: m,
           overallCoveragePct: nearestSnapshot.overallCoveragePct,
+          geometricCoveragePct: nearestSnapshot.geometricCoveragePct,
+          crowdAgentCount: nearestSnapshot.crowdAgentCount,
           criticalZonePassCount: nearestSnapshot.criticalZonePassCount,
           criticalZoneTotalCount: nearestSnapshot.criticalZoneTotalCount,
           criticalZoneStatuses: nearestSnapshot.criticalZoneStatuses,

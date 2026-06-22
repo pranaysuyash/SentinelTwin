@@ -1,14 +1,24 @@
 "use client";
 
 import { MapPin } from "lucide-react";
+import { useMemo } from "react";
 
 import { TruthBadge } from "@/components/shared/TruthBadge";
 import { PathMap } from "@/components/map/PathMap";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { clampPathDuration } from "@/components/view/camera-view-utils";
 import { QUALITY_RANK } from "@/lib/quality-display";
+import type { CameraNode } from "@/schema/security-scene";
 import { pathLength } from "@/components/workspace/editing/editor-geometry";
 import { useStudioStore } from "@/store/studio-store";
+
+const STATUS_COLOR: Record<CameraNode["status"], { bg: string; text: string; label: string }> = {
+  on:             { bg: "bg-emerald-500/15", text: "text-emerald-300", label: "Online" },
+  off:            { bg: "bg-zinc-500/15",    text: "text-zinc-400",    label: "Offline" },
+  blocked:        { bg: "bg-rose-500/15",    text: "text-rose-300",    label: "Blocked" },
+  dirty:          { bg: "bg-amber-500/15",   text: "text-amber-300",   label: "Dirty" },
+  malfunctioning: { bg: "bg-red-500/15",     text: "text-red-300",     label: "Malfunction" },
+};
 
 export function ScenarioPathPanel() {
   const scene = useStudioStore((s) => s.scene);
@@ -164,6 +174,8 @@ export function ScenarioPathPanel() {
                     </span>
                   </div>
                 </div>
+
+                {pathResult && <RouteCameraHealthStrip />}
               </>
             )}
 
@@ -273,6 +285,65 @@ function Stat({
     <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
       <div className={`text-[13px] font-semibold ${tone}`}>{value}</div>
       <div className="mt-0.5 text-[8px] uppercase tracking-[0.18em] text-[#556076]">{label}</div>
+    </div>
+  );
+}
+
+function RouteCameraHealthStrip() {
+  const scene = useStudioStore((s) => s.scene);
+  const result = useStudioStore((s) => s.simulationResult);
+  const activePathId = useStudioStore((s) => s.activePathId);
+
+  const routeCameras = useMemo(() => {
+    const pathResult = result?.pathResults.find((r) => r.pathId === activePathId);
+    if (!pathResult?.visibilityByCamera) return [];
+
+    const cameraMap = new Map(scene.cameras.map((c) => [c.id, c]));
+
+    return Object.entries(pathResult.visibilityByCamera)
+      .map(([camId, vis]) => {
+        const cam = cameraMap.get(camId);
+        if (!cam) return null;
+        return { cam, visibleS: vis.visibleS, maxQuality: vis.maxQuality };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => b.visibleS - a.visibleS);
+  }, [scene.cameras, result, activePathId]);
+
+  if (routeCameras.length === 0) return null;
+
+  const degradedCount = routeCameras.filter((c) => c.cam.status !== "on").length;
+
+  return (
+    <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0a0d14] px-2.5 py-2">
+      <div className="mb-1.5 flex items-center justify-between">
+        <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
+          Route Camera Health
+        </div>
+        {degradedCount > 0 && (
+          <span className="rounded-md border border-amber-500/20 bg-amber-500/8 px-1.5 py-0.5 text-[8px] text-amber-200">
+            {degradedCount} degraded
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {routeCameras.map(({ cam, visibleS, maxQuality }) => {
+          const st = STATUS_COLOR[cam.status];
+          return (
+            <div
+              key={cam.id}
+              className={`flex items-center gap-1.5 rounded-md border border-[#24283a] ${st.bg} px-1.5 py-1`}
+              title={`${cam.name}: ${st.label} · ${cam.clarity} clarity · ${visibleS.toFixed(1)}s visible · best ${maxQuality}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${cam.status === "on" ? "bg-emerald-400" : cam.status === "off" ? "bg-zinc-500" : "bg-amber-400"}`} />
+              <span className={`text-[9px] font-medium ${st.text}`}>
+                {cam.name.length > 14 ? cam.name.slice(0, 12) + "…" : cam.name}
+              </span>
+              <span className="text-[8px] text-[#556076]">{maxQuality}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

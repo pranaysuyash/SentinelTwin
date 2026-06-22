@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const metricsTabPath = "./src/components/bottom-panel/MetricsTab.tsx";
+const metricsTabPath = join(import.meta.dir, "../..", "components/bottom-panel/MetricsTab.tsx");
 
 describe("MetricsTab", () => {
   test("exposes the live metric cards used by the studio shell", () => {

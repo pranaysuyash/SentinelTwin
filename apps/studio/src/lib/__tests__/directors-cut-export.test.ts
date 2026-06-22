@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const pdfExportPath = "./src/lib/pdf-export.ts";
-const dashboardPath = "./src/components/view/AnalyticsDashboardView.tsx";
+const pdfExportPath = join(import.meta.dir, "../pdf-export.ts");
+const dashboardPath = join(import.meta.dir, "../../components/view/AnalyticsDashboardView.tsx");
 
 describe("Director's Cut export", () => {
   test("exportDirectorsCutPdf is exported from pdf-export.ts", () => {

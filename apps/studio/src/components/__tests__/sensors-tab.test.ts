@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const sensorsTabPath = "./src/components/bottom-panel/SensorsTab.tsx";
+const sensorsTabPath = join(import.meta.dir, "../..", "components/bottom-panel/SensorsTab.tsx");
 
 describe("SensorsTab", () => {
   test("surfaces sensor inventory and placement controls", () => {

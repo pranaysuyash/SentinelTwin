@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const leftPanelPath = "./src/components/left-panel/LeftPanel.tsx";
+const leftPanelPath = join(import.meta.dir, "../..", "components/left-panel/LeftPanel.tsx");
 
 describe("LeftPanel", () => {
   test("exposes the sensor placement tool in the core authoring rail", () => {

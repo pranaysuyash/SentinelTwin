@@ -5392,3 +5392,56 @@ Once a user applies floor-plan calibration, those dimensions become the authorit
 - `normalizeFloorPlanResult(...)` keeps manual dimensions authoritative when present.
 - The floor-plan wizard path now syncs room name and dimensions into review state instead of leaking blank/default metadata from the skipped room-setup step.
 - The import-review UI distinguishes import trust, gate status, and locked manual footprint more clearly during correction.
+
+## D-318 | 2026-06-22 | Perimeter & outdoor security layer as distinct architectural surface
+
+**Date:** 2026-06-22
+**Status:** Adopted — implemented in Thread 149
+
+**Decision:**
+Model site perimeter security as three new node types (`FenceSegment`, `GateNode`, `BollardLine`) alongside LPR capability on existing `CameraNode`, rather than extending interior coverage semantics to the boundary.
+
+**Rationale:**
+- Interior coverage answers "which floor cells are covered at what DORI quality?". Perimeter integrity answers "how hard is it for a threat to reach the interior at all?" — different problem, different scoring.
+- `FenceSegment` participates in the vision collider mesh (partial vision transmission for chain-link, zero for breached), directly reusing the existing raycasting infrastructure without forking it.
+- `GateNode` serves as an adversarial entry point candidate alongside `EntryPoint`, with `accessControl` reusing the same schema as `DoorNode.accessControl`.
+- `BollardLine` is a vehicle-class deterrent with no effect on the current pedestrian Dijkstra model — modeled now for report evidence, active in the vehicle threat model (V0.3).
+- LPR is a capability on `CameraNode` (not a separate node type) because an LPR camera IS a camera: it has a frustum, mount position, and DORI contribution. Duplicating camera rendering/simulation/inspector logic for a three-field delta would be architectural debt.
+
+**Alternatives rejected:**
+- Separate `LprCamera` node type: rejected due to duplication of all camera infrastructure for minimal schema delta.
+- Modeling fence as a wall variant: rejected because fences have distinct properties (climb difficulty, material-based vision transmission, integrity state) that don't map to wall semantics.
+- Perimeter as a separate simulation pass: rejected for V0.1 — perimeter integrity scoring is lightweight enough to compute inline in `buildSimulationResult`.
+
+**Impact:**
+- Rule-5 schema sync across `packages/core` and `apps/studio` for all three node types + LPR fields + `perimeterIntegrity` on `SimulationResult`.
+- `vision-collider-mesh.ts` gains fence segment support (breached segments excluded).
+- `adversarial-path.ts` routes through gate nodes and collects gate access-control barriers.
+- Three new inspector panels (`FenceInspector`, `GateNodeInspector`, `BollardInspector`), LPR section in `CameraInspector`, perimeter integrity card in analytics dashboard.
+- Architecture doc: `Docs/architecture/09_PERIMETER_OUTDOOR.md`.
+
+## D-319 | 2026-06-22 | Event/temporary site lifecycle as schema-driven temporal overlay
+
+**Date:** 2026-06-22
+**Status:** Adopted — implemented in Thread 153
+
+**Decision:**
+Model event and temporary site deployments as an `eventConfig` on SecurityScene with discrete lifecycle phases (setup/ingress/live/egress/teardown), each with occupancy expectations that drive crowd density scaling in the temporal simulation engine.
+
+**Rationale:**
+- Permanent sites have static crowd profiles keyed to daily schedule. Events have a lifecycle: a festival's security posture at 6am setup differs fundamentally from peak attendance at 2pm. Representing this as another occupancy schedule would lose phase semantics (what security measures apply during ingress vs. teardown).
+- Each phase carries `expectedOccupancy` that maps through `OCCUPANCY_CROWD_SCALE` to a 0-1 multiplier on `expectedPeakAttendance`, producing crowd archetype counts in `patchSceneForTimeSlice`. This reuses the existing crowd scaling infrastructure — no new simulation engine.
+- `collectScheduleTransitionHours` gains event phase boundaries, so the temporal profile samples at the right breakpoints instead of interpolating across phase transitions.
+- `getActiveEventPhase(scene, hour)` is a pure function that returns the currently active phase for any simulation hour, keeping temporal logic testable without store dependencies.
+- `eventConfig.isActive` flag allows toggling event mode without deleting configuration, useful for before/after comparisons.
+
+**Alternatives rejected:**
+- Modeling events as a special crowd profile: rejected because it loses lifecycle phase semantics and the ability to attach phase-specific security postures (future: per-phase camera presets, guard assignments).
+- Separate event timeline outside SecurityScene: rejected per D-002 — SecurityScene is the single source of truth.
+- Phase-specific scene variants: rejected as it would require N parallel scenes; a single scene with temporal overlay is simpler and more composable.
+
+**Impact:**
+- Rule-5 schema sync: `eventPhaseSchema`, `eventConfigSchema`, `EventPhase`, `EventConfig` types in both schema files; `eventConfig` optional on scene base.
+- `temporal.ts` gains event phase transitions, `getActiveEventPhase`, and crowd scaling in `patchSceneForTimeSlice`.
+- `scene-slice.ts` gains `updateEventConfig` store action.
+- `EventConfigPanel.tsx` inspector panel with full phase lifecycle editor, wired into `ScheduleEditor.tsx` alongside crowd profiles.

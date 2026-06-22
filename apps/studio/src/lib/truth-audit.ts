@@ -682,6 +682,29 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
     forbiddenPhrases: [],
   },
   {
+    surface: "Perimeter Integrity analytics card",
+    file: "src/components/view/AnalyticsDashboardView.tsx",
+    requiredPhrases: [
+      "perimeterIntegrity",
+      "integrityPct",
+      "blindGates",
+      "breachedSegments",
+      "TruthBadge",
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Access Control on adversarial route card",
+    file: "src/components/view/AnalyticsDashboardView.tsx",
+    requiredPhrases: [
+      "accessControlBarriers",
+      "breachTimeS",
+      "breachDifficulty",
+      "TruthBadge",
+    ],
+    forbiddenPhrases: [],
+  },
+  {
     surface: "Director's Cut PDF export",
     file: "src/lib/pdf-export.ts",
     requiredPhrases: [

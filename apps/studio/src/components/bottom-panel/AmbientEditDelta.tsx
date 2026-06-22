@@ -36,6 +36,8 @@ import {
   formatDelta,
   HEADLINE_METRIC_CHIPS,
 } from "@/lib/simulation-metrics";
+// Visual Pass V1 — canonical semantic tones (no raw Tailwind color utilities).
+import { toneForDelta, UI_TONES } from "@/lib/design-tokens";
 
 const DISPLAY_MS = 6000;
 
@@ -90,15 +92,13 @@ export function AmbientEditDelta() {
         const value = deltas[chip.key];
         // Skip ~zero deltas — a chip that says "+0.0%" is noise.
         if (Math.abs(value) <= 0.05) return null;
-        const isImprovement = chip.positiveIsGood ? value > 0 : value < 0;
-        const tone = isImprovement
-          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-          : "border-rose-500/30 bg-rose-500/10 text-rose-200";
+        const tone = toneForDelta(value, chip.positiveIsGood);
+        const cls = UI_TONES[tone];
         return (
           <span
             key={chip.key}
             title={`${chip.label}: ${formatDelta(value)} vs previous run`}
-            className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.04em] ${tone}`}
+            className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.04em] ${cls.border} ${cls.bg} ${cls.text}`}
             style={{ borderColor: chip.accent + "55" }}
           >
             <span className="text-[7px] uppercase tracking-[0.1em] opacity-70">{chip.label}</span>

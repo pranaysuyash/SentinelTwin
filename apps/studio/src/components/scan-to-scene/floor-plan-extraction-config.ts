@@ -1,4 +1,5 @@
 import type { FloorPlanSourceProfile } from "@/lib/floor-plan-import";
+export type { FloorPlanSourceProfile };
 
 export const FLOOR_PLAN_SOURCE_PROFILES: readonly FloorPlanSourceProfile[] = [
   "architectural",

@@ -23,8 +23,8 @@ describe("ViewModeBar", () => {
     expect(source).toContain('mode: "camera_view"');
     expect(source).toContain('mode: "wall"');
     expect(source).toContain('mode: "replay"');
-    expect(source).toContain("Workspaces");
-    expect(source).toContain("Review");
+    expect(source).toContain("Compare");
+    expect(source).toContain("Analytics");
     expect(source).toContain("Map View");
     expect(source).toContain("Camera View");
     expect(source).toContain("Camera Wall");

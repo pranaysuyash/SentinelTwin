@@ -84,6 +84,62 @@ function ConfidenceCard({ confidence, zones }: { confidence: ConfidenceBand; zon
   );
 }
 
+const POSTURE_BAND_STYLE: Record<string, { color: string; bg: string; border: string }> = {
+  exceptional: { color: "#a78bfa", bg: "bg-violet-500/10", border: "border-violet-500/30" },
+  excellent:   { color: "#22c55e", bg: "bg-emerald-500/10", border: "border-emerald-500/30" },
+  good:        { color: "#3b82f6", bg: "bg-blue-500/10", border: "border-blue-500/30" },
+  fair:        { color: "#f5a623", bg: "bg-amber-500/10", border: "border-amber-500/30" },
+  poor:        { color: "#ef4444", bg: "bg-red-500/10", border: "border-red-500/30" },
+};
+
+const POSTURE_FACTOR_LABELS: Record<string, string> = {
+  coverageCompleteness: "Coverage",
+  temporalResilience: "Temporal",
+  adversarialPathResistance: "Adversarial",
+  redundancyDepth: "Redundancy",
+  responseWindow: "Response",
+};
+
+function PostureScoreCard() {
+  const posture = useStudioStore((s) => s.postureScore);
+  if (!posture) return null;
+
+  const style = POSTURE_BAND_STYLE[posture.band] ?? POSTURE_BAND_STYLE.poor;
+  const pct = ((posture.score - 300) / 550) * 100;
+
+  return (
+    <div className={`flex items-center gap-4 rounded-lg border ${style.border} ${style.bg} px-4 py-2`}>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-[28px] font-bold leading-none" style={{ color: style.color }}>
+          {posture.score}
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: style.color }}>
+          {posture.band}
+        </span>
+        {posture.delta !== null && (
+          <span className={`ml-1 text-[10px] font-medium ${posture.delta >= 0 ? "text-green-400" : "text-red-400"}`}>
+            {posture.delta >= 0 ? "+" : ""}{posture.delta}
+          </span>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[8px] uppercase tracking-[0.14em] text-[#4a5568] mb-1">Security Posture (300–850)</div>
+        <div className="h-1.5 w-full rounded-full bg-[#1a2030] overflow-hidden">
+          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: style.color }} />
+        </div>
+      </div>
+      <div className="flex gap-2 shrink-0">
+        {Object.entries(posture.factorScores).map(([key, val]) => (
+          <div key={key} className="text-center min-w-[40px]">
+            <div className="text-[11px] font-semibold text-[#c7d0e4]">{val as number}</div>
+            <div className="text-[7px] uppercase tracking-wider text-[#4a5568]">{POSTURE_FACTOR_LABELS[key] ?? key}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function MetricsTab() {
   const result = useStudioStore((s) => s.simulationResult);
   const scene  = useStudioStore((s) => s.scene);
@@ -223,6 +279,11 @@ export function MetricsTab() {
           <TruthBadge label="simulated" />
         </div>
         <div className="max-w-[32rem] truncate text-right" title={truthLabelDetail("simulated")}>{truthLabelDetail("simulated")}</div>
+      </div>
+
+      {/* ── Posture Score headline ── */}
+      <div className="shrink-0 px-3 pt-2">
+        <PostureScoreCard />
       </div>
 
       {/* ── Main metric cards: 6-column grid ── */}

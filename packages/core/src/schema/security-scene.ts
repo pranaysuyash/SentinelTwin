@@ -1133,6 +1133,38 @@ export const crowdProfileSchema = z.object({
 export type AgentArchetype = z.infer<typeof agentArchetypeSchema>;
 export type CrowdProfile = z.infer<typeof crowdProfileSchema>;
 
+// ── Thread 153: Event / Temporary Site Configuration ─────────────────────────
+
+export const eventPhaseSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  phase: z.enum(["setup", "ingress", "live", "egress", "teardown"]),
+  startHour: z.number().min(0).max(23),
+  endHour: z.number().min(0).max(24),
+  expectedOccupancy: z.enum(["empty", "low", "medium", "high", "peak"]).default("medium"),
+  crowdProfileOverrideId: z.string().optional(),
+  notes: z.string().default(""),
+});
+
+export const eventConfigSchema = z.object({
+  eventName: z.string(),
+  eventType: z.enum([
+    "concert", "trade_show", "sporting_event", "outdoor_market",
+    "festival", "pop_up", "protest", "ceremony", "other",
+  ]).default("other"),
+  isActive: z.boolean().default(true),
+  expectedPeakAttendance: z.number().int().nonnegative(),
+  venueBoundaryMode: z.enum(["indoor", "outdoor", "hybrid"]).default("outdoor"),
+  dateStart: z.string().optional(),
+  dateEnd: z.string().optional(),
+  phases: z.array(eventPhaseSchema).default([]),
+  weatherRiskLevel: z.enum(["none", "low", "moderate", "high"]).default("none"),
+  specialRisks: z.array(z.string()).default([]),
+});
+
+export type EventPhase = z.infer<typeof eventPhaseSchema>;
+export type EventConfig = z.infer<typeof eventConfigSchema>;
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const timeScheduleSchema = z.object({
@@ -1156,6 +1188,10 @@ export const hourlySecuritySnapshotSchema = z.object({
   hour: z.number().int().min(0).max(23),
   minute: z.number().int().min(0).max(59),
   overallCoveragePct: z.number().min(0).max(100),
+  /** Geometric coverage before crowd occlusion adjustment. Present when crowd profiles are active. */
+  geometricCoveragePct: z.number().min(0).max(100).optional(),
+  /** Number of crowd agents at this time slot. Present when crowd profiles are active. */
+  crowdAgentCount: z.number().int().nonnegative().optional(),
   criticalZonePassCount: z.number().int().min(0),
   criticalZoneTotalCount: z.number().int().min(0),
   criticalZoneStatuses: z.record(z.string(), z.enum(["pass", "fail", "partial"])),
@@ -1240,6 +1276,7 @@ const securitySceneBaseSchema = z.object({
   assumptions: simulationAssumptionsSchema,
   calibrationConstants: calibrationConstantsSchema.optional(),
   timeSchedule: timeScheduleSchema.optional(),
+  eventConfig: eventConfigSchema.optional(),
   crowdProfiles: z.array(crowdProfileSchema).default([]),
   fenceSegments: z.array(fenceSegmentSchema).default([]),
   gateNodes: z.array(gateNodeSchema).default([]),

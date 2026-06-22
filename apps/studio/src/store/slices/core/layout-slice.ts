@@ -77,7 +77,7 @@ export type BottomTab =
 export type OverlayDensity = "all" | "compact" | "minimal";
 export type UiDensity = "compact" | "normal" | "comfortable";
 export type UiTheme = "dark" | "light";
-export type OverlayFilterId = "cameraLabels" | "zoneLabels" | "obstructionWarnings" | "entryChips" | "pathLabels";
+export type OverlayFilterId = "cameraLabels" | "zoneLabels" | "obstructionWarnings" | "entryChips" | "pathLabels" | "adversaryShadow";
 export type OverlayFilters = Record<OverlayFilterId, boolean>;
 export type LayerId =
   | "cameras"
@@ -406,6 +406,7 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
       obstructionWarnings: true,
       entryChips: true,
       pathLabels: true,
+      adversaryShadow: true,
     },
     viewSettingsOpen: false,
     visibleComponents: _initialLayout.visibleComponents,

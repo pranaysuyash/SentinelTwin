@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Box, Car, Columns3, Grid3x3, Package, PanelTop, Ruler, Square, TreePine, X } from "lucide-react";
+import { BadgeInfo, Box, Car, Columns3, Grid3x3, Layers3, Package, PanelTop, Ruler, Square, TreePine, X } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import {
@@ -9,6 +9,7 @@ import {
   OBSTRUCTION_PRESETS,
   getObstructionPreset,
 } from "@/lib/obstruction-presets";
+import { SCENE_OBJECT_LAYERS, getSceneObjectLayerCounts } from "@/lib/scene-object-catalog";
 import { useStudioStore } from "@/store/studio-store";
 
 const PRESET_ICONS: Record<string, React.ReactNode> = {
@@ -57,6 +58,7 @@ export function ObstructionPresetPicker() {
   const customDimensions = useStudioStore((s) => s.customObstructionDimensions);
   const setCustomDimensions = useStudioStore((s) => s.setCustomObstructionDimensions);
   const selectedPreset = getObstructionPreset(selectedPresetId);
+  const layerCounts = getSceneObjectLayerCounts();
 
   // Collapsed by default: the expanded grid can cover most of the canvas at
   // narrow widths, blocking the placement clicks it exists to support.
@@ -90,7 +92,7 @@ export function ObstructionPresetPicker() {
             Object library
           </div>
           <div className="mt-1 text-[10px] leading-relaxed text-[#7b889f]">
-            Pick the object to place. Dimensions and occlusion behavior feed the deterministic coverage engine directly.
+            Pick the object to place. The catalog keeps the scene graph split into structural primitives, security fixtures, and fit-out objects so the future marketplace can attach SKUs without changing the scene model.
           </div>
         </div>
         <button
@@ -101,6 +103,63 @@ export function ObstructionPresetPicker() {
         >
           <X className="h-3.5 w-3.5" />
         </button>
+      </div>
+
+      <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-2">
+        <div className="flex items-center gap-2 text-[8px] uppercase tracking-[0.18em] text-[#6a748b]">
+          <Layers3 className="h-3.5 w-3.5 text-sky-200" />
+          Object graph layers
+        </div>
+        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+          {SCENE_OBJECT_LAYERS.map((layer) => {
+            const isFitOut = layer.id === "fit_out";
+            const count = layer.id === "structural"
+              ? layerCounts.structural
+              : layer.id === "security_fixture"
+                ? layerCounts.securityFixture
+                : layerCounts.fitOut;
+
+            return (
+              <div
+                key={layer.id}
+                className={cn(
+                  "rounded-lg border px-2 py-2",
+                  isFitOut ? "border-amber-400/25 bg-amber-500/6" : "border-[#1f2536] bg-[#111521]",
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[10px] font-semibold text-[#e6ebf7]">{layer.label}</div>
+                  <span className={cn(
+                    "rounded-full border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em]",
+                    isFitOut ? "border-amber-400/30 bg-amber-500/10 text-amber-200" : "border-[#24314a] bg-[#0b0f17] text-[#7d8aa4]",
+                  )}>
+                    {layer.marketplaceRole}
+                  </span>
+                </div>
+                <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">{layer.description}</div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {layer.liveExamples.slice(0, 3).map((example) => (
+                    <span key={example} className="rounded-full border border-[#1f2536] bg-[#0b0f17] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#8b96ab]">
+                      {example}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2 text-[8px] text-[#556076]">
+                  <span>{count} live objects</span>
+                  <span>{layer.addPath}</span>
+                </div>
+                {layer.futureExamples?.length ? (
+                  <div className="mt-2 flex items-start gap-1.5 rounded-md border border-dashed border-[#2a3448] bg-[#0b0f17] px-2 py-1">
+                    <BadgeInfo className="mt-0.5 h-3 w-3 shrink-0 text-sky-200/80" />
+                    <div className="text-[8px] leading-relaxed text-[#7b889f]">
+                      Future catalog examples: {layer.futureExamples.join(", ")}.
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mt-2 grid grid-cols-3 gap-1.5">

@@ -6712,6 +6712,7 @@ All relevant decisions and analysis are already captured in:
   2. **Aim-time coverage delta** — while aiming, show the projected coverage gain (placement-oracle-lite for the held pose) in the preview panel footer.
   3. **Drag-to-aim for lights and sensors** — same interaction grammar; light aiming previews illumination footprint at night.
   4. **Object library extension to walls/doors** — parametric presets (double door, roller shutter, glass storefront) through the same picker idiom.
+  5. **Scene object taxonomy for marketplace readiness** — split the visible object graph into structural primitives, security fixtures, and fit-out objects so the current obstruction library can become a buy/customize surface later without forking the scene schema. The live catalog now reflects that split in `apps/studio/src/lib/scene-object-catalog.ts` and keeps the marketplace candidates aligned with the current obstruction preset library.
 
 ## "Super App for Physical Security" — Vision Expansion (2026-06-12)
 

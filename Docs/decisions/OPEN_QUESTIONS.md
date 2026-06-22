@@ -238,6 +238,11 @@ The new platform spine is a temporal ledger, but the exact event shape still nee
 
 ### Q-023: What role and approval model should govern draft, recovered, and published scenes?
 The product now has visible branch labels, branch-lineage previews, a branch-comparison panel, merge-readiness guidance, explicit restore-to-branch actions, a publish action, a local Governance tab, and an operational evidence archive restore path with local branch merge support plus a shared-workspace access surface, but the backend identity, sync, and conflict model are still undefined.
+
+### Q-026: Should fit-out catalog rows become commerce records or remain scene-only metadata?
+The live object library now separates structural primitives, security fixtures, and fit-out objects so the obstruction presets can become a marketplace-ready surface later. What is still undecided is whether the commerce layer should live in the same catalog records as the scene graph, or whether it should attach as a separate procurement layer with SKU/pricing/vendor metadata.
+**Why it matters:** if we blur commerce into the scene graph too early, we risk coupling simulation truth to vendor data. If we keep them too separate, we may miss the clean one-click quote/customize flow the feedback is pushing toward.
+**Needed:** a decision on the ownership boundary between scene objects, quoteable SKUs, and vendor integrations.
 **Questions to answer:**
 - Which backend identity model should own the active member selection and reviewer routing?
 - Should publication require explicit approval when a scene is shared or compliance-bound?

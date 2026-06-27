@@ -915,7 +915,36 @@ export function CameraInspector() {
               <CameraFeedCanvas cameraId={camera.id} />
             </div>
 
-            <SectionCard title="Live Camera Binding" helpText="Connect this planned camera to live feed evidence. Use it to compare the site twin against the real device without making the simulation depend on the feed." helpTitle="Live camera binding help">
+            <SectionCard title="Move & Rotate" helpText="Use the same manipulation model everywhere: keyboard nudges, on-canvas handles, and the right-click menu all patch the selected camera through the canonical store." helpTitle="Camera transform help" truthLabel="placeholder">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2.5">
+                  <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Keyboard</div>
+                  <div className="mt-2 space-y-2 text-[9px] leading-relaxed text-[#7b889f]">
+                    <div>
+                      <span className="rounded border border-[#24283a] bg-[#0b0f17] px-1.5 py-0.5 font-mono text-[8px] text-[#d2d9e8]">Arrow keys</span>
+                      <span className="ml-2">Nudge the selected camera or object in the plane.</span>
+                    </div>
+                    <div>
+                      <span className="rounded border border-[#24283a] bg-[#0b0f17] px-1.5 py-0.5 font-mono text-[8px] text-[#d2d9e8]">PageUp / PageDown</span>
+                      <span className="ml-2">Raise or lower the selected camera or object.</span>
+                    </div>
+                    <div>
+                      <span className="rounded border border-[#24283a] bg-[#0b0f17] px-1.5 py-0.5 font-mono text-[8px] text-[#d2d9e8]">Q / E</span>
+                      <span className="ml-2">Rotate the selected camera or object left and right.</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2.5">
+                  <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Mouse</div>
+                  <div className="mt-2 space-y-2 text-[9px] leading-relaxed text-[#7b889f]">
+                    <div>Drag the blue handle to move, the orange handle to change height, the pitch nub to tilt, and the green ring to yaw.</div>
+                    <div>Right-click the camera for snap, aim, open-view, duplicate, and delete actions.</div>
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Live Camera Binding" helpText="Connect this planned camera to live feed evidence. Use it to compare the site twin against the real device without making the simulation depend on the feed." helpTitle="Live camera binding help" truthLabel="live">
               <div className="space-y-2">
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                   <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
@@ -1194,7 +1223,7 @@ export function CameraInspector() {
               </div>
             </SectionCard>
 
-            <SectionCard title="Camera Metadata Bridge" helpText="Bring camera health, clarity, night mode, and feed status into the evidence trail. This helps explain whether a coverage issue is a design problem or an operational camera problem." helpTitle="Camera metadata help">
+            <SectionCard title="Camera Metadata Bridge" helpText="Bring camera health, clarity, night mode, and feed status into the evidence trail. This helps explain whether a coverage issue is a design problem or an operational camera problem." helpTitle="Camera metadata help" truthLabel="imported">
               <div className="space-y-2">
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
@@ -1302,7 +1331,7 @@ export function CameraInspector() {
               </div>
             </SectionCard>
 
-            <SectionCard title="Camera Spec Import" helpText="Paste manufacturer specs to update field of view, resolution, IR range, and mounting values. Review the parsed values before trusting them in an audit." helpTitle="Camera specs help">
+            <SectionCard title="Camera Spec Import" helpText="Paste manufacturer specs to update field of view, resolution, IR range, and mounting values. Review the parsed values before trusting them in an audit." helpTitle="Camera specs help" truthLabel="imported">
               <div className="space-y-2">
                 <div className="text-[9px] leading-relaxed text-[#6a748b]">
                   Paste a spec sheet snippet or JSON payload, then let the inspector stamp the parsed optics values back onto this camera through the canonical store.
@@ -1311,7 +1340,7 @@ export function CameraInspector() {
               </div>
             </SectionCard>
 
-            <SectionCard title="Placement Presets">
+            <SectionCard title="Placement Presets" truthLabel="computed">
               <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
@@ -1387,7 +1416,7 @@ export function CameraInspector() {
               </div>
             </SectionCard>
 
-            <SectionCard title="Camera Motion" helpText="Define how this camera moves so replay and coverage use time-aware behavior." helpTitle="Camera motion help">
+            <SectionCard title="Camera Motion" helpText="Define how this camera moves so replay and coverage use time-aware behavior." helpTitle="Camera motion help" truthLabel="simulated">
               <div className="space-y-2">
                 <div className="grid gap-2 sm:grid-cols-2">
                   <PropSelect
@@ -1545,7 +1574,7 @@ export function CameraInspector() {
               onChange={(v) => updateNode(camera.id, { mountType: v as CameraNode["mountType"] })}
             />
 
-            <SectionCard title="Mount Snap" helpText="Snap this camera to a realistic wall, ceiling, or pole mount so coverage results reflect where the device can actually be installed." helpTitle="Mount snap help">
+            <SectionCard title="Mount Snap" helpText="Snap this camera to a realistic wall, ceiling, or pole mount so coverage results reflect where the device can actually be installed." helpTitle="Mount snap help" truthLabel="computed">
               <div className="space-y-2">
                 <div className="text-[10px] leading-relaxed text-[#6a748b]">
                   Snap this camera to a wall, ceiling, or pole-like mount target, then re-aim it toward the room interior.
@@ -1724,7 +1753,7 @@ export function CameraInspector() {
 
             {/* ── Installability section ── */}
             {installabilityResult && (
-              <SectionCard title="Installability">
+              <SectionCard title="Installability" truthLabel="computed">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] text-[#6a748b]">Overall</span>
@@ -1883,7 +1912,7 @@ export function CameraInspector() {
                 <SummaryStat label="Zones Fail" value={camResult ? `${camResult.criticalZonesFailed.length}` : "--"} accent="text-amber-300" />
               </div>
             </SectionCard>
-            <SectionCard title="Operational Fusion" helpText="Combines planned camera coverage with live metadata, connection health, and nearby sensor signals so the operator can separate design risk from device health risk." helpTitle="Operational fusion help">
+            <SectionCard title="Operational Fusion" helpText="Combines planned camera coverage with live metadata, connection health, and nearby sensor signals so the operator can separate design risk from device health risk." helpTitle="Operational fusion help" truthLabel="inferred">
               <div className="grid grid-cols-2 gap-1.5">
                 <SummaryStat label="Health" value={fusionSummary?.operationalHealthLabel ?? "Unknown"} accent="text-cyan-300" />
                 <SummaryStat label="Metadata" value={fusionSummary?.cameraMetadataEvent ? `${fusionSummary.cameraMetadataEvent.status ?? "unknown"} · ${fusionSummary.cameraMetadataEvent.clarity ?? "unknown"}` : "none"} accent="text-emerald-300" />
@@ -1902,7 +1931,7 @@ export function CameraInspector() {
               </div>
             </SectionCard>
             {cameraOvpReport && (
-              <SectionCard title="Observed vs Planned" helpText="Compares this camera's current physical state to the last verified baseline. Drift means the camera has moved or been re-aimed since baseline. Live faults mean the camera is not reporting healthy right now." helpTitle="Observed vs Planned help">
+              <SectionCard title="Observed vs Planned" helpText="Compares this camera's current physical state to the last verified baseline. Drift means the camera has moved or been re-aimed since baseline. Live faults mean the camera is not reporting healthy right now." helpTitle="Observed vs Planned help" truthLabel="inferred">
                 {!snapshots[0] ? (
                   <div className="text-[10px] text-[#6a748b]">No baseline snapshot yet. Take a snapshot to enable drift detection for this camera.</div>
                 ) : cameraOvpReport.thisDrift ? (
@@ -1922,7 +1951,7 @@ export function CameraInspector() {
               </SectionCard>
             )}
 
-            <SectionCard title="Sensor Fusion" helpText="Shows nearby non-camera sensors that may confirm activity when camera coverage is weak. This is a preview of multi-sensor evidence, not a replacement for camera verification." helpTitle="Sensor fusion help">
+            <SectionCard title="Sensor Fusion" helpText="Shows nearby non-camera sensors that may confirm activity when camera coverage is weak. This is a preview of multi-sensor evidence, not a replacement for camera verification." helpTitle="Sensor fusion help" truthLabel="inferred">
               <div className="grid grid-cols-2 gap-1.5">
                 <SummaryStat label="Sensors" value={`${scene.sensors.length}`} accent="text-cyan-300" />
                 <SummaryStat label="Active" value={`${activeSensorCount}`} accent="text-emerald-300" />
@@ -1947,7 +1976,7 @@ export function CameraInspector() {
                 Sensors are schema-backed and live in the same scene graph as cameras. This preview makes the nearest sensor to the selected camera visible while full live fusion remains the next platform step.
               </div>
             </SectionCard>
-            <SectionCard title="Verified Notes">
+            <SectionCard title="Verified Notes" truthLabel="simulated">
               {offlineImpact.length > 0 ? (
                 <div className="space-y-2">
                   {offlineImpact.map((message, index) => (
@@ -1963,7 +1992,7 @@ export function CameraInspector() {
 
         {inspectorTab === "status" && (
           <div className="space-y-2.5">
-            <SectionCard title="Operational Status">
+            <SectionCard title="Operational Status" truthLabel="live">
               <ToggleField
                 label="Status"
                 value={camera.status === "on"}
@@ -1982,7 +2011,7 @@ export function CameraInspector() {
         {inspectorTab === "view" && (
           <div className="space-y-2.5">
             <div className="grid gap-2 sm:grid-cols-2">
-              <SectionCard title="View Mode">
+              <SectionCard title="View Mode" truthLabel="placeholder">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] text-[#6a748b]">Current Feed</span>
@@ -2013,7 +2042,7 @@ export function CameraInspector() {
                 </div>
               </SectionCard>
 
-              <SectionCard title="Target Info">
+              <SectionCard title="Target Info" truthLabel="computed">
                 <div className="space-y-1">
                   <Field label="Target Type" value={targetZone?.targetType.replace(/_/g, " ") ?? "—"} />
                   <Field label="Distance" value={targetDistanceM != null ? `${targetDistanceM.toFixed(1)}m` : "—"} />
@@ -2024,7 +2053,7 @@ export function CameraInspector() {
               </SectionCard>
             </div>
 
-            <SectionCard title="DORI Overlay (At Target)" helpText="Translates camera detail at the selected target into usable evidence quality. The key question is whether this camera can detect, observe, recognize, or identify what the zone requires." helpTitle="Evidence quality help">
+            <SectionCard title="DORI Overlay (At Target)" helpText="Translates camera detail at the selected target into usable evidence quality. The key question is whether this camera can detect, observe, recognize, or identify what the zone requires." helpTitle="Evidence quality help" truthLabel="simulated">
               <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <SummaryStat label="Target" value={targetZone?.label ?? "None"} accent="text-blue-300" />
@@ -2082,7 +2111,7 @@ export function CameraInspector() {
               </div>
             </SectionCard>
 
-            <SectionCard title="View Options" helpText="Choose which review overlays appear in the simulated camera view. These controls change what you see, not the underlying site twin." helpTitle="View options help">
+            <SectionCard title="View Options" helpText="Choose which review overlays appear in the simulated camera view. These controls change what you see, not the underlying site twin." helpTitle="View options help" truthLabel="placeholder">
               <div className="space-y-1">
                 <ToggleField label="Overlay Stack" value={viewToggles.overlays} trueLabel="Show" falseLabel="Hide" onChange={(value) => setViewToggles((current) => ({ ...current, overlays: value }))} />
                 <ToggleField label="Show DORI Labels" value={viewToggles.dori} trueLabel="Show" falseLabel="Hide" onChange={() => setViewToggle("dori")} />
@@ -2100,7 +2129,7 @@ export function CameraInspector() {
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
-              <SectionCard title="View Metrics" helpText="Quick camera facts for the current simulated feed: status, lens width, resolution, range, and measured zone coverage." helpTitle="View metrics help">
+              <SectionCard title="View Metrics" helpText="Quick camera facts for the current simulated feed: status, lens width, resolution, range, and measured zone coverage." helpTitle="View metrics help" truthLabel="simulated">
                 <div className="space-y-1">
                   <Field label="Camera" value={camera.name} />
                   <Field label="Status" value={camera.status === "on" ? "Online" : "Offline"} />
@@ -2114,7 +2143,7 @@ export function CameraInspector() {
                 </div>
               </SectionCard>
 
-              <SectionCard title="DORI Profile" helpText="Shows how evidence quality changes by distance and zone. Use it to decide whether a wide shot needs a second, tighter camera." helpTitle="DORI profile help">
+              <SectionCard title="DORI Profile" helpText="Shows how evidence quality changes by distance and zone. Use it to decide whether a wide shot needs a second, tighter camera." helpTitle="DORI profile help" truthLabel="simulated">
                 {(() => {
                   const sortedZoneEntries = (Object.entries(camResult?.qualityByZone ?? {}) as [string, DoriQuality][])
                     .map(([zoneId, quality]) => ({

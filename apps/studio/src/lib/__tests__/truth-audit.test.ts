@@ -9,6 +9,11 @@ describe("truth audit", () => {
   test("keeps the user-facing trust surfaces aligned with the manifest", () => {
     const report = auditTrustSurfaces(appRoot);
 
+    if (!report.ok) {
+      // eslint-disable-next-line no-console
+      console.error(formatTrustAuditReport(report));
+    }
+
     expect(report.ok).toBe(true);
     expect(report.issues).toHaveLength(0);
     expect(report.surfaces.some((surface) => surface.surface === "Project launcher scan flow" && surface.status === "pass")).toBe(true);

@@ -5,6 +5,7 @@ import type { SecurityIssue } from "@/schema/security-scene";
 import { TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { HideSectionButton } from "./HideSectionButton";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 
 export interface CoverageMetricsCardsProps {
   /**
@@ -64,7 +65,8 @@ export function CoverageMetricsCards({
   return (
     <div className="mt-4 grid grid-cols-3 gap-3 lg:grid-cols-6">
       <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
-        <div className="-mx-1 -mt-1 mb-1 flex justify-end">
+        <div className="-mx-1 -mt-1 mb-1 flex items-center justify-end gap-1.5">
+          <TruthBadge label={displayCoverage != null ? "simulated" : "placeholder"} />
           <HideSectionButton label="summary metrics" onClick={onHide} />
         </div>
         <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">COVERAGE</div>

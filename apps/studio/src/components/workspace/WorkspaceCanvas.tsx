@@ -25,7 +25,6 @@ import { ViewControls } from "@/components/workspace/overlays/ViewControls";
 import { TOOL_GHOST_COLORS, TOOL_ICONS, TOOL_LABELS } from "@/lib/tool-constants";
 import { useStudioStore } from "@/store/studio-store";
 import {
-  ENVIRONMENT_THEMES,
   SceneFloor,
   SceneWalls,
   SceneDoors,
@@ -38,6 +37,8 @@ import {
   CrowdChokepointOverlay,
   SceneContactShadows,
   SceneEnvironmentSphere,
+  SceneEnvironmentSetup,
+  SceneShadowCaster,
 } from "./SharedScene";
 import { makeSnapEngine } from "./editing/SnapEngine";
 import { PathDrawTool } from "./editing/PathDrawTool";
@@ -50,6 +51,7 @@ import {
   planContextualAction,
   type ContextActionId,
 } from "./editing/object-context-actions";
+import { PlanView2D } from "./PlanView2D";
 import { SelectionContextBar } from "./SelectionContextBar";
 import { SelectionOverlay } from "./editing/SelectionOverlay";
 import { TransformHandles } from "./editing/TransformHandles";
@@ -57,6 +59,8 @@ import { getSceneSelectionIds, normalizeBounds } from "./editing/selection-geome
 import { WallDrawTool } from "./editing/WallDrawTool";
 import { applyShiftLock, clampToScene, pathLength, pointDistance } from "./editing/editor-geometry";
 import { cn } from "@/lib/cn";
+import { isTypingTarget } from "@/lib/input-guard";
+import { resolveSceneLighting } from "@/lib/scene-appearance";
 import { getTrustQualityLabel } from "@/lib/quality-display";
 import { pointOnPathAtProgress } from "@/components/map/path-quality";
 import { MAP_COLORS } from "@/components/map/map-colors";
@@ -144,12 +148,6 @@ function SelectionRectangleOverlay({ drag }: { drag: SelectionDragState | null }
       />
     </div>
   );
-}
-
-function isTypingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  const tagName = target.tagName.toLowerCase();
-  return target.isContentEditable || tagName === "input" || tagName === "textarea" || tagName === "select";
 }
 
 function setWorkspaceCursor(cursor: "pointer" | "default") {
@@ -930,7 +928,7 @@ function SceneGeometry({
       <SceneEnvironmentSphere theme="day" visible={is3D} />
       {layers.walls_floors && (
         <>
-          <SceneFloor width={width} depth={depth} showGrid={false} />
+          <SceneFloor width={width} depth={depth} showGrid={false} appearance={scene.sceneAppearance?.surfaces?.floor} />
           <SceneContactShadows width={width} depth={depth} />
           <AccentSurface position={[width / 2, 0.002, depth / 2]} size={[width * 0.94, depth * 0.94]} color="#5b677d" opacity={0.06} />
           <AccentSurface position={[5, 0.0025, 5.58]} size={[2.5, 1.45]} color="#d7c542" opacity={0.16} />
@@ -955,7 +953,7 @@ function SceneGeometry({
       )}
 
       {layers.walls_floors ? (
-        <SceneWalls walls={scene.walls} onContextMenu={onObjectContextMenu} />
+        <SceneWalls walls={scene.walls} onContextMenu={onObjectContextMenu} defaultAppearance={scene.sceneAppearance?.surfaces?.wall} />
       ) : null}
 
       <SceneDoors doors={scene.doors} onContextMenu={onObjectContextMenu} />
@@ -1165,6 +1163,10 @@ function ToolPlacementFloor({
   const setEditorMode = useStudioStore((s) => s.setEditorMode);
   const setActiveTool = useStudioStore((s) => s.setActiveTool);
   const cameraPresetId = useStudioStore((s) => s.cameraPresetId);
+  const setMeasurementTool = useStudioStore((s) => s.setMeasurementTool);
+  const setCommentTool = useStudioStore((s) => s.setCommentTool);
+  const addComment = useStudioStore((s) => s.addComment);
+  const sceneCameras = useStudioStore((s) => s.scene.cameras);
   const { camera, size } = useThree();
 
   const [hoverPos, setHoverPos] = useState<THREE.Vector3 | null>(null);
@@ -1462,6 +1464,23 @@ function ToolPlacementFloor({
         addNode(node);
         setEditorFeedbackMessage(null);
         selectNode(node.id);
+      } else if (activeTool === "measure") {
+        const nearest = sceneCameras.reduce<{ id: string; dist: number } | null>((best, cam) => {
+          const dx = cam.position[0] - pos[0];
+          const dz = cam.position[2] - pos[2];
+          const dist = Math.hypot(dx, dz);
+          return !best || dist < best.dist ? { id: cam.id, dist } : best;
+        }, null);
+        if (nearest && nearest.dist <= 20) {
+          setMeasurementTool({ active: true, sourceCameraId: nearest.id, targetPoint: pos, result: null });
+          setEditorFeedbackMessage(`Measurement from ${nearest.id}: ${nearest.dist.toFixed(1)}m`);
+        } else {
+          setEditorFeedbackMessage("No camera within 20m for measurement");
+        }
+      } else if (activeTool === "comment") {
+        addComment(pos, "New annotation", "Operator", null);
+        setCommentTool({ active: true, position: pos, attachedToNodeId: null, draftText: "New annotation" });
+        setEditorFeedbackMessage("Comment placed");
       }
     },
     [
@@ -1489,6 +1508,10 @@ function ToolPlacementFloor({
       setPlacementAim,
       setSelectionDrag,
       snapEngine,
+      sceneCameras,
+      setMeasurementTool,
+      setCommentTool,
+      addComment,
     ],
   );
 
@@ -1999,7 +2022,9 @@ export function WorkspaceCanvas() {
   const setActiveTool = useStudioStore((s) => s.setActiveTool);
   const setScene = useStudioStore((s) => s.setScene);
   const referenceScenes = useStudioStore((s) => s.referenceScenes);
-  const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
+  // Effective lighting = built-in environment theme merged with the scene's
+  // persisted appearance customization (scene.sceneAppearance).
+  const lighting = resolveSceneLighting(envMode, scene.sceneAppearance);
   const [sceneWidth, sceneDepth] = useMemo(
     () => sanitizeSceneDimensions(scene.dimensions.width, scene.dimensions.depth, 0.5),
     [scene.dimensions.depth, scene.dimensions.width],
@@ -2201,11 +2226,22 @@ export function WorkspaceCanvas() {
         </div>
       )}
 
+      {canvasMode === "plan_2d" ? (
+        <PlanView2D />
+      ) : (
       <Canvas
-        shadows="percentage"
-        gl={{ antialias: true, alpha: false }}
-        style={{ width: "100%", height: "100%", background: theme.background }}
+        shadows="soft"
+        gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
+        style={{ width: "100%", height: "100%", background: lighting.background }}
       >
+        <SceneEnvironmentSetup
+          tier="high"
+          intensityScale={lighting.iblIntensityScale}
+          toneMappingExposure={lighting.toneMappingExposure}
+        />
+        {lighting.shadows && (
+          <SceneShadowCaster tier="high" maxDimension={Math.max(scene.dimensions.width, scene.dimensions.depth)} />
+        )}
         {isTopDown ? (
           <OrthographicCamera
             makeDefault
@@ -2223,20 +2259,29 @@ export function WorkspaceCanvas() {
             far={canvasCamera.far}
           />
         )}
-        <color attach="background" args={[theme.background]} />
-        <fog attach="fog" args={[theme.background, 12, 24]} />
+        <color attach="background" args={[lighting.background]} />
+        {lighting.fogEnabled && (
+          <fog attach="fog" args={[lighting.fogColor, lighting.fogNear ?? 12, lighting.fogFar ?? 24]} />
+        )}
 
-        <ambientLight intensity={theme.ambient} />
-        <hemisphereLight groundColor="#0b0f15" color="#d9e6ff" intensity={theme.hemisphere} />
+        <ambientLight intensity={lighting.ambient} />
+        <hemisphereLight groundColor="#0b0f15" color="#d9e6ff" intensity={lighting.hemisphere} />
         <directionalLight
           position={[10, 14, 8]}
-          intensity={theme.directional}
-          color="#eef4ff"
-          castShadow
+          intensity={lighting.directional}
+          color={lighting.keyLightColor}
+          castShadow={lighting.shadows}
           shadow-mapSize={[1024, 1024]}
         />
-        <directionalLight position={[-5, 8, -8]} intensity={theme.fill} color="#a5c2ff" />
-        <pointLight position={[5, 2.8, 3.5]} intensity={envMode === "night" ? 1.0 : 1.45} distance={10} color="#fff6d8" />
+        <directionalLight position={[-5, 8, -8]} intensity={lighting.fill} color={lighting.fillLightColor} />
+        {lighting.practicalLights && (
+          <pointLight
+            position={[5, 2.8, 3.5]}
+            intensity={(envMode === "night" ? 1.0 : 1.45) * lighting.practicalIntensity}
+            distance={10}
+            color="#fff6d8"
+          />
+        )}
 
         <Suspense fallback={<CanvasLoadingOverlay label="Loading workspace scene" />}>
           <SceneGeometry
@@ -2271,6 +2316,7 @@ export function WorkspaceCanvas() {
           dampingFactor={0.08}
         />
       </Canvas>
+      )}
     </div>
   );
 }

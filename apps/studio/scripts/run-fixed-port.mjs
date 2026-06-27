@@ -5,7 +5,7 @@ import net from "node:net";
 import path from "node:path";
 import { spawn } from "node:child_process";
 
-const PORT = 3001;
+const PORT = parseInt(process.env.STUDIO_PORT || process.env.PORT || "3001", 10);
 const HOST = "127.0.0.1";
 const mode = process.argv[2];
 const devBundler = (process.env.STUDIO_DEV_BUNDLER ?? "turbopack").toLowerCase();

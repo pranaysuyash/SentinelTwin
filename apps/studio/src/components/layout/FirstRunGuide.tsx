@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 const FIRST_RUN_DISMISSED_KEY = "sentineltwin:first-run-dismissed:v1";
 
 /**
@@ -47,10 +49,26 @@ export function resetFirstRunGuideDismissal(): void {
 }
 
 export default function FirstRunGuide({ onClose, onOpenHelp }: { onClose: () => void; onOpenHelp: () => void }) {
+  const [dontShowAgain, setDontShowAgain] = useState(true);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (dontShowAgain) markFirstRunGuideDismissed();
+        else resetFirstRunGuideDismissal();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose, dontShowAgain]);
+
   const handleStart = () => {
-    markFirstRunGuideDismissed();
+    if (dontShowAgain) markFirstRunGuideDismissed();
+    else resetFirstRunGuideDismissal();
     onClose();
   };
+
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/55 backdrop-blur-sm" onClick={handleStart}>
       <div className="w-[560px] max-w-[92vw] rounded-xl border border-[#26304a] bg-[#0d111a] p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -62,20 +80,28 @@ export default function FirstRunGuide({ onClose, onOpenHelp }: { onClose: () => 
           <li>3. Open Security Outcome to review failures and causes.</li>
           <li>4. Preview Fix, compare before/after, then apply.</li>
         </ol>
-        <div className="mt-3 flex items-center justify-end gap-2">
-          <button type="button" onClick={onOpenHelp} className="rounded border border-[#2d3750] px-3 py-1.5 text-[11px] text-[#cfe0ff] hover:bg-[#161f31]">Open Help</button>
-          <button
-            type="button"
-            onClick={handleStart}
-            data-testid="first-run-guide-start"
-            className="rounded border border-emerald-500/35 px-3 py-1.5 text-[11px] text-emerald-300 hover:bg-emerald-500/10"
-          >
-            Start
-          </button>
+        <div className="mt-4 flex items-center justify-between border-t border-[#1e2538] pt-3">
+          <label className="flex cursor-pointer items-center gap-2 text-[11px] text-[#9fb0ce] select-none">
+            <input
+              type="checkbox"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-[#2d3750] bg-[#11182a] text-emerald-500 focus:ring-0 focus:ring-offset-0"
+            />
+            Don&apos;t show this guide again on startup
+          </label>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onOpenHelp} className="rounded border border-[#2d3750] px-3 py-1.5 text-[11px] text-[#cfe0ff] hover:bg-[#161f31]">Open Help</button>
+            <button
+              type="button"
+              onClick={handleStart}
+              data-testid="first-run-guide-start"
+              className="rounded border border-emerald-500/35 px-3 py-1.5 text-[11px] text-emerald-300 hover:bg-emerald-500/10"
+            >
+              Start
+            </button>
+          </div>
         </div>
-        <p className="mt-2 text-right text-[9px] text-[#5b667c]">
-          The guide won't reappear after you click Start.
-        </p>
       </div>
     </div>
   );

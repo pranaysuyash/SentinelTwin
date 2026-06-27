@@ -24,6 +24,20 @@ export { computeMountTiltPenalty, getMountModel, getDefaultHeight, isPitchWithin
 // Vision collider
 export { buildVisionColliderMesh, getVisionColliderSource, disposeVisionColliderMesh } from "./vision-collider-mesh";
 
+// Vision bridge (deterministic batch raycast; JS + WASM-spike backends)
+export {
+  createVisionBridge,
+  createBridgeForScene,
+  BvhJsVisionBridge,
+  WasmVisionBridge,
+} from "./wasm-vision-bridge";
+export type {
+  RayBatchRay,
+  RayBatchHit,
+  VisionBridge,
+  VisionBridgeBackend,
+} from "./wasm-vision-bridge";
+
 // Path analysis
 export { computePathResults, deriveCameraQualityByZone } from "./path-analysis";
 export { pathLengthM, pointOnPathAtProgress, samplePathQuality, groupPathQualitySamples } from "./path-quality";

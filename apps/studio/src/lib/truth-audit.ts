@@ -437,6 +437,92 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
     forbiddenPhrases: ["stub"],
   },
   {
+    surface: "Shared SectionCard truth label prop",
+    file: "src/components/shared/SectionCard.tsx",
+    requiredPhrases: [
+      "truthLabel?: TruthLabel",
+      "import { TruthBadge",
+      "{truthLabel && <TruthBadge label={truthLabel} />",
+    ],
+    forbiddenPhrases: ["stub"],
+  },
+  {
+    surface: "Analytics dashboard truth labels",
+    file: "src/components/view/AnalyticsDashboardView.tsx",
+    requiredPhrases: [
+      "truthLabel?: TruthLabel",
+      "import { TruthBadge, type TruthLabel }",
+      'truthLabel="simulated"',
+      'truthLabel="computed"',
+      'truthLabel="inferred"',
+    ],
+    forbiddenPhrases: ["stub"],
+  },
+  {
+    surface: "Launcher coverage metrics truth label",
+    file: "src/components/launcher/CoverageMetricsCards.tsx",
+    requiredPhrases: [
+      "import { TruthBadge",
+      'label={displayCoverage != null ? "simulated" : "placeholder"}',
+    ],
+    forbiddenPhrases: ["stub"],
+  },
+  {
+    surface: "Launcher security status truth label",
+    file: "src/components/launcher/SecurityStatusPanel.tsx",
+    requiredPhrases: [
+      "import { TruthBadge",
+      'label={displayCoverage != null ? "simulated" : "placeholder"}',
+    ],
+    forbiddenPhrases: ["Live", "stub"],
+  },
+  {
+    surface: "Launcher dashboard header truth label",
+    file: "src/components/launcher/StudioDashboardHome.tsx",
+    requiredPhrases: [
+      "import { TruthBadge",
+      'label={displayCoverage != null ? "simulated" : "placeholder"}',
+    ],
+    forbiddenPhrases: ["stub"],
+  },
+  {
+    surface: "Inspector camera truth labels",
+    file: "src/components/inspector/CameraInspector.tsx",
+    requiredPhrases: [
+      'truthLabel="simulated"',
+      'truthLabel="computed"',
+      'truthLabel="inferred"',
+      'truthLabel="imported"',
+      'truthLabel="live"',
+      'truthLabel="placeholder"',
+    ],
+    forbiddenPhrases: ["stub"],
+  },
+  {
+    surface: "Report view stat group truth labels",
+    file: "src/components/view/ReportView.tsx",
+    requiredPhrases: [
+      "import { TruthBadge",
+      'truthLabel?: "computed" | "simulated"',
+      'truthLabel="computed"',
+      'truthLabel="computed"',
+    ],
+    forbiddenPhrases: ["stub"],
+  },
+  {
+    surface: "Adaptive DPR performance budget contract",
+    file: "src/lib/adaptive-dpr-budget.ts",
+    requiredPhrases: [
+      "PerformanceMonitor",
+      "AdaptiveDpr",
+      "WALL_TARGET_FPS",
+      "SINGLE_TARGET_FPS",
+      "computeWallTileDpr",
+      "computeSingleCanvasDpr",
+    ],
+    forbiddenPhrases: ["stub", "TODO"],
+  },
+  {
     surface: "Inspector analytics truth labels",
     file: "src/components/inspector/CameraInspector.tsx",
     requiredPhrases: [

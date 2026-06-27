@@ -200,6 +200,47 @@ export function TextInput({
   );
 }
 
+export function ColorInput({
+  label,
+  value,
+  placeholder = "#ffffff",
+  onChange,
+  onClear,
+}: {
+  label: string;
+  /** Hex color, or undefined when the surface uses its built-in color. */
+  value: string | undefined;
+  placeholder?: string;
+  onChange: (v: string) => void;
+  /** When provided, shows a reset affordance that clears the override. */
+  onClear?: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-[#181c27] py-2 last:border-b-0 last:pb-0 first:pt-0">
+      <span className="text-[10px] text-[#6a748b]">{label}</span>
+      <div className="flex items-center gap-1.5">
+        {value !== undefined && onClear ? (
+          <button
+            type="button"
+            onClick={onClear}
+            className="rounded px-1 py-0.5 text-[9px] text-[#556076] transition-colors hover:text-[#a8b4cc]"
+            title="Reset to default color"
+          >
+            Reset
+          </button>
+        ) : null}
+        <span className="font-mono text-[9px] text-[#7f8aa3]">{value ?? "default"}</span>
+        <input
+          type="color"
+          value={value ?? placeholder}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-6 w-8 cursor-pointer rounded border border-[#24283a] bg-[#111521] p-0.5"
+        />
+      </div>
+    </div>
+  );
+}
+
 export function PropSelect({
   label, value, options, onChange,
 }: {

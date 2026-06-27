@@ -196,7 +196,7 @@ function evidenceLogLine(evt: any): string {
 }
 
 function cloneDefaultMapState(): any {
-  return { minimap: { zoom: 1, pan: [0, 0] }, pathMap: { zoom: 1, pan: [0, 0] } };
+  return { minimap: { zoom: 1, pan: [0, 0] }, pathMap: { zoom: 1, pan: [0, 0] }, planView: { zoom: 1, pan: [0, 0] } };
 }
 
 function persistAiProviderSelection(selection: AiProviderSelection) {

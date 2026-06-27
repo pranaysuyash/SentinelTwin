@@ -2,6 +2,7 @@
 
 import { Canvas } from "@react-three/fiber";
 import { useMemo, useState } from "react";
+import * as THREE from "three";
 import { cn } from "@/lib/cn";
 
 import "@/lib/three-compat";
@@ -10,7 +11,8 @@ import { computeOperationalEvidenceFusionSummary, computeSensorFusionSummary } f
 import { samplePathQuality } from "@/components/map/path-quality";
 import { qualityToScore } from "@sentineltwin/core";
 import { useStudioStore } from "@/store/studio-store";
-import { PathActor, CoverageSegmentPath } from "@/components/workspace/SharedScene";
+import { PathActor, CoverageSegmentPath, SceneEnvironmentSetup, SceneShadowCaster } from "@/components/workspace/SharedScene";
+import { CameraFeedPostProcessing } from "@/components/view/CameraFeedPostProcessing";
 import { CameraRigLive, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
 
 type FeedViewMode = "normal" | "ir" | "low_light" | "thermal";
@@ -386,9 +388,15 @@ export function CameraFeedCanvas({
       <div className={cn("absolute inset-0", canvasFilterClass)}>
         <Canvas
           camera={{ position: camera.position, fov: camera.fovHorizontalDeg, near: 0.1, far: 50 }}
-          shadows="percentage"
-          gl={{ preserveDrawingBuffer: true }}
+          shadows="soft"
+          gl={{ preserveDrawingBuffer: true, powerPreference: "high-performance" }}
         >
+          <SceneEnvironmentSetup tier="medium" />
+          <SceneShadowCaster
+            tier="medium"
+            maxDimension={Math.max(scene.dimensions.width, scene.dimensions.depth)}
+          />
+          <CameraFeedPostProcessing mode={viewMode === "ir" ? "ir_bw" : viewMode === "low_light" ? "low_light" : viewMode === "thermal" ? "thermal" : "normal"} />
           <CameraFeedScene
             camera={camera}
             pathState={pathState}

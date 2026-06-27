@@ -14,7 +14,10 @@ import { computeOverallConfidence, computeZoneConfidence, computePathConfidence 
 import { computeAdversarialPath } from "./adversarial-path";
 import { analyseBlindSpotTopology } from "./blind-spot-topology";
 import { computeBlindSpotFingerprint } from "./blind-spot-fingerprint";
+import { computeCoverageEntropy } from "./coverage-entropy";
 import { computeCoverageFragility } from "./coverage-fragility";
+import { computeCoverageUncertainty } from "./coverage-uncertainty";
+import { computeCoveragePostureVariation } from "./coverage-posture";
 import { analyzeOcclusionBlame } from "./occlusion-blame";
 import {
   createCoverageEvaluator,
@@ -31,7 +34,7 @@ import { computePlacementOracle } from "./placement-oracle";
 import { computeCrowdOcclusion } from "./crowd-sim";
 
 type EvaluatedZone = ZoneResult & {
-  blockingLabels: string[];
+  blockingIds: string[];
   cameraQualityById: Record<string, DoriQuality>;
   redundancyRequired: boolean;
 };
@@ -300,7 +303,7 @@ function getSimulationCellDensity(scene: SecurityScene): SimulationPerformanceEn
 
 type CellSampleResult = {
   bestQuality: DoriQuality;
-  blockingLabels: Set<string>;
+  blockingIds: Set<string>;
   cameraQualityById: Record<string, DoriQuality>;
 };
 
@@ -337,7 +340,7 @@ function sampleCellCoverage(
     cellBest = maxQuality(cellBest, evaluationQuality);
   }
 
-  return { bestQuality: cellBest, blockingLabels: cellBlocking, cameraQualityById };
+  return { bestQuality: cellBest, blockingIds: cellBlocking, cameraQualityById };
 }
 
 function evaluateZone(
@@ -352,12 +355,10 @@ function evaluateZone(
   const sampleHeightsM = getZoneSampleHeights(zone);
 
   const cellQualities: { quality: DoriQuality }[] = [];
-  const cameraQualityById: Record<string, DoriQuality> = Object.fromEntries(
+  let accumulatedCameraQuality: Record<string, DoriQuality> = Object.fromEntries(
     scene.cameras.map((camera) => [camera.id, "none" as DoriQuality]),
   );
-  const blockingLabels = new Set<string>();
-
-  let accumulatedCameraQuality = cameraQualityById;
+const blockingIds = new Set<string>();
 
   for (const cell of zoneCells) {
     const result = sampleCellCoverage(
@@ -366,7 +367,7 @@ function evaluateZone(
     );
     accumulatedCameraQuality = result.cameraQualityById;
     cellQualities.push({ quality: result.bestQuality });
-    result.blockingLabels.forEach((label) => blockingLabels.add(label));
+    result.blockingIds.forEach((id) => blockingIds.add(id));
   }
 
   const actualQuality = getZoneQuality(cellQualities);
@@ -381,13 +382,13 @@ function evaluateZone(
       ? "fail"
       : coverageStatus(actualQuality, zone.requiredQuality);
 
-  const failureReasons: string[] = [];
+const failureReasons: string[] = [];
   if (status !== "pass") {
     failureReasons.push(
       `${zone.label} is below ${zone.requiredQuality} with ${profile.description} near ${zone.heightM.toFixed(2)}m.`,
     );
-    if (blockingLabels.size > 0) {
-      failureReasons.push(`Blocked by: ${Array.from(blockingLabels).join(", ")}.`);
+    if (blockingIds.size > 0) {
+      failureReasons.push(`Blocked by: ${Array.from(blockingIds).join(", ")}.`);
     }
     if (coveringCameras.length === 0) {
       failureReasons.push("No camera can currently sample this zone.");
@@ -404,7 +405,7 @@ function evaluateZone(
     redundancyRequired: zone.redundancyRequired,
     status,
     failureReasons,
-    blockingLabels: Array.from(blockingLabels),
+    blockingIds: Array.from(blockingIds),
     cameraQualityById: accumulatedCameraQuality,
   };
 }
@@ -413,16 +414,16 @@ function getZoneByLabel(scene: SecurityScene, label: string) {
   return scene.criticalZones.find((zone) => zone.label === label);
 }
 
-function getObstructionByLabel(scene: SecurityScene, label: string) {
-  return scene.obstructions.find((obstruction) => obstruction.label === label);
+function getObstructionById(scene: SecurityScene, id: string) {
+  return scene.obstructions.find((obstruction) => obstruction.id === id);
 }
 
 function moveObstructionAwayFromZone(
   scene: SecurityScene,
   zone: SecurityScene["criticalZones"][number],
-  obstructionLabel: string,
+  obstructionId: string,
 ) {
-  const obstruction = getObstructionByLabel(scene, obstructionLabel);
+  const obstruction = getObstructionById(scene, obstructionId);
   if (!obstruction) return null;
 
   const next = cloneSecuritySceneSimulation(scene);
@@ -568,6 +569,9 @@ function buildSimulationResult(
     coverageCells.map((c) => ({ ...c, ppm: c.ppm ?? 0, coverageIncluded: c.coverageIncluded, privacyRestricted: c.privacyRestricted ?? false, coveringCameras: c.coveringCameras, blockedBy: c.blockedBy ?? [] })),
     scene.assumptions.doriStandard,
   );
+  const entropy = computeCoverageEntropy(coverageCells);
+  const uncertainty = includeNovelAnalytics ? computeCoverageUncertainty(scene) : null;
+  const postureVariation = includeNovelAnalytics ? computeCoveragePostureVariation(scene) : null;
   const fragilityCellMap = new Map(fragility.cells.map((fc) => [`${fc.cellX}:${fc.cellZ}`, fc.fragility]));
   const includedCoverageCells = coverageCells.filter((cell) => cell.coverageIncluded);
   const includedCoverageCellCount = includedCoverageCells.length;
@@ -665,7 +669,7 @@ function buildSimulationResult(
 
   const obstructionToZones = new Map<string, Set<string>>();
   for (const zone of zoneEvaluations) {
-    for (const obsLabel of zone.blockingLabels) {
+    for (const obsLabel of zone.blockingIds) {
       if (!obstructionToZones.has(obsLabel)) {
         obstructionToZones.set(obsLabel, new Set());
       }
@@ -673,7 +677,7 @@ function buildSimulationResult(
     }
   }
 
-  for (const [obsLabel, affectedZoneSet] of obstructionToZones) {
+  for (const [obsId, affectedZoneSet] of obstructionToZones) {
     const affectedZoneList = Array.from(affectedZoneSet);
     const affectedCameraIds = cameraResults
       .filter((camera) =>
@@ -681,12 +685,15 @@ function buildSimulationResult(
       )
       .map((camera) => camera.cameraId);
 
+    const obstructionNode = scene.obstructions.find((o) => o.id === obsId);
+    const obstructionLabel = obstructionNode?.label ?? obsId;
     issues.push({
       severity: "high",
       category: "blindspot",
-      description: `${obsLabel} is obstructing coverage in: ${affectedZoneList.join(", ")}.`,
+      description: `${obstructionLabel} is obstructing coverage in: ${affectedZoneList.join(", ")}.`,
       affectedZones: affectedZoneList,
       affectedCameras: affectedCameraIds,
+      affectedNodeId: obsId,
     });
   }
 
@@ -756,16 +763,16 @@ function buildSimulationResult(
 
   const recommendations: Recommendation[] = [];
   if (includeRecommendations) {
-    const firstBlockingZone = zoneEvaluations.find((zone) => zone.blockingLabels.length > 0 && zone.status !== "pass");
+    const firstBlockingZone = zoneEvaluations.find((zone) => zone.blockingIds.length > 0 && zone.status !== "pass");
     const firstCameraZone = zoneEvaluations.find(
       (zone) => zone.status !== "pass" && zone.coveringCameras.length > 0,
     );
 
     if (firstBlockingZone) {
-      const obstructionLabel = firstBlockingZone.blockingLabels[0];
+      const obstructionId = firstBlockingZone.blockingIds[0];
       const zone = getZoneByLabel(scene, firstBlockingZone.label);
-      if (zone && obstructionLabel) {
-        const patchedScene = moveObstructionAwayFromZone(scene, zone, obstructionLabel);
+      if (zone && obstructionId) {
+        const patchedScene = moveObstructionAwayFromZone(scene, zone, obstructionId);
         if (patchedScene) {
           const patchedResult = simulateStudioInternal(patchedScene, false, false, false);
           const patchedZone = patchedResult.criticalZoneResults.find((entry) => entry.zoneId === zone.id);
@@ -773,8 +780,9 @@ function buildSimulationResult(
             patchedZone &&
             qualityToScore(patchedZone.actualQuality) > qualityToScore(firstBlockingZone.actualQuality);
 
-          const obsNode = getObstructionByLabel(patchedScene, obstructionLabel);
-          const movedObs = patchedScene.obstructions.find((o) => o.label === obstructionLabel);
+          const obsNode = patchedScene.obstructions.find((o) => o.id === obstructionId);
+          const obstructionLabel = obsNode?.label ?? obstructionId;
+          const movedObs = patchedScene.obstructions.find((o) => o.id === obstructionId);
 
           const recKey = obsNode?.id ?? movedObs?.id ?? "rec_move";
           recommendations.push({
@@ -894,6 +902,9 @@ function buildSimulationResult(
       robustCellCount: fragility.robustCellCount,
       totalCells: fragility.totalCells,
     } : undefined,
+    coverageEntropy: entropy ?? undefined,
+    coverageUncertainty: uncertainty ?? undefined,
+    coveragePostureVariation: postureVariation ?? undefined,
     kRobustness,
     placementOracle,
     // Simulation engine maturity fields (Thread 2b)

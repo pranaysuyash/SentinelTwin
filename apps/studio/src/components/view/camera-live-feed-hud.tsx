@@ -114,6 +114,8 @@ export function LiveFeedHUD({
   cameraLiveConnectionEvent,
   operationalFusion,
   simulationAssumptions,
+  leftAddons,
+  rightAddons,
 }: {
   camera: CameraNode;
   mode: CameraFeedMode;
@@ -126,8 +128,9 @@ export function LiveFeedHUD({
   cameraLiveConnectionEvent: CameraLiveConnectionEvent;
   operationalFusion: OperationalEvidenceFusionSummary | null;
   simulationAssumptions: SimulationAssumptions;
+  leftAddons?: React.ReactNode;
+  rightAddons?: React.ReactNode;
 }) {
-  const isActive = cam.status === "on";
   const ranges = rangeMeters(cam, ppm);
   const realismFlags = [
     simulationAssumptions.timeOfDay !== "day" ? `Light: ${simulationAssumptions.timeOfDay}` : null,
@@ -135,172 +138,187 @@ export function LiveFeedHUD({
     simulationAssumptions.glareIntensity !== "none" ? `Glare: ${simulationAssumptions.glareIntensity}` : null,
     simulationAssumptions.overexposedZones ? "Overexposure risk" : null,
   ].filter((entry): entry is string => Boolean(entry));
+
   return (
     <>
       <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-linear-to-b from-black/80 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/85 to-transparent" />
 
-      <div className="absolute left-3 top-3 flex items-center gap-2">
-        <span className={`h-2 w-2 rounded-full ${isActive ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]" : "bg-red-400"}`} />
-        <span className="text-[11px] font-bold uppercase tracking-wide text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.9)]">
-          {formatCameraTag(cam.name)}
+      {/* Top-Right Spec Badge */}
+      <div className="absolute right-3 top-3 z-30 flex flex-col items-end gap-0.5 pointer-events-auto">
+        <span className="rounded border border-[#263246] bg-[#0b0f17]/90 px-2 py-0.5 text-[9px] font-semibold text-[#93c5fd] shadow-sm">
+          {cam.resolutionMP}MP · {cam.fovHorizontalDeg}°
         </span>
-        <span className="text-[11px] font-bold text-white/80 [text-shadow:0_1px_6px_rgba(0,0,0,0.9)]">
-          {cam.name}
+        <span className="font-mono text-[8px] text-white/70 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
+          {cam.mountType.toUpperCase()}
         </span>
-        <span className="rounded bg-emerald-500/30 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-emerald-300">{isActive ? "Active" : "Offline"}</span>
+        {flags.timestamp ? (
+          <span className="font-mono text-[8px] text-white/75 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
+            {nowTimestamp()}
+          </span>
+        ) : null}
       </div>
 
-      <div className="absolute right-3 top-3 flex flex-col items-end gap-0.5">
-        <span className="rounded bg-black/60 px-2 py-0.5 text-[8px] font-semibold text-[#93c5fd]">{cam.resolutionMP}MP · {cam.fovHorizontalDeg}°</span>
-        <span className="font-mono text-[8px] text-white/70 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">{cam.mountType.toUpperCase()}</span>
-        {flags.timestamp ? <span className="font-mono text-[8px] text-white/75 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">{nowTimestamp()}</span> : null}
+      {/* Left Sidebar Stack */}
+      <div className="absolute left-3 top-16 z-30 flex w-64 max-h-[calc(100vh-13rem)] flex-col gap-2.5 overflow-y-auto pointer-events-none pr-1 scrollbar-none">
+        <div className="flex flex-wrap gap-1.5 pointer-events-auto">
+          <span className="rounded-md border border-[#2d3d56] bg-[#0b0f17]/90 px-2 py-1 text-[8px] font-semibold text-[#95a9cf] shadow-sm">
+            Mode: {modeLabel(mode)}
+          </span>
+          <span className="rounded-md border border-[#2d3d56] bg-[#0b0f17]/90 px-2 py-1 text-[8px] font-semibold text-[#95a9cf] shadow-sm">
+            LIVE (SIMULATED)
+          </span>
+        </div>
+
+        {leftAddons}
+
+        {sensorEvent ? (
+          <div className="pointer-events-auto rounded-xl border border-cyan-400/20 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
+            <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Live Sensor Event</div>
+            <div className="mt-1 text-[10px] font-semibold text-white">{sensorEvent.sensorLabel}</div>
+            <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
+              <div>
+                <span className="text-[#6a748b]">Type:</span> {sensorEvent.kind}
+              </div>
+              <div>
+                <span className="text-[#6a748b]">State:</span> {sensorEvent.resultingState ?? "—"}
+              </div>
+              <div>
+                <span className="text-[#6a748b]">Camera:</span> {sensorEvent.nearestCameraName ?? "None"}
+              </div>
+              <div>
+                <span className="text-[#6a748b]">Distance:</span>{" "}
+                {sensorEvent.nearestDistanceM == null ? "—" : `${sensorEvent.nearestDistanceM.toFixed(1)}m`}
+              </div>
+            </div>
+            <div className="mt-1 text-[8px] text-[#8ea6cc]">{sensorEvent.details}</div>
+          </div>
+        ) : null}
+
+        {realismFlags.length > 0 ? (
+          <div className="pointer-events-auto rounded-xl border border-amber-400/20 bg-[#0b0f17]/92 px-3 py-2 text-[8px] text-amber-100 shadow-sm">
+            <div className="font-semibold uppercase tracking-[0.16em] text-amber-200">Feed realism model</div>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {realismFlags.map((flag) => (
+                <span key={flag} className="rounded border border-amber-300/20 bg-amber-500/12 px-1.5 py-0.5">
+                  {flag}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {flags.path || flags.zones || flags.overlays || flags.grid ? (
+          <div className="pointer-events-auto flex flex-col gap-1 rounded-xl border border-[#2d3d56] bg-[#0b0f17]/90 px-3 py-2 text-[8px] text-[#8ea6cc] shadow-sm">
+            <div className="font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">Active Overlays</div>
+            {flags.overlays ? <span>• Overlays: enabled</span> : null}
+            {flags.path ? <span>• Path overlays</span> : null}
+            {flags.zones ? <span>• Zone overlays</span> : null}
+            {flags.grid ? <span>• Floor grid</span> : null}
+          </div>
+        ) : null}
       </div>
 
-      {flags.dori ? (
-        <div className="absolute right-3 top-24 flex w-48 flex-col gap-1 rounded-lg border border-[#2d3d56] bg-black/55 px-2 py-2 text-[9px] text-[#cdd6ef]">
-          <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#87a5cf]">DORI RANGES AT TARGET</div>
-          <div className="space-y-0.5">
-            <div className="flex justify-between"><span>Detection</span><span className={"font-mono " + QUALITY_TEXT_COLOR.detection}>{ranges.detection.toFixed(1)}m</span></div>
-            <div className="flex justify-between"><span>Observation</span><span className={"font-mono " + QUALITY_TEXT_COLOR.observation}>{ranges.observation.toFixed(1)}m</span></div>
-            <div className="flex justify-between"><span>Recognition</span><span className={"font-mono " + QUALITY_TEXT_COLOR.recognition}>{ranges.recognition.toFixed(1)}m</span></div>
-            <div className="flex justify-between"><span>Identification</span><span className={"font-mono " + QUALITY_TEXT_COLOR.identification}>{ranges.identification.toFixed(1)}m</span></div>
+      {/* Right Sidebar Stack */}
+      <div className="absolute right-3 top-16 z-30 flex w-72 max-h-[calc(100vh-13rem)] flex-col gap-2.5 overflow-y-auto pointer-events-none pl-1 scrollbar-none">
+        {flags.dori ? (
+          <div className="pointer-events-auto flex flex-col gap-1 rounded-xl border border-[#2d3d56] bg-[#0b0f17]/92 px-3 py-2.5 text-[9px] text-[#cdd6ef] shadow-sm">
+            <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#87a5cf]">DORI RANGES AT TARGET</div>
+            <div className="space-y-0.5 mt-1">
+              <div className="flex justify-between"><span>Detection</span><span className={"font-mono " + QUALITY_TEXT_COLOR.detection}>{ranges.detection.toFixed(1)}m</span></div>
+              <div className="flex justify-between"><span>Observation</span><span className={"font-mono " + QUALITY_TEXT_COLOR.observation}>{ranges.observation.toFixed(1)}m</span></div>
+              <div className="flex justify-between"><span>Recognition</span><span className={"font-mono " + QUALITY_TEXT_COLOR.recognition}>{ranges.recognition.toFixed(1)}m</span></div>
+              <div className="flex justify-between"><span>Identification</span><span className={"font-mono " + QUALITY_TEXT_COLOR.identification}>{ranges.identification.toFixed(1)}m</span></div>
+            </div>
+            {targetType ? <div className="mt-1 border-t border-[#334563] pt-1 text-[8px] uppercase tracking-wide text-[#7a94c7]">Target: {formatTargetTypeLabel(targetType)}</div> : null}
+            <div className="text-[8px] text-[#95a9cf]">Mode: {modeLabel(mode)}</div>
           </div>
-          {targetType ? <div className="mt-1 border-t border-[#334563] pt-1 text-[8px] uppercase tracking-wide text-[#7a94c7]">Target: {formatTargetTypeLabel(targetType)}</div> : null}
-          <div className="text-[8px] text-[#95a9cf]">Mode: {modeLabel(mode)}</div>
-        </div>
-      ) : null}
+        ) : null}
 
-      <div className="absolute left-3 bottom-3 flex flex-wrap gap-2 text-[8px] text-[#95a9cf]">
-        <span className="rounded border border-[#2d3d56] bg-black/45 px-2 py-1">Mode: {modeLabel(mode)}</span>
-        <span className="rounded border border-[#2d3d56] bg-black/45 px-2 py-1">LIVE MODE (SIMULATED)</span>
+        {rightAddons}
+
+        {sensorFusion.totalCount > 0 ? (
+          <div className="pointer-events-auto rounded-xl border border-cyan-400/20 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
+            <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Sensor Fusion</div>
+            <div className="mt-1 text-[10px] font-semibold text-white">{sensorFusion.nearestSensorLabel}</div>
+            <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
+              <div>
+                <span className="text-[#6a748b]">Distance:</span>{" "}
+                {sensorFusion.nearestDistanceM == null ? "—" : `${sensorFusion.nearestDistanceM.toFixed(1)}m`}
+              </div>
+              <div>
+                <span className="text-[#6a748b]">State:</span> {sensorFusion.nearestSensorState}
+              </div>
+              <div>
+                <span className="text-[#6a748b]">Coverage:</span> {sensorFusion.nearestSensorCoverage}
+              </div>
+              <div>
+                <span className="text-[#6a748b]">Active:</span> {sensorFusion.activeCount} / {sensorFusion.totalCount}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {cameraMetadataEvent ? (
+          <div className="pointer-events-auto rounded-xl border border-emerald-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
+            <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-emerald-300">Live Camera Metadata</div>
+            <div className="mt-1 text-[10px] font-semibold text-white">{cameraMetadataEvent.cameraName}</div>
+            <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
+              <div><span className="text-[#6a748b]">Status:</span> {cameraMetadataEvent.status ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Clarity:</span> {cameraMetadataEvent.clarity ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Night:</span> {cameraMetadataEvent.nightMode ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Mode:</span> {cameraMetadataEvent.feedMode ?? cameraMetadataEvent.ingestMode}</div>
+            </div>
+            <div className="mt-1 text-[8px] text-[#8ea6cc]">
+              {cameraMetadataEvent.feedLabel ? `${cameraMetadataEvent.feedLabel} · ` : ""}
+              {cameraMetadataEvent.summary}
+            </div>
+          </div>
+        ) : null}
+
+        {cameraLiveConnectionEvent ? (
+          <div className="pointer-events-auto rounded-xl border border-cyan-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
+            <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Live Camera Connection</div>
+            <div className="mt-1 text-[10px] font-semibold text-white">{cameraLiveConnectionEvent.cameraName}</div>
+            <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
+              <div><span className="text-[#6a748b]">Status:</span> {cameraLiveConnectionEvent.liveConnectionStatus ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Mode:</span> {cameraLiveConnectionEvent.liveConnectionMode ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Session:</span> {cameraLiveConnectionEvent.liveSessionState ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Session ID:</span> {cameraLiveConnectionEvent.liveSessionId ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Transport:</span> {cameraLiveConnectionEvent.transportSessionState ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Protocol:</span> {cameraLiveConnectionEvent.protocolProfile ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Auth:</span> {cameraLiveConnectionEvent.authState ?? "—"} · {cameraLiveConnectionEvent.authMode ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Auth session:</span> {cameraLiveConnectionEvent.authSessionId ?? "—"}</div>
+              <div className="col-span-2"><span className="text-[#6a748b]">Feed:</span> {cameraLiveConnectionEvent.liveFeedLabel ?? cameraLiveConnectionEvent.liveFeedUrl ?? "—"}</div>
+            </div>
+            <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[8px] text-[#8ea6cc]">
+              <div><span className="text-[#6a748b]">Started:</span> {cameraLiveConnectionEvent.liveSessionStartedAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionStartedAt).toLocaleTimeString()}</div>
+              <div><span className="text-[#6a748b]">Confirmed:</span> {cameraLiveConnectionEvent.liveSessionConfirmedAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionConfirmedAt).toLocaleTimeString()}</div>
+              <div className="col-span-2"><span className="text-[#6a748b]">Expires:</span> {cameraLiveConnectionEvent.liveSessionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionExpiresAt).toLocaleTimeString()}</div>
+              <div className="col-span-2"><span className="text-[#6a748b]">Auth expires:</span> {cameraLiveConnectionEvent.authSessionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.authSessionExpiresAt).toLocaleTimeString()}</div>
+              <div className="col-span-2"><span className="text-[#6a748b]">Challenge:</span> {cameraLiveConnectionEvent.authChallengeHeader ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Events:</span> {cameraLiveConnectionEvent.eventSubscriptionUri ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Transport response:</span> {cameraLiveConnectionEvent.transportResponseStatus == null ? "—" : `${cameraLiveConnectionEvent.transportResponseStatus}${cameraLiveConnectionEvent.transportResponseStatusText ? ` ${cameraLiveConnectionEvent.transportResponseStatusText}` : ""}`}</div>
+              <div><span className="text-[#6a748b]">Event ref:</span> {cameraLiveConnectionEvent.eventSubscriptionReference ?? "—"}</div>
+              <div><span className="text-[#6a748b]">Challenge scheme:</span> {cameraLiveConnectionEvent.authChallengeScheme ?? "—"}</div>
+              <div className="col-span-2"><span className="text-[#6a748b]">Event expiry:</span> {cameraLiveConnectionEvent.eventSubscriptionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.eventSubscriptionExpiresAt).toLocaleTimeString()}</div>
+              <div className="col-span-2"><span className="text-[#6a748b]">Heartbeat:</span> {cameraLiveConnectionEvent.lastHeartbeatAt == null ? "—" : new Date(cameraLiveConnectionEvent.lastHeartbeatAt).toLocaleTimeString()} · probes {cameraLiveConnectionEvent.probeCount}</div>
+            </div>
+            <div className="mt-1 text-[8px] text-[#8ea6cc]">
+              {cameraLiveConnectionEvent.ingestMode === "external" ? "External bind" : "Manual bind"} · {cameraLiveConnectionEvent.summary}
+            </div>
+          </div>
+        ) : null}
+
+        <CameraNoise />
+        {operationalFusion && (operationalFusion.operationalHealth !== "unknown" || operationalFusion.sensorFusion.totalCount > 0 || operationalFusion.cameraMetadataEvent || operationalFusion.cameraLiveConnectionEvent) ? (
+          <div className="pointer-events-auto rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2 text-[8px] text-[#8ea6cc] shadow-sm">
+            <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Operational Evidence</div>
+            <div className="mt-1 text-[9px] font-semibold text-white">{operationalFusion.operationalHealthLabel}</div>
+            <div className="mt-1 text-[8px] text-[#9ab0ce]">{operationalFusion.operationalHealthDetail}</div>
+          </div>
+        ) : null}
       </div>
-      {realismFlags.length > 0 ? (
-        <div className="absolute left-3 bottom-12 z-30 rounded-lg border border-amber-400/20 bg-black/55 px-2 py-1.5 text-[8px] text-amber-100">
-          <div className="font-semibold uppercase tracking-[0.16em] text-amber-200">Feed realism model</div>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {realismFlags.map((flag) => (
-              <span key={flag} className="rounded border border-amber-300/20 bg-amber-500/12 px-1.5 py-0.5">
-                {flag}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {flags.path || flags.zones || flags.overlays || flags.grid ? (
-        <div className="absolute left-3 top-20 flex flex-col gap-1 rounded-lg border border-[#2d3d56] bg-black/40 px-2 py-1.5 text-[8px] text-[#8ea6cc]">
-          {flags.overlays ? <span>• Overlays: enabled</span> : null}
-          {flags.path ? <span>• Path overlays</span> : null}
-          {flags.zones ? <span>• Zone overlays</span> : null}
-          {flags.grid ? <span>• Floor grid</span> : null}
-        </div>
-      ) : null}
-
-      {sensorFusion.totalCount > 0 ? (
-        <div className="absolute right-3 bottom-24 z-30 rounded-xl border border-cyan-400/20 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
-          <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Sensor Fusion</div>
-          <div className="mt-1 text-[10px] font-semibold text-white">{sensorFusion.nearestSensorLabel}</div>
-          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
-            <div>
-              <span className="text-[#6a748b]">Distance:</span>{" "}
-              {sensorFusion.nearestDistanceM == null ? "—" : `${sensorFusion.nearestDistanceM.toFixed(1)}m`}
-            </div>
-            <div>
-              <span className="text-[#6a748b]">State:</span> {sensorFusion.nearestSensorState}
-            </div>
-            <div>
-              <span className="text-[#6a748b]">Coverage:</span> {sensorFusion.nearestSensorCoverage}
-            </div>
-            <div>
-              <span className="text-[#6a748b]">Active:</span> {sensorFusion.activeCount} / {sensorFusion.totalCount}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {sensorEvent ? (
-        <div className="absolute left-3 top-20 z-30 rounded-xl border border-cyan-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
-          <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Live Sensor Event</div>
-          <div className="mt-1 text-[10px] font-semibold text-white">{sensorEvent.sensorLabel}</div>
-          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
-            <div>
-              <span className="text-[#6a748b]">Type:</span> {sensorEvent.kind}
-            </div>
-            <div>
-              <span className="text-[#6a748b]">State:</span> {sensorEvent.resultingState ?? "—"}
-            </div>
-            <div>
-              <span className="text-[#6a748b]">Camera:</span> {sensorEvent.nearestCameraName ?? "None"}
-            </div>
-            <div>
-              <span className="text-[#6a748b]">Distance:</span>{" "}
-              {sensorEvent.nearestDistanceM == null ? "—" : `${sensorEvent.nearestDistanceM.toFixed(1)}m`}
-            </div>
-          </div>
-          <div className="mt-1 text-[8px] text-[#8ea6cc]">{sensorEvent.details}</div>
-        </div>
-      ) : null}
-
-      {cameraMetadataEvent ? (
-        <div className="absolute right-3 bottom-52 z-30 rounded-xl border border-emerald-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
-          <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-emerald-300">Live Camera Metadata</div>
-          <div className="mt-1 text-[10px] font-semibold text-white">{cameraMetadataEvent.cameraName}</div>
-          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
-            <div><span className="text-[#6a748b]">Status:</span> {cameraMetadataEvent.status ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Clarity:</span> {cameraMetadataEvent.clarity ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Night:</span> {cameraMetadataEvent.nightMode ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Mode:</span> {cameraMetadataEvent.feedMode ?? cameraMetadataEvent.ingestMode}</div>
-          </div>
-          <div className="mt-1 text-[8px] text-[#8ea6cc]">
-            {cameraMetadataEvent.feedLabel ? `${cameraMetadataEvent.feedLabel} · ` : ""}
-            {cameraMetadataEvent.summary}
-          </div>
-        </div>
-      ) : null}
-
-      {cameraLiveConnectionEvent ? (
-        <div className="absolute right-3 bottom-80 z-30 rounded-xl border border-cyan-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
-          <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Live Camera Connection</div>
-          <div className="mt-1 text-[10px] font-semibold text-white">{cameraLiveConnectionEvent.cameraName}</div>
-          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
-            <div><span className="text-[#6a748b]">Status:</span> {cameraLiveConnectionEvent.liveConnectionStatus ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Mode:</span> {cameraLiveConnectionEvent.liveConnectionMode ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Session:</span> {cameraLiveConnectionEvent.liveSessionState ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Session ID:</span> {cameraLiveConnectionEvent.liveSessionId ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Transport:</span> {cameraLiveConnectionEvent.transportSessionState ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Protocol:</span> {cameraLiveConnectionEvent.protocolProfile ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Auth:</span> {cameraLiveConnectionEvent.authState ?? "—"} · {cameraLiveConnectionEvent.authMode ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Auth session:</span> {cameraLiveConnectionEvent.authSessionId ?? "—"}</div>
-            <div className="col-span-2"><span className="text-[#6a748b]">Feed:</span> {cameraLiveConnectionEvent.liveFeedLabel ?? cameraLiveConnectionEvent.liveFeedUrl ?? "—"}</div>
-          </div>
-          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[8px] text-[#8ea6cc]">
-            <div><span className="text-[#6a748b]">Started:</span> {cameraLiveConnectionEvent.liveSessionStartedAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionStartedAt).toLocaleTimeString()}</div>
-            <div><span className="text-[#6a748b]">Confirmed:</span> {cameraLiveConnectionEvent.liveSessionConfirmedAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionConfirmedAt).toLocaleTimeString()}</div>
-            <div className="col-span-2"><span className="text-[#6a748b]">Expires:</span> {cameraLiveConnectionEvent.liveSessionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionExpiresAt).toLocaleTimeString()}</div>
-            <div className="col-span-2"><span className="text-[#6a748b]">Auth expires:</span> {cameraLiveConnectionEvent.authSessionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.authSessionExpiresAt).toLocaleTimeString()}</div>
-            <div className="col-span-2"><span className="text-[#6a748b]">Challenge:</span> {cameraLiveConnectionEvent.authChallengeHeader ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Events:</span> {cameraLiveConnectionEvent.eventSubscriptionUri ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Transport response:</span> {cameraLiveConnectionEvent.transportResponseStatus == null ? "—" : `${cameraLiveConnectionEvent.transportResponseStatus}${cameraLiveConnectionEvent.transportResponseStatusText ? ` ${cameraLiveConnectionEvent.transportResponseStatusText}` : ""}`}</div>
-            <div><span className="text-[#6a748b]">Event ref:</span> {cameraLiveConnectionEvent.eventSubscriptionReference ?? "—"}</div>
-            <div><span className="text-[#6a748b]">Challenge scheme:</span> {cameraLiveConnectionEvent.authChallengeScheme ?? "—"}</div>
-            <div className="col-span-2"><span className="text-[#6a748b]">Event expiry:</span> {cameraLiveConnectionEvent.eventSubscriptionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.eventSubscriptionExpiresAt).toLocaleTimeString()}</div>
-            <div className="col-span-2"><span className="text-[#6a748b]">Heartbeat:</span> {cameraLiveConnectionEvent.lastHeartbeatAt == null ? "—" : new Date(cameraLiveConnectionEvent.lastHeartbeatAt).toLocaleTimeString()} · probes {cameraLiveConnectionEvent.probeCount}</div>
-          </div>
-          <div className="mt-1 text-[8px] text-[#8ea6cc]">
-            {cameraLiveConnectionEvent.ingestMode === "external" ? "External bind" : "Manual bind"} · {cameraLiveConnectionEvent.summary}
-          </div>
-        </div>
-      ) : null}
-
-      <CameraNoise />
-      {operationalFusion && (operationalFusion.operationalHealth !== "unknown" || operationalFusion.sensorFusion.totalCount > 0 || operationalFusion.cameraMetadataEvent || operationalFusion.cameraLiveConnectionEvent) ? (
-        <div className="absolute right-3 bottom-8 z-30 rounded-lg border border-[#243146] bg-[#0b0f17]/92 px-2.5 py-2 text-[8px] text-[#8ea6cc] shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
-          <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Operational Evidence</div>
-          <div className="mt-1 text-[9px] font-semibold text-white">{operationalFusion.operationalHealthLabel}</div>
-          <div className="mt-1 text-[8px] text-[#9ab0ce]">{operationalFusion.operationalHealthDetail}</div>
-        </div>
-      ) : null}
     </>
   );
 }

@@ -17,7 +17,7 @@ import { MapLayers } from "@/components/map/MapLayers";
 
 type MapMode = "mini" | "path" | "overview" | "picker";
 
-type MapViewportTarget = "minimap" | "pathMap";
+type MapViewportTarget = "minimap" | "pathMap" | "planView";
 
 export type MapCanvasProps = {
   scene: SecurityScene;
@@ -50,6 +50,8 @@ export type MapCanvasProps = {
   activePathForReplay?: ScenarioPath | null;
   showNodeLabels?: boolean;
   focusPoint?: [number, number] | null;
+  /** Architectural plan rendering (wall thickness, door swings, glazing). */
+  architectural?: boolean;
 };
 
 function extractProjectionPoints(scene: SecurityScene, paths?: ScenarioPath[]): Array<[number, number]> {
@@ -151,6 +153,7 @@ export function MapCanvas({
   activePathForReplay,
   showNodeLabels,
   focusPoint,
+  architectural,
 }: MapCanvasProps) {
   const mapLayers = layers ? { ...createLayerFlags(), ...layers } : createLayerFlags();
   void onFit;
@@ -295,6 +298,7 @@ export function MapCanvas({
           onPathSegmentSelect={onPathSegmentSelect}
           coverageOpacity={coverageOpacity}
           showNodeLabels={showNodeLabels ?? mapLayers.labels}
+          architectural={architectural}
         />
 
       {focusPoint ? (

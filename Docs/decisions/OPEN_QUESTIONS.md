@@ -23,6 +23,24 @@ and composite at query time?
 **Recommendation:** Full rebuild on change is simpler. BVH build time is fast (<5ms for typical scenes).
 Rebuild when `simulationDirty` is set.
 
+### Q-009a: Floor-plan buyer trust UX for live demo flows
+
+What is the minimal copy and visual contract needed so users can trust floor-plan import in one pass?
+
+Open issue from 2026-06-18 through 2026-06-30 recovery:
+- raw wall candidates include legend/text noise and appear inflated,
+- calibration is authoritative but preview can look unchanged,
+- button intent is often unclear (`Next` vs final create action).
+
+Decision needed now:
+- required on-screen signals before user moves from configure to review,
+- required calibration audit evidence (from→to footprint row, scale delta, source tag),
+- required wall-metric semantics when the list is truncated or filtered.
+
+Current status:
+- implemented documentation/flow guardrails and reusable demo artifact updates in 6/30.
+- open follow-up: make these signals explicit in-app in a constrained, one-screen contract.
+
 ### Q-003: How should SimulationResult interact with Zustand store?
 SimulationResult is derived (computed), not canonical. But it needs to trigger React re-renders
 when updated (to update heatmap, inspector panels, metrics).

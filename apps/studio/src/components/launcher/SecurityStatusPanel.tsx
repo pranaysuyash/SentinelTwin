@@ -3,6 +3,7 @@
 import { cn } from "@/lib/cn";
 import { HideSectionButton } from "@/components/launcher/HideSectionButton";
 import type { SecurityIssue } from "@/schema/security-scene";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 
 export type SecurityStatusPanelProps = {
   displayOutcomeStatus: string;
@@ -32,9 +33,7 @@ export function SecurityStatusPanel({
       <div className="flex items-center justify-between">
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#7dd3fc]">SECURITY STATUS</div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-emerald-300">
-            Live
-          </span>
+          <TruthBadge label={displayCoverage != null ? "simulated" : "placeholder"} />
           <HideSectionButton label="security status" onClick={onHide} />
         </div>
       </div>

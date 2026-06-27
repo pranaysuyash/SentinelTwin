@@ -17,13 +17,31 @@ export interface FragilitySummary {
   totalCells: number;
 }
 
-const FRAGILE_THRESHOLD = 0.3;
+const FRAGILE_THRESHOLD = 0.2;
+
+function findDoriThreshold(quality: DoriQuality, direction: "down" | "up"): number | undefined {
+  const idx = QUALITY_ORDER.indexOf(quality);
+  if (direction === "down") {
+    const direct = (DORI_THRESHOLDS as Record<string, number | undefined>)[quality];
+    if (direct != null) return direct;
+    for (let i = idx - 1; i >= 0; i--) {
+      const t = (DORI_THRESHOLDS as Record<string, number | undefined>)[QUALITY_ORDER[i]];
+      if (t != null) return t;
+    }
+  } else {
+    for (let i = idx + 1; i < QUALITY_ORDER.length; i++) {
+      const t = (DORI_THRESHOLDS as Record<string, number | undefined>)[QUALITY_ORDER[i]];
+      if (t != null) return t;
+    }
+  }
+  return undefined;
+}
 
 function ppmThresholdForQuality(quality: DoriQuality, isOodpcvs: boolean): number | undefined {
   if (isOodpcvs) {
     return OODPCVS_THRESHOLDS[quality];
   }
-  return (DORI_THRESHOLDS as Record<string, number | undefined>)[quality];
+  return findDoriThreshold(quality, "down");
 }
 
 function computeFragilityWithOrder(
@@ -31,21 +49,25 @@ function computeFragilityWithOrder(
   quality: DoriQuality,
   isOodpcvs: boolean,
 ): { fragility: number; ppmMargin: number } {
-  const qOrder = QUALITY_ORDER;
-  const idx = qOrder.indexOf(quality);
-  if (idx <= 0 || idx >= qOrder.length - 1) return { fragility: 0, ppmMargin: 0 };
-
   const lower = ppmThresholdForQuality(quality, isOodpcvs);
-  const nextQuality = qOrder[idx + 1];
-  const upper = ppmThresholdForQuality(nextQuality, isOodpcvs);
+  if (lower == null) return { fragility: 0, ppmMargin: 0 };
 
-  if (lower == null || upper == null || !Number.isFinite(upper)) {
+  let upper: number | undefined;
+  if (isOodpcvs) {
+    const qOrder = QUALITY_ORDER;
+    const idx = qOrder.indexOf(quality);
+    if (idx <= 0 || idx >= qOrder.length - 1) return { fragility: 0, ppmMargin: 0 };
+    const nextQuality = qOrder[idx + 1];
+    upper = OODPCVS_THRESHOLDS[nextQuality];
+  } else {
+    upper = findDoriThreshold(quality, "up");
+  }
+
+  if (upper == null || !Number.isFinite(upper) || upper <= lower) {
     return { fragility: 0, ppmMargin: 0 };
   }
 
   const range = upper - lower;
-  if (range <= 0) return { fragility: 0, ppmMargin: 0 };
-
   const lowerDist = ppm - lower;
   const upperDist = upper - ppm;
   const minDist = Math.min(lowerDist, upperDist);

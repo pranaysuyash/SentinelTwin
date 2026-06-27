@@ -108,6 +108,155 @@ export type CameraLiveConnectionProbeResponse = {
   sourceCount: number;
 };
 
+export function buildCameraLiveConnectionRecord(
+  request: CameraLiveConnectionProbeRequest,
+  input: {
+    status: CameraLiveConnectionStatus;
+    liveFeedUrl: string | null;
+    liveFeedLabel: string | null;
+    liveConnectionMode?: CameraLiveConnectionMode | null;
+    responseStatus: number | null;
+    responseStatusText: string | null;
+    authChallengeHeader: string | null;
+    authChallengeScheme?: CameraLiveAuthChallengeScheme | null;
+    authChallengeRealm?: string | null;
+    eventSubscriptionUri: string | null;
+    eventSubscriptionReference: string | null;
+    eventSubscriptionExpiresAt: number | null;
+    notes?: string | null;
+    timestamp?: number;
+    authMode?: CameraLiveAuthMode;
+    authState?: CameraLiveAuthState;
+    authRealm?: string | null;
+    authSessionId?: string | null;
+    authSessionExpiresAt?: number | null;
+  },
+): CameraLiveConnectionRecord {
+  const now = input.timestamp ?? Date.now();
+  const action = request.action;
+  const protocol: CameraLiveConnectionMode = input.liveConnectionMode
+    ?? (action === "disconnect" ? null : request.protocol)
+    ?? "onvif";
+  const challengeFromHeader = parseAuthChallengeHeader(input.authChallengeHeader);
+  const authChallengeScheme = input.authChallengeScheme ?? challengeFromHeader.scheme;
+  const authChallengeRealm = input.authChallengeRealm ?? challengeFromHeader.realm;
+
+  const authMode: CameraLiveAuthMode = input.authMode
+    ?? request.authMode
+    ?? (protocol === "onvif"
+      ? "onvif_digest"
+      : protocol === "rtsp"
+        ? "digest"
+        : protocol === "mjpeg" || protocol === "http"
+          ? "basic"
+          : protocol === "proxy"
+            ? "proxy_passthrough"
+            : "none");
+
+  const authState: CameraLiveAuthState = input.authState
+    ?? request.authState
+    ?? (action === "disconnect"
+      ? "unauthenticated"
+      : input.status === "connected"
+        ? "authenticated"
+        : input.status === "error"
+          ? "failed"
+          : "authenticating");
+
+  const authSessionId = request.authSessionId ?? request.transportSessionId ?? request.liveSessionId ?? null;
+  const liveSessionId = action === "disconnect"
+    ? (request.liveSessionId ?? null)
+    : (request.liveSessionId ?? `live_session_${request.cameraId}_${now.toString(36)}_${Math.random().toString(36).slice(2, 8)}`);
+  const transportSessionId = action === "disconnect"
+    ? (request.transportSessionId ?? request.liveSessionId ?? null)
+    : (request.transportSessionId ?? request.liveSessionId ?? `transport_session_${request.cameraId}_${now.toString(36)}_${Math.random().toString(36).slice(2, 8)}`);
+  const transportSessionState: NonNullable<CameraLiveConnectionRecord["transportSessionState"]> = action === "disconnect"
+    ? "closing"
+    : input.status === "connected"
+      ? "active"
+      : authState === "authenticating"
+        ? "negotiating"
+        : "error";
+  const liveSessionState: NonNullable<CameraLiveConnectionRecord["liveSessionState"]> = action === "disconnect"
+    ? "idle"
+    : input.status === "connected"
+      ? "connected"
+      : authState === "authenticating"
+        ? "probing"
+        : "error";
+
+  const confirmedAt = action === "disconnect"
+    ? (request.liveSessionConfirmedAt ?? null)
+    : input.status === "connected"
+      ? (request.liveSessionConfirmedAt ?? now)
+      : null;
+  const expiresAt = action === "disconnect"
+    ? null
+    : input.status === "connected"
+      ? (request.liveSessionConfirmedAt ?? now) + LIVE_SESSION_TTL_MS
+      : null;
+
+  const notes = input.notes !== undefined
+    ? input.notes
+    : action === "disconnect"
+      ? (request.notes?.trim() ?? null)
+      : null;
+
+  const parsed = CameraLiveConnectionRecordSchema.safeParse({
+    cameraId: request.cameraId,
+    cameraName: request.cameraName,
+    liveFeedUrl: input.liveFeedUrl,
+    liveFeedLabel: input.liveFeedLabel,
+    liveConnectionMode: protocol,
+    liveConnectionStatus: input.status,
+    liveSessionId,
+    liveSessionState,
+    liveSessionStartedAt: request.liveSessionStartedAt ?? request.submittedAt ?? now,
+    liveSessionConfirmedAt: confirmedAt,
+    liveSessionExpiresAt: expiresAt,
+    transportSessionId,
+    transportSessionState,
+    lastHeartbeatAt: input.status === "connected" ? now : null,
+    probeCount: action === "disconnect" ? 0 : 1,
+    protocolProfile: protocol === "onvif"
+      ? "onvif_device"
+      : protocol === "rtsp"
+        ? "rtsp_session"
+        : protocol === "mjpeg"
+          ? "mjpeg_stream"
+          : protocol === "http"
+            ? "http_poll"
+            : "proxy",
+    authMode,
+    authState,
+    authRealm: input.authRealm ?? request.authRealm ?? null,
+    onvifUsername: request.onvifUsername ?? null,
+    onvifPassword: request.onvifPassword ?? null,
+    authSessionId: input.authSessionId ?? request.authSessionId ?? request.transportSessionId ?? request.liveSessionId ?? null,
+    authSessionExpiresAt: input.authSessionExpiresAt
+      ?? request.authSessionExpiresAt
+      ?? (authState === "authenticated" && action !== "disconnect"
+        ? (request.liveSessionConfirmedAt ?? now) + LIVE_SESSION_TTL_MS
+        : null),
+    transportResponseStatus: input.responseStatus,
+    transportResponseStatusText: input.responseStatusText,
+    authChallengeHeader: input.authChallengeHeader,
+    authChallengeScheme,
+    authChallengeRealm,
+    eventSubscriptionUri: input.eventSubscriptionUri,
+    eventSubscriptionReference: input.eventSubscriptionReference,
+    eventSubscriptionExpiresAt: input.eventSubscriptionExpiresAt,
+    notes,
+    timestamp: now,
+  });
+
+  if (!parsed.success) {
+    throw new Error(`Invalid camera live connection record: ${parsed.error.message}`);
+  }
+
+  return parsed.data;
+}
+
 function parseJsonCandidates(raw: string): { items: unknown[]; errors: string[] } {
   const trimmed = raw.trim();
   if (!trimmed) return { items: [], errors: [] };
@@ -479,61 +628,13 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
     errors.push("The live connection probe payload did not match the expected connection schema.");
   }
 
-  const record = {
-    cameraId: request.cameraId,
-    cameraName: request.cameraName,
-    liveSessionId: request.action === "disconnect"
-      ? request.liveSessionId ?? null
-      : request.liveSessionId ?? `live_session_${request.cameraId}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-    liveSessionState: request.action === "disconnect"
-      ? "idle"
-      : status === "connected"
-        ? "connected"
-        : receivedAuthChallenge
-          ? "probing"
-          : "error",
-    liveSessionStartedAt: request.action === "disconnect"
-      ? request.liveSessionStartedAt ?? request.submittedAt ?? Date.now()
-      : request.liveSessionStartedAt ?? request.submittedAt ?? Date.now(),
-    liveSessionConfirmedAt: request.action === "disconnect"
-      ? request.liveSessionConfirmedAt ?? null
-      : status === "connected"
-        ? (request.liveSessionConfirmedAt ?? Date.now())
-        : null,
-    liveSessionExpiresAt: request.action === "disconnect"
-      ? null
-      : status === "connected"
-        ? ((request.liveSessionConfirmedAt ?? Date.now()) + LIVE_SESSION_TTL_MS)
-        : null,
-    transportSessionId: request.action === "disconnect"
-      ? request.transportSessionId ?? request.liveSessionId ?? null
-      : request.transportSessionId ?? request.liveSessionId ?? `transport_session_${request.cameraId}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-    transportSessionState,
-    lastHeartbeatAt: status === "connected" ? Date.now() : null,
-    probeCount: request.action === "disconnect" ? 0 : 1,
-    protocolProfile:
-      protocol === "onvif"
-        ? "onvif_device"
-        : protocol === "rtsp"
-          ? "rtsp_session"
-          : protocol === "mjpeg"
-            ? "mjpeg_stream"
-            : protocol === "http"
-              ? "http_poll"
-              : "proxy",
+  const record = buildCameraLiveConnectionRecord(request, {
+    status,
     liveFeedUrl,
     liveFeedLabel: feedLabel,
     liveConnectionMode: request.action === "disconnect" ? null : protocol,
-    liveConnectionStatus: status,
-    authMode,
-    authState,
-    authRealm,
-    onvifUsername: request.onvifUsername ?? null,
-    onvifPassword: request.onvifPassword ?? null,
-    authSessionId,
-    authSessionExpiresAt,
-    transportResponseStatus: responseStatus,
-    transportResponseStatusText: responseStatusText,
+    responseStatus,
+    responseStatusText,
     authChallengeHeader,
     authChallengeScheme,
     authChallengeRealm,
@@ -541,8 +642,12 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
     eventSubscriptionReference: payload.eventSubscriptionReference ?? (parsedCandidate?.success ? parsedCandidate.data.eventSubscriptionReference ?? null : null),
     eventSubscriptionExpiresAt: payload.eventSubscriptionExpiresAt ?? (parsedCandidate?.success ? parsedCandidate.data.eventSubscriptionExpiresAt ?? null : null),
     notes,
-    timestamp: parsedCandidate?.success && parsedCandidate.data.timestamp ? parsedCandidate.data.timestamp : Date.now(),
-  } as const;
+    authMode,
+    authState,
+    authRealm,
+    authSessionId,
+    authSessionExpiresAt,
+  });
 
   const receivedAt = new Date(request.submittedAt ?? Date.now()).toISOString();
   const authSummary = authState === "authenticated"

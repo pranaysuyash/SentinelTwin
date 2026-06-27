@@ -1,3 +1,7 @@
+// Primary test runner: `bun test` (see package.json "test" script).
+// This vitest config exists for coverage generation only — vitest cannot
+// resolve `bun:test` imports used by 400+ test files, so it is NOT used
+// as a test runner. Coverage: `bun run vitest --run --coverage`.
 import { defineConfig } from "vitest/config";
 import path from "node:path";
 

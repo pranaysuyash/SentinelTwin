@@ -27,7 +27,8 @@ describe("InspectorPanel", () => {
     expect(panelSource).toMatch(/obstruction\s*\?\s*\(\s*<ObstructionInspector \/>/);
     expect(panelSource).toMatch(/light\s*\?\s*\(\s*<LightInspector \/>/);
     expect(panelSource).toMatch(/sensor\s*\?\s*\(\s*<SensorInspector \/>/);
-    expect(panelSource).toMatch(/<NoSelection \/>/);
+    // No-selection state now hosts the scene-level appearance editor.
+    expect(panelSource).toMatch(/<SceneAppearancePanel \/>/);
   });
 
   test("renders editable camera placement and optics controls", () => {

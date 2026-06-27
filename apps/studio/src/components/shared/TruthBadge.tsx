@@ -1,7 +1,7 @@
 import { ShieldCheck, BrainCircuit, Activity, HelpCircle, Database, Radio } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-export type TruthLabel = "computed" | "inferred" | "imported" | "simulated" | "placeholder" | "live";
+export type TruthLabel = "computed" | "inferred" | "imported" | "simulated" | "placeholder" | "live" | "configured";
 
 interface TruthBadgeProps {
   label: TruthLabel;
@@ -40,6 +40,11 @@ export function TruthBadge({ label, className, showText = true }: TruthBadgeProp
       color: "text-emerald-400 bg-emerald-950/30 border-emerald-900/50",
       icon: ShieldCheck,
       text: "Real Evidence",
+    },
+    configured: {
+      color: "text-sky-400 bg-sky-950/30 border-sky-900/50",
+      icon: ShieldCheck,
+      text: "Configured",
     },
     placeholder: {
       color: "text-amber-500 bg-amber-950/30 border-amber-900/50",

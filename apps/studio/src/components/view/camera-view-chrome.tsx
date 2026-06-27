@@ -3,7 +3,7 @@
 import { ArrowLeft, Camera, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { formatTargetTypeLabel } from "@/components/view/camera-view-utils";
+import { formatCameraTag, formatTargetTypeLabel } from "@/components/view/camera-view-utils";
 import type { CameraNode, SecurityScene } from "@/schema/security-scene";
 
 export type CameraFeedMode = "normal" | "ir_bw" | "low_light" | "thermal";
@@ -67,24 +67,32 @@ export function CameraHeader({
   onNext: () => void;
   onSelect: (id: string) => void;
 }) {
+  const isActive = camera.status === "on";
   return (
-    <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-xl border border-[#263246] bg-[#0b0f17]/90 px-3 py-2">
+    <div className="absolute left-3 top-3 z-30 flex items-center gap-3 rounded-xl border border-[#263246] bg-[#0b0f17]/90 px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
       <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
-          <Camera className="h-3.5 w-3.5" />
-        </div>
-        <div className="leading-tight">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera View - Single Camera</div>
-          <div className="text-[11px] font-medium text-white">{camera.name}</div>
+        <span className={`h-2 w-2 rounded-full ${isActive ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]" : "bg-red-400"}`} />
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-white">
+            {formatCameraTag(camera.name)}
+          </span>
+          <span className="text-[11px] font-medium text-white/80">
+            {camera.name}
+          </span>
+          <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-emerald-300">
+            {isActive ? "Active" : "Offline"}
+          </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 rounded-lg border border-[#27364e] bg-black/40 p-1">
+      <div className="h-4 w-px bg-[#263246]" />
+
+      <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={onPrevious}
           disabled={index <= 0}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-[#8ea5cc] transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+          className="flex h-6 w-6 items-center justify-center rounded-md text-[#8ea5cc] transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
           aria-label="Previous camera"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
@@ -92,7 +100,7 @@ export function CameraHeader({
         <select
           value={camera.id}
           onChange={(event) => onSelect(event.target.value)}
-          className="min-w-44 rounded-md border border-[#27364e] bg-[#111521] px-2 py-1 text-[10px] text-[#c7d0e4]"
+          className="min-w-44 rounded-md border border-[#27364e] bg-[#111521] px-2 py-1 text-[10px] text-[#c7d0e4] outline-none focus:border-sky-500"
           aria-label="Select camera"
         >
           {cameras.map((entry) => (
@@ -105,7 +113,7 @@ export function CameraHeader({
           type="button"
           onClick={onNext}
           disabled={index >= total - 1}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-[#8ea5cc] transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+          className="flex h-6 w-6 items-center justify-center rounded-md text-[#8ea5cc] transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
           aria-label="Next camera"
         >
           <ChevronRight className="h-3.5 w-3.5" />
@@ -140,40 +148,47 @@ export function ReplayStatusOverlay({
         : { label: "High", className: "text-orange-300" };
 
   return (
-    <div className="absolute left-3 bottom-24 z-30 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
-      <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">LIVE MODE (Simulated)</div>
-      <div className="mt-1 space-y-0.5 text-[10px] text-[#d2d9e8]">
-        <div>
-          <span className="text-[#6a748b]">Actor:</span> Tracked replay path
-        </div>
-        <div>
-          <span className="text-[#6a748b]">Time:</span> {timeS.toFixed(1)}s
-        </div>
-        <div className="max-w-55 truncate">
-          <span className="text-[#6a748b]">Path:</span> {pathLabel}
-        </div>
-        {progressPct != null ? (
-          <div>
-            <span className="text-[#6a748b]">Complete:</span> {Math.max(0, Math.min(100, Math.round(progressPct * 100)))}%
-          </div>
-        ) : null}
-        <div>
-          <span className="text-[#6a748b]">Speed:</span> {speed.toFixed(1)}x
-        </div>
-        {qualityLabel ? (
-          <div>
-            <span className="text-[#6a748b]">Quality:</span> {qualityLabel}
-          </div>
-        ) : null}
-        <div>
-          <span className="text-[#6a748b]">Risk:</span> <span className={risk.className}>{risk.label}</span>
-        </div>
-        {segmentLabel ? (
-          <div className="max-w-55 truncate">
-            <span className="text-[#6a748b]">Segment:</span> {segmentLabel}
-          </div>
-        ) : null}
+    <div className="absolute left-1/2 top-3 z-30 -translate-x-1/2 flex items-center gap-3 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3.5 py-2 shadow-[0_12px_34px_rgba(0,0,0,0.45)] text-[10px] text-[#d2d9e8]">
+      <div className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-sky-400 animate-pulse" />
+        <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#7dd3fc]">LIVE REPLAY</span>
       </div>
+      <div className="h-3 w-px bg-[#243146]" />
+      <div className="max-w-48 truncate">
+        <span className="text-[#6a748b]">Path:</span> <span className="font-medium text-white">{pathLabel}</span>
+      </div>
+      <div className="h-3 w-px bg-[#243146]" />
+      <div>
+        <span className="text-[#6a748b]">Time:</span> <span className="font-mono text-white">{timeS.toFixed(1)}s</span>
+      </div>
+      <div>
+        <span className="text-[#6a748b]">Speed:</span> <span className="font-mono">{speed.toFixed(1)}x</span>
+      </div>
+      {progressPct != null ? (
+        <div>
+          <span className="text-[#6a748b]">Progress:</span> <span className="font-mono">{Math.max(0, Math.min(100, Math.round(progressPct * 100)))}%</span>
+        </div>
+      ) : null}
+      {qualityLabel ? (
+        <>
+          <div className="h-3 w-px bg-[#243146]" />
+          <div>
+            <span className="text-[#6a748b]">Quality:</span> <span className="font-semibold text-white">{qualityLabel}</span>
+          </div>
+        </>
+      ) : null}
+      <div className="h-3 w-px bg-[#243146]" />
+      <div>
+        <span className="text-[#6a748b]">Risk:</span> <span className={`font-semibold ${risk.className}`}>{risk.label}</span>
+      </div>
+      {segmentLabel ? (
+        <>
+          <div className="h-3 w-px bg-[#243146]" />
+          <div className="max-w-44 truncate text-[9px] text-[#8ea6cc]">
+            {segmentLabel}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -195,10 +210,10 @@ export function CameraPathVisibilityOverlay({
   const statusColor = ratio > 0.7 ? "text-emerald-300" : ratio > 0.35 ? "text-amber-300" : "text-red-300";
 
   return (
-    <div className="absolute left-3 bottom-3 z-30 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2">
-      <div className="text-[8px] uppercase tracking-[0.18em] text-[#7dd3fc]">Path Visibility</div>
-      <div className="mt-1 text-[10px] text-[#d2d9e8]">{cameraName}</div>
-      <div className={`mt-1 text-[10px] font-semibold ${statusColor}`}>{status}</div>
+    <div className="pointer-events-auto rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2 shadow-sm">
+      <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Path Visibility</div>
+      <div className="mt-1 text-[10px] font-medium text-white">{cameraName}</div>
+      <div className={`mt-0.5 text-[10px] font-semibold ${statusColor}`}>{status}</div>
       <div className="mt-1 text-[9px] text-[#9ab0ce]">{pct}% visible • best quality: {maxQuality.toUpperCase()}</div>
     </div>
   );
@@ -238,7 +253,7 @@ export function DoriInsightCard({
           : "UNKNOWN";
 
   return (
-    <div className="absolute right-3 top-24 z-30 w-56 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
+    <div className="pointer-events-auto w-full rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-sm">
       <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">DORI OVERLAY</div>
       <div className="mt-1 text-[10px] font-semibold text-white">{zoneLabel}</div>
       <div className="mt-1 text-[8px] uppercase tracking-[0.16em] text-[#8ea5cc]">

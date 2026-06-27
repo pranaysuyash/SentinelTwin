@@ -433,3 +433,115 @@ durable exploration document, as a launchpad for any new component touching crea
 - `Docs/exploration/EXPLORATION_WORKSPACE_CREATION_2026-06-02.md` (new)
 - `Docs/exploration/EXPLORATION_MAP.md` (Thread 99 appended)
 - `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` (Q-019, Q-020, Q-021 added)
+
+## D-323 | 2026-07-07 | Three-mode canvas: 3D orbit, 2.5D orthographic, and a true-2D architectural plan built on the map subsystem
+
+**Decision:** The workspace canvas now has three explicit representations. `orbit_3d` (unchanged) and `topdown_2d` — now labeled **2.5D** in the UI because it is an orthographic top-down projection of the extruded 3D geometry — remain R3F surfaces. A new `plan_2d` mode renders a **true 2D architectural plan** through the existing SVG map subsystem (`MapCanvas` / `MapLayers` / `MapProjection`, the same layers behind the minimap and path map), extended with an `architectural` rendering pass: walls drawn at real thickness with a poché core, door swing arcs (hinge + quarter-circle, suppressed for locked doors), wall-aligned window glazing lines, camera FOV wedges, zone fills, and the coverage heatmap.
+
+**Rationale:**
+- The previous "2D" button was an orthographic 3D camera — useful, but not a floor plan. Security consultants and stakeholders read plans; a real plan view makes the twin legible in the format the industry already uses.
+- D-002 forbids parallel scene representations: the plan view renders from the same `SecurityScene` through the already-canonical map layers instead of a new renderer. The architectural pass is a flag on `MapLayers`, so the minimap/path map inherit zero behavior change.
+- Door/window orientation comes from `wallId` when present, otherwise the nearest wall segment (`nearestWallAngle` in `map-geometry.ts`) — no new schema fields needed.
+- Selection routes through the canonical store (`selectNode`), so the inspector (including the D-322 appearance sections) works identically in 2D.
+
+**Scope note:** the plan view is a review/selection surface in this pass; placement/drawing tools remain in the 3D/2.5D modes. Extending the tool rail into the plan is the natural next step and shares `MapProjection.svgToScene`.
+
+**Implementation impact:**
+- `CanvasMode` gains `plan_2d` (`layout-slice.ts`, `workspace-layouts.ts` guard); `MapState` gains a `planView` viewport (zoom/pan/fit generalized in `scene-slice.ts`, defaults in governance/telemetry slices).
+- `map-geometry.ts`: `nearestWallAngle`, `doorSwingPath`, `wallAlignedSegment` (+ unit tests in `__tests__/plan-geometry.test.ts`).
+- `MapLayers.tsx` / `MapCanvas.tsx`: optional `architectural` prop.
+- `components/workspace/PlanView2D.tsx` (new): container-measured plan surface wired to store selection/hover/layers/viewport; honors the shared `Reset canvas view` control.
+- `WorkspaceCanvas.tsx`: renders `PlanView2D` instead of the R3F `<Canvas>` when `canvasMode === "plan_2d"`; `ViewControls.tsx` exposes the 3D / 2.5D / 2D triple toggle.
+
+---
+
+## D-322 | 2026-07-07 | Scene appearance layer: scene-persisted visual customization with Pascal-style material presets
+
+**Decision:** SentinelTwin now has a first-class, user-editable visual customization layer. An optional `sceneAppearance` block on `SecurityScene` (in `@sentineltwin/core`) carries per-environment-mode lighting overrides (ambient/hemisphere/key/fill intensities, light colors, practical ceiling lights, background), fog (enabled/color/near/far), environment controls (IBL intensity scale, tone-mapping exposure, shadows), and default floor/wall surface materials. Walls, doors, windows, and obstructions additionally carry an optional per-node `appearance` override. Material customization follows the pattern adopted from pascalorg/editor (MIT): a preset id (`plaster`, `paint`, `brick`, `concrete`, `wood`, `tile`, `marble`, `carpet`, `metal`, `fabric`, `custom`) plus explicit PBR property overrides, resolved by a single merge function (`applyNodeAppearance`), with resolution precedence built-in spec → scene surface default → node override.
+
+**Hard constraint:** the appearance layer is rendering-only. Simulation-relevant surface semantics stay in the existing `material` / `visionTransmission` fields; `cloneSecuritySceneSimulation` strips `sceneAppearance` so the coverage engine can never observe cosmetic state (D-003 determinism). Appearance edits route through `commitSceneChange` (undo/redo + evidence trail) with a new `markSimulationDirty: false` option so cosmetic changes never trigger recomputes.
+
+**Rationale:**
+- Lighting themes and textures were hardcoded in `SharedScene.tsx`; the only customization was the day/dusk/night mode switch. Buyers/consultants need site twins that read like their actual site (brick shopfront, wood floor, concrete warehouse), and the rendering roadmap (`Docs/exploration/3D_REALISTIC_RENDERING_ROADMAP_2026-07-04.md`) already called for a canonical material library.
+- Persisting appearance inside `SecurityScene` keeps D-002 intact (single source of truth — appearance travels with export/import/snapshots) instead of creating a parallel per-workspace theme store.
+- Pascal's preset + override + `resolveMaterial()` merge is a proven shape for this exact problem (their `packages/core/src/schema/material.ts`, `material-library.ts`, `scene-material.ts`), and adopting the pattern (not the code) keeps us aligned with the fork decision D-001 while D-010 keeps the full fork parked.
+- Procedural canvas textures (no external assets, no network) preserve the local-first constraint for sensitive site reviews.
+
+**Alternatives rejected:**
+- View-level (non-persisted) appearance settings in View Settings: rejected — appearance is a property of the site twin document, not of the local layout; it must survive export/import and snapshots.
+- Full texture-map pipeline (albedo/normal/roughness image uploads) as in Pascal's `MaterialPresetPayload.maps`: deferred — procedural styles cover the current need without asset management, uploads can extend `NodeAppearance` later without schema breakage.
+- Reusing the simulation `material` enum for looks: rejected — conflates occlusion semantics with cosmetics and would let visual edits change coverage results.
+
+**Implementation impact:**
+- `packages/core/src/schema/security-scene.ts`: `appearancePresetIdSchema`, `nodeAppearanceSchema`, `environmentLightingOverrideSchema`, `sceneAppearanceSchema`; `appearance` on wall/door/window/obstruction nodes; `sceneAppearance` on the scene; stripped in `cloneSecuritySceneSimulation`.
+- `apps/studio/src/lib/scene-appearance.ts` (new): canonical `ENVIRONMENT_THEMES` (moved from SharedScene), `APPEARANCE_PRESETS` catalog, `applyNodeAppearance`, `resolveAppearanceTextureStyle/Scale`, `resolveSceneLighting`, picker choice lists. Pure module, unit-tested.
+- `apps/studio/src/lib/procedural-textures.ts` (new): canvas-generated albedo+normal pairs for tile/plaster/concrete/wood/carpet/marble/brick with style- and repeat-keyed caches (original floor/wall generators moved here from SharedScene).
+- `apps/studio/src/components/workspace/SharedScene.tsx`: `SceneLighting`, `SceneFloor`, `SceneWalls`, `SceneDoors`, `SceneWindows`, `ObstructionGeometry` all resolve appearance; `SceneEnvironmentSetup` accepts IBL intensity scale + exposure; selection/locked/glass state styling always wins over cosmetic overrides.
+- `apps/studio/src/components/workspace/WorkspaceCanvas.tsx`: canvas lighting/fog/shadows/background now come from `resolveSceneLighting`; floor/wall surface defaults passed through. Same for `CompareView`, `CameraWallView`, `PathReplayView`, `SceneFeedCanvas`.
+- `apps/studio/src/store/slices/core/scene-slice.ts`: `updateSceneAppearance` + `updateNodeAppearance` actions; `commitSceneChange` gains the `markSimulationDirty` option.
+- `apps/studio/src/components/inspector/SceneAppearancePanel.tsx` (new): scene-level editor shown in the inspector when nothing is selected (replaces the empty `NoSelection` state).
+- `apps/studio/src/components/inspector/NodeAppearanceSection.tsx` (new) + `ColorInput` control: per-node appearance UI in `ObstructionInspector`, `WallInspector`, `DoorWindowInspector`.
+- Tests: `apps/studio/src/lib/__tests__/scene-appearance.test.ts` (new), appearance cases in `apps/studio/src/schema/__tests__/security-scene.test.ts`, updated source-contract assertions in `inspector-panel.test.ts` / `workspace-canvas.test.ts`.
+
+**Open questions:** OQ-3D-04 and OQ-3D-05 resolved by this decision (see `OPEN_QUESTIONS_ADDENDUM.md`). Image-based texture uploads and per-zone/floor-region materials remain future extensions.
+
+---
+
+## D-321 | 2026-07-01 | Camera Wall uses Drei PerformanceMonitor + AdaptiveDpr with a formal performance budget
+
+**Decision:** Every R3F `<Canvas>` in `CameraWallView` is now wrapped with Drei's `<PerformanceMonitor>` and `<AdaptiveDpr pixelated />`. A new shared module, `@/lib/adaptive-dpr-budget`, defines the FPS thresholds, DPR ranges, and draw-call/GPU-memory budget constants for both wall and single-canvas modes. Dense mode gets a more aggressive DPR cap than quad/overview mode.
+
+**Rationale:**
+- The Camera Wall can render up to 16 live POV tiles plus a 3D overview map simultaneously. On lower-end GPUs the aggregate WebGL load can drop below interactive FPS.
+- `PerformanceMonitor` measures per-tile FPS over a short sliding window and signals DPR adjustments; `AdaptiveDpr` applies them declaratively without per-tile state plumbing.
+- `frameloop="demand"` is preserved so tiles only render when the simulation/playback actually changes, while the adaptive path still responds when continuous rendering happens (live feeds, replay playback).
+- Dense mode deserves a distinct DPR range: 16 small tiles are more tolerant of pixelation than 4 large tiles, so we cap max DPR lower to protect aggregate GPU load.
+- Security-critical overlays (heatmap, DORI, actor, blindspot highlights) must remain visible under degradation; DPR reduction is safe because it only lowers resolution, it does not remove layers.
+
+**Alternatives rejected:**
+- Manual `setPixelRatio` in `useEffect`: rejected because it fights R3F's own DPR management and is harder to test.
+- Single global quality toggle instead of per-tile adaptation: rejected because different tiles have different load profiles (overview map renders the full heatmap; POV tiles render `SceneFeedGeometry`).
+- Removing `frameloop="demand"` to give PerformanceMonitor more data: rejected because demand rendering is the larger win for static wall operation.
+
+**Implementation impact:**
+- `apps/studio/src/lib/adaptive-dpr-budget.ts` (new): unified budget constants + helpers for wall and single-canvas modes.
+- `apps/studio/src/lib/camera-wall-performance-budget.ts` (updated): re-export shim for backwards compatibility.
+- `apps/studio/src/components/view/CameraWallView.tsx`: wraps both the per-camera POV canvas and the `WallOverviewPanel` canvas; passes `isDense` through `CameraSlotButton` → `CameraFeedPanel` to select the right DPR range.
+- `apps/studio/src/components/view/CameraViewMode.tsx`: single full-screen canvas wrapped with `PerformanceMonitor` + `AdaptiveDpr`, using the higher single-canvas DPR range.
+- `apps/studio/src/components/view/PathReplayView.tsx`: full replay canvas wrapped with `PerformanceMonitor` + `AdaptiveDpr`, using the single-canvas budget.
+- `apps/studio/src/components/view/__tests__/camera-wall-perf-guard.test.ts`: extended to assert PerformanceMonitor/AdaptiveDpr/budget integration for all three surfaces.
+- `apps/studio/src/lib/__tests__/camera-wall-performance-budget.test.ts` (new): unit tests for the unified budget contract.
+
+**Skills referenced:** `r3f-drei`, `threejs-performance`.
+
+**Open questions:**
+- OQ-3D-02: Should the Camera Wall budget be enforced by a CI performance test or is manual QA sufficient until v1?
+- OQ-3D-03 RESOLVED: Single-canvas modes (`CameraViewMode`, `PathReplayView`) reuse the same adaptive wrapper pattern with a dedicated, higher DPR range. See updated `OPEN_QUESTIONS_ADDENDUM.md`.
+
+---
+
+## D-320 | 2026-06-30 | Canonical camera manipulation uses the shared transform model, not a camera-only side channel
+
+**Decision:** Camera selection now uses the same canonical object manipulation path as the rest of the workbench: arrow keys nudge the selected object, `Q`/`E` rotate it, `PageUp`/`PageDown` adjust its vertical position, the contextual right-click menu exposes the same actions, and the camera inspector explains those controls explicitly. The same contract now also surfaces wall height controls and keeps the movement/rotate affordances visible for lights and other editables so non-camera objects do not lose discoverability.
+
+**Rationale:**
+- The camera workflow already had the right primitives: contextual actions, drag handles, and canonical store updates. The missing part was user-facing consistency and discoverability, not a new camera-specific editor.
+- A separate camera-only control path would duplicate movement semantics, drift from the rest of the transform model, and create another place where selection behavior could silently diverge.
+- `PageUp`/`PageDown` preserve the existing global shortcuts while giving operators a conflict-free keyboard path for vertical adjustments.
+- The inspector and shortcut sheet need to teach the control contract where the operator is already looking, otherwise the feature still feels absent even when the code exists.
+
+**Alternatives rejected:**
+- Add a separate camera editor mode: rejected because it would fork the canonical selection/transform model.
+- Reuse conflicting global shortcuts like `R`/`F` for camera transforms: rejected because those keys already have global product meaning.
+- Hide the behavior behind mouse-only handles: rejected because keyboard control is a core operator workflow, not an advanced bonus.
+
+**Updated in this pass:**
+- `apps/studio/src/hooks/use-studio-keyboard.ts`
+- `apps/studio/src/components/workspace/editing/object-context-actions.ts`
+- `apps/studio/src/components/workspace/editing/ObjectContextMenu.tsx`
+- `apps/studio/src/components/layout/ShortcutsModal.tsx`
+- `apps/studio/src/components/inspector/CameraInspector.tsx`
+- `apps/studio/src/components/workspace/editing/__tests__/object-context-actions.test.ts`
+- `apps/studio/src/components/__tests__/camera-inspector.test.ts`
+- `apps/studio/src/components/__tests__/studio-shell-shortcuts.test.ts`
+- `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md`

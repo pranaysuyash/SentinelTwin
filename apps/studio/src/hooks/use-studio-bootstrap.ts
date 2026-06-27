@@ -64,6 +64,13 @@ export function useStudioBootstrap() {
 
   useEffect(() => {
     refreshSavedScenesList();
+    const { scene, savedScenes, setScene } = useStudioStore.getState();
+    if (scene.name === "Untitled Scene" && scene.cameras.length === 0 && scene.changeLog.length === 0 && savedScenes.length > 0) {
+      const sorted = [...savedScenes].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      if (sorted[0]) {
+        setScene(sorted[0]);
+      }
+    }
   }, [refreshSavedScenesList]);
 
   useEffect(() => {

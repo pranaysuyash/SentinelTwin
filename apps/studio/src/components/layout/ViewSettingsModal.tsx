@@ -228,6 +228,7 @@ export function ViewSettingsModal() {
           <button
             type="button"
             onClick={() => setOpen(false)}
+            aria-label="Close view settings"
             className="ml-auto rounded-full border border-[#24283a] bg-[#111521] p-2 text-[#93a1bd] transition-colors hover:border-[#39445d] hover:text-white"
           >
             <X className="h-4 w-4" />

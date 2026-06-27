@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { CameraLiveAuthChallengeScheme, CameraLiveAuthMode, CameraLiveAuthState, CameraLiveConnectionProbeResponse } from "@/lib/camera-live-connection";
+import type { CameraLiveAuthChallengeScheme, CameraLiveAuthMode, CameraLiveAuthState, CameraLiveConnectionProbeResponse, CameraLiveConnectionRecord } from "@/lib/camera-live-connection";
 
 export type CameraLiveSessionStatus = "active" | "closed" | "expired";
 
@@ -221,6 +221,67 @@ export function pruneExpiredCameraLiveSessionRegistry(rootDir = resolveCameraLiv
     writeFileSync(filePath, JSON.stringify(nextRegistry, null, 2));
   }
   return nextRegistry;
+}
+
+export function toCameraLiveSessionRecord(
+  record: CameraLiveConnectionRecord,
+  input: {
+    sceneId: string | null;
+    sceneName: string | null;
+    summary: string;
+    lastAction: CameraLiveConnectionProbeResponse["action"];
+    status?: CameraLiveSessionStatus;
+    lastObservedAt?: number;
+    sessionExpiresAt?: number | null;
+  },
+): CameraLiveSessionRecord {
+  const now = input.lastObservedAt ?? Date.now();
+  const status = input.status ?? (record.liveConnectionStatus === "connected" || record.liveConnectionStatus === "connecting" ? "active" : "closed");
+  const sessionExpiresAt = typeof input.sessionExpiresAt === "number"
+    ? input.sessionExpiresAt
+    : status === "active"
+      ? now + DEFAULT_SESSION_TTL_MS
+      : null;
+  return {
+    sessionId: record.liveSessionId ?? `live_session_${record.cameraId}_${now}`,
+    status,
+    cameraId: record.cameraId,
+    cameraName: record.cameraName,
+    sceneId: input.sceneId,
+    sceneName: input.sceneName,
+    liveFeedUrl: record.liveFeedUrl,
+    feedLabel: record.liveFeedLabel,
+    liveConnectionMode: record.liveConnectionMode,
+    liveConnectionStatus: record.liveConnectionStatus,
+    liveSessionState: record.liveSessionState,
+    liveSessionStartedAt: record.liveSessionStartedAt,
+    liveSessionConfirmedAt: record.liveSessionConfirmedAt,
+    liveSessionExpiresAt: record.liveSessionExpiresAt,
+    transportSessionId: record.transportSessionId,
+    transportSessionState: record.transportSessionState,
+    lastHeartbeatAt: record.lastHeartbeatAt,
+    probeCount: record.probeCount,
+    protocolProfile: record.protocolProfile,
+    authMode: record.authMode,
+    authState: record.authState,
+    authRealm: record.authRealm,
+    authSessionId: record.authSessionId,
+    authSessionExpiresAt: record.authSessionExpiresAt,
+    transportResponseStatus: record.transportResponseStatus,
+    transportResponseStatusText: record.transportResponseStatusText,
+    authChallengeHeader: record.authChallengeHeader,
+    authChallengeScheme: record.authChallengeScheme,
+    authChallengeRealm: record.authChallengeRealm,
+    onvifUsername: record.onvifUsername ?? null,
+    onvifPassword: record.onvifPassword ?? null,
+    eventSubscriptionUri: record.eventSubscriptionUri,
+    eventSubscriptionReference: record.eventSubscriptionReference,
+    eventSubscriptionExpiresAt: record.eventSubscriptionExpiresAt,
+    lastObservedAt: now,
+    sessionExpiresAt,
+    lastAction: input.lastAction,
+    summary: input.summary,
+  };
 }
 
 export function appendCameraLiveSessionRecord(

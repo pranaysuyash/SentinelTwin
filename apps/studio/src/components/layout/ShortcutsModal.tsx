@@ -9,6 +9,8 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { keys: "Enter", action: "Complete wall / path / zone" },
     { keys: "Delete", action: "Remove selected objects" },
     { keys: "← → ↑ ↓", action: "Nudge selected objects" },
+    { keys: "PageUp / PageDown", action: "Raise or lower selected cameras or objects" },
+    { keys: "Q / E", action: "Rotate selected cameras and objects" },
     { keys: "1 – 7", action: "Switch View Mode (Map, Camera, Wall, Replay, Compare, Report Lite, Analytics)" },
     { keys: "V", action: "Select tool" },
     { keys: "C", action: "Place Camera tool" },
@@ -39,6 +41,9 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 text-[11px] font-semibold text-white">Keyboard Shortcuts</div>
+        <div className="mb-3 rounded-lg border border-[#222a3e] bg-[#0b0f17] px-3 py-2 text-[9px] leading-relaxed text-[#7d8aa4]">
+          Selected cameras also expose drag handles on the canvas and the same actions in the right-click menu.
+        </div>
         <div className="space-y-2">
           {shortcuts.map(({ keys, action }) => (
             <div key={keys} className="flex items-center justify-between">

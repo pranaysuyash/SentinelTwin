@@ -99,7 +99,7 @@ describe("computeCoverageCells lighting penalties", () => {
 
     expect(frontEval?.illuminatedBy).toContain("light_front");
     expect(frontEval?.lightLevel ?? 0).toBeGreaterThan(behindEval?.lightLevel ?? 0);
-    expect(behindEval?.shadowedBy).toContain("Shadow Shelf");
+    expect(behindEval?.shadowedBy).toContain("obs_test");
     expect(behindEval?.reasonCodes).toContain("LIGHT_SHADOWED_BY_OBSTRUCTION");
   });
 });

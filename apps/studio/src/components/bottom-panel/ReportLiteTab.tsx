@@ -747,6 +747,20 @@ export function ReportLiteTab() {
               Default
             </button>
             <button type="button"
+              onClick={() => {
+                void handleExportPdf();
+              }}
+              className="flex items-center gap-1.5 rounded-md border border-cyan-500/30 bg-cyan-950/40 px-2.5 py-1 text-[9px] font-semibold text-cyan-300 shadow-sm transition-all hover:border-cyan-400 hover:bg-cyan-900/50 hover:text-white"
+            >
+              <FileText className="h-3 w-3" /> Export Audit PDF
+            </button>
+            <button type="button"
+              onClick={handleExportEvidenceBundle}
+              className="flex items-center gap-1.5 rounded-md border border-indigo-500/30 bg-indigo-950/40 px-2.5 py-1 text-[9px] font-semibold text-indigo-300 shadow-sm transition-all hover:border-indigo-400 hover:bg-indigo-900/50 hover:text-white"
+            >
+              <Database className="h-3 w-3" /> Export Evidence Bundle
+            </button>
+            <button type="button"
               onClick={handleExportMarkdown}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
@@ -759,25 +773,11 @@ export function ReportLiteTab() {
               <Globe className="h-3 w-3" /> Export HTML
             </button>
             <button type="button"
-              onClick={handleExportEvidenceBundle}
-              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
-            >
-              <Database className="h-3 w-3" /> Export Evidence Bundle
-            </button>
-            <button type="button"
               onClick={handleExportProvenance}
               disabled={!result}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white disabled:opacity-40"
             >
               <Database className="h-3 w-3" /> Export Provenance
-            </button>
-            <button type="button"
-              onClick={() => {
-                void handleExportPdf();
-              }}
-              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
-            >
-              <FileText className="h-3 w-3" /> Export PDF
             </button>
             <button type="button"
               onClick={handlePrint}

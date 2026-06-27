@@ -1,9 +1,10 @@
 "use client";
 
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, PerformanceMonitor, AdaptiveDpr } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Camera, VideoOff } from "lucide-react";
 import { memo, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import * as THREE from "three";
 
 import "@/lib/three-compat";
 import { cn } from "@/lib/cn";
@@ -17,12 +18,23 @@ import {
   SceneWalls,
   SceneWindows,
   ScenePrivacyZones,
+  SceneEnvironmentSetup,
+  SceneShadowCaster,
 } from "@/components/workspace/SharedScene";
 import { CameraRigFixed, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
+import { CameraFeedPostProcessing } from "@/components/view/CameraFeedPostProcessing";
 import { useStudioStore } from "@/store/studio-store";
 import type { CameraNode, DoriQuality, SimulationResult } from "@/schema/security-scene";
 import { STUDIO_SHORTCUT_EVENTS } from "@/lib/studio-shortcuts";
 import { QUALITY_RANK } from "@/lib/quality-display";
+import {
+  WALL_PERF_MONITOR_ITERATIONS,
+  WALL_PERF_MONITOR_MS,
+  WALL_PERF_DPR_STEP,
+  WALL_PERF_FLIPFLOPS,
+  wallPerformanceBounds,
+  computeWallTileDpr,
+} from "@/lib/adaptive-dpr-budget";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import {
   clampPathDuration,
@@ -34,6 +46,12 @@ import {
 } from "@/components/view/camera-view-utils";
 
 const CAMERA_WALL_THEME = ENVIRONMENT_THEMES.day;
+
+/** Debug flag: when true, CameraWall tiles log adaptive-DPR decisions to the
+ *  console. Controlled by the existing `showDebugOverlays` path in the future;
+ *  for now it is off by default and can be enabled by changing this constant. */
+const DEBUG_WALL_PERF = false;
+
 type CameraWallLayoutMode = "auto" | "quad" | "overview" | "dense";
 type CameraReplayState = {
   visible: boolean;
@@ -379,6 +397,8 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
   pathVisibility,
   replayState,
   timestampLabel,
+  isDense = false,
+  sceneMaxDimension = 12,
 }: {
   camera: CameraNode;
   isSelected: boolean;
@@ -392,6 +412,8 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
   } | null;
   replayState?: CameraReplayState | null;
   timestampLabel: string;
+  isDense?: boolean;
+  sceneMaxDimension?: number;
 }) {
   const isActive = camData.status === "on";
 
@@ -416,7 +438,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
             timestampLabel={timestampLabel}
           />
         ) : (
-        <>
+          <>
           <Canvas
             camera={{
               position: camData.position,
@@ -424,16 +446,39 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
               near: 0.1,
               far: 50,
             }}
-            dpr={[0.8, 1.1]}
+            dpr={computeWallTileDpr(1, isDense)}
             gl={{ antialias: false, alpha: false, powerPreference: "low-power" }}
             frameloop="demand"
             style={{ width: "100%", height: "100%" }}
           >
-            <Suspense fallback={<CanvasLoadingOverlay label="Loading wall feed" />}>
-              <SceneFeedGeometry theme={CAMERA_WALL_THEME} showPrivacyZones />
-            </Suspense>
-            <CameraRigFixed camera={camData} poseOverride={replayPose} />
-            <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
+            <SceneEnvironmentSetup tier="low" />
+            <SceneShadowCaster tier="low" maxDimension={sceneMaxDimension} />
+            <PerformanceMonitor
+              iterations={WALL_PERF_MONITOR_ITERATIONS}
+              ms={WALL_PERF_MONITOR_MS}
+              step={WALL_PERF_DPR_STEP}
+              flipflops={WALL_PERF_FLIPFLOPS}
+              bounds={wallPerformanceBounds}
+              onDecline={(api) => {
+                if (DEBUG_WALL_PERF) {
+                  // eslint-disable-next-line no-console
+                  console.debug("[CameraWall] perf decline", {
+                    camera: camData.name,
+                    fps: api.fps,
+                    factor: api.factor,
+                    dpr: computeWallTileDpr(api.factor, isDense),
+                  });
+                }
+              }}
+            >
+              <AdaptiveDpr pixelated />
+              <CameraFeedPostProcessing mode="normal" intensityScale={0.5} />
+              <Suspense fallback={<CanvasLoadingOverlay label="Loading wall feed" />}>
+                <SceneFeedGeometry theme={CAMERA_WALL_THEME} showPrivacyZones />
+              </Suspense>
+              <CameraRigFixed camera={camData} poseOverride={replayPose} />
+              <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
+            </PerformanceMonitor>
           </Canvas>
           {/* Subtle scanline overlay for authenticity */}
           <div
@@ -474,7 +519,12 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-red-300/70">
                 Camera Offline
               </div>
-              <div className="mt-0.5 text-[8px] text-[#4a5568]">{camData.name}</div>
+              <div className="mt-1 flex items-center justify-center gap-1">
+                <span className="rounded border border-red-500/30 bg-red-950/60 px-1.5 py-0.5 text-[8px] font-mono text-red-300">
+                  ⚠️ STREAM LEASE EXPIRED
+                </span>
+              </div>
+              <div className="mt-0.5 text-[8px] text-[#4a5568]">{camData.name} · RTSP Bridge Unreachable</div>
             </div>
           </div>
           {/* Offline overlay header */}
@@ -486,9 +536,14 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
                   {shortTag(camData.name)} · {camData.name}
                 </span>
               </div>
-              <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[7px] font-semibold text-red-300">
-                OFFLINE
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[7px] font-semibold text-red-300">
+                  OFFLINE
+                </span>
+                <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[7px] font-semibold text-amber-300" title="Live session health check failed for this RTSP endpoint">
+                  ERR_503
+                </span>
+              </div>
             </div>
           </div>
       </>
@@ -497,7 +552,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
   );
 });
 
-const WallOverviewPanel = memo(function WallOverviewPanel() {
+const WallOverviewPanel = memo(function WallOverviewPanel({ isDense = false }: { isDense?: boolean }) {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
@@ -518,33 +573,44 @@ const WallOverviewPanel = memo(function WallOverviewPanel() {
       </div>
       <Canvas
         camera={{ position: cameraPos, fov: 48, near: 0.1, far: 200 }}
-        shadows={false}
-        dpr={[0.8, 1.05]}
+        shadows="soft"
+        dpr={computeWallTileDpr(1, isDense)}
         frameloop="demand"
         gl={{ antialias: false, alpha: false, powerPreference: "low-power" }}
         style={{ width: "100%", height: "100%", background: theme.background }}
       >
-        <color attach="background" args={[theme.background]} />
-        <SceneLighting theme={theme} />
-        <Suspense fallback={<CanvasLoadingOverlay label="Loading coverage overview" />}>
-          <SceneFloor width={width} depth={depth} showGrid={false} />
-          <SceneWalls walls={scene.walls} selectable={false} />
-          <SceneDoors doors={scene.doors} selectable={false} />
-          <SceneWindows windows={scene.windows} selectable={false} />
-          <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} onSelect={() => {}} />
-          {scene.privacyZones.length > 0 ? <ScenePrivacyZones zones={scene.privacyZones} /> : null}
-          {result?.coverageCells?.length ? <CoverageHeatmapInstanced cells={result.coverageCells} /> : null}
-        </Suspense>
-        <OrbitControls
-          makeDefault
-          target={[width / 2, 0.1, depth / 2]}
-          minDistance={8}
-          maxDistance={40}
-          minPolarAngle={Math.PI / 4.1}
-          maxPolarAngle={Math.PI / 2.1}
-          enableDamping
-          dampingFactor={0.08}
-        />
+        <SceneEnvironmentSetup tier="medium" />
+        <SceneShadowCaster tier="medium" maxDimension={Math.max(width, depth)} />
+        <PerformanceMonitor
+          iterations={WALL_PERF_MONITOR_ITERATIONS}
+          ms={WALL_PERF_MONITOR_MS}
+          step={WALL_PERF_DPR_STEP}
+          flipflops={WALL_PERF_FLIPFLOPS}
+          bounds={wallPerformanceBounds}
+        >
+          <AdaptiveDpr pixelated />
+          <color attach="background" args={[theme.background]} />
+          <SceneLighting theme={theme} />
+          <Suspense fallback={<CanvasLoadingOverlay label="Loading coverage overview" />}>
+            <SceneFloor width={width} depth={depth} showGrid={false} appearance={scene.sceneAppearance?.surfaces?.floor} />
+            <SceneWalls walls={scene.walls} selectable={false} defaultAppearance={scene.sceneAppearance?.surfaces?.wall} />
+            <SceneDoors doors={scene.doors} selectable={false} />
+            <SceneWindows windows={scene.windows} selectable={false} />
+            <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} onSelect={() => {}} />
+            {scene.privacyZones.length > 0 ? <ScenePrivacyZones zones={scene.privacyZones} /> : null}
+            {result?.coverageCells?.length ? <CoverageHeatmapInstanced cells={result.coverageCells} /> : null}
+          </Suspense>
+          <OrbitControls
+            makeDefault
+            target={[width / 2, 0.1, depth / 2]}
+            minDistance={8}
+            maxDistance={40}
+            minPolarAngle={Math.PI / 4.1}
+            maxPolarAngle={Math.PI / 2.1}
+            enableDamping
+            dampingFactor={0.08}
+          />
+        </PerformanceMonitor>
       </Canvas>
     </div>
   );
@@ -611,6 +677,8 @@ const CameraSlotButton = memo(function CameraSlotButton({
   replayPose,
   className = "",
   timestampLabel,
+  isDense = false,
+  sceneMaxDimension,
 }: {
   camera: CameraNode;
   isSelected: boolean;
@@ -625,6 +693,8 @@ const CameraSlotButton = memo(function CameraSlotButton({
   replayState?: CameraReplayState | null;
   className?: string;
   timestampLabel: string;
+  isDense?: boolean;
+  sceneMaxDimension: number;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
@@ -649,6 +719,8 @@ const CameraSlotButton = memo(function CameraSlotButton({
         replayState={replayState}
         replayPose={replayPose}
         timestampLabel={timestampLabel}
+        isDense={isDense}
+        sceneMaxDimension={sceneMaxDimension}
       />
     </button>
   );
@@ -661,12 +733,43 @@ export function CameraWallView() {
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
   const pathReplay = useStudioStore((s) => s.pathReplay);
+  const compactViewport = useStudioStore((s) => s.compactViewport);
   const [layoutMode, setLayoutMode] = useState<CameraWallLayoutMode>("auto");
   const [syncTime, setSyncTime] = useState(true);
   const [freeRunningTimestamp, setFreeRunningTimestamp] = useState(() => Date.now());
   const [immersiveMode, setImmersiveMode] = useState(false);
   const toggleImmersiveMode = useCallback(() => {
     setImmersiveMode((value) => !value);
+  }, []);
+
+  const [sessionHealth, setSessionHealth] = useState<{
+    totals?: { active: number; expiringSoon: number; expired: number; closed: number };
+    sessions?: { id: string; cameraId?: string; status: string; reason?: string }[];
+  } | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchHealth = async () => {
+      try {
+        const res = await fetch("/api/camera-live-session-health");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (mounted && data.ok) {
+          setSessionHealth({
+            totals: data.totals,
+            sessions: data.sessions,
+          });
+        }
+      } catch {
+        // Silently ignore offline/network errors
+      }
+    };
+    void fetchHealth();
+    const timer = window.setInterval(fetchHealth, 15000);
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
   }, []);
 
   const cameras = useMemo(() => {
@@ -791,28 +894,37 @@ export function CameraWallView() {
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#07090d] p-2.5" style={{ paddingTop: "var(--st-full-canvas-safe-top, 4.25rem)" }}>
       {immersiveMode ? (
-        <div className="mb-2 flex items-center justify-between rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-2">
+        <div className={`mb-2 flex items-center justify-between rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-2${compactViewport ? "" : ""}`}>
           <div>
             <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Wall Focus Mode</div>
-            <div className="mt-0.5 text-[11px] text-[#94a3b8]">
-              {viewCount} view layout · {selectedCamera?.name ?? "None"}
-            </div>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px] text-[#6b7c95]">
-              <span className="rounded-md border border-emerald-500/15 bg-emerald-500/8 px-2 py-0.5 text-emerald-300">Active {activeCount}</span>
-              <span className="rounded-md border border-rose-500/15 bg-rose-500/8 px-2 py-0.5 text-rose-300">Offline {offlineCount}</span>
-              {activePath ? (
-                <span className="rounded-md border border-[#24527b] bg-[#0b1a2d]/60 px-2 py-0.5 text-[#93c5fd]">
-                  Route {activePath.label}
+            {!compactViewport && (
+              <div className="mt-0.5 text-[11px] text-[#94a3b8]">
+                {viewCount} view layout · {selectedCamera?.name ?? "None"}
+              </div>
+            )}
+            {!compactViewport && (
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px] text-[#6b7c95]">
+                <span className="rounded-md border border-emerald-500/15 bg-emerald-500/8 px-2 py-0.5 text-emerald-300">Active {activeCount}</span>
+                <span className="rounded-md border border-rose-500/15 bg-rose-500/8 px-2 py-0.5 text-rose-300">Offline {offlineCount}</span>
+                <span className="rounded-md border border-sky-500/15 bg-sky-500/8 px-2 py-0.5 text-sky-300" title="Telemetry from /api/camera-live-session-health">
+                  Bridge Health: {sessionHealth?.totals?.active ?? activeCount} Active · {sessionHealth?.totals?.expired ?? offlineCount} Expired
                 </span>
-              ) : (
-                <span className="rounded-md border border-[#334155] bg-[#0f172a]/50 px-2 py-0.5 text-[#9ca3af]">
-                  Route unavailable
-                </span>
-              )}
-            </div>
-            <div className="mt-1 text-[9px] text-[#9fb0c9]">
-              Focus mode collapses the layout controls so the operator can read the wall at a glance. Press F to exit focus.
-            </div>
+                {activePath ? (
+                  <span className="rounded-md border border-[#24527b] bg-[#0b1a2d]/60 px-2 py-0.5 text-[#93c5fd]">
+                    Route {activePath.label}
+                  </span>
+                ) : (
+                  <span className="rounded-md border border-[#334155] bg-[#0f172a]/50 px-2 py-0.5 text-[#9ca3af]">
+                    Route unavailable
+                  </span>
+                )}
+              </div>
+            )}
+            {!compactViewport && (
+              <div className="mt-1 text-[9px] text-[#9fb0c9]">
+                Focus mode collapses the layout controls so the operator can read the wall at a glance. Press F to exit focus.
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -829,6 +941,9 @@ export function CameraWallView() {
               </span>
               <span className="rounded-md border border-rose-500/15 bg-rose-500/8 px-2 py-0.5 text-rose-300">
                 Offline {offlineCount}
+              </span>
+              <span className="rounded-md border border-sky-500/15 bg-sky-500/8 px-2 py-0.5 text-sky-300" title="Telemetry from /api/camera-live-session-health">
+                Bridge Health: {sessionHealth?.totals?.active ?? activeCount} Active · {sessionHealth?.totals?.expired ?? offlineCount} Expired
               </span>
               <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5 text-[#c7d0e4]">
                 Selected {selectedCamera?.name ?? "None"}
@@ -936,12 +1051,14 @@ export function CameraWallView() {
                 replayPose={replayPoseByCameraId[cam.id]}
                 timestampLabel={timestampLabel}
                 className="h-full w-full"
+                isDense
+                sceneMaxDimension={Math.max(scene.dimensions.width, scene.dimensions.depth)}
               />
             ))}
             {Array.from({ length: Math.max(0, layoutSpec.cameraSlots - visible.length) }).map((_, index) => (
               <EmptySlot key={`dense-empty-${index}`} />
             ))}
-            <WallOverviewPanel />
+            <WallOverviewPanel isDense />
           </>
         ) : effectiveLayout === "overview" ? (
           <>
@@ -957,12 +1074,14 @@ export function CameraWallView() {
                 replayPose={replayPoseByCameraId[cam.id]}
                 timestampLabel={timestampLabel}
                 className="h-full w-full"
+                isDense={false}
+                sceneMaxDimension={Math.max(scene.dimensions.width, scene.dimensions.depth)}
               />
             ))}
             {Array.from({ length: Math.max(0, layoutSpec.cameraSlots - visible.length) }).map((_, index) => (
               <EmptySlot key={`overview-empty-${index}`} />
             ))}
-            <WallOverviewPanel />
+            <WallOverviewPanel isDense={false} />
           </>
         ) : (
           <>
@@ -978,12 +1097,14 @@ export function CameraWallView() {
                 replayPose={replayPoseByCameraId[cam.id]}
                 timestampLabel={timestampLabel}
                 className="h-full w-full"
+                isDense={false}
+                sceneMaxDimension={Math.max(scene.dimensions.width, scene.dimensions.depth)}
               />
             ))}
             {Array.from({ length: Math.max(0, layoutSpec.cameraSlots - visible.length) }).map((_, index) => (
               <EmptySlot key={`quad-empty-${index}`} />
             ))}
-            <WallOverviewPanel />
+            <WallOverviewPanel isDense={false} />
           </>
         )}
       </div>

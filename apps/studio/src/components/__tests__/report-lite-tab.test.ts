@@ -12,7 +12,7 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("exportCompareAsMarkdown");
     expect(source).toContain("Export HTML");
     expect(source).toContain("Export Evidence Bundle");
-    expect(source).toContain("Export PDF");
+    expect(source).toContain("Export Audit PDF");
     expect(source).toContain("handleExportPdf");
     expect(source).toContain("exportTextAsPdf");
     expect(source).toContain("compareReportSelection ? \"compare\" : \"single\"");

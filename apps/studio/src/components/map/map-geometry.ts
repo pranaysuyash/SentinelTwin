@@ -208,3 +208,91 @@ export function createDefaultSceneBounds(width: number, depth: number) {
 export function pathHasNoSteps(path: ScenarioPath): boolean {
   return path.points.length < 2;
 }
+
+// ── Architectural plan helpers (true-2D plan view) ──────────────────────────
+
+/**
+ * Orientation of the wall segment nearest to a point, in radians measured in
+ * scene XZ space. Used to align door swings and window glazing with the wall
+ * they sit in (via wallId when set, nearest segment otherwise).
+ */
+export function nearestWallAngle(
+  scene: Pick<SecurityScene, "walls">,
+  point: Point2,
+  preferredWallId?: string,
+): number {
+  const preferred = preferredWallId
+    ? scene.walls.find((wall) => wall.id === preferredWallId)
+    : undefined;
+  if (preferred) {
+    return Math.atan2(preferred.end[1] - preferred.start[1], preferred.end[0] - preferred.start[0]);
+  }
+
+  let bestAngle = 0;
+  let bestDistSq = Number.POSITIVE_INFINITY;
+  for (const wall of scene.walls) {
+    const [ax, ay] = wall.start;
+    const [bx, by] = wall.end;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((point[0] - ax) * dx + (point[1] - ay) * dy) / lenSq));
+    const px = ax + t * dx;
+    const py = ay + t * dy;
+    const distSq = (point[0] - px) ** 2 + (point[1] - py) ** 2;
+    if (distSq < bestDistSq) {
+      bestDistSq = distSq;
+      bestAngle = Math.atan2(dy, dx);
+    }
+  }
+  return bestAngle;
+}
+
+/**
+ * SVG path for an architectural door swing: hinge at one jamb, leaf drawn
+ * open at 90°, plus the quarter-circle swing arc. All coordinates in scene
+ * meters; the caller projects via `project`.
+ */
+export function doorSwingPath(
+  center: Point2,
+  widthM: number,
+  wallAngleRad: number,
+  project: (point: Point2) => { x: number; y: number },
+): { leaf: string; arc: string; hinge: Point2 } {
+  const half = Math.max(0.05, widthM / 2);
+  const cos = Math.cos(wallAngleRad);
+  const sin = Math.sin(wallAngleRad);
+  // Hinge at one end of the opening along the wall direction.
+  const hinge: Point2 = [center[0] - half * cos, center[1] - half * sin];
+  const jamb: Point2 = [center[0] + half * cos, center[1] + half * sin];
+  // Leaf swings 90° off the wall: rotate wall direction by +90° → (-sin, cos),
+  // leaf length equals the opening width.
+  const openEnd: Point2 = [hinge[0] + 2 * half * -sin, hinge[1] + 2 * half * cos];
+  const h = project(hinge);
+  const j = project(jamb);
+  const o = project(openEnd);
+  const radius = Math.hypot(j.x - h.x, j.y - h.y);
+  return {
+    leaf: `M ${formatSvgNumber(h.x)} ${formatSvgNumber(h.y)} L ${formatSvgNumber(o.x)} ${formatSvgNumber(o.y)}`,
+    arc: `M ${formatSvgNumber(j.x)} ${formatSvgNumber(j.y)} A ${formatSvgNumber(radius)} ${formatSvgNumber(radius)} 0 0 1 ${formatSvgNumber(o.x)} ${formatSvgNumber(o.y)}`,
+    hinge,
+  };
+}
+
+/**
+ * Endpoints of a wall-aligned segment centered on `center` with length
+ * `widthM`, in scene meters. Used for window glazing lines in plan view.
+ */
+export function wallAlignedSegment(
+  center: Point2,
+  widthM: number,
+  wallAngleRad: number,
+): { start: Point2; end: Point2 } {
+  const half = Math.max(0.05, widthM / 2);
+  const cos = Math.cos(wallAngleRad);
+  const sin = Math.sin(wallAngleRad);
+  return {
+    start: [center[0] - half * cos, center[1] - half * sin],
+    end: [center[0] + half * cos, center[1] + half * sin],
+  };
+}

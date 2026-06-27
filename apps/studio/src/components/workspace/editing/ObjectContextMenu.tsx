@@ -161,7 +161,7 @@ export function ObjectContextMenu({
         </div>
 
         <div className="border-t border-white/8 px-3 py-2 text-[8px] uppercase tracking-[0.18em] text-slate-500">
-          Right-click object actions
+          Right-click object actions, keyboard nudges, and drag handles
         </div>
       </div>
     </div>

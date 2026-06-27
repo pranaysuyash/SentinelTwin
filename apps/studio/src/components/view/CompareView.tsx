@@ -240,8 +240,8 @@ function ScenePanel({
           <directionalLight position={[10, 14, 8]} intensity={theme.directional} color="#eef4ff" castShadow />
           <Suspense fallback={<CanvasLoadingOverlay label="Loading compare scene" />}>
             <SceneLighting theme={theme} />
-            <SceneFloor width={width} depth={depth} showGrid={false} />
-            <SceneWalls walls={scene.walls} />
+            <SceneFloor width={width} depth={depth} showGrid={false} appearance={scene.sceneAppearance?.surfaces?.floor} />
+            <SceneWalls walls={scene.walls} defaultAppearance={scene.sceneAppearance?.surfaces?.wall} />
             <SceneDoors doors={scene.doors} />
             <SceneWindows windows={scene.windows} />
             <SceneObstructions obstructions={scene.obstructions} selectedId={null} />

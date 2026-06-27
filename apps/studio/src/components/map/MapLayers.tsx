@@ -21,6 +21,9 @@ import {
   polygonCentroid,
   polygonToSvgPoints,
   estimateCoverageCellSize,
+  doorSwingPath,
+  nearestWallAngle,
+  wallAlignedSegment,
   type MapLayerFlags,
 } from "./map-geometry";
 import { samplePathQuality, pointOnPathAtProgress } from "./path-quality";
@@ -58,18 +61,20 @@ type MapLayersProps = {
   coverageOpacity?: number;
   showNodeLabels?: boolean;
   showReplayPath?: boolean;
+  /** Architectural plan rendering: wall thickness, door swings, glazing lines. */
+  architectural?: boolean;
 };
 
 function zoneStatusFill(level: string) {
   if (level === "pass") {
-    return "rgba(34,197,94,0.2)";
+    return MAP_COLORS.zone.pass;
   }
 
   if (level === "partial") {
-    return "rgba(234,179,8,0.2)";
+    return MAP_COLORS.zone.partial;
   }
 
-  return "rgba(239,68,68,0.2)";
+  return MAP_COLORS.zone.fail;
 }
 
 function styleForWall(material: string) {
@@ -142,7 +147,7 @@ function makeFovPolygon(
 function pathStroke(pathId: string, activePathId?: string | null) {
   const isActive = activePathId != null && pathId === activePathId;
   return {
-    stroke: isActive ? "#8b5cf6" : "#64748b",
+    stroke: isActive ? MAP_COLORS.pathActive : MAP_COLORS.path,
     strokeWidth: isActive ? 2.2 : 1.4,
     opacity: isActive ? 0.98 : 0.55,
     dash: isActive ? "none" : "6 4",
@@ -217,6 +222,7 @@ export function MapLayers({
   coverageOpacity,
   showNodeLabels,
   showReplayPath,
+  architectural = false,
 }: MapLayersProps) {
   const adversaryShadowOn = useStudioStore((s) => s.overlayFilters.adversaryShadow);
   const cells = result?.coverageCells ?? [];
@@ -305,20 +311,40 @@ export function MapLayers({
             const b = projection.sceneToSvg(wall.end);
             const style = styleForWall(wall.material);
             const isSelected = nodeActive(wall.id, selectedNodeId, hoveredNodeId);
+            // Architectural plan: draw the wall at its real thickness with a
+            // lighter core so it reads like a floor-plan poché, not a wire.
+            const planWidth = architectural
+              ? Math.max(2, projection.lengthToSvg(Math.max(0.08, wall.thicknessM)))
+              : null;
+            const baseWidth = planWidth ?? style.strokeWidth;
             return (
-              <line
-                key={wall.id}
-                x1={a.x}
-                y1={a.y}
-                x2={b.x}
-                y2={b.y}
-                {...makeNodeHandlers(wall.id, onNodeSelect, onNodeHover)}
-                stroke={style.stroke}
-                strokeWidth={isSelected ? style.strokeWidth + 0.7 : style.strokeWidth}
-                strokeOpacity={isSelected ? 1 : style.strokeOpacity}
-                strokeDasharray={style.strokeDasharray}
-                strokeLinecap="round"
-              />
+              <g key={wall.id}>
+                <line
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  {...makeNodeHandlers(wall.id, onNodeSelect, onNodeHover)}
+                  stroke={style.stroke}
+                  strokeWidth={isSelected ? baseWidth + 0.7 : baseWidth}
+                  strokeOpacity={isSelected ? 1 : style.strokeOpacity}
+                  strokeDasharray={style.strokeDasharray}
+                  strokeLinecap={architectural ? "butt" : "round"}
+                />
+                {architectural && planWidth !== null && planWidth > 3 && wall.material !== "glass" ? (
+                  <line
+                    x1={a.x}
+                    y1={a.y}
+                    x2={b.x}
+                    y2={b.y}
+                    pointerEvents="none"
+                    stroke={MAP_COLORS.wallInner}
+                    strokeWidth={Math.max(1, planWidth - 2.4)}
+                    strokeOpacity={0.65}
+                    strokeLinecap="butt"
+                  />
+                ) : null}
+              </g>
             );
           })}
         </g>
@@ -328,14 +354,31 @@ export function MapLayers({
         <g>
           {scene.doors.map((door) => {
             const [x, y, z] = door.position;
+            const wallAngle = architectural ? nearestWallAngle(scene, [x, z], door.wallId) : 0;
+            const opening = architectural
+              ? wallAlignedSegment([x, z], Math.max(0.1, door.dimensions[0]), wallAngle)
+              : null;
             const startScene = [x - Math.max(0.05, door.dimensions[0] * 0.5), y, z - Math.max(0.05, door.dimensions[2] * 0.3)] as [number, number, number];
             const endScene = [x + Math.max(0.05, door.dimensions[0] * 0.5), y, z + Math.max(0.05, door.dimensions[2] * 0.3)] as [number, number, number];
-            const p1 = projection.sceneToSvg([startScene[0], startScene[2]]);
-            const p2 = projection.sceneToSvg([endScene[0], endScene[2]]);
+            const p1 = opening
+              ? projection.sceneToSvg(opening.start)
+              : projection.sceneToSvg([startScene[0], startScene[2]]);
+            const p2 = opening
+              ? projection.sceneToSvg(opening.end)
+              : projection.sceneToSvg([endScene[0], endScene[2]]);
+            const swing = architectural && door.state !== "locked"
+              ? doorSwingPath([x, z], Math.max(0.1, door.dimensions[0]), wallAngle, projection.sceneToSvg)
+              : null;
             const style = statusForDoor(door.state);
             const isSelected = nodeActive(door.id, selectedNodeId, hoveredNodeId);
             return (
               <g key={door.id}>
+                {swing ? (
+                  <g pointerEvents="none" opacity={0.55}>
+                    <path d={swing.leaf} stroke={style.stroke} strokeWidth={1.1} fill="none" />
+                    <path d={swing.arc} stroke={style.stroke} strokeWidth={0.8} strokeDasharray="2 2" fill="none" />
+                  </g>
+                ) : null}
                 <line
                   x1={p1.x}
                   y1={p1.y}
@@ -354,7 +397,7 @@ export function MapLayers({
                     cy={(p1.y + p2.y) / 2}
                     r={3}
                     fill="none"
-                    stroke="#fde68a"
+                    stroke={MAP_COLORS.lightOn}
                     strokeWidth={1.2}
                     strokeDasharray="2 2"
                     opacity={0.8}
@@ -371,8 +414,12 @@ export function MapLayers({
           {scene.windows.map((windowNode) => {
             const [x, , z] = windowNode.position;
             const wHalf = Math.max(0.1, windowNode.dimensions[0] * 0.55);
-            const p1 = projection.sceneToSvg([x - wHalf, z]);
-            const p2 = projection.sceneToSvg([x + wHalf, z]);
+            const windowAngle = architectural ? nearestWallAngle(scene, [x, z], windowNode.wallId) : 0;
+            const aligned = architectural
+              ? wallAlignedSegment([x, z], wHalf * 2, windowAngle)
+              : null;
+            const p1 = aligned ? projection.sceneToSvg(aligned.start) : projection.sceneToSvg([x - wHalf, z]);
+            const p2 = aligned ? projection.sceneToSvg(aligned.end) : projection.sceneToSvg([x + wHalf, z]);
             const style = styleForWindow(windowNode.state);
             const isSelected = nodeActive(windowNode.id, selectedNodeId, hoveredNodeId);
             return (
@@ -417,9 +464,9 @@ export function MapLayers({
                   <text
                     x={centroid.x}
                     y={centroid.y}
-                    fill="#f8fafc"
+                    fill={MAP_COLORS.text.primary}
                     fontSize={8}
-                    stroke="#020617"
+                    stroke={MAP_COLORS.text.dark}
                     strokeWidth={2}
                     paintOrder="stroke"
                     opacity={0.95}
@@ -444,9 +491,9 @@ export function MapLayers({
               patternUnits="userSpaceOnUse"
               patternTransform="rotate(45)"
             >
-              <path d="M 0 0 L 0 6" stroke="#fda4af" strokeWidth={1} />
+              <path d="M 0 0 L 0 6" stroke={MAP_COLORS.privacy.stroke} strokeWidth={1} />
             </pattern>
-            <circle id={`privacy-lock-${mode}`} cx="0" cy="0" r="2.8" fill="#fecdd3" />
+            <circle id={`privacy-lock-${mode}`} cx="0" cy="0" r="2.8" fill={MAP_COLORS.privacy.fill} />
           </defs>
 
           {scene.privacyZones.map((zone: PrivacyZoneNode) => {
@@ -460,15 +507,15 @@ export function MapLayers({
                   points={polygon}
                   fill={`url(#privacy-hatch-${mode})`}
                   fillOpacity={isSelected ? 0.58 : 0.42}
-                  stroke="#fecdd3"
+                  stroke={MAP_COLORS.privacy.fill}
                   strokeWidth={isSelected ? 1.8 : 1.25}
                   {...makeNodeHandlers(zone.id, onNodeSelect, onNodeHover)}
                 />
                 <g transform={`translate(${centroid.x} ${centroid.y})`}>
                   <circle
                     r={4.2}
-                    fill="rgba(236,72,153,0.28)"
-                    stroke="#fca5a5"
+                    fill={MAP_COLORS.privacy.fillTint}
+                    stroke={MAP_COLORS.privacy.strokeAccent}
                     strokeWidth={1}
                     onPointerDown={() => onNodeSelect?.(zone.id)}
                   />
@@ -478,12 +525,12 @@ export function MapLayers({
                     width={4.4}
                     height={2.8}
                     rx={1}
-                    fill="#fecdd3"
+                    fill={MAP_COLORS.privacy.fill}
                     opacity={0.5}
                   />
                   <path
                     d="M -1.4 0 L 1.4 0 M -0.6 0 L -0.6 -1.3 M 0.6 0 L 0.6 -1.3"
-                    stroke="#7f1d1d"
+                    stroke={MAP_COLORS.privacy.lock}
                     strokeWidth={0.75}
                     fill="none"
                   />
@@ -559,17 +606,17 @@ export function MapLayers({
             const isSelected = nodeActive(obs.id, selectedNodeId, hoveredNodeId);
 
             const fill = obs.material === "glass"
-              ? "rgba(125,211,252,0.28)"
+              ? MAP_COLORS.obstacle.glass
               : obs.material === "partial"
-                ? "rgba(148,163,184,0.22)"
-                : "rgba(148,163,184,0.35)";
+                ? MAP_COLORS.obstacle.partial
+                : MAP_COLORS.obstacle.solid;
 
             return (
               <polygon
                 key={obs.id}
                 points={points}
                 fill={fill}
-                stroke={isSelected ? "#fbbf24" : "#94a3b8"}
+                stroke={isSelected ? MAP_COLORS.obstacle.strokeSelected : MAP_COLORS.obstacle.stroke}
                 strokeWidth={isSelected ? 1.9 : 1.2}
                 strokeLinejoin="round"
                 {...makeNodeHandlers(obs.id, onNodeSelect, onNodeHover)}
@@ -644,7 +691,7 @@ export function MapLayers({
                   r={Math.max(2.3, projection.lengthToSvg(isHovered ? 0.28 : 0.22))}
                   fill={color}
                   opacity={isOff ? 0.35 : (isHovered ? 1 : isSuggested ? 0.5 : 0.94)}
-                  stroke={isSelected ? "#f8fafc" : "transparent"}
+                  stroke={isSelected ? MAP_COLORS.text.primary : "transparent"}
                   strokeWidth={isHovered ? 1.4 : 1}
                   {...makeNodeHandlers(camera.id, onNodeSelect, onNodeHover)}
                 />
@@ -654,7 +701,7 @@ export function MapLayers({
                     cy={point.y}
                     r={projection.lengthToSvg(0.2) + (isHovered ? 7 : 4)}
                     fill="none"
-                    stroke={isHovered ? "#e0e7ff" : "#c7d2fe"}
+                    stroke={isHovered ? MAP_COLORS.selectionRing : MAP_COLORS.hoverRing}
                     strokeWidth={isHovered ? 1.4 : 1}
                     strokeDasharray={isHovered ? "1 2" : "2 2"}
                   />
@@ -677,8 +724,8 @@ export function MapLayers({
                     y={point.y - 7}
                     fontSize="9"
                     fontWeight="700"
-                    fill={isHovered ? "#e0e7ff" : "#cbd5e1"}
-                    stroke="#020617"
+                    fill={isHovered ? MAP_COLORS.selectionRing : MAP_COLORS.text.secondary}
+                    stroke={MAP_COLORS.text.dark}
                     strokeWidth="2.4"
                     paintOrder="stroke"
                     pointerEvents="none"
@@ -758,20 +805,20 @@ export function MapLayers({
                     {path.points.map((point, index) => {
                       const p = projection.sceneToSvg(point.position);
                       if (index === 0) {
-                        return <circle key={`${path.id}-start`} cx={p.x} cy={p.y} r={4.2} fill="#22c55e" />;
+                        return <circle key={`${path.id}-start`} cx={p.x} cy={p.y} r={4.2} fill={MAP_COLORS.pathStart} />;
                       }
 
                       if (index === path.points.length - 1) {
                         return (
                           <g key={`${path.id}-end`}>
-                            <circle cx={p.x} cy={p.y} r={4.6} fill="none" stroke="#f59e0b" strokeWidth={1.8} />
-                            <circle cx={p.x} cy={p.y} r={1.8} fill="#f59e0b" />
+                            <circle cx={p.x} cy={p.y} r={4.6} fill="none" stroke={MAP_COLORS.pathEnd} strokeWidth={1.8} />
+                            <circle cx={p.x} cy={p.y} r={1.8} fill={MAP_COLORS.pathEnd} />
                           </g>
                         );
                       }
 
                       if (path.points.length > 0 && index % 2 === 1) {
-                        return <circle key={`${path.id}-mid-${index}`} cx={p.x} cy={p.y} r={1.3} fill="#a78bfa" opacity={0.5} />;
+                        return <circle key={`${path.id}-mid-${index}`} cx={p.x} cy={p.y} r={1.3} fill={MAP_COLORS.pathMid} opacity={0.5} />;
                       }
 
                       return null;
@@ -798,7 +845,7 @@ export function MapLayers({
                 y1={a.y}
                 x2={b.x}
                 y2={b.y}
-                stroke={ghosted ? "#ef4444" : qualityColor(wp.detectionQuality)}
+                stroke={ghosted ? MAP_COLORS.pathGhost : qualityColor(wp.detectionQuality)}
                 strokeWidth={ghosted ? 1.2 : 1.5}
                 strokeLinecap="round"
                 opacity={ghosted ? 0.35 : 0.85}
@@ -820,8 +867,8 @@ export function MapLayers({
                 + `${formatSvgPoint({ x: p.x - 3, y: p.y + 3.2 })} `
                 + `${formatSvgPoint({ x: p.x + 3, y: p.y + 3.2 })}`
               }
-              fill={isSelected ? "#bfdbfe" : "#93c5fd"}
-              stroke={isSelected ? "#f8fafc" : "#e2e8f0"}
+              fill={isSelected ? MAP_COLORS.selectionBlue : MAP_COLORS.viewport}
+              stroke={isSelected ? MAP_COLORS.text.primary : MAP_COLORS.panelText}
               strokeWidth={0.9}
               {...makeNodeHandlers(entry.id, onNodeSelect, onNodeHover)}
             />
@@ -829,7 +876,7 @@ export function MapLayers({
               <text
                 x={p.x}
                 y={p.y + 8}
-                fill="#cbd5e1"
+                fill={MAP_COLORS.text.secondary}
                 fontSize={8}
                 opacity={0.9}
                 textAnchor="middle"
@@ -848,8 +895,8 @@ export function MapLayers({
             const actor = projection.sceneToSvg(replayActor);
             return (
               <>
-                <circle cx={actor.x} cy={actor.y} r={4.4} fill="#fb923c" opacity={0.95} />
-                <circle cx={actor.x} cy={actor.y} r={1.8} fill="#fdba74" />
+                <circle cx={actor.x} cy={actor.y} r={4.4} fill={MAP_COLORS.replayActor} opacity={0.95} />
+                <circle cx={actor.x} cy={actor.y} r={1.8} fill={MAP_COLORS.replayActorInner} />
               </>
             );
           })()}
@@ -861,7 +908,7 @@ export function MapLayers({
           {(() => {
             const actor = pointOnPathAtProgress(activePathForReplay, 0.55);
             const pos = projection.sceneToSvg(actor);
-            return <circle cx={pos.x} cy={pos.y} r={3.2} fill="#f97316" opacity={0.52} />;
+            return <circle cx={pos.x} cy={pos.y} r={3.2} fill={MAP_COLORS.replayActorGhost} opacity={0.52} />;
           })()}
         </g>
       ) : null}
@@ -869,7 +916,7 @@ export function MapLayers({
       {showReplayPath && activePathForReplay ? (() => {
         const actor = pointOnPathAtProgress(activePathForReplay, Math.max(0, Math.min(1, 0.35)));
         const pos = projection.sceneToSvg(actor);
-        return <circle cx={pos.x} cy={pos.y} r={3.8} fill="#fb923c" opacity={0.2} />;
+        return <circle cx={pos.x} cy={pos.y} r={3.8} fill={MAP_COLORS.replayActor} opacity={0.2} />;
       })() : null}
     </g>
   );

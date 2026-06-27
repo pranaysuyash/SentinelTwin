@@ -4,6 +4,8 @@
 This script defines what "done" looks like for the V0.1 build. Agents building features
 should use this to understand how their piece fits into the end-to-end flow.
 
+**Current run note (2026-06-30):** For live buyer sessions that include intake, keep this script for the core 4:15 flow and use `SITE_TWIN_CREATION_DEMO_FLOW.md` + `DEMO_RUNS.md` for floor-plan branch coaching, route-state handling, and review-gate boundaries.
+
 **Scene:** Small Retail Shop (small_retail_shop.json)
 
 ---

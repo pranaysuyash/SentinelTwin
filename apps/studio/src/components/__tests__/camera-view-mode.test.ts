@@ -23,7 +23,7 @@ describe("CameraViewMode", () => {
     const combinedSource = `${source}\n${workflowSource}\n${hudSource}\n${panelSource}\n${utilsSource}\n${chromeSource}`;
 
     expect(source).toContain("VerificationPanel as SharedVerificationPanel");
-    expect(combinedSource).toContain("Camera View - Single Camera");
+    expect(source).toContain("Camera Focus Mode");
     expect(panelSource).toContain("Footage Verification");
 
     expect(combinedSource).toContain("Back to Map View");
@@ -106,8 +106,8 @@ describe("CameraViewMode", () => {
     expect(source).toContain("clampPathDuration,");
     expect(source).toContain("clampReplayProgress,");
     expect(source).toContain("orderCamerasForReplayPlayback,");
-    expect(source).toContain("const safeReplayDurationS = clampPathDuration(activePathResult?.totalDurationS);");
-    expect(source).toContain("const pathTimeS = safeReplayDurationS * safeReplayProgress;");
+    expect(source).toContain("const safeReplayDurationS = replayClock.durationS;");
+    expect(source).toContain("const pathTimeS = replayClock.timeS;");
     expect(source).toContain("totalSeconds={safeReplayDurationS}");
     expect(source).not.toContain("function clampReplayProgress(progress");
     expect(source).not.toContain("function clampPathDuration(durationS");

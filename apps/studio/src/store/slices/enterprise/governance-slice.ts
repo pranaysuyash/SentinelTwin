@@ -43,6 +43,7 @@ function resetWorkspaceGovernanceForDraft(governance: WorkspaceGovernanceState):
 import { getOrganizationManager } from "@/lib/organization-store";
 import { guardVisibilityChange, guardWorkspaceCountQuota } from "@/lib/entitlement-guards";
 import type { OrganizationList, Organization } from "@/schema/organization";
+import type { TimelineFocusRequest } from "@/store/studio-types";
 import {
   buildOperationalEvidenceEvent,
   compareOperationalEvidenceBranches,
@@ -186,7 +187,7 @@ function evidenceLogLine(event: any): string {
 }
 
 function cloneDefaultMapState(): any {
-  return { minimap: { zoom: 1, pan: [0, 0] }, pathMap: { zoom: 1, pan: [0, 0] } };
+  return { minimap: { zoom: 1, pan: [0, 0] }, pathMap: { zoom: 1, pan: [0, 0] }, planView: { zoom: 1, pan: [0, 0] } };
 }
 
 function buildGraphState(scene: any, simulationResult: any, revisionDepth: number, snapshotCount: number, events?: any): any {
@@ -324,6 +325,7 @@ function buildCanonicalSavedLayoutFromState(state: any): WorkspaceLayoutRecord {
     rightPanelMode: state.rightPanelMode,
     bottomDrawerMode: state.bottomDrawerMode,
     pinnedAnalysisModule: state.pinnedAnalysisModule,
+    bottomTab: state.bottomTab,
     overlayDensity: state.overlayDensity,
     showDebugOverlays: state.showDebugOverlays,
     clientDemoOptions: { ...state.clientDemoOptions },
@@ -351,7 +353,7 @@ export interface GovernanceSlice {
   cameraVerificationSnapshots: Record<string, any[]>;
 
   launchNotice: string | null;
-  timelineFocusRequest: any;
+  timelineFocusRequest: TimelineFocusRequest | null;
   archiveHandoffRequest: ArchiveHandoffRequest | null;
 
   fixSandboxActive: boolean;
@@ -428,7 +430,8 @@ export interface GovernanceSlice {
   removeCameraVerificationSnapshot: (cameraId: string, snapshotId: string) => void;
 
   setLaunchNotice: (notice: string | null) => void;
-  setTimelineFocusRequest: (request: any) => void;
+  setTimelineFocusRequest: (request: TimelineFocusRequest | null) => void;
+  consumeTimelineFocusRequest: () => TimelineFocusRequest | null;
   setArchiveHandoffRequest: (request: ArchiveHandoffRequest | null) => void;
 
   enterFixSandbox: () => void;
@@ -1228,6 +1231,12 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
 
     setLaunchNotice: (launchNotice) => set({ launchNotice }),
     setTimelineFocusRequest: (timelineFocusRequest) => set({ timelineFocusRequest }),
+    consumeTimelineFocusRequest: () => {
+      const state = get();
+      const request = state.timelineFocusRequest;
+      if (request) set({ timelineFocusRequest: null });
+      return request;
+    },
     setArchiveHandoffRequest: (archiveHandoffRequest) => set({ archiveHandoffRequest }),
 
     enterFixSandbox: () => {
@@ -1354,7 +1363,7 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
       const patch = buildLayoutStatePatch(layout);
       const bottomTab = getFirstEnabledAnalysisTab(
         layout.enabledAnalysisModules as Record<BottomTab, boolean>,
-        layout.pinnedAnalysisModule,
+        layout.bottomTab ?? layout.pinnedAnalysisModule,
       );
       set({
         ...patch, focusMode: layout.workspacePreset === "focus",

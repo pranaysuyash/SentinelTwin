@@ -936,7 +936,7 @@ describe("exportAsText", () => {
     expect(md).toContain("Scene IDs");
   });
 
-  longTest("includes novel algorithms section with uncertainty", () => {
+  longTest("includes uncertainty section", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("NOVEL ALGORITHMS");
     expect(text).toContain("Coverage Uncertainty");
@@ -955,15 +955,14 @@ describe("exportAsText", () => {
     expect(text).toContain("Camera matrix");
   });
 
-  longTest("includes posture variation in novel algorithms section", () => {
+  longTest("includes posture variation section", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("Coverage Posture Variation");
   });
 
   longTest("includes blind spot topology in novel algorithms section", () => {
     const text = exportAsText(baseReport);
-    // Blind spot topology details are in the report model but not rendered in Text export
-    expect(text).not.toContain("Blind Spot Topology");
+    expect(text).toContain("Blind Spot Topology");
   });
 
   longTest("includes blind spot fingerprint in novel algorithms section", () => {

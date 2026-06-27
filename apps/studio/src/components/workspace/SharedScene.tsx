@@ -2,13 +2,14 @@
 
 import { useMemo, useRef, useEffect, useCallback } from "react";
 import { Html, ContactShadows } from "@react-three/drei";
-import { useFrame, type ThreeEvent } from "@react-three/fiber";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 
 import type {
   DoriQuality,
   CoverageCellResult,
   DoorNode,
+  NodeAppearance,
   ObstructionNode,
   WallNode,
   WindowNode,
@@ -17,6 +18,30 @@ import { DORI_THRESHOLDS } from "@sentineltwin/core";
 import { useStudioStore } from "@/store/studio-store";
 import { SceneHtml } from "@/components/shared/SceneHtml";
 import { isPrimaryMouseEvent } from "@/components/workspace/workspace-canvas-utils";
+import {
+  surfaceMaterial,
+  surfaceMaterialWithSelection,
+  needsPhysicalMaterial,
+  pbrToStandardMaterialProps,
+  pbrToPhysicalMaterialProps,
+} from "@/lib/pbr-materials";
+import {
+  ENVIRONMENT_THEMES,
+  applyNodeAppearance,
+  resolveAppearanceTextureScale,
+  resolveAppearanceTextureStyle,
+  resolveSceneLighting,
+  type EnvironmentTheme,
+} from "@/lib/scene-appearance";
+import {
+  cloneSurfaceTexturesWithRepeat,
+  getSurfaceTextures,
+} from "@/lib/procedural-textures";
+
+// Canonical theme data now lives in lib/scene-appearance.ts; re-exported here
+// so the existing canvas call sites keep importing from SharedScene.
+export { ENVIRONMENT_THEMES };
+export type { EnvironmentTheme };
 
 type HeatmapMode = "quality" | "lighting" | "fragility" | "overlap" | "contribution" | "blindspots";
 
@@ -159,201 +184,6 @@ function makeSceneNodeHandlers({
   };
 }
 
-// ── Procedural texture generators (canvas-based, no external assets) ──
-
-function createFloorTexture(): THREE.CanvasTexture {
-  const size = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-
-  ctx.fillStyle = "#e2dbd0";
-  ctx.fillRect(0, 0, size, size);
-
-  const tileSize = 128;
-  const groutWidth = 2;
-  ctx.strokeStyle = "#cdc5b8";
-  ctx.lineWidth = groutWidth;
-
-  for (let x = 0; x <= size; x += tileSize) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, size);
-    ctx.stroke();
-  }
-  for (let y = 0; y <= size; y += tileSize) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(size, y);
-    ctx.stroke();
-  }
-
-  for (let tx = 0; tx < size / tileSize; tx++) {
-    for (let ty = 0; ty < size / tileSize; ty++) {
-      const brightness = 0.92 + Math.random() * 0.08;
-      ctx.fillStyle = `rgba(${Math.floor(226 * brightness)}, ${Math.floor(219 * brightness)}, ${Math.floor(208 * brightness)}, 0.6)`;
-      ctx.fillRect(tx * tileSize + groutWidth, ty * tileSize + groutWidth, tileSize - groutWidth * 2, tileSize - groutWidth * 2);
-
-      for (let i = 0; i < 40; i++) {
-        const px = tx * tileSize + groutWidth + Math.random() * (tileSize - groutWidth * 2);
-        const py = ty * tileSize + groutWidth + Math.random() * (tileSize - groutWidth * 2);
-        const gray = 160 + Math.random() * 60;
-        ctx.fillStyle = `rgba(${gray}, ${gray - 10}, ${gray - 20}, ${0.04 + Math.random() * 0.06})`;
-        ctx.fillRect(px, py, 1 + Math.random() * 2, 1 + Math.random() * 2);
-      }
-    }
-  }
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(1, 1);
-  return texture;
-}
-
-function createFloorNormalMap(): THREE.CanvasTexture {
-  const size = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-
-  ctx.fillStyle = "#8080ff";
-  ctx.fillRect(0, 0, size, size);
-
-  const tileSize = 128;
-  const groutWidth = 3;
-
-  for (let x = 0; x <= size; x += tileSize) {
-    ctx.fillStyle = "#6060ff";
-    ctx.fillRect(x - groutWidth / 2, 0, groutWidth, size);
-  }
-  for (let y = 0; y <= size; y += tileSize) {
-    ctx.fillStyle = "#6060ff";
-    ctx.fillRect(0, y - groutWidth / 2, size, groutWidth);
-  }
-
-  for (let i = 0; i < 200; i++) {
-    const px = Math.random() * size;
-    const py = Math.random() * size;
-    const r = 128 + (Math.random() - 0.5) * 12;
-    const g = 128 + (Math.random() - 0.5) * 12;
-    ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, 255, 0.15)`;
-    ctx.fillRect(px, py, 2 + Math.random() * 4, 2 + Math.random() * 4);
-  }
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(1, 1);
-  return texture;
-}
-
-function createWallTexture(): THREE.CanvasTexture {
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-
-  ctx.fillStyle = "#eaecf0";
-  ctx.fillRect(0, 0, size, size);
-
-  for (let i = 0; i < 300; i++) {
-    const px = Math.random() * size;
-    const py = Math.random() * size;
-    const gray = 220 + Math.random() * 30;
-    ctx.fillStyle = `rgba(${gray}, ${gray + 2}, ${gray + 5}, ${0.08 + Math.random() * 0.12})`;
-    ctx.fillRect(px, py, 1 + Math.random() * 3, 1 + Math.random() * 3);
-  }
-
-  for (let y = 0; y < size; y += 64) {
-    ctx.fillStyle = `rgba(200, 204, 212, ${0.02 + Math.random() * 0.03})`;
-    ctx.fillRect(0, y, size, 1);
-  }
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  return texture;
-}
-
-function createWallNormalMap(): THREE.CanvasTexture {
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-
-  ctx.fillStyle = "#8080ff";
-  ctx.fillRect(0, 0, size, size);
-
-  for (let i = 0; i < 150; i++) {
-    const px = Math.random() * size;
-    const py = Math.random() * size;
-    const r = 128 + (Math.random() - 0.5) * 8;
-    const g = 128 + (Math.random() - 0.5) * 8;
-    ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, 255, 0.12)`;
-    ctx.fillRect(px, py, 1 + Math.random() * 3, 1 + Math.random() * 3);
-  }
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  return texture;
-}
-
-let _floorTexture: THREE.CanvasTexture | null = null;
-let _floorNormal: THREE.CanvasTexture | null = null;
-let _wallTexture: THREE.CanvasTexture | null = null;
-let _wallNormal: THREE.CanvasTexture | null = null;
-
-function getFloorTexture(): THREE.CanvasTexture {
-  if (!_floorTexture) _floorTexture = createFloorTexture();
-  return _floorTexture;
-}
-function getFloorNormal(): THREE.CanvasTexture {
-  if (!_floorNormal) _floorNormal = createFloorNormalMap();
-  return _floorNormal;
-}
-function getWallTexture(): THREE.CanvasTexture {
-  if (!_wallTexture) _wallTexture = createWallTexture();
-  return _wallTexture;
-}
-function getWallNormal(): THREE.CanvasTexture {
-  if (!_wallNormal) _wallNormal = createWallNormalMap();
-  return _wallNormal;
-}
-
-// ── Environment themes ──
-
-export const ENVIRONMENT_THEMES = {
-  day: {
-    background: "#0d1420",   // slightly brighter dark blue (reference background)
-    ambient: 2.2,            // bright enough to fully illuminate white walls
-    hemisphere: 1.2,
-    directional: 2.2,
-    fill: 1.2,
-  },
-  dusk: {
-    background: "#090b12",
-    ambient: 0.7,
-    hemisphere: 0.55,
-    directional: 1.3,
-    fill: 0.55,
-  },
-  night: {
-    background: "#06080d",
-    ambient: 0.4,
-    hemisphere: 0.35,
-    directional: 0.9,
-    fill: 0.4,
-  },
-} as const;
-
-export type EnvironmentTheme = (typeof ENVIRONMENT_THEMES)[keyof typeof ENVIRONMENT_THEMES];
-
 const WALL_MATERIAL = {
   selected: "#93c5fd",
   glass: "#dceeff",
@@ -379,38 +209,144 @@ export function SceneLighting({ theme, intensityScale = 1, overrides }: {
   intensityScale?: number;
   overrides?: SceneLightingOverride;
 }) {
-  const safeTheme = resolveTheme(theme);
+  // Scene-persisted lighting customization (scene.sceneAppearance). Applied
+  // for named modes so every canvas honors the user's environment edits;
+  // callers passing an explicit EnvironmentTheme object keep full control.
+  const sceneAppearance = useStudioStore((s) => s.scene?.sceneAppearance);
+  const modeKey: keyof typeof SCENE_LIGHT_PRESETS | null =
+    typeof theme === "string" && theme in ENVIRONMENT_THEMES ? theme : null;
+  const resolved = resolveSceneLighting(modeKey ?? "day", modeKey ? sceneAppearance : undefined);
+  const safeTheme = modeKey ? resolved : resolveTheme(theme);
   const safeScale = resolveSafeNumber(intensityScale, 1);
   const appliedTheme = {
-    background: typeof overrides?.background === "string" ? overrides.background : safeTheme.background,
+    background: typeof overrides?.background === "string" ? overrides.background : (modeKey ? resolved.background : safeTheme.background),
     ambient: clampPositiveNumber((overrides?.ambient ?? safeTheme.ambient) * safeScale, 0, safeTheme.ambient * safeScale),
     hemisphere: clampPositiveNumber((overrides?.hemisphere ?? safeTheme.hemisphere) * safeScale, 0, safeTheme.hemisphere * safeScale),
     directional: clampPositiveNumber((overrides?.directional ?? safeTheme.directional) * safeScale, 0, safeTheme.directional * safeScale),
     fill: clampPositiveNumber((overrides?.fill ?? safeTheme.fill) * safeScale, 0, safeTheme.fill * safeScale),
   };
+  const practicalScale = resolved.practicalIntensity;
   return (
     <>
       <color attach="background" args={[appliedTheme.background]} />
-      <fog attach="fog" args={[appliedTheme.background, 22, 44]} />
+      {resolved.fogEnabled && (
+        <fog attach="fog" args={[resolved.fogColor ?? appliedTheme.background, resolved.fogNear ?? 22, resolved.fogFar ?? 44]} />
+      )}
       <ambientLight intensity={appliedTheme.ambient} />
       <hemisphereLight groundColor="#1a2030" color="#e8f0ff" intensity={appliedTheme.hemisphere} />
       {/* Main key light — no shadows to prevent dark corners */}
       <directionalLight
         position={[10, 16, 10]}
         intensity={appliedTheme.directional}
-        color="#f5f8ff"
+        color={resolved.keyLightColor}
         castShadow={false}
       />
       {/* Fill light from opposite side */}
-      <directionalLight position={[-8, 10, -10]} intensity={appliedTheme.fill} color="#c8d8ff" />
+      <directionalLight position={[-8, 10, -10]} intensity={appliedTheme.fill} color={resolved.fillLightColor} />
       {/* Warm ceiling point lights spread across the room */}
-      <pointLight position={[2.5, 2.8, 1.8]} intensity={2.5} distance={10} color="#fff4d0" />
-      <pointLight position={[7.5, 2.8, 5.5]} intensity={2.5} distance={10} color="#fff4d0" />
-      <pointLight position={[5.0, 2.8, 3.5]} intensity={2.0} distance={10} color="#fff8e8" />
-      {/* Extra fill from below */}
-      <pointLight position={[5.0, 0.5, 3.5]} intensity={0.6} distance={8} color="#e8ddd0" />
+      {resolved.practicalLights && (
+        <>
+          <pointLight position={[2.5, 2.8, 1.8]} intensity={2.5 * practicalScale} distance={10} color="#fff4d0" />
+          <pointLight position={[7.5, 2.8, 5.5]} intensity={2.5 * practicalScale} distance={10} color="#fff4d0" />
+          <pointLight position={[5.0, 2.8, 3.5]} intensity={2.0 * practicalScale} distance={10} color="#fff8e8" />
+          {/* Extra fill from below */}
+          <pointLight position={[5.0, 0.5, 3.5]} intensity={0.6 * practicalScale} distance={8} color="#e8ddd0" />
+        </>
+      )}
     </>
   );
+}
+
+// ── Environment setup (IBL + shadows) ──
+//
+// `SceneEnvironmentSetup` and `SceneShadowCaster` are the canonical
+// R3F hooks for image-based lighting and shadow casting. They are
+// composable: drop them inside any R3F Canvas and the scene picks up
+// the same IBL environment, the same tone mapping, and the same shadow
+// caster across the app. See `lib/r3f-rendering.ts` for the source of
+// truth for tier → preset mapping.
+
+import {
+  defaultShadowCaster,
+  installRoomEnvironmentIBL,
+  R3F_PRESETS,
+  type RenderingQualityTier,
+} from "@/lib/r3f-rendering";
+
+/**
+ * Auto-derive a rendering tier from an `EnvironmentTheme` so existing
+ * call sites that pass a theme (day/dusk/night) keep working without
+ * an explicit tier prop. Day = high, dusk = medium, night = low.
+ */
+export function tierForTheme(
+  theme: EnvironmentTheme | keyof typeof SCENE_LIGHT_PRESETS,
+): RenderingQualityTier {
+  const key = typeof theme === "string" ? theme : null;
+  if (key === "day") return "high";
+  if (key === "dusk") return "medium";
+  if (key === "night") return "low";
+  return "medium";
+}
+
+export function SceneShadowCaster({
+  tier,
+  maxDimension,
+}: {
+  tier: RenderingQualityTier;
+  maxDimension: number;
+}) {
+  const spec = defaultShadowCaster(maxDimension, tier);
+  return (
+    <directionalLight
+      position={spec.position}
+      intensity={spec.intensity}
+      color={spec.color}
+      castShadow
+      shadow-mapSize-width={spec.shadowMapSize[0]}
+      shadow-mapSize-height={spec.shadowMapSize[1]}
+      shadow-camera-near={spec.shadowCamera.near}
+      shadow-camera-far={spec.shadowCamera.far}
+      shadow-camera-left={spec.shadowCamera.left}
+      shadow-camera-right={spec.shadowCamera.right}
+      shadow-camera-top={spec.shadowCamera.top}
+      shadow-camera-bottom={spec.shadowCamera.bottom}
+      shadow-bias={spec.shadowBias}
+    />
+  );
+}
+
+/**
+ * R3F-side environment setup. Call once near the root of each Canvas.
+ * The IBL is built lazily inside an R3F `useEffect` so it picks up the
+ * real `gl` instance after the renderer is ready.
+ */
+export function SceneEnvironmentSetup({
+  tier,
+  intensityScale = 1,
+  toneMappingExposure,
+}: {
+  tier: RenderingQualityTier;
+  /** Multiplier over the tier's IBL intensity (scene appearance customization). */
+  intensityScale?: number;
+  /** Optional exposure override from scene appearance. */
+  toneMappingExposure?: number;
+}) {
+  const preset = R3F_PRESETS[tier];
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  const safeScale = clampPositiveNumber(intensityScale, 0, 1);
+  useEffect(() => {
+    if (!gl || !scene) return;
+    installRoomEnvironmentIBL(scene, gl, preset.environmentIntensity * safeScale);
+  }, [gl, scene, preset.environmentIntensity, safeScale]);
+  useEffect(() => {
+    if (!gl) return;
+    const exposure = toneMappingExposure ?? preset.toneMappingExposure;
+    if (Number.isFinite(exposure) && exposure > 0) {
+      gl.toneMappingExposure = exposure;
+    }
+  }, [gl, toneMappingExposure, preset.toneMappingExposure]);
+  return null;
 }
 
 // ── Floor + Grid ──
@@ -423,6 +359,7 @@ export function SceneFloor({
   gridSectionsMultiplier = 4,
   gridColor = "#c8c0b4",
   gridSectionColor = "#d8d0c8",
+  appearance,
 }: {
   width: number;
   depth: number;
@@ -431,6 +368,8 @@ export function SceneFloor({
   gridSectionsMultiplier?: number;
   gridColor?: string;
   gridSectionColor?: string;
+  /** Scene-level floor appearance (scene.sceneAppearance.surfaces.floor). */
+  appearance?: NodeAppearance;
 }) {
   const safeWidth = clampPositiveNumber(width, 0.1, 0.1);
   const safeDepth = clampPositiveNumber(depth, 0.1, 0.1);
@@ -439,16 +378,16 @@ export function SceneFloor({
   const maxDimension = Math.max(safeWidth, safeDepth);
   const gridDivisions = Math.max(2, Math.max(1, Math.floor((maxDimension + 2) / safeCellSize)) * safeSectionsMultiplier);
 
+  const textureStyle = resolveAppearanceTextureStyle(appearance) ?? "tile";
+  const textureScale = resolveAppearanceTextureScale(appearance);
   const [floorMap, floorNormalMap] = useMemo(() => {
-    const map = getFloorTexture();
-    const normal = getFloorNormal();
-    const repeatX = Math.max(1, Math.round(safeWidth / 2));
-    const repeatY = Math.max(1, Math.round(safeDepth / 2));
-    map.repeat.set(repeatX, repeatY);
-    normal.repeat.set(repeatX, repeatY);
-    return [map, normal];
-  }, [safeWidth, safeDepth]);
+    const repeatX = Math.max(1, Math.round((safeWidth / 2) * textureScale));
+    const repeatY = Math.max(1, Math.round((safeDepth / 2) * textureScale));
+    const { map, normalMap } = cloneSurfaceTexturesWithRepeat(textureStyle, repeatX, repeatY);
+    return [map, normalMap];
+  }, [safeWidth, safeDepth, textureStyle, textureScale]);
 
+  const floorPbr = applyNodeAppearance(surfaceMaterial("floor"), appearance);
   return (
     <>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[safeWidth / 2, -0.0015, safeDepth / 2]} receiveShadow>
@@ -457,8 +396,7 @@ export function SceneFloor({
           map={floorMap}
           normalMap={floorNormalMap}
           normalScale={new THREE.Vector2(0.15, 0.15)}
-          roughness={0.82}
-          metalness={0.02}
+          {...pbrToStandardMaterialProps(floorPbr)}
         />
       </mesh>
       {showGrid && (
@@ -477,18 +415,17 @@ export function SceneWalls({
   walls,
   selectable = true,
   onContextMenu,
+  defaultAppearance,
 }: {
   walls: WallNode[];
   selectable?: boolean;
   onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
+  /** Scene-level wall appearance (scene.sceneAppearance.surfaces.wall). */
+  defaultAppearance?: NodeAppearance;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectedNodeIdSet = useSelectedNodeIdSet();
-
-  const [wallMap, wallNormalMap] = useMemo(() => {
-    return [getWallTexture(), getWallNormal()];
-  }, []);
 
   return (
     <>
@@ -514,6 +451,47 @@ export function SceneWalls({
           toggleSelectedNode,
           onContextMenu,
         });
+        // Cosmetic appearance: scene-level wall default, then per-node override.
+        // Glass walls keep their built-in physical look — the glass semantics
+        // come from the simulation-relevant `material` field, not appearance.
+        const basePbr = surfaceMaterialWithSelection(
+          isGlass ? "wall_glass" : "wall",
+          isSelected,
+          isGlass ? undefined : { color: WALL_MATERIAL.solid },
+        );
+        const wallPbr = isGlass || isSelected
+          ? basePbr
+          : applyNodeAppearance(basePbr, defaultAppearance, wall.appearance);
+        const wallTextureStyle = isGlass
+          ? null
+          : resolveAppearanceTextureStyle(defaultAppearance, wall.appearance) ?? "plaster";
+        const wallTextureScale = resolveAppearanceTextureScale(defaultAppearance, wall.appearance);
+        const wallTextures = wallTextureStyle
+          ? wallTextureScale === 1
+            ? getSurfaceTextures(wallTextureStyle)
+            : cloneSurfaceTexturesWithRepeat(wallTextureStyle, wallTextureScale, wallTextureScale)
+          : null;
+        const wallMap = wallTextures?.map ?? null;
+        const wallNormalMap = wallTextures?.normalMap ?? null;
+        // Pick the right R3F material element based on whether the spec
+        // has physical features (transmission, clearcoat, reflectivity).
+        const wallMaterialElement = needsPhysicalMaterial(wallPbr) ? (
+          <meshPhysicalMaterial
+            map={isSelected || isGlass ? null : wallMap}
+            normalMap={isSelected || isGlass ? null : wallNormalMap}
+            normalScale={isSelected || isGlass ? undefined : new THREE.Vector2(0.12, 0.12)}
+            {...pbrToPhysicalMaterialProps(wallPbr)}
+          />
+        ) : (
+          <meshStandardMaterial
+            map={isSelected ? null : wallMap}
+            normalMap={isSelected ? null : wallNormalMap}
+            normalScale={isSelected ? undefined : new THREE.Vector2(0.12, 0.12)}
+            {...pbrToStandardMaterialProps(wallPbr)}
+          />
+        );
+        const baseboardPbr = surfaceMaterial("wall", { color: "#c8c0b4" });
+        const topCapPbr = surfaceMaterial("wall", { color: "#d8d4cc" });
         return (
           <group
             key={wall.id}
@@ -523,41 +501,20 @@ export function SceneWalls({
           >
             <mesh castShadow receiveShadow>
               <boxGeometry args={[length, wallHeight, 0.18]} />
-              {isGlass ? (
-                <meshStandardMaterial
-                  color={isSelected ? WALL_MATERIAL.selected : WALL_MATERIAL.glass}
-                  transparent
-                  opacity={0.22}
-                  roughness={0.08}
-                  metalness={0.28}
-                  emissive={isSelected ? "#1d4ed8" : "#000000"}
-                  emissiveIntensity={isSelected ? 0.18 : 0}
-                />
-              ) : (
-                <meshStandardMaterial
-                  map={isSelected ? null : wallMap}
-                  normalMap={isSelected ? null : wallNormalMap}
-                  normalScale={new THREE.Vector2(0.12, 0.12)}
-                  color={isSelected ? WALL_MATERIAL.selected : WALL_MATERIAL.solid}
-                  roughness={0.72}
-                  metalness={0.0}
-                  emissive={isSelected ? "#1d4ed8" : "#000000"}
-                  emissiveIntensity={isSelected ? 0.18 : 0}
-                />
-              )}
+              {wallMaterialElement}
             </mesh>
             {/* Baseboard trim */}
             {!isGlass && (
               <mesh position={[0, -wallHeight / 2 + 0.04, 0.092]} castShadow>
                 <boxGeometry args={[length, 0.08, 0.02]} />
-                <meshStandardMaterial color="#c8c0b4" roughness={0.6} metalness={0.05} />
+                <meshStandardMaterial {...pbrToStandardMaterialProps(baseboardPbr)} />
               </mesh>
             )}
             {/* Top cap */}
             {!isGlass && (
               <mesh position={[0, wallHeight / 2, 0]} castShadow>
                 <boxGeometry args={[length + 0.02, 0.02, 0.2]} />
-                <meshStandardMaterial color="#d8d4cc" roughness={0.55} metalness={0.02} />
+                <meshStandardMaterial {...pbrToStandardMaterialProps(topCapPbr)} />
               </mesh>
             )}
             {isSelected && (
@@ -606,6 +563,15 @@ export function SceneDoors({
           toggleSelectedNode,
           onContextMenu,
         });
+        const doorFramePbr = surfaceMaterial("door_frame", { color: frameColor });
+        // Cosmetic appearance on the panel only; locked/selected states win so
+        // the security state stays legible over any custom finish.
+        const doorPanelBase = surfaceMaterialWithSelection("door_panel", isSelected, { color: doorColor });
+        const doorPanelPbr = isSelected || isLocked
+          ? doorPanelBase
+          : applyNodeAppearance(doorPanelBase, door.appearance);
+        const handlePbr = surfaceMaterial("door_handle");
+        const openPanelPbr = surfaceMaterial("door_panel", { color: "#6b7280", opacity: 0.35, transparent: true });
 
         return (
           <group
@@ -616,34 +582,28 @@ export function SceneDoors({
             {/* Door frame — left jamb */}
             <mesh position={[-width / 2 - frameWidth / 2, 0, 0]} castShadow receiveShadow>
               <boxGeometry args={[frameWidth, height + frameWidth, frameDepth]} />
-              <meshStandardMaterial color={frameColor} roughness={0.65} metalness={0.05} />
+              <meshStandardMaterial {...pbrToStandardMaterialProps(doorFramePbr)} />
             </mesh>
             {/* Door frame — right jamb */}
             <mesh position={[width / 2 + frameWidth / 2, 0, 0]} castShadow receiveShadow>
               <boxGeometry args={[frameWidth, height + frameWidth, frameDepth]} />
-              <meshStandardMaterial color={frameColor} roughness={0.65} metalness={0.05} />
+              <meshStandardMaterial {...pbrToStandardMaterialProps(doorFramePbr)} />
             </mesh>
             {/* Door frame — header */}
             <mesh position={[0, height / 2 + frameWidth / 2, 0]} castShadow receiveShadow>
               <boxGeometry args={[width + frameWidth * 2, frameWidth, frameDepth]} />
-              <meshStandardMaterial color={frameColor} roughness={0.65} metalness={0.05} />
+              <meshStandardMaterial {...pbrToStandardMaterialProps(doorFramePbr)} />
             </mesh>
             {/* Door panel */}
             <mesh castShadow receiveShadow visible={!isOpen}>
               <boxGeometry args={[width, height, safeThickness]} />
-              <meshStandardMaterial
-                color={doorColor}
-                roughness={0.72}
-                metalness={0.08}
-                emissive={isSelected ? "#1d4ed8" : "#000000"}
-                emissiveIntensity={isSelected ? 0.16 : 0}
-              />
+              <meshStandardMaterial {...pbrToStandardMaterialProps(doorPanelPbr)} />
             </mesh>
             {/* Door handle */}
             {!isOpen && (
               <mesh position={[width / 2 - 0.08, 0, safeThickness / 2 + 0.01]} rotation={[Math.PI / 2, 0, 0]} castShadow>
                 <cylinderGeometry args={[0.012, 0.012, 0.1, 8]} />
-                <meshStandardMaterial color="#888" roughness={0.3} metalness={0.7} />
+                <meshStandardMaterial {...pbrToStandardMaterialProps(handlePbr)} />
               </mesh>
             )}
             {isSelected && (
@@ -655,7 +615,7 @@ export function SceneDoors({
             {isOpen && (
               <mesh position={[width * 0.12, 0, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
                 <boxGeometry args={[safeThickness, height, width]} />
-                <meshStandardMaterial color="#6b7280" roughness={0.55} metalness={0.1} transparent opacity={0.35} />
+                <meshStandardMaterial {...pbrToStandardMaterialProps(openPanelPbr)} />
               </mesh>
             )}
           </group>
@@ -698,6 +658,21 @@ export function SceneWindows({
           toggleSelectedNode,
           onContextMenu,
         });
+        // Frame takes the cosmetic appearance; glass keeps its state-driven
+        // look (open/curtain/reflective are simulation-relevant semantics).
+        const windowFrameBase = surfaceMaterialWithSelection("window_frame", isSelected, { color: isSelected ? WINDOW_MATERIAL.selected : frameColor });
+        const windowFramePbr = isSelected
+          ? windowFrameBase
+          : applyNodeAppearance(windowFrameBase, window.appearance);
+        const windowGlassPbr = surfaceMaterialWithSelection(
+          "window_glass",
+          isSelected,
+          isReflective
+            ? { color: WINDOW_MATERIAL.reflective, opacity, roughness: 0.05, metalness: 0.4 }
+            : { color: WINDOW_MATERIAL.default, opacity },
+        );
+        const windowSillPbr = surfaceMaterial("window_sill");
+        const mullionPbr = surfaceMaterial("window_frame", { color: frameColor });
 
         return (
           <group
@@ -708,43 +683,31 @@ export function SceneWindows({
             {/* Window frame — outer border */}
             <mesh castShadow receiveShadow>
               <boxGeometry args={[width + frameWidth * 2, height + frameWidth * 2, safeThickness + 0.02]} />
-              <meshStandardMaterial
-                color={isSelected ? WINDOW_MATERIAL.selected : frameColor}
-                roughness={0.4}
-                metalness={0.35}
-                emissive={isSelected ? "#1d4ed8" : "#000000"}
-                emissiveIntensity={isSelected ? 0.12 : 0}
-              />
+              <meshStandardMaterial {...pbrToStandardMaterialProps(windowFramePbr)} />
             </mesh>
-            {/* Glass pane */}
+            {/* Glass pane — physical material for correct IBL behavior */}
             <mesh castShadow receiveShadow visible={!isOpen}>
               <boxGeometry args={[width - frameWidth, height - frameWidth, safeThickness]} />
-              <meshStandardMaterial
-                color={isSelected ? WINDOW_MATERIAL.selected : isReflective ? WINDOW_MATERIAL.reflective : WINDOW_MATERIAL.default}
-                transparent
-                opacity={isSelected ? Math.min(0.45, opacity + 0.1) : opacity}
-                roughness={isReflective ? 0.05 : 0.15}
-                metalness={isReflective ? 0.4 : 0.12}
-              />
+              <meshPhysicalMaterial {...pbrToPhysicalMaterialProps(windowGlassPbr)} />
             </mesh>
             {/* Center mullion (vertical divider) */}
             {width > 0.8 && (
               <mesh position={[0, 0, safeThickness / 2 + 0.005]} castShadow>
                 <boxGeometry args={[0.02, height - frameWidth * 2, 0.015]} />
-                <meshStandardMaterial color={frameColor} roughness={0.4} metalness={0.35} />
+                <meshStandardMaterial {...pbrToStandardMaterialProps(mullionPbr)} />
               </mesh>
             )}
             {/* Horizontal divider for tall windows */}
             {height > 0.9 && (
               <mesh position={[0, 0, safeThickness / 2 + 0.005]} castShadow>
                 <boxGeometry args={[width - frameWidth * 2, 0.02, 0.015]} />
-                <meshStandardMaterial color={frameColor} roughness={0.4} metalness={0.35} />
+                <meshStandardMaterial {...pbrToStandardMaterialProps(mullionPbr)} />
               </mesh>
             )}
             {/* Sill */}
             <mesh position={[0, -height / 2 - frameWidth / 2, safeThickness / 2 + 0.02]} castShadow>
               <boxGeometry args={[width + frameWidth * 4, frameWidth, 0.06]} />
-              <meshStandardMaterial color="#c0c8d4" roughness={0.5} metalness={0.15} />
+              <meshStandardMaterial {...pbrToStandardMaterialProps(windowSillPbr)} />
             </mesh>
             {isSelected && (
               <lineSegments>
@@ -774,13 +737,20 @@ const OBSTRUCTION_COLORS: Record<string, string> = {
   other: "#414456",
 };
 
-function ObstructionGeometry({ type, w, h, d, color, isSelected }: {
+function ObstructionGeometry({ type, w, h, d, color, isSelected, appearance }: {
   type: string; w: number; h: number; d: number; color: string; isSelected: boolean;
+  appearance?: NodeAppearance;
 }) {
   const selColor = "#60a5fa";
-  const emissive = isSelected ? "#1e3a5f" : "#000000";
-  const emissiveIntensity = isSelected ? 0.4 : 0;
-  const baseColor = isSelected ? selColor : color;
+  // Cosmetic appearance drives the primary body material; selection wins.
+  const appearancePbr = !isSelected && appearance
+    ? applyNodeAppearance({ color, roughness: 0.82, metalness: 0.08 }, appearance)
+    : null;
+  const emissive = isSelected ? "#1e3a5f" : appearancePbr?.emissive ?? "#000000";
+  const emissiveIntensity = isSelected ? 0.4 : appearancePbr?.emissiveIntensity ?? 0;
+  const baseColor = isSelected ? selColor : appearancePbr?.color ?? color;
+  const baseRoughness = appearancePbr?.roughness;
+  const baseMetalness = appearancePbr?.metalness;
 
   switch (type) {
     case "shelf":
@@ -789,11 +759,11 @@ function ObstructionGeometry({ type, w, h, d, color, isSelected }: {
           {/* Side panels */}
           <mesh position={[-w / 2 + 0.015, 0, 0]} castShadow receiveShadow>
             <boxGeometry args={[0.03, h, d]} />
-            <meshStandardMaterial color={baseColor} roughness={0.82} metalness={0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+            <meshStandardMaterial color={baseColor} roughness={baseRoughness ?? 0.82} metalness={baseMetalness ?? 0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
           </mesh>
           <mesh position={[w / 2 - 0.015, 0, 0]} castShadow receiveShadow>
             <boxGeometry args={[0.03, h, d]} />
-            <meshStandardMaterial color={baseColor} roughness={0.82} metalness={0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+            <meshStandardMaterial color={baseColor} roughness={baseRoughness ?? 0.82} metalness={baseMetalness ?? 0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
           </mesh>
           {/* Back panel */}
           <mesh position={[0, 0, -d / 2 + 0.01]} castShadow receiveShadow>
@@ -821,7 +791,7 @@ function ObstructionGeometry({ type, w, h, d, color, isSelected }: {
           {/* Body */}
           <mesh position={[0, -0.025, 0]} castShadow receiveShadow>
             <boxGeometry args={[w, h - 0.05, d]} />
-            <meshStandardMaterial color={baseColor} roughness={0.78} metalness={0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+            <meshStandardMaterial color={baseColor} roughness={baseRoughness ?? 0.78} metalness={baseMetalness ?? 0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
           </mesh>
           {/* Front kickplate recess */}
           <mesh position={[0, -h / 2 + 0.04, d / 2 - 0.025]}>
@@ -837,7 +807,7 @@ function ObstructionGeometry({ type, w, h, d, color, isSelected }: {
           {/* Main body */}
           <mesh castShadow receiveShadow>
             <boxGeometry args={[w, h, d]} />
-            <meshStandardMaterial color={baseColor} roughness={0.78} metalness={0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+            <meshStandardMaterial color={baseColor} roughness={baseRoughness ?? 0.78} metalness={baseMetalness ?? 0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
           </mesh>
           {/* Door seam (vertical line) */}
           <mesh position={[0, 0, d / 2 + 0.002]}>
@@ -866,7 +836,7 @@ function ObstructionGeometry({ type, w, h, d, color, isSelected }: {
       return (
         <mesh castShadow receiveShadow>
           <cylinderGeometry args={[Math.min(w, d) / 2, Math.min(w, d) / 2, h, 16]} />
-          <meshStandardMaterial color={baseColor} roughness={0.55} metalness={0.1} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={baseColor} roughness={baseRoughness ?? 0.55} metalness={baseMetalness ?? 0.1} emissive={emissive} emissiveIntensity={emissiveIntensity} />
         </mesh>
       );
 
@@ -899,7 +869,7 @@ function ObstructionGeometry({ type, w, h, d, color, isSelected }: {
           {/* Thin panel */}
           <mesh castShadow receiveShadow>
             <boxGeometry args={[w, h, Math.max(d, 0.04)]} />
-            <meshStandardMaterial color={baseColor} roughness={0.7} metalness={0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+            <meshStandardMaterial color={baseColor} roughness={baseRoughness ?? 0.7} metalness={baseMetalness ?? 0.05} emissive={emissive} emissiveIntensity={emissiveIntensity} />
           </mesh>
           {/* Feet */}
           {[-1, 1].map((sx, i) => (
@@ -917,7 +887,7 @@ function ObstructionGeometry({ type, w, h, d, color, isSelected }: {
           {/* Body */}
           <mesh position={[0, -h * 0.1, 0]} castShadow receiveShadow>
             <boxGeometry args={[w, h * 0.6, d]} />
-            <meshStandardMaterial color={baseColor} roughness={0.5} metalness={0.4} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+            <meshStandardMaterial color={baseColor} roughness={baseRoughness ?? 0.5} metalness={baseMetalness ?? 0.4} emissive={emissive} emissiveIntensity={emissiveIntensity} />
           </mesh>
           {/* Cabin */}
           <mesh position={[0, h * 0.2, 0]} castShadow receiveShadow>
@@ -968,7 +938,7 @@ function ObstructionGeometry({ type, w, h, d, color, isSelected }: {
         <>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[w, h, d]} />
-            <meshStandardMaterial color={baseColor} roughness={0.82} metalness={0.08} emissive={emissive} emissiveIntensity={emissiveIntensity} />
+            <meshStandardMaterial color={baseColor} roughness={baseRoughness ?? 0.82} metalness={baseMetalness ?? 0.08} emissive={emissive} emissiveIntensity={emissiveIntensity} />
           </mesh>
           {/* Top surface */}
           <mesh position={[0, h / 2 - 0.025, 0]} castShadow>
@@ -1043,7 +1013,7 @@ export function SceneObstructions({
             }}
             {...interactionHandlers}
           >
-            <ObstructionGeometry type={obs.obstructionType} w={w} h={h} d={d} color={color} isSelected={isSelected} />
+            <ObstructionGeometry type={obs.obstructionType} w={w} h={h} d={d} color={color} isSelected={isSelected} appearance={obs.appearance} />
             {isSelected && (
               <lineSegments>
                 <edgesGeometry args={[highlightBox]} />
@@ -1114,27 +1084,27 @@ export function PathActor({ waypoints, currentIndex, progress }: {
       </mesh>
       <mesh position={[0, 0.8, 0]} castShadow>
         <capsuleGeometry args={[0.12, 0.35, 4, 8]} />
-        <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.1} />
+        <meshStandardMaterial {...pbrToStandardMaterialProps(surfaceMaterial("actor_body"))} />
       </mesh>
       <mesh position={[0, 1.05, 0]} castShadow>
         <sphereGeometry args={[0.09, 8, 8]} />
-        <meshStandardMaterial color="#475569" roughness={0.5} />
+        <meshStandardMaterial {...pbrToStandardMaterialProps(surfaceMaterial("actor_head"))} />
       </mesh>
       <mesh position={[-0.14, 0.82, 0]} rotation={[0, 0, 0.15]} castShadow>
         <capsuleGeometry args={[0.03, 0.2, 4, 6]} />
-        <meshStandardMaterial color="#334155" />
+        <meshStandardMaterial {...pbrToStandardMaterialProps(surfaceMaterial("actor_limb"))} />
       </mesh>
       <mesh position={[0.14, 0.82, 0]} rotation={[0, 0, -0.15]} castShadow>
         <capsuleGeometry args={[0.03, 0.2, 4, 6]} />
-        <meshStandardMaterial color="#334155" />
+        <meshStandardMaterial {...pbrToStandardMaterialProps(surfaceMaterial("actor_limb"))} />
       </mesh>
       <mesh position={[-0.06, 0.38, 0]} castShadow>
         <capsuleGeometry args={[0.03, 0.25, 4, 6]} />
-        <meshStandardMaterial color="#0f172a" />
+        <meshStandardMaterial {...pbrToStandardMaterialProps(surfaceMaterial("actor_limb_dark"))} />
       </mesh>
       <mesh position={[0.06, 0.38, 0]} castShadow>
         <capsuleGeometry args={[0.03, 0.25, 4, 6]} />
-        <meshStandardMaterial color="#0f172a" />
+        <meshStandardMaterial {...pbrToStandardMaterialProps(surfaceMaterial("actor_limb_dark"))} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]}>
         <ringGeometry args={[0.12, 0.28, 24]} />

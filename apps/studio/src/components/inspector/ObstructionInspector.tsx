@@ -9,8 +9,10 @@ import {
   SliderInput,
   TextInput,
 } from "@/components/inspector/inspector-controls";
+import { NodeAppearanceSection } from "@/components/inspector/NodeAppearanceSection";
 import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";
+import { OBJECT_PRESET_CHOICES } from "@/lib/scene-appearance";
 import type { ObstructionNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -208,6 +210,12 @@ export function ObstructionInspector() {
           <Field label="Camera sees through" value={`${Math.round((obs.visionTransmission ?? 0) * 100)}%`} />
           <Field label="Movable" value={obs.movable ? "Yes" : "No"} />
         </SectionCard>
+
+        <NodeAppearanceSection
+          appearance={obs.appearance}
+          presetChoices={OBJECT_PRESET_CHOICES}
+          onChange={(next) => useStudioStore.getState().updateNodeAppearance(obs.id, next)}
+        />
       </div>
 
       <div className="border-t border-[#1e2130] px-3 py-3 space-y-2">

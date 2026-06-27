@@ -212,7 +212,10 @@ function deriveResolutionWidth(camera: CameraNode) {
     return Math.max(1, width);
   }
 
-  return Math.sqrt(megapixels * (16 / 9));
+  // Fallback: assume 4:3 aspect ratio (common for security cameras) when no
+  // resolution dimensions are provided. 16:9 is also common but 4:3 gives
+  // more conservative (lower) PPM estimates, which is safer for compliance.
+  return Math.sqrt(megapixels * (4 / 3));
 }
 
 function computePixelDensity(camera: CameraNode, distanceM: number) {
@@ -534,7 +537,7 @@ function assessOcclusion(
         blocked: false,
         materialPenalty: source.visionTransmission,
         glarePenalty: source.glarePenalty ? 0.86 : 0,
-        blockedBy: source.label,
+        blockedBy: source.id,
       };
     }
 
@@ -542,7 +545,7 @@ function assessOcclusion(
       blocked: true,
       materialPenalty: 0,
       glarePenalty: 0,
-      blockedBy: source.label,
+      blockedBy: source.id,
     };
   }
 

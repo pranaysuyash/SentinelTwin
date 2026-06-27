@@ -3,8 +3,10 @@
 import { Crosshair, Trash2 } from "lucide-react";
 
 import { NumberInput, SelectInput, TextInput } from "@/components/inspector/inspector-controls";
+import { NodeAppearanceSection } from "@/components/inspector/NodeAppearanceSection";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { snapDoorWindowToWall } from "@/components/inspector/door-window-snap";
+import { OBJECT_PRESET_CHOICES } from "@/lib/scene-appearance";
 import type { DoorAccessControl, DoorNode, WindowNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -141,6 +143,13 @@ export function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
             )}
           </SectionCard>
         )}
+
+        <NodeAppearanceSection
+          title={isWindow ? "Frame Appearance" : "Panel Appearance"}
+          appearance={node.appearance}
+          presetChoices={OBJECT_PRESET_CHOICES}
+          onChange={(next) => useStudioStore.getState().updateNodeAppearance(node.id, next)}
+        />
       </div>
 
       <div className="border-t border-[#1e2130] px-3 py-3">

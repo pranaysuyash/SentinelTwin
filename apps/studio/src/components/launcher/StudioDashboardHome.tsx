@@ -40,7 +40,9 @@ import { QuickStartSection } from "@/components/launcher/QuickStartSection";
 import { SiteTwinSearchBar } from "@/components/launcher/SiteTwinSearchBar";
 import { DashboardOpenHint } from "@/components/launcher/DashboardOpenHint";
 import { HideSectionButton } from "@/components/launcher/HideSectionButton";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useDashboardArchives } from "@/hooks/useDashboardArchives";
+import { OnboardingTourOverlay, TourLauncherButton, useOnboardingTour } from "@/components/launcher/OnboardingTour";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality } from "@/schema/security-scene";
 import { QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 
@@ -456,6 +458,7 @@ export function StudioDashboardHome({
   const [footerPanel, setFooterPanel] = useState<"feedback" | "help" | null>(null);
   const [dashboardViewMenuOpen, setDashboardViewMenuOpen] = useState(false);
   const [dashboardVisibility, setDashboardVisibility] = useState(DEFAULT_DASHBOARD_VISIBILITY);
+  const tour = useOnboardingTour();
   const isDashboardSectionVisible = (id: DashboardSectionId) => dashboardVisibility[id];
   const setDashboardSectionVisible = (id: DashboardSectionId, visible: boolean) => {
     setDashboardVisibility((current) => ({ ...current, [id]: visible }));
@@ -960,6 +963,17 @@ export function StudioDashboardHome({
   const feedbackEmbedUrl = feedbackFormEmbedUrl(feedbackFormUrl);
   return (
     <main className="relative h-screen overflow-y-auto overflow-x-hidden bg-[color:var(--st-bg)] text-[color:var(--st-text)]" style={rootStyle}>
+      <OnboardingTourOverlay
+        active={tour.active}
+        currentStep={tour.currentStep}
+        stepIndex={tour.stepIndex}
+        isFirst={tour.isFirst}
+        isLast={tour.isLast}
+        onNext={tour.next}
+        onPrev={tour.prev}
+        onClose={tour.stop}
+      />
+      <TourLauncherButton onClick={tour.start} />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(56,189,248,0.12),transparent_30%),radial-gradient(circle_at_80%_8%,rgba(16,185,129,0.08),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(245,158,11,0.06),transparent_26%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:64px_64px]" />
 
@@ -985,8 +999,8 @@ export function StudioDashboardHome({
             >
               <span className="truncate">{scene.name}</span>
             </button>
-            <span className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-emerald-400/20 bg-emerald-500/10 px-3 text-[11px] font-medium text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <span className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[color:var(--st-border)] bg-white/[0.03] px-3 text-[11px] font-medium text-[color:var(--st-muted)]">
+              <TruthBadge label={displayCoverage != null ? "simulated" : "placeholder"} />
               <span suppressHydrationWarning>{displayStatusLabel}</span>
             </span>
             <span suppressHydrationWarning className="hidden text-xs text-[color:var(--st-muted)] lg:inline">

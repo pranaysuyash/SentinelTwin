@@ -17,7 +17,7 @@ import { buildFramingGradeReport, type FramingGrade } from "@/lib/framing-grade"
 import { buildDirectorsCutSequence, type DirectorsCutGrade } from "@/lib/directors-cut";
 import { buildObservedVsPlannedReport } from "@/lib/observed-vs-planned";
 import { exportDirectorsCutPdf } from "@/lib/pdf-export";
-import { TruthBadge } from "@/components/shared/TruthBadge";
+import { TruthBadge, type TruthLabel } from "@/components/shared/TruthBadge";
 import { useStudioStore, type BottomTab, type ViewMode } from "@/store/studio-store";
 
 const TONE_CARD_CLASSES: Record<AnalyticsTone, string> = {
@@ -93,6 +93,7 @@ function SectionCard({
   subtitle,
   icon,
   action,
+  truthLabel,
   children,
 }: {
   title: string;
@@ -100,6 +101,7 @@ function SectionCard({
   subtitle?: string;
   icon?: React.ReactNode;
   action?: React.ReactNode;
+  truthLabel?: TruthLabel;
   children: React.ReactNode;
 }) {
   return (
@@ -110,7 +112,10 @@ function SectionCard({
           <span>{title}</span>
           {subtitle ? <span className="font-normal tracking-normal text-[#3a4158]">({subtitle})</span> : null}
         </div>
-        {action}
+        <div className="flex items-center gap-1.5">
+          {action}
+          {truthLabel ? <TruthBadge label={truthLabel} /> : null}
+        </div>
       </header>
       {children}
     </section>
@@ -414,6 +419,7 @@ function DirectorsCutCard({
       title="Director's Cut"
       subtitle="incident replay"
       icon={<Clapperboard className="h-3.5 w-3.5" />}
+      truthLabel="simulated"
       action={
         <button
           type="button"
@@ -589,6 +595,7 @@ export function AnalyticsDashboardView() {
           <SectionCard
             title="24h Coverage Profile"
             icon={<Clock3 className="h-3.5 w-3.5" />}
+            truthLabel="simulated"
             action={
               model.temporal ? (
                 <button
@@ -638,7 +645,7 @@ export function AnalyticsDashboardView() {
             )}
           </SectionCard>
 
-          <SectionCard title="What can you actually see?" subtitle="DORI quality distribution" icon={<Layers className="h-3.5 w-3.5" />}>
+          <SectionCard title="What can you actually see?" subtitle="DORI quality distribution" truthLabel="simulated" icon={<Layers className="h-3.5 w-3.5" />}>
             <DoriDistributionBar bands={model.doriDistribution} />
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-[#1f2536] bg-[#101627] px-3 py-2">
@@ -684,7 +691,7 @@ export function AnalyticsDashboardView() {
         </div>
 
         <div className="grid gap-3 lg:grid-cols-3">
-          <SectionCard title="Camera Leaderboard" icon={<Camera className="h-3.5 w-3.5" />}>
+          <SectionCard title="Camera Leaderboard" truthLabel="simulated" icon={<Camera className="h-3.5 w-3.5" />}>
             {model.cameraLeaderboard.length === 0 ? (
               <div className="text-[11px] text-[#7a86a0]">No cameras in the scene.</div>
             ) : (
@@ -716,7 +723,7 @@ export function AnalyticsDashboardView() {
             )}
           </SectionCard>
 
-          <SectionCard title="Occlusion Offenders" icon={<Crosshair className="h-3.5 w-3.5" />}>
+          <SectionCard title="Occlusion Offenders" truthLabel="simulated" icon={<Crosshair className="h-3.5 w-3.5" />}>
             {model.occlusionOffenders.length === 0 ? (
               <div className="text-[11px] text-[#7a86a0]">No obstruction is currently degrading a critical zone.</div>
             ) : (
@@ -771,7 +778,7 @@ export function AnalyticsDashboardView() {
           </SectionCard>
 
           {simulationResult?.crowdOcclusion && (
-            <SectionCard title="Crowd Impact" subtitle="people blocking camera views" icon={<Users className="h-3.5 w-3.5" />}>
+            <SectionCard title="Crowd Impact" subtitle="people blocking camera views" truthLabel="simulated" icon={<Users className="h-3.5 w-3.5" />}>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">Agents at hour {simulationResult.crowdOcclusion.hour}:00</span>
@@ -810,13 +817,12 @@ export function AnalyticsDashboardView() {
                     </ul>
                   </div>
                 )}
-                <TruthBadge label="simulated" />
               </div>
             </SectionCard>
           )}
 
           {simulationResult?.perimeterIntegrity && (
-            <SectionCard title="Perimeter Integrity" icon={<ShieldAlert className="h-3.5 w-3.5" />} subtitle="fence coverage & gate exposure">
+            <SectionCard title="Perimeter Integrity" icon={<ShieldAlert className="h-3.5 w-3.5" />} subtitle="fence coverage & gate exposure" truthLabel="simulated">
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-[#7a86a0]">Fence Segments</span>
@@ -859,13 +865,10 @@ export function AnalyticsDashboardView() {
                   </>
                 )}
               </div>
-              <div className="mt-2">
-                <TruthBadge label="simulated" />
-              </div>
             </SectionCard>
           )}
 
-          <SectionCard title="Trend & Activity" icon={<Activity className="h-3.5 w-3.5" />}>
+          <SectionCard title="Trend & Activity" truthLabel="computed" icon={<Activity className="h-3.5 w-3.5" />}>
             <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">Coverage Across Snapshots</div>
             <div className="mt-1">
               <CoverageTrendSparkline points={model.coverageTrend} />
@@ -902,7 +905,7 @@ export function AnalyticsDashboardView() {
         </div>
 
         {regressionReport ? (
-          <SectionCard title="Coverage CI" icon={<Activity className="h-3.5 w-3.5" />}>
+          <SectionCard title="Coverage CI" truthLabel="computed" icon={<Activity className="h-3.5 w-3.5" />}>
             <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
               vs. baseline: {regressionReport.baselineLabel}
             </div>
@@ -932,6 +935,7 @@ export function AnalyticsDashboardView() {
           <SectionCard
             title="Observed vs Planned"
             subtitle="camera drift + live ops"
+            truthLabel="inferred"
             icon={<Compass className="h-3.5 w-3.5" />}
           >
             <div className="flex items-center justify-between gap-2">
@@ -1008,7 +1012,7 @@ export function AnalyticsDashboardView() {
         ) : null}
 
         {framingGradeReport && framingGradeReport.zonesNeedingAttention.length > 0 ? (
-          <SectionCard title="Shot Quality" icon={<Clapperboard className="h-3.5 w-3.5" />}>
+          <SectionCard title="Shot Quality" truthLabel="simulated" icon={<Clapperboard className="h-3.5 w-3.5" />}>
             <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">
               Framing of critical zones — beyond pixel density
             </div>
@@ -1042,7 +1046,7 @@ export function AnalyticsDashboardView() {
 
         {simulationResult?.adversarialPath?.accessControlBarriers &&
           simulationResult.adversarialPath.accessControlBarriers.length > 0 && (
-          <SectionCard title="Access Control on Route" icon={<ShieldAlert className="h-3.5 w-3.5" />} subtitle="barriers the intruder must pass">
+          <SectionCard title="Access Control on Route" icon={<ShieldAlert className="h-3.5 w-3.5" />} subtitle="barriers the intruder must pass" truthLabel="simulated">
             <div className="text-[10px] text-[#7a86a0]">
               {simulationResult.adversarialPath.accessControlBarriers.length} barrier{simulationResult.adversarialPath.accessControlBarriers.length !== 1 ? "s" : ""} add{" "}
               {simulationResult.adversarialPath.accessControlBarriers.reduce((s, b) => s + b.breachTimeS, 0)}s breach time to the route.
@@ -1063,13 +1067,10 @@ export function AnalyticsDashboardView() {
                 </li>
               ))}
             </ul>
-            <div className="mt-2">
-              <TruthBadge label="simulated" />
-            </div>
           </SectionCard>
         )}
 
-        <SectionCard title="Resilience" icon={<ShieldAlert className="h-3.5 w-3.5" />}>
+        <SectionCard title="Resilience" truthLabel="simulated" icon={<ShieldAlert className="h-3.5 w-3.5" />}>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div className="rounded-xl border border-[#1f2536] bg-[#101627] px-3 py-2">
               <div className="text-[10px] uppercase tracking-[0.12em] text-[#7a86a0]">

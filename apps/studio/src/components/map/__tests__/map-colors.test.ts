@@ -16,7 +16,11 @@ describe("map colors", () => {
     expect(lightStatusColor("failed")).toBe(MAP_COLORS.lightFailed);
     expect(lightStatusColor("off")).toBe(MAP_COLORS.lightOff);
     expect(priorityStrokeColor("critical")).toBe(MAP_COLORS.priority.critical);
+    expect(priorityStrokeColor("unknown")).toBe(MAP_COLORS.priority.default);
     expect(wallStrokeColor("glass")).toBe(MAP_COLORS.wallGlass);
     expect(windowStrokeColor("reflective")).toBe(MAP_COLORS.windowReflective);
+    expect(windowStrokeColor("curtain")).toBe(MAP_COLORS.windowCurtain);
+    expect(windowStrokeColor("grill")).toBe(MAP_COLORS.windowGrill);
   });
 });
+

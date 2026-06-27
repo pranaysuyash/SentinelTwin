@@ -37,10 +37,10 @@ export function ViewControls() {
       <button
         type="button"
         onClick={() => setCanvasMode("topdown_2d")}
-        aria-label="Switch to 2D top-down"
-        title="Switch to 2D top-down"
+        aria-label="Switch to 2.5D top-down"
+        title="Switch to 2.5D top-down (orthographic over 3D geometry)"
         className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-lg border text-[9px] font-bold transition-colors",
+          "flex h-8 w-8 items-center justify-center rounded-lg border text-[8px] font-bold transition-colors",
            canvasMode === "topdown_2d"
              ? "border-emerald-400 text-emerald-100"
              : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
@@ -49,6 +49,26 @@ export function ViewControls() {
           ? {
               borderColor: MAP_COLORS.viewport,
               backgroundColor: "rgba(16, 185, 129, 0.14)",
+            }
+          : undefined}
+      >
+        2.5D
+      </button>
+      <button
+        type="button"
+        onClick={() => setCanvasMode("plan_2d")}
+        aria-label="Switch to 2D plan"
+        title="Switch to 2D architectural plan"
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-lg border text-[9px] font-bold transition-colors",
+           canvasMode === "plan_2d"
+             ? "border-amber-400 text-amber-100"
+             : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
+        )}
+        style={canvasMode === "plan_2d"
+          ? {
+              borderColor: MAP_COLORS.viewport,
+              backgroundColor: "rgba(245, 158, 11, 0.14)",
             }
           : undefined}
       >

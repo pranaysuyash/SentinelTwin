@@ -1,8 +1,8 @@
-# Coverage Entropy — Novel Metric Concept
+# Coverage Entropy & Fragility — Implemented Metrics
 
 **Thread:** Exploration Map Thread 7
-**Status:** Concept. Not yet in formal design. Decision needed before V0.2.
-**Last updated:** 2026-05-25
+**Status:** Implemented. Entropy wired into simulation pipeline. Fragility in production.
+**Last updated:** 2026-06-30
 
 ---
 
@@ -26,113 +26,106 @@ Two scenes can both show "78% coverage" but have very different security propert
 - A dirty lens, slight angle shift, or minor lighting change drops critical zones below threshold
 - The "78%" is barely holding
 
-Both show "78% covered." Only coverage entropy distinguishes them.
+Both show "78% covered." Only coverage entropy and fragility distinguish them.
 
 ---
 
-## The Metric
+## Implemented Metrics
 
-### Coverage Margin
+### Coverage Fragility
 
-For each grid cell covered at quality level Q, compute the margin above the threshold for Q:
+For each grid cell, fragility measures how close the cell's PPM is to the nearest quality threshold boundary. A cell at the exact threshold has fragility 1.0 (maximally fragile). A cell at the midpoint between two thresholds has fragility near 0 (robust).
 
 ```typescript
-function computeCellMargin(ppm: number): {
-  quality: DORIQuality;
-  margin: number;         // 0–1: 0 = barely passing, 1 = much higher than threshold
-  fragile: boolean;       // margin < 0.2 = fragile
-} {
-  const thresholds = {
-    identification: 250,
-    recognition: 125,
-    observation: 62.5,
-    detection: 25,
-  };
+// packages/simulation/src/coverage-fragility.ts
+const FRAGILE_THRESHOLD = 0.2; // cells with fragility >= 0.2 are "fragile"
 
-  let quality: DORIQuality = "none";
-  let threshold = 0;
-
-  if (ppm >= thresholds.identification) { quality = "identification"; threshold = thresholds.identification; }
-  else if (ppm >= thresholds.recognition) { quality = "recognition"; threshold = thresholds.recognition; }
-  else if (ppm >= thresholds.observation) { quality = "observation"; threshold = thresholds.observation; }
-  else if (ppm >= thresholds.detection) { quality = "detection"; threshold = thresholds.detection; }
-
-  if (quality === "none") return { quality: "none", margin: 0, fragile: false };
-
-  // Margin relative to next threshold up
-  const nextThreshold = threshold * 2; // roughly: each DORI level doubles PPM
-  const margin = Math.min(1, (ppm - threshold) / (nextThreshold - threshold));
-
-  return { quality, margin, fragile: margin < 0.2 };
+function computeFragilityWithOrder(ppm, quality, isOodpcvs): { fragility, ppmMargin } {
+  // fragility = 1 - minDist / range
+  // where minDist is distance to nearest threshold boundary
+  // and range is the distance between current and next threshold
 }
 ```
 
-### Coverage Robustness Score
+**Output:** `FragilitySummary` with `meanFragility`, `fragileCellCount`, `robustCellCount`, `totalCells`.
+
+**Wired into:** `SimulationResult.fragilitySummary` via `simulate-studio.ts`.
+
+**Heatmap mode:** `"fragility"` renders green-to-red gradient in the 3D viewport.
+
+### Coverage Entropy
+
+Shannon entropy over the coverage-cell quality distribution. Measures how concentrated or spread out the quality distribution is.
 
 ```typescript
-function computeCoverageRobustness(grid: GridCell[][]): {
-  score: number;          // 0–100
-  fragileCellPct: number; // % of covered cells that are "barely passing"
-  robustCellPct: number;  // % of covered cells with margin > 0.5
-  weakestZone?: string;   // critical zone with lowest average margin
-} {
-  const coveredCells = grid.flat().filter(c => c.finalQuality !== "none");
-  if (coveredCells.length === 0) return { score: 0, fragileCellPct: 0, robustCellPct: 0 };
-
-  const margins = coveredCells.map(cell => computeCellMargin(cell.effectivePPM).margin);
-  const avgMargin = margins.reduce((a, b) => a + b, 0) / margins.length;
-  const fragileCells = margins.filter(m => m < 0.2).length;
-  const robustCells = margins.filter(m => m > 0.5).length;
-
-  return {
-    score: Math.round(avgMargin * 100),
-    fragileCellPct: fragileCells / coveredCells.length,
-    robustCellPct: robustCells / coveredCells.length,
-  };
+// packages/simulation/src/coverage-entropy.ts
+function computeCoverageEntropy(cells): CoverageEntropySummary | null {
+  // Count cells per quality level
+  // Compute H = -sum(p * log2(p))
+  // Normalize by log2(number of observed levels)
 }
 ```
 
-### Simple Output
+**Output:** `CoverageEntropySummary` with `entropyBits`, `normalizedEntropy`, `dominantQuality`, `dominantQualityShare`, `qualityCounts`.
 
+**Wired into:** `SimulationResult.coverageEntropy` via `simulate-studio.ts`.
+
+### Coverage Uncertainty (Monte Carlo)
+
+Monte Carlo simulation that perturbs camera parameters (position, yaw, pitch, range, FOV, resolution) with Gaussian noise and re-runs coverage to estimate confidence intervals.
+
+```typescript
+// packages/simulation/src/coverage-uncertainty.ts
+function computeCoverageUncertainty(scene, options?): CoverageUncertaintySummary
 ```
-Coverage: 78%   Robustness: 42/100
 
-Fragile zones: 23% of covered area is near-threshold
-→ Cash Counter: barely passing recognition (margin: 12%)
-→ Entry Corridor: identification quality fragile (margin: 8%)
+**Output:** `CoverageUncertaintySummary` with `meanCoveragePct`, `p5CoveragePct`, `p95CoveragePct`, `zonePassRates`.
 
-Robust zones: 34% of covered area has strong margin
-→ Main Entry: identification quality robust (margin: 71%)
-→ Back Storage: detection quality robust (margin: 88%)
+**Status:** Exported but not yet wired into the simulation pipeline. Available for standalone use.
+
+### Coverage Posture Variation
+
+Evaluates coverage at multiple target heights (crouching 0.7m, seated 1.0m, child 1.25m, standing 1.7m) to find posture-dependent blind spots.
+
+```typescript
+// packages/simulation/src/coverage-posture.ts
+function computeCoveragePostureVariation(scene, options?): CoveragePostureVariationSummary
 ```
+
+**Output:** Per-profile summaries, worst profile, largest drop delta.
+
+**Status:** Exported but not yet wired into the simulation pipeline. Available for standalone use.
 
 ---
 
 ## Why It Matters for the Product
 
-Coverage entropy / robustness score directly answers a question security professionals ask:
+These metrics directly answer a question security professionals ask:
 "Will this still work if conditions change slightly?" (camera ages, lens gets slightly dirty,
 someone moves a small object, lighting changes seasonally)
 
-It also makes the counterfactual recommendations more nuanced:
-- A move that increases coverage by 5% but improves robustness by 30 points is often better
+They also make the counterfactual recommendations more nuanced:
+- A move that increases coverage by 5% but improves fragility by 30 points is often better
   than a move that increases coverage by 8% but barely passes new zones.
 
 ---
 
 ## UI Considerations
 
-**Risk of confusing users:** "Coverage 78%, Robustness 42" — what does 42 mean?
-Security professionals might not intuitively understand entropy/robustness as a concept.
+**Risk of confusing users:** "Coverage 78%, Fragility 0.42" — what does 0.42 mean?
+Security professionals might not intuitively understand fragility as a concept.
 
-**Proposed UX:** Keep coverage % as the primary metric. Add robustness as a secondary badge:
+**Current UX:** Fragility is available as a heatmap overlay mode (green = robust, red = fragile).
+Coverage entropy is included in report exports.
+
+**Proposed UX:** Keep coverage % as the primary metric. Add fragility as a secondary badge:
 ```
-Coverage: 78%  [Robustness: Low ⚠️]
+Coverage: 78%  [Fragility: Low ⚠️]
 ```
 Clicking "Low" expands an explanation: "23% of your covered area is near threshold. Small
 changes to lighting or camera alignment could reduce actual coverage."
 
-**Decision needed:** Surface in V0.1 or V0.2? Show to target users first.
+**Decision needed:** Surface fragility badge in V0.1 or V0.2? Show to target users first.
 If a security professional finds it immediately valuable = V0.1.
 If it requires explanation = V0.2 with tooltip.
 
@@ -140,13 +133,24 @@ If it requires explanation = V0.2 with tooltip.
 
 ## Connection to Other Features
 
-**Temporal simulation:** Coverage robustness should factor into the temporal profile.
+**Temporal simulation:** Coverage fragility should factor into the temporal profile.
 A space that is "covered" at 1 AM but only marginally is high-risk even though it "passes."
 
 **Counterfactual ranking:** Rank candidate fixes not just by coverage improvement but by
-robustness improvement. "This fix adds 5% coverage and brings the cash counter from fragile
+fragility improvement. "This fix adds 5% coverage and brings the cash counter from fragile
 to robust — far more valuable than a fix that adds 12% coverage of non-critical areas."
 
-**Adversarial path:** The adversarial algorithm could use robustness-weighted detection
+**Adversarial path:** The adversarial algorithm could use fragility-weighted detection
 probability. A cell barely above detection threshold has low actual detection probability
 in practice. This makes the adversarial path more realistic.
+
+---
+
+## Implementation Status
+
+| Metric | Module | Wired into Pipeline | In Schema | In Reports | Heatmap |
+|--------|--------|-------------------|-----------|------------|---------|
+| Fragility | `coverage-fragility.ts` | Yes | Yes | Yes | Yes |
+| Entropy | `coverage-entropy.ts` | Yes | Yes | Yes | No |
+| Uncertainty | `coverage-uncertainty.ts` | No | No | No | No |
+| Posture Variation | `coverage-posture.ts` | No | No | No | No |

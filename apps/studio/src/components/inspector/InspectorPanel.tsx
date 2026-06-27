@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Shield, Trash2 } from "lucide-react";
+import { Copy, Trash2 } from "lucide-react";
 
 import { BollardInspector } from "@/components/inspector/BollardInspector";
 import { CameraInspector } from "@/components/inspector/CameraInspector";
@@ -14,26 +14,11 @@ import { LightInspector } from "@/components/inspector/LightInspector";
 import { ObstructionInspector } from "@/components/inspector/ObstructionInspector";
 import { PathInspector } from "@/components/inspector/PathInspector";
 import { PrivacyZoneInspector } from "@/components/inspector/PrivacyZoneInspector";
+import { SceneAppearancePanel } from "@/components/inspector/SceneAppearancePanel";
 import { SensorInspector } from "@/components/inspector/SensorInspector";
 import { WallInspector } from "@/components/inspector/WallInspector";
 import { Badge } from "@/components/shared/Badge";
 import { useStudioStore } from "@/store/studio-store";
-
-function NoSelection() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 text-center">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#1f2536] bg-[#0b0f17] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-        <Shield className="h-5 w-5 text-[#434d63]" />
-      </div>
-      <div>
-        <div className="text-[11px] font-medium text-[#95a0b7]">No object selected</div>
-        <div className="mt-1 text-[9px] leading-relaxed text-[#556076]">
-          Click any camera, wall, door, window, sensor, zone, path, light, or obstruction in the canvas to inspect it.
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } = {}) {
   const selectedId = useStudioStore((s) => s.selectedNodeId);
@@ -140,7 +125,9 @@ export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } =
       ) : bollard ? (
         <BollardInspector />
       ) : (
-        <NoSelection />
+        // No selection: expose the scene-level appearance editor so the
+        // inspector column stays useful instead of showing an empty state.
+        <SceneAppearancePanel />
       )}
     </aside>
   );

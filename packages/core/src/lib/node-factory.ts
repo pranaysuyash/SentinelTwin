@@ -227,7 +227,7 @@ export function createObstructionNode(
   _obsCounter += 1;
   const labelMap: Record<string, string> = {
     shelf: "Shelf",
-    cupboard: "Cupboard",
+    cabinet: "Cabinet",
     counter: "Counter",
     pillar: "Pillar",
     partition: "Partition",

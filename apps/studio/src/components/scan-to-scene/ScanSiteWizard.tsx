@@ -212,7 +212,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const [step, setStep] = useState<ScanStep>(0);
-  const [guidedStep, setGuidedStep] = useState(0);
+  const [guidedStep, setGuidedStep] = useState(isGuided ? 0 : 0);
   const [activeKind, setActiveKind] = useState<ScanCandidateKind>("counter");
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [isReading, setIsReading] = useState(false);
@@ -228,15 +228,6 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
     () => session.photos.find((photo) => photo.id === session.activePhotoId) ?? null,
     [session.activePhotoId, session.photos],
   );
-
-  useEffect(() => {
-    if (isGuided) {
-      startTransition(() => {
-        setAutoCreatePath(true);
-        setGuidedStep(0);
-      });
-    }
-  }, [isGuided]);
 
   const candidateStats = useMemo(() => {
     const accepted = session.candidates.filter((candidate) => candidate.status !== "rejected");

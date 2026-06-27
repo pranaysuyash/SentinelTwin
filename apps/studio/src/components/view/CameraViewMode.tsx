@@ -1,14 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { PerspectiveCamera } from "@react-three/drei";
+import { PerspectiveCamera, PerformanceMonitor, AdaptiveDpr } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Camera as CameraIcon, CircleSmall, VideoOff } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useStudioStore } from "@/store/studio-store";
 import "@/lib/three-compat";
-import { ENVIRONMENT_THEMES } from "@/components/workspace/SharedScene";
+import { ENVIRONMENT_THEMES, SceneEnvironmentSetup, SceneShadowCaster } from "@/components/workspace/SharedScene";
+import { CameraFeedPostProcessing } from "@/components/view/CameraFeedPostProcessing";
 import { QUALITY_RANK } from "@/lib/quality-display";
 import { CameraRigLive, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
 import { CameraControlStrip } from "@/components/view/CameraControlStrip";
@@ -22,9 +23,18 @@ import { CameraPositionIndicator } from "@/components/view/camera-position-indic
 import { CameraViewFloorAim } from "@/components/view/camera-view-floor-aim";
 import { useCameraVerificationWorkflow } from "@/components/view/camera-verification-workflow";
 import { alignmentQualityLabel } from "@/components/view/camera-verification-utils";
+import {
+  SINGLE_PERF_MONITOR_ITERATIONS,
+  SINGLE_PERF_MONITOR_MS,
+  SINGLE_PERF_DPR_STEP,
+  SINGLE_PERF_FLIPFLOPS,
+  singlePerformanceBounds,
+  computeSingleCanvasDpr,
+} from "@/lib/adaptive-dpr-budget";
 import { computeOperationalEvidenceFusionSummary, computeSensorFusionSummary } from "@/lib/sensor-fusion";
 import type { CameraNode, DoriQuality } from "@/schema/security-scene";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
+import { useReplayClock } from "@/hooks/use-replay-clock";
 import { STUDIO_SHORTCUT_EVENTS } from "@/lib/studio-shortcuts";
 import {
   buildReplayStateByCameraAtTime,
@@ -77,6 +87,7 @@ export function CameraViewMode() {
   const upsertCameraVerificationSnapshot = useStudioStore((s) => s.upsertCameraVerificationSnapshot);
   const removeCameraVerificationSnapshot = useStudioStore((s) => s.removeCameraVerificationSnapshot);
   const recordOperationalEvidenceEvent = useStudioStore((s) => s.recordOperationalEvidenceEvent);
+  const compactViewport = useStudioStore((s) => s.compactViewport);
 
   const orderedCameras = useMemo(
     () => orderCamerasForReplayPlayback(scene.cameras, selectedCameraId, selectedId),
@@ -148,15 +159,11 @@ export function CameraViewMode() {
         : feedMode === "low_light"
           ? "brightness(0.65) contrast(1.1) saturate(0.8)"
           : "brightness(0.78) contrast(1.22) saturate(1.1) sepia(0.08)";
-  const safeReplayProgress = clampReplayProgress(pathReplay.progress);
-  const safeReplayDurationS = clampPathDuration(activePathResult?.totalDurationS);
-  const pathTimeS = safeReplayDurationS * safeReplayProgress;
-  const replayActorVisible = Boolean(
-    activePath
-      && activePathResult
-      && safeReplayDurationS > 0
-      && (pathReplay.playing || safeReplayProgress > 0),
-  );
+  const replayClock = useReplayClock();
+  const safeReplayProgress = replayClock.progress;
+  const safeReplayDurationS = replayClock.durationS;
+  const pathTimeS = replayClock.timeS;
+  const replayActorVisible = replayClock.hasContent;
   const visibilityForCurrentCamera = useMemo(() => {
     if (!activePathResult || !camera) return null;
     return activePathResult.visibilityByCamera[camera.id] ?? null;
@@ -336,13 +343,17 @@ export function CameraViewMode() {
         }
       `}</style>
       {immersiveMode ? (
-        <div className="absolute left-3 top-3 z-30 rounded-xl border border-[#263246] bg-[#0b0f17]/92 px-3 py-2">
+        <div className={`absolute left-3 top-3 z-30 rounded-xl border border-[#263246] bg-[#0b0f17]/92 px-3 py-2${compactViewport ? " max-w-[200px]" : ""}`}>
           <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Focus Mode</div>
           <div className="text-[13px] font-medium text-white">{camera.name}</div>
-          <div className="mt-1 text-[10px] text-[#8ea5cc]">{cameraIndex + 1}/{orderedCameras.length} • Press F to exit focus</div>
-          <div className="mt-2 rounded-lg border border-[#2a344a] bg-black/45 px-2 py-1 text-[9px] text-[#9ab0ce]">
-            Frame, zoom, timeline, and overlays can be tuned after exiting focus mode.
-          </div>
+          {!compactViewport && (
+            <div className="mt-1 text-[10px] text-[#8ea5cc]">{cameraIndex + 1}/{orderedCameras.length} • Press F to exit focus</div>
+          )}
+          {!compactViewport && (
+            <div className="mt-2 rounded-lg border border-[#2a344a] bg-black/45 px-2 py-1 text-[9px] text-[#9ab0ce]">
+              Frame, zoom, timeline, and overlays can be tuned after exiting focus mode.
+            </div>
+          )}
         </div>
       ) : (
         <CameraHeader
@@ -371,28 +382,44 @@ export function CameraViewMode() {
               near: 0.1,
               far: 60,
             }}
-            shadows="percentage"
-            gl={{ antialias: true, alpha: false }}
+            shadows="soft"
+            dpr={computeSingleCanvasDpr(1)}
+            gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
             style={{ width: "100%", height: "100%", filter: canvasFilter }}
           >
-            <PerspectiveCamera
-              makeDefault
-              position={camera.position}
-              fov={Math.min(camera.fovHorizontalDeg, 100)}
-              near={0.1}
-              far={60}
+            <SceneEnvironmentSetup tier={envMode === "night" ? "low" : envMode === "dusk" ? "medium" : "high"} />
+            <SceneShadowCaster
+              tier={envMode === "night" ? "low" : envMode === "dusk" ? "medium" : "high"}
+              maxDimension={Math.max(scene.dimensions.width, scene.dimensions.depth)}
             />
-            <color attach="background" args={[theme.background]} />
-            <Suspense fallback={<CanvasLoadingOverlay label="Loading camera view" />}>
-              <SceneFeedGeometry theme={theme} showPrivacyZones />
-            </Suspense>
-            <CameraRigLive camera={camera} poseOverride={activeCameraReplayPose ?? undefined} />
-            <CameraViewFloorAim camera={camera} />
-            {flags.dori ? <DoriBandArcs camera={camera} /> : null}
-            <CameraPositionIndicator camera={camera} />
-            {replayActorVisible && activePath ? (
-              <ReplayActor path={activePath} progress={pathReplay.progress} />
-            ) : null}
+            <PerformanceMonitor
+              iterations={SINGLE_PERF_MONITOR_ITERATIONS}
+              ms={SINGLE_PERF_MONITOR_MS}
+              step={SINGLE_PERF_DPR_STEP}
+              flipflops={SINGLE_PERF_FLIPFLOPS}
+              bounds={singlePerformanceBounds}
+            >
+              <AdaptiveDpr pixelated />
+              <PerspectiveCamera
+                makeDefault
+                position={camera.position}
+                fov={Math.min(camera.fovHorizontalDeg, 100)}
+                near={0.1}
+                far={60}
+              />
+              <color attach="background" args={[theme.background]} />
+              <CameraFeedPostProcessing mode={feedMode} />
+              <Suspense fallback={<CanvasLoadingOverlay label="Loading camera view" />}>
+                <SceneFeedGeometry theme={theme} showPrivacyZones />
+              </Suspense>
+              <CameraRigLive camera={camera} poseOverride={activeCameraReplayPose ?? undefined} />
+              <CameraViewFloorAim camera={camera} />
+              {flags.dori ? <DoriBandArcs camera={camera} /> : null}
+              <CameraPositionIndicator camera={camera} />
+              {replayActorVisible && activePath ? (
+                <ReplayActor path={activePath} progress={pathReplay.progress} />
+              ) : null}
+            </PerformanceMonitor>
           </Canvas>
           {verification.verificationEnabled && verification.verificationImageUrl ? (
             <FootageVerificationOverlay

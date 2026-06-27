@@ -96,3 +96,32 @@ Transcripts for all buyer-facing demo sessions. Each run documents: screen obser
 
 - The review lane is now legible enough to continue even with ~1000+ segment inputs.
 - Remaining improvement needed: preprocessing toggle for text/annotation suppression before detection.
+
+## RUN 4 — 2026-06-30 · Live Recovery (buyer-style floor-plan objection handling)
+
+**Feature under demo:** Floor-plan import trust recovery, route-state continuity, and review-lane transitions
+**Persona:** Security buyer (negative on first pass, requires explicit trust repair)
+**Operator:** User-driven flow with guided sales-mode narration
+
+### Transcript (compressed)
+
+| # | Screen observed | Action taken | System response | Defect observed | Next recommendation | Buyer trust note |
+|---|---|---|---|---|---|---|
+| 1 | Running URL opens prior scene (`localhost:3001`) | Confirmed current route and clarified restore state | Route matched persisted workspace state | Session start target mismatch | Continue from current route, then explicitly return to Create Site Twin if required | First-run trust impact (state continuity issue) |
+| 2 | Upload Floor Plan intake card | Clicked primary source card | Source profile + import stage becomes active | Right metadata panel too dense, preview compact | Use primary CTA path only; avoid side links | UX density blocks first impression |
+| 3 | Floor-plan configure with raw wall list | User asked about checkbox meaning and high wall count | Wall list exposed keep/exclude actions | “1335/1245” counts interpreted as final geometry | Reframe as raw candidates vs kept geometry before correction |
+| 4 | Apply calibration | Entered dimensions, clicked Apply | Metrics and warnings changed | Preview did not visually shift as expected | Validate via action delta and calibration lock rows |
+| 5 | Back/forward flow check | User asked if this is Next vs Create Scene | Corrected flow boundary: `Next` for review transition, `Create Draft Scene` for finalization | Button intent remained unclear without narration | Keep strict screen-by-screen coaching path |
+| 6 | Wall list review + correction path | Asked exact correction steps | Cleaned to smaller kept set | List remains long and requires batch workflow | Keep batch actions, avoid one-off selection overload |
+
+### Outcome
+
+- Buyer sentiment remained negative due to trust + readability friction.
+- Session ended with explicit request to treat this as a backlog pass and resurface only after recovery.
+
+### Acceptance notes for next run
+
+1. Route bootstrap should be deterministic on first open.
+2. Calibration should show explicit before/after footprint and pixel-scale delta.
+3. Wall metric semantics need persistent raw/kept context.
+4. Review lane transition must remain explicit in copy and button labels.

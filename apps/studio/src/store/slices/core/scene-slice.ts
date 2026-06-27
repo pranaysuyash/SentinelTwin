@@ -119,8 +119,8 @@ export type MeasurementToolState = {
 };
 export type FocusScenePointRequest = { point: [number, number]; source: "minimap" | "pathMap" };
 export type MapViewportState = { zoom: number; pan: [number, number] };
-export type MapState = { minimap: MapViewportState; pathMap: MapViewportState };
-type MapViewportTarget = "minimap" | "pathMap";
+export type MapState = { minimap: MapViewportState; pathMap: MapViewportState; planView: MapViewportState };
+type MapViewportTarget = "minimap" | "pathMap" | "planView";
 
 // ---------------------------------------------------------------------------
 // Local helper types (used in scene-replacement patches)
@@ -140,6 +140,7 @@ const DEFAULT_LAYERS: LocalLayerVisibility = {
 const DEFAULT_MAP_STATE: MapState = {
   minimap: { zoom: 1, pan: [0, 0] },
   pathMap: { zoom: 1, pan: [0, 0] },
+  planView: { zoom: 1, pan: [0, 0] },
 };
 
 const OPERATIONAL_EVIDENCE_STORAGE_KEY = "sentineltwin_operational_evidence_v1";
@@ -538,6 +539,7 @@ function cloneDefaultMapState(): MapState {
   return {
     minimap: { zoom: DEFAULT_MAP_STATE.minimap.zoom, pan: [...DEFAULT_MAP_STATE.minimap.pan] as [number, number] },
     pathMap: { zoom: DEFAULT_MAP_STATE.pathMap.zoom, pan: [...DEFAULT_MAP_STATE.pathMap.pan] as [number, number] },
+    planView: { zoom: DEFAULT_MAP_STATE.planView.zoom, pan: [...DEFAULT_MAP_STATE.planView.pan] as [number, number] },
   };
 }
 
@@ -807,9 +809,14 @@ export interface SceneSlice {
 
   addNode: (node: AnyEditableNode) => void;
   updateNode: (id: string, patch: Partial<AnyEditableNode>) => void;
+  updateNodeAppearance: (
+    id: string,
+    appearance: import("@/schema/security-scene").NodeAppearance | undefined,
+  ) => void;
   duplicateNode: (id: string) => void;
   removeNode: (id: string) => void;
   updateAssumptions: (patch: Partial<import("@/schema/security-scene").SimulationAssumptions>) => void;
+  updateSceneAppearance: (patch: Partial<import("@/schema/security-scene").SceneAppearance>) => void;
   updateTimeSchedule: (patch: Partial<import("@/schema/security-scene").TimeSchedule>) => void;
   updateCrowdProfiles: (profiles: import("@/schema/security-scene").CrowdProfile[]) => void;
   updateEventConfig: (config: import("@/schema/security-scene").EventConfig | undefined) => void;
@@ -820,7 +827,11 @@ export interface SceneSlice {
   addBollardLine: (bollard: import("@/schema/security-scene").BollardLine) => void;
   updateBollardLine: (id: string, patch: Partial<import("@/schema/security-scene").BollardLine>) => void;
 
-  commitSceneChange: (updater: (scene: SecurityScene) => SecurityScene, label?: string) => void;
+  commitSceneChange: (
+    updater: (scene: SecurityScene) => SecurityScene,
+    label?: string,
+    options?: { markSimulationDirty?: boolean },
+  ) => void;
   undo: () => void;
   redo: () => void;
   canUndo: () => boolean;
@@ -862,9 +873,9 @@ export interface SceneSlice {
   removeComment: (id: string) => void;
   resolveComment: (id: string) => void;
 
-  setMapZoom: (target: "minimap" | "pathMap", zoom: number) => void;
-  setMapPan: (target: "minimap" | "pathMap", pan: [number, number]) => void;
-  fitMap: (target: "minimap" | "pathMap") => void;
+  setMapZoom: (target: "minimap" | "pathMap" | "planView", zoom: number) => void;
+  setMapPan: (target: "minimap" | "pathMap" | "planView", pan: [number, number]) => void;
+  fitMap: (target: "minimap" | "pathMap" | "planView") => void;
   setHoveredMapNodeId: (id: string | null) => void;
   setFocusScenePointRequest: (request: FocusScenePointRequest | null) => void;
   setFocusScenePointHighlight: (request: FocusScenePointRequest | null) => void;
@@ -1129,6 +1140,16 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
     get().commitSceneChange((scene: SecurityScene) => patchNodeInScene(scene, id, patch));
   },
 
+  updateNodeAppearance: (id, appearance) => {
+    // Cosmetic per-node override. Same undo/evidence path as updateNode but
+    // never dirties the simulation (appearance cannot change coverage, D-003).
+    get().commitSceneChange(
+      (scene: SecurityScene) => patchNodeInScene(scene, id, { appearance } as Partial<AnyEditableNode>),
+      "Object appearance updated",
+      { markSimulationDirty: false },
+    );
+  },
+
   duplicateNode: (id) => {
     const { fixSandboxActive, fixSandboxDraftScene } = get();
     if (fixSandboxActive && fixSandboxDraftScene) {
@@ -1231,6 +1252,31 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
     }));
   },
 
+  updateSceneAppearance: (patch) => {
+    // Rendering-only customization (materials, lighting, fog). Routed through
+    // commitSceneChange for undo/redo and the evidence trail, but does not
+    // mark the simulation dirty — appearance cannot change coverage results
+    // (D-003). Top-level sections merge one level deep so a lighting edit
+    // doesn't drop surface settings.
+    get().commitSceneChange(
+      (scene: SecurityScene) => ({
+        ...scene,
+        sceneAppearance: {
+          ...scene.sceneAppearance,
+          ...patch,
+          ...(patch.lighting
+            ? { lighting: { ...scene.sceneAppearance?.lighting, ...patch.lighting } }
+            : {}),
+          ...(patch.surfaces
+            ? { surfaces: { ...scene.sceneAppearance?.surfaces, ...patch.surfaces } }
+            : {}),
+        },
+      }),
+      "Scene appearance updated",
+      { markSimulationDirty: false },
+    );
+  },
+
   updateTimeSchedule: (patch) => {
     get().commitSceneChange((scene: SecurityScene) => ({
       ...scene,
@@ -1299,7 +1345,7 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
 
   // ===== History / Undo / Redo =====
 
-  commitSceneChange: (updater, label) =>
+  commitSceneChange: (updater, label, options) =>
     set((s: Record<string, unknown>) => {
       void label;
       const scene = s.scene as SecurityScene;
@@ -1334,7 +1380,10 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
       const nextGovernance = resetWorkspaceGovernanceForDraft(workspaceGovernance);
       persistWorkspaceGovernanceLocal(nextGovernance);
       return {
-        simulationDirty: true,
+        // Rendering-only changes (e.g. scene appearance) opt out of dirtying
+        // the simulation; the prior dirty state is preserved in that case.
+        simulationDirty:
+          options?.markSimulationDirty === false ? (s.simulationDirty as boolean) : true,
         sceneIntelligenceGraph: buildGraphState(next, simulationResult, historyPast.length + 1, snapshots.length, operationalEvidenceEvents),
         ...setSelectionState(next, s.selectedNodeIds as string[]),
         activePathId: cloneAndSetActivePath(next, s.activePathId as string | null),
@@ -1669,28 +1718,26 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
 
   setMapZoom: (target, zoom) => {
     const nextZoom = Math.max(0.05, Math.min(6, zoom));
-    if (target === "minimap") {
-      set((state: Record<string, unknown>) => ({ mapState: { ...(state.mapState as MapState), minimap: { ...(state.mapState as MapState).minimap, zoom: nextZoom } } }));
-      return;
-    }
-    set((state: Record<string, unknown>) => ({ mapState: { ...(state.mapState as MapState), pathMap: { ...(state.mapState as MapState).pathMap, zoom: nextZoom } } }));
+    set((state: Record<string, unknown>) => {
+      const mapState = state.mapState as MapState;
+      const current = mapState[target] ?? { zoom: 1, pan: [0, 0] as [number, number] };
+      return { mapState: { ...mapState, [target]: { ...current, zoom: nextZoom } } };
+    });
   },
 
   setMapPan: (target, pan) => {
     const nextPan = [pan[0], pan[1]] as [number, number];
-    if (target === "minimap") {
-      set((state: Record<string, unknown>) => ({ mapState: { ...(state.mapState as MapState), minimap: { ...(state.mapState as MapState).minimap, pan: nextPan } } }));
-      return;
-    }
-    set((state: Record<string, unknown>) => ({ mapState: { ...(state.mapState as MapState), pathMap: { ...(state.mapState as MapState).pathMap, pan: nextPan } } }));
+    set((state: Record<string, unknown>) => {
+      const mapState = state.mapState as MapState;
+      const current = mapState[target] ?? { zoom: 1, pan: [0, 0] as [number, number] };
+      return { mapState: { ...mapState, [target]: { ...current, pan: nextPan } } };
+    });
   },
 
   fitMap: (target) => {
-    if (target === "minimap") {
-      set((state: Record<string, unknown>) => ({ mapState: { ...(state.mapState as MapState), minimap: { zoom: 1, pan: [0, 0] } } }));
-      return;
-    }
-    set((state: Record<string, unknown>) => ({ mapState: { ...(state.mapState as MapState), pathMap: { zoom: 1, pan: [0, 0] } } }));
+    set((state: Record<string, unknown>) => ({
+      mapState: { ...(state.mapState as MapState), [target]: { zoom: 1, pan: [0, 0] as [number, number] } },
+    }));
   },
 
   setHoveredMapNodeId: (id) => set({ hoveredMapNodeId: id }),

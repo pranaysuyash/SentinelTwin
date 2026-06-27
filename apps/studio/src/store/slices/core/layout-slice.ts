@@ -20,7 +20,7 @@ import {
 } from "@/lib/contextual-tabs";
 
 export type ViewMode = "map" | "wall" | "replay" | "camera_view" | "compare" | "report" | "analytics";
-export type CanvasMode = "orbit_3d" | "topdown_2d";
+export type CanvasMode = "orbit_3d" | "topdown_2d" | "plan_2d";
 export type DockSide = "left" | "right" | "bottom";
 export type RightPanelMode =
   | "inspector"
@@ -173,6 +173,7 @@ function dockCollapsedKey(side: DockSide): "leftDockCollapsed" | "rightDockColla
 function snapshotLayout(state: {
   viewMode: ViewMode;
   workspacePreset: WorkspacePreset;
+  bottomTab: BottomTab | null;
   canvasMode: CanvasMode;
   leftDockCollapsed: boolean;
   rightDockCollapsed: boolean;
@@ -193,6 +194,7 @@ function snapshotLayout(state: {
   return {
     viewMode: state.viewMode,
     workspacePreset: state.workspacePreset,
+    bottomTab: state.bottomTab,
     canvasMode: state.canvasMode,
     leftDockCollapsed: state.leftDockCollapsed,
     rightDockCollapsed: state.rightDockCollapsed,
@@ -335,6 +337,7 @@ export interface LayoutSlice {
   showDebugOverlays: boolean;
   clientDemoOptions: { hideDebugModules: boolean; simplifiedLabels: boolean; criticalIssuesOnly: boolean; lockLayout: boolean };
   viewSettingsOpen: boolean;
+  compactViewport: boolean;
 
   setViewMode: (mode: ViewMode) => void;
   setWorkspacePreset: (preset: WorkspacePreset) => void;
@@ -368,6 +371,7 @@ export interface LayoutSlice {
   setUiDensity: (density: UiDensity) => void;
   setUiTheme: (theme: UiTheme) => void;
   setOverlayFilter: (filter: OverlayFilterId, visible: boolean) => void;
+  setCompactViewport: (compact: boolean) => void;
   setViewSettingsOpen: (open: boolean) => void;
   toggleViewSettingsOpen: () => void;
 }
@@ -409,6 +413,7 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
       adversaryShadow: true,
     },
     viewSettingsOpen: false,
+    compactViewport: false,
     visibleComponents: _initialLayout.visibleComponents,
     enabledAnalysisModules: _initialLayout.enabledAnalysisModules,
     pendingTabAttention: [],
@@ -513,18 +518,18 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
         };
       }),
 
-    restorePreviousLayout: () =>
-      set((state: any) => {
-        if (!state.previousLayout) return state;
-        const layout = state.previousLayout;
-        const patch = buildLayoutStatePatch(layout);
-        return {
-          ...patch,
-          focusMode: false,
-          previousLayout: null,
-          bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, layout.pinnedAnalysisModule),
-        };
-      }),
+      restorePreviousLayout: () =>
+        set((state: any) => {
+          if (!state.previousLayout) return state;
+          const layout = state.previousLayout;
+          const patch = buildLayoutStatePatch(layout);
+          return {
+            ...patch,
+            focusMode: false,
+            previousLayout: null,
+            bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, layout.bottomTab ?? layout.pinnedAnalysisModule),
+          };
+        }),
 
     setBottomTab: (tab) =>
       set((state: any) => {
@@ -617,6 +622,8 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
 
     setOverlayFilter: (filter, visible) =>
       set((s: any) => ({ overlayFilters: { ...s.overlayFilters, [filter]: visible } })),
+
+    setCompactViewport: (compact) => set({ compactViewport: compact }),
 
     setViewSettingsOpen: (open) => set({ viewSettingsOpen: open }),
 

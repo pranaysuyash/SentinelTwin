@@ -120,6 +120,81 @@ export const auditLogSchema = z.object({
 });
 export type AuditLog = z.infer<typeof auditLogSchema>;
 
+export const workspaceInviteStatusSchema = z.enum(["pending", "accepted", "declined", "revoked", "expired"]);
+export type WorkspaceInviteStatus = z.infer<typeof workspaceInviteStatusSchema>;
+
+export const workspaceInviteSchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  inviterId: z.string().min(1),
+  inviteeEmail: z.string().email(),
+  role: userRoleSchema,
+  status: workspaceInviteStatusSchema,
+  createdAt: z.number(),
+  expiresAt: z.number(),
+});
+export type WorkspaceInvite = z.infer<typeof workspaceInviteSchema>;
+
+export const ownershipTransferEventSchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  fromOwnerId: z.string().min(1),
+  toOwnerId: z.string().min(1),
+  status: z.enum(["requested", "completed", "cancelled"]),
+  createdAt: z.number(),
+  completedAt: z.number().nullable(),
+});
+export type OwnershipTransferEvent = z.infer<typeof ownershipTransferEventSchema>;
+
+export function createWorkspaceInvite(
+  workspaceId: string,
+  organizationId: string,
+  inviterId: string,
+  inviteeEmail: string,
+  role: UserRole = "operator",
+): WorkspaceInvite {
+  return {
+    id: crypto.randomUUID(),
+    workspaceId,
+    organizationId,
+    inviterId,
+    inviteeEmail,
+    role,
+    status: "pending",
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+  };
+}
+
+export function createOwnershipTransferEvent(
+  workspaceId: string,
+  fromOwnerId: string,
+  toOwnerId: string,
+): OwnershipTransferEvent {
+  return {
+    id: crypto.randomUUID(),
+    workspaceId,
+    fromOwnerId,
+    toOwnerId,
+    status: "requested",
+    createdAt: Date.now(),
+    completedAt: null,
+  };
+}
+
+export function acceptOwnershipTransfer(event: OwnershipTransferEvent): OwnershipTransferEvent {
+  return { ...event, status: "completed", completedAt: Date.now() };
+}
+
+export function cancelOwnershipTransfer(event: OwnershipTransferEvent): OwnershipTransferEvent {
+  return { ...event, status: "cancelled", completedAt: Date.now() };
+}
+
+export function isWorkspaceInviteExpired(invite: WorkspaceInvite): boolean {
+  return invite.status === "pending" && invite.expiresAt < Date.now();
+}
+
 export const conflictResolutionStrategySchema = z.enum(["last_write_wins", "manual_merge", "reject_new"]);
 export type ConflictResolutionStrategy = z.infer<typeof conflictResolutionStrategySchema>;
 

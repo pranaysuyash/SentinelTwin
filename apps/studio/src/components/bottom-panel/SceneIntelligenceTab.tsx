@@ -226,7 +226,7 @@ export function SceneIntelligenceTab() {
   const allCameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents);
   const allCameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents);
   const timelineFocusRequest = useStudioStore((s) => s.timelineFocusRequest);
-  const setTimelineFocusRequest = useStudioStore((s) => s.setTimelineFocusRequest);
+  const consumeTimelineFocusRequest = useStudioStore((s) => s.consumeTimelineFocusRequest);
   const setCompareReportSelection = useStudioStore((s) => s.setCompareReportSelection);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
@@ -393,13 +393,10 @@ export function SceneIntelligenceTab() {
 
   useEffect(() => {
     if (!timelineFocusRequest) return;
-    const request = timelineFocusRequest;
+    const request = consumeTimelineFocusRequest();
+    if (!request) return;
     focusRequestPending.current = request;
     processedRequestId.current = request.timestamp;
-
-    startTransition(() => {
-      setTimelineFocusRequest(null);
-    });
 
     startTransition(() => {
       if (request.query) setEvidenceQuery(request.query);
@@ -427,7 +424,7 @@ export function SceneIntelligenceTab() {
         setSelectedEvidenceEventId(targetEvent.id);
       });
     }
-  }, [setTimelineFocusRequest, timelineFocusRequest, operationalEvidenceEvents]);
+  }, [consumeTimelineFocusRequest, timelineFocusRequest, operationalEvidenceEvents]);
   const selectedEvidenceReconstructionSummary = useMemo(
     () => (selectedEvidenceReconstructionScene ? summarizeSceneEvidence(selectedEvidenceReconstructionScene) : null),
     [selectedEvidenceReconstructionScene],

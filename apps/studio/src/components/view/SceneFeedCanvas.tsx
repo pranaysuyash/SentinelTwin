@@ -36,8 +36,8 @@ export function SceneFeedGeometry({
   return (
     <>
       <SceneLighting theme={resolvedTheme} />
-      <SceneFloor width={width} depth={depth} showGrid={false} />
-      <SceneWalls walls={scene.walls} selectable={false} />
+      <SceneFloor width={width} depth={depth} showGrid={false} appearance={scene.sceneAppearance?.surfaces?.floor} />
+      <SceneWalls walls={scene.walls} selectable={false} defaultAppearance={scene.sceneAppearance?.surfaces?.wall} />
       <SceneDoors doors={scene.doors} selectable={false} />
       <SceneWindows windows={scene.windows} selectable={false} />
       <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} onSelect={() => {}} />

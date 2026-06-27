@@ -345,10 +345,12 @@ def run_json_sample_intake_check(page, log: list[dict]) -> bool:
     signal = wait_any_text(
         page,
         [
-            scene_name,
+            "Security Twin Intake Draft",
+            "Review before workspace activation",
+            "Approve Draft & Activate",
+            "Approve & Run Baseline",
+            "Review Required to Activate",
             "sample-security-scene-import.json",
-            "Site Draft Review",
-            "Draft Review",
         ],
         timeout_ms=18000,
     )
@@ -360,6 +362,20 @@ def run_json_sample_intake_check(page, log: list[dict]) -> bool:
     step(log, "json_sample_review_ready", True, f"signal={signal}")
     page.wait_for_timeout(1000)
     safe_shot(page, SHOT_DIR / "04-json-sample-draft-review.png", log, "shot_json_sample_draft_review")
+
+    approved = click_any(page, [
+        "Approve Draft & Activate",
+        "Approve & Run Baseline",
+        "Review Required to Activate",
+        "Import as Canonical Scene",
+        "Approve as Canonical Twin",
+        "Approve as Draft",
+        "Approve as Scene Shell",
+        "Open in Studio",
+        "Approve",
+    ], timeout_ms=8000)
+    step(log, "json_sample_approved", approved, f"clicked={approved}")
+    page.wait_for_timeout(1500)
 
     page.goto(BASE_URL, wait_until="commit", timeout=45000)
     home_signal = wait_any_text(
@@ -530,7 +546,7 @@ def main() -> int:
                 step(log, "studio_ready", False, "No studio workspace signal found")
             else:
                 step(log, "studio_ready", True, "workspace signal found")
-            click_visible_text(page, ["Close", "Dismiss"], timeout_ms=1200)
+            click_visible_text(page, ["Start", "Close", "Dismiss"], timeout_ms=1200)
             page.wait_for_timeout(2500)
             try:
                 page.wait_for_load_state("networkidle", timeout=12000)
@@ -615,6 +631,7 @@ def main() -> int:
                 optional=True,
             )
             try:
+                click_label(page, "Close view settings", timeout_ms=2000)
                 page.keyboard.press("Escape")
                 page.wait_for_timeout(500)
             except Exception:
@@ -625,8 +642,8 @@ def main() -> int:
                 ("camera_view", ["Camera View"], "18-camera-view.png", ["CAMERA VIEW", "Single Camera", "Footage Verification"], "Inspect a single simulated camera feed."),
                 ("camera_wall", ["Camera Wall"], "19-camera-wall.png", ["CAMERA WALL", "Multi Camera", "6 view"], "Review the multi-camera wall and offline camera state."),
                 ("path_replay", ["Path Replay"], "20-path-replay.png", ["INCIDENT REVIEW", "Path Replay", "Coverage Replay"], "Review route visibility over time."),
-                ("compare_view", ["Compare View", "Compare Fix"], "21-compare-view.png", ["COMPARE", "Before", "After", "Delta"], "Compare baseline and proposed fix."),
-                ("report_view", ["Report View", "Audit Report"], "22-report-view.png", ["REPORT", "Audit", "Evidence", "Export"], "Open the audit report/evidence view."),
+                ("compare_view", ["Compare", "Compare View", "Compare Fix"], "21-compare-view.png", ["COMPARE", "Before", "After", "Delta"], "Compare baseline and proposed fix."),
+                ("report_view", ["Report", "Report View", "Audit Report"], "22-report-view.png", ["REPORT", "Audit", "Evidence", "Export"], "Open the audit report/evidence view."),
                 ("map_return", ["Map View"], "23-map-return.png", ["Map View", "QUALITY VIEW", "Coverage"], "Return to coverage map."),
             ]
             for name, labels, shot, signals, detail in studio_steps:
@@ -637,7 +654,7 @@ def main() -> int:
             # Object click contextual behavior check (camera selection)
             # Try clicking known camera labels from left panel if present.
             selected = False
-            for label in ["Camera 1", "CAM 1", "Front Door Cam", "Checkout Cam", "Entrance Camera", "cam_", "camera"]:
+            for label in ["Entry Camera", "Checkout Camera", "Entry", "Checkout", "Camera 1", "CAM 1", "Front Door Cam", "Checkout Cam", "Entrance Camera", "cam_", "camera"]:
                 try:
                     loc = page.get_by_text(label)
                     if loc.count() > 0 and loc.first.is_visible():

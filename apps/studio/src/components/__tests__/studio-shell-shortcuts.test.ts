@@ -5,11 +5,17 @@ const constantsPath = new URL("../../lib/studio-constants.ts", import.meta.url);
 const shortcutsModalPath = new URL("../layout/ShortcutsModal.tsx", import.meta.url);
 const pathReplayClockPath = new URL("../layout/PathReplayClock.tsx", import.meta.url);
 const shellPath = new URL("../layout/StudioShell.tsx", import.meta.url);
+const keyboardHookPath = new URL("../../hooks/use-studio-keyboard.ts", import.meta.url);
+const shortcutsEventsPath = new URL("../../lib/studio-shortcuts.ts", import.meta.url);
+const cameraViewModePath = new URL("../view/CameraViewMode.tsx", import.meta.url);
+const cameraWallViewPath = new URL("../view/CameraWallView.tsx", import.meta.url);
+const pathReplayViewPath = new URL("../view/PathReplayView.tsx", import.meta.url);
 
 describe("Studio shell shortcuts", () => {
   test("wires all visible tool keys into the global shortcut map", () => {
     const constantsSource = readFileSync(constantsPath, "utf8");
     const shortcutsSource = readFileSync(shortcutsModalPath, "utf8");
+    const keyboardSource = readFileSync(keyboardHookPath, "utf8");
 
     expect(constantsSource).toContain('v: "select"');
     expect(constantsSource).toContain('c: "camera"');
@@ -27,6 +33,8 @@ describe("Studio shell shortcuts", () => {
     expect(shortcutsSource).toContain('keys: "Enter"');
     expect(shortcutsSource).toContain('keys: "Delete"');
     expect(shortcutsSource).toContain('keys: "← → ↑ ↓"');
+    expect(shortcutsSource).toContain('keys: "PageUp / PageDown"');
+    expect(shortcutsSource).toContain('keys: "Q / E"');
     expect(shortcutsSource).toContain('keys: "V"');
     expect(shortcutsSource).toContain('keys: "P"');
     expect(shortcutsSource).toContain('keys: "Y"');
@@ -40,6 +48,12 @@ describe("Studio shell shortcuts", () => {
     expect(shortcutsSource).toContain('keys: "F"');
     expect(shortcutsSource).toContain('keys: "S"');
     expect(shortcutsSource).toContain('keys: "?"');
+
+    expect(keyboardSource).toContain('selectionCanTransform');
+    expect(keyboardSource).toContain('e.key === "PageUp"');
+    expect(keyboardSource).toContain('e.key === "PageDown"');
+    expect(keyboardSource).toContain('rotate_left');
+    expect(keyboardSource).toContain('rotate_right');
   });
 
   test("owns the shared path replay clock so dock panels do not start competing RAF loops", () => {
@@ -50,5 +64,19 @@ describe("Studio shell shortcuts", () => {
     expect(clockSource).toContain("export default function PathReplayClock()");
     expect(clockSource).toContain('if (viewMode === "replay" || !playing || totalDurationS <= 0) return;');
     expect(shellSource).toContain("<PathReplayClock />");
+  });
+
+  test("surface focus event constant is dispatched by the keyboard hook and listened to by all 3 view surfaces", () => {
+    const shortcutsSource = readFileSync(shortcutsEventsPath, "utf8");
+    const keyboardSource = readFileSync(keyboardHookPath, "utf8");
+    const cameraViewSource = readFileSync(cameraViewModePath, "utf8");
+    const cameraWallSource = readFileSync(cameraWallViewPath, "utf8");
+    const pathReplaySource = readFileSync(pathReplayViewPath, "utf8");
+
+    expect(shortcutsSource).toContain("toggleActiveSurfaceFocus");
+    expect(keyboardSource).toContain("STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus");
+    expect(cameraViewSource).toContain("STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus");
+    expect(cameraWallSource).toContain("STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus");
+    expect(pathReplaySource).toContain("STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus");
   });
 });

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { loadCameraLiveSessionRegistry, renewCameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
+import { evaluateStreamRenewal, initializeStreamContinuity } from "@/lib/camera-live-stream-continuity";
 import { API_METHODS, apiJson, parseValidatedJsonBody } from "@/lib/api-response";
 import { corsNoContent } from "@/lib/api-cors";
 
@@ -18,15 +19,23 @@ function getSessionHealthSummary() {
   const expiringSoon = sessions.filter((session) => session.status === "active" && session.sessionExpiresAt != null && session.sessionExpiresAt - now <= 60_000);
   const expired = sessions.filter((session) => session.status === "expired");
 
+  const continuityRecords = sessions.map((session) => initializeStreamContinuity(session, now));
+  const renewalEvaluations = sessions.map((session) => evaluateStreamRenewal(session, now));
+  const pendingRenewals = renewalEvaluations.filter((ev) => ev.shouldRenewNow);
+
   return {
     sessions,
+    continuityRecords,
+    renewalEvaluations,
     totals: {
       active: sessions.filter((session) => session.status === "active").length,
       expiringSoon: expiringSoon.length,
       expired: expired.length,
       closed: sessions.filter((session) => session.status === "closed").length,
+      pendingRenewals: pendingRenewals.length,
     },
     expiringSoon,
+    pendingRenewals,
     generatedAt: now,
   };
 }

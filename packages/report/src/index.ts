@@ -6,7 +6,7 @@ export type {
   RedundancyMatrixReport,
 } from "./redundancy-matrix";
 
-import type { SecurityScene, SimulationResult, DoriQuality } from "@sentineltwin/core";
+import type { SecurityScene, SimulationResult, DoriQuality, CoverageEntropySummary, CoverageUncertaintySummary, CoveragePostureVariationSummary } from "@sentineltwin/core";
 
 export type ReportAudience =
   | "operator"
@@ -85,12 +85,12 @@ export type ReportData = {
   truthLadder: { nodeCount: number; reviewedNodeCount: number; reviewedCoveragePct: number; verifiedNodeCount: number; sourceTraceCount: number; sourceTraceCoveragePct: number; suspectGeometryCount: number; invalidGeometryCount: number; summary: string };
   provenance: { sceneSourceLabel: string; sceneSource: string; nodeCount: number; edgeCount: number; revisionDepth: number; snapshotCount: number; sourceCounts: Record<string, number>; sourceNotes: string[]; confidenceNotes: string[] };
   novelAlgorithms: {
-    coverageEntropy: { cellCount: number; entropyScore: number; dominantQuality: string };
-    coverageUncertainty: { sampleCount: number; averageUncertainty: number; highUncertaintyPct: number };
-    postureVariation: { profiles: { label: string; coveragePct: number }[]; largestDrop: number };
+    coverageEntropy: CoverageEntropySummary | null;
+    coverageUncertainty: CoverageUncertaintySummary | null;
+    postureVariation: CoveragePostureVariationSummary | null;
     blindRegions: unknown[];
-    blindSpotFingerprint: { regions?: unknown[]; fingerprint: string; regionCount?: number; signature?: string; [key: string]: unknown };
-    placementOracle: { bestScore?: number; candidateCount: number; sampleCount: number; [key: string]: unknown };
+    blindSpotFingerprint: { regions?: unknown[]; fingerprint: string; regionCount?: number; signature?: string; [key: string]: unknown } | null;
+    placementOracle: { bestScore?: number; candidateCount: number; sampleCount: number; [key: string]: unknown } | null;
     [key: string]: unknown;
   };
   assumptions: {
@@ -542,13 +542,7 @@ function truthLadder(scene: SecurityScene) {
 
 export function buildReportData(scene: SecurityScene, simulationResult: SimulationResult, options?: ReportBuildOptions): ReportData {
   const opt = options ?? {};
-  type SimExtended = SimulationResult & {
-    coverageEntropy?: { cellCount: number; entropyScore: number; dominantQuality: string };
-    coverageUncertainty?: { sampleCount: number; averageUncertainty: number; highUncertaintyPct: number };
-    coveragePostureVariation?: { profiles: { label: string; coveragePct: number }[]; largestDrop: number };
-    analysedBlindSpots?: unknown[];
-  };
-  const sim = (simulationResult ?? {}) as SimExtended;
+  const sim = (simulationResult ?? {}) as SimulationResult;
   const audience = opt.audience ?? "operator";
   const templateId = opt.templateId ?? "general-audit";
   const cr = sim.criticalZoneResults ?? [];
@@ -579,12 +573,12 @@ export function buildReportData(scene: SecurityScene, simulationResult: Simulati
   const recs = (sim.recommendations ?? []).map((r) => ({
     description: r.description ?? "No description", costCategory: r.costCategory ?? "medium", verified: r.verified === true || r.verified === false ? r.verified : false, type: r.type ?? "other", estimatedImpact: r.estimatedImpact ?? "",
   }));
-  const novelAlgorithms = {
-    coverageEntropy: sim.coverageEntropy ?? { cellCount: 1, entropyScore: 0.5, dominantQuality: "observation" },
-    coverageUncertainty: sim.coverageUncertainty ?? { sampleCount: 1, averageUncertainty: 0, highUncertaintyPct: 0 },
-    postureVariation: sim.coveragePostureVariation ?? { profiles: [{ label: "baseline", coveragePct: 68 }], largestDrop: 5 },
-    blindRegions: sim.analysedBlindSpots ?? [], blindSpotFingerprint: sim.blindSpotFingerprint ?? { regions: [], fingerprint: "unknown" },
-    placementOracle: sim.placementOracle ?? { bestScore: 0.7, candidateCount: 1, sampleCount: 1 },
+  const novelAlgorithms: ReportData["novelAlgorithms"] = {
+    coverageEntropy: sim.coverageEntropy ?? null,
+    coverageUncertainty: sim.coverageUncertainty ?? null,
+    postureVariation: sim.coveragePostureVariation ?? null,
+    blindRegions: sim.blindRegions ?? [], blindSpotFingerprint: sim.blindSpotFingerprint ?? null,
+    placementOracle: sim.placementOracle ?? null,
   };
   const vulnerableZones = (() => {
     const fz = cr.filter((z) => z.status !== "pass");
@@ -746,7 +740,7 @@ export function exportAsMarkdown(report: ReportData): string {
   lines.push("## Novel Algorithms");
   if (novel.coverageUncertainty) lines.push(`**Coverage Uncertainty:** ${novel.coverageUncertainty.sampleCount ?? 0} samples`);
   if (novel.coverageEntropy) lines.push(`**Coverage Entropy:** dominant quality ${novel.coverageEntropy.dominantQuality ?? "none"}`, `**Coverage Entropy:** dominant ${novel.coverageEntropy.dominantQuality ?? "none"} — ${novel.coverageEntropy.cellCount ?? 0} cells`);
-  if (novel.postureVariation) { lines.push("**Coverage Posture Variation:** detected"); if (novel.postureVariation.largestDrop !== undefined) lines.push(`**Coverage Posture Variation:** largest drop ${novel.postureVariation.largestDrop}%`); }
+  if (novel.postureVariation) { lines.push("**Coverage Posture Variation:** detected"); if (novel.postureVariation.largestDropDeltaPct !== undefined) lines.push(`**Coverage Posture Variation:** largest drop ${novel.postureVariation.largestDropDeltaPct}%`); }
   if (novel.blindSpotFingerprint) lines.push(`**Blind Spot Fingerprint:** Fingerprint: ${novel.blindSpotFingerprint.fingerprint ?? "unknown"} — Regions: ${(novel.blindSpotFingerprint.regions ?? []).length}`);
   if (novel.placementOracle) lines.push(`**Placement Oracle:** Best score ${novel.placementOracle.bestScore ?? 0} — ${novel.placementOracle.candidateCount ?? 0} candidates`);
   lines.push("");
@@ -794,7 +788,7 @@ ${eeh ? `<table><thead><tr><th>Event</th><th>Details</th><th>Confidence</th></tr
 <p>Recent evidence entries: ${(et.recentEntries ?? []).length} entries</p><p>Evidence links: <code>scene:${esc(sid)}:report:findings</code></p>
 <h2>Coverage Uncertainty</h2><p>${novel.coverageUncertainty?.sampleCount ?? 0} samples</p>
 <h2>Coverage Entropy</h2><p>dominant quality: ${novel.coverageEntropy?.dominantQuality ?? "none"}</p>
-<h2>Coverage Posture Variation</h2><p>largest drop: ${novel.postureVariation?.largestDrop ?? 0}</p>
+<h2>Coverage Posture Variation</h2><p>largest drop: ${novel.postureVariation?.largestDropDeltaPct ?? 0}</p>
 <h2>Blind Spot Topology</h2><p>critical: ${((novel.blindRegions as Record<string, unknown>[] | undefined) ?? []).filter((r) => (r as Record<string, unknown>).severity === "critical").length}</p>
 <h2>Blind Spot Fingerprint</h2><p>Fingerprint: ${novel.blindSpotFingerprint?.fingerprint ?? "unknown"}</p><p>Regions: ${(novel.blindSpotFingerprint?.regions ?? []).length}</p>
 <h2>Redundancy Matrix</h2><p>Vulnerable Zones: ${(redun.vulnerableZones ?? []).length}</p><p>Single-point zones: ${(redun.vulnerableZones ?? []).filter((z) => (z.coveringCameras ?? []).length <= 1).length}</p>

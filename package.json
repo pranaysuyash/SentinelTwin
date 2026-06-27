@@ -15,6 +15,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
     "clean": "turbo run clean && rm -rf node_modules",
     "support:bundle": "bash tools/generate-support-bundle.sh",
+    "trust-audit": "cd apps/studio && bun run trust-audit",
     "qa:all": "bash tools/studio-quality-gate.sh"
   },
   "devDependencies": {

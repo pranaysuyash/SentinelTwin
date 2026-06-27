@@ -49,7 +49,7 @@ describe("computeCoverageCells occlusion handling", () => {
     const blockedCell = findCellNear(cells, 4.375, 1.875);
 
     expect(blockedCell.quality).toBe("none");
-    expect(blockedCell.blockedBy).toContain("Blocker");
+    expect(blockedCell.blockedBy).toContain("obs_blocker");
   });
 
   test("allows partial visibility through high-transmission glass", () => {
@@ -57,7 +57,7 @@ describe("computeCoverageCells occlusion handling", () => {
     const throughGlassCell = findCellNear(cells, 4.375, 1.875);
 
     expect(throughGlassCell.quality).not.toBe("none");
-    expect(throughGlassCell.blockedBy).toContain("Blocker");
+    expect(throughGlassCell.blockedBy).toContain("obs_blocker");
   });
 
   test("allows partial visibility through a grill", () => {
@@ -65,7 +65,7 @@ describe("computeCoverageCells occlusion handling", () => {
     const throughGrillCell = findCellNear(cells, 4.375, 1.875);
 
     expect(throughGrillCell.quality).not.toBe("none");
-    expect(throughGrillCell.blockedBy).toContain("Blocker");
+    expect(throughGrillCell.blockedBy).toContain("obs_blocker");
   });
 
   test("returns per-camera evaluation metadata for each visible and blocked sample", () => {

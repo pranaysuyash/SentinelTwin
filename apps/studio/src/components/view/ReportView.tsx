@@ -3,6 +3,8 @@
 import { FileText, LayoutDashboard, ShieldCheck, Sparkles } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 
+import { TruthBadge } from "@/components/shared/TruthBadge";
+
 import { cn } from "@/lib/cn";
 import { ReportLiteTab } from "@/components/bottom-panel/ReportLiteTab";
 import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
@@ -14,6 +16,7 @@ import {
 import { buildRedundancyMatrixReport } from "@sentineltwin/report";
 import { useStudioStore } from "@/store/studio-store";
 import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-outcome-selectors";
+import { computeSceneInputHash } from "@sentineltwin/simulation";
 
 const REPORT_VIEW_UNCERTAINTY_SAMPLE_COUNT = 2;
 const REPORT_VIEW_SIMULATION_STALE_BUFFER_MS = 1_500;
@@ -48,14 +51,19 @@ function StatCard({
 
 function StatGroup({
   title,
+  truthLabel,
   children,
 }: {
   title: string;
+  truthLabel?: "computed" | "simulated";
   children: ReactNode;
 }) {
   return (
     <div className="rounded-2xl border border-[#1f2536] bg-[#0f141f]/70 p-2">
-      <div className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7a86a0]">{title}</div>
+      <div className="mb-2 flex items-center justify-between px-1">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7a86a0]">{title}</div>
+        {truthLabel ? <TruthBadge label={truthLabel} /> : null}
+      </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {children}
       </div>
@@ -131,8 +139,12 @@ export function ReportView() {
   const latestAiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry[0] ?? null);
   const simulationIsFresh = useMemo(() => {
     if (!result) return false;
+    if (result.sceneHash) {
+      const currentHash = computeSceneInputHash(scene);
+      return result.sceneHash.hash === currentHash.hash;
+    }
     return result.computedAt + REPORT_VIEW_SIMULATION_STALE_BUFFER_MS >= scene.updatedAt;
-  }, [result, scene.updatedAt]);
+  }, [result, scene]);
   const simulationFreshnessLabel = simulationIsFresh
     ? "Simulation fresh"
     : result
@@ -278,25 +290,25 @@ export function ReportView() {
         </div>
 
         <section className="mt-3 grid gap-3 rounded-[28px] border border-[#1f2536] bg-[#0b0f17]/92 p-3 shadow-2xl shadow-black/20 xl:grid-cols-2">
-          <StatGroup title="Operational Snapshot">
+          <StatGroup title="Operational Snapshot" truthLabel="computed">
             <StatCard label="Coverage" value={summary.coverage} tone="sky" />
             <StatCard label="Open Issues" value={String(summary.issues)} tone={summary.issues > 0 ? "rose" : "emerald"} />
             <StatCard label="Recommendations" value={String(summary.recs)} tone="amber" />
             <StatCard label="Critical Zones" value={String(summary.critical)} tone="emerald" />
           </StatGroup>
-          <StatGroup title="Model Confidence">
+          <StatGroup title="Model Confidence" truthLabel="computed">
             <StatCard label="Fragility" value={summary.fragility} tone={summary.fragility === "--" ? "emerald" : "amber"} />
             <StatCard label="Coverage Stability Index" value={summary.coverageEntropySummary} tone={summary.coverageEntropySummary === "--" ? "emerald" : "sky"} />
             <StatCard label="Uncertainty" value={summary.uncertaintySummary} tone={summary.uncertaintySummary === "--" ? "emerald" : "rose"} />
             <StatCard label="Posture" value={summary.postureSummary} tone={summary.postureSummary === "--" ? "emerald" : "sky"} />
           </StatGroup>
-          <StatGroup title="Temporal And Privacy">
+          <StatGroup title="Temporal And Privacy" truthLabel="computed">
             <StatCard label="Temporal Anomalies" value={String(summary.temporalWindows)} tone={summary.temporalWindows > 0 ? "amber" : "emerald"} />
             <StatCard label="Worst Drop" value={summary.temporalWorstDrop != null ? `${Math.abs(summary.temporalWorstDrop).toFixed(1)}%` : "--"} tone={summary.temporalWorstDrop != null ? "rose" : "emerald"} />
             <StatCard label="Privacy Zones" value={String(summary.privacyZones)} tone={summary.privacyZones > 0 ? "rose" : "emerald"} />
             <StatCard label="Privacy Issues" value={String(summary.privacyIssues)} tone={summary.privacyIssues > 0 ? "rose" : "emerald"} />
           </StatGroup>
-          <StatGroup title="Resilience And Sensors">
+          <StatGroup title="Resilience And Sensors" truthLabel="computed">
             <StatCard label="Backup Coverage" value={summary.kRobustness} tone={summary.kRobustness === "--" ? "emerald" : "sky"} />
             <StatCard label="Blind Regions" value={String(summary.blindRegions)} tone={summary.blindRegions > 0 ? "amber" : "emerald"} />
             <StatCard label="Sensors" value={String(summary.sensorCount)} tone={summary.sensorCount > 0 ? "amber" : "emerald"} />

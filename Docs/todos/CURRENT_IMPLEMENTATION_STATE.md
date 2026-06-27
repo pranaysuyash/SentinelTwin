@@ -1,6 +1,26 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-06-22 (session 39+40+41+42: brainstorm convergent features — camera model library, posture score + store + UI, adversary shadow, FORECAST, temporal-crowd integration, analytics dedup, fix ranker audit, Thread 147 audit, plain-language report, coverage provenance)
+**Updated:** 2026-07-07 (scene appearance customization layer — D-322; true-2D plan + 2.5D canvas modes — D-323)
+
+## True-2D architectural plan + 2.5D canvas modes (2026-07-07, D-323)
+
+- `CanvasMode` is now `orbit_3d | topdown_2d | plan_2d`; the view toggle reads 3D / 2.5D / 2D (the old "2D" orthographic mode is honestly labeled 2.5D) ✅
+- New `PlanView2D` workspace surface renders a true architectural plan from the same `SecurityScene` through the canonical map subsystem (`MapCanvas`/`MapLayers` with a new `architectural` pass): real wall thickness with poché core, door swing arcs, wall-aligned glazing, FOV wedges, zone fills, coverage heatmap ✅
+- Store: `mapState.planView` viewport (zoom/pan/fit generalized); plan honors the shared Reset canvas view control; selection/hover route through the canonical store so all inspectors (incl. D-322 appearance) work in 2D ✅
+- Geometry helpers `nearestWallAngle` / `doorSwingPath` / `wallAlignedSegment` in `map-geometry.ts` with unit tests (`plan-geometry.test.ts`) ✅
+- Verified live: mode toggle, plan rendering with retail demo, wall selection → Wall inspector; full suite 1237 pass / typecheck clean ✅
+- Not yet in plan mode: placement/drawing tools (remain 3D/2.5D); context menu in plan view — natural next step via `MapProjection.svgToScene`.
+
+## Scene appearance customization (2026-07-07, D-322)
+
+- Optional `sceneAppearance` block on `SecurityScene` (`@sentineltwin/core`): per-mode lighting overrides (day/dusk/night), fog, IBL intensity + exposure + shadows, and default floor/wall surface materials. Per-node cosmetic `appearance` override added to walls, doors, windows, and obstructions. Strictly rendering-only: `cloneSecuritySceneSimulation` strips it and appearance edits never mark the simulation dirty (`commitSceneChange` gained a `markSimulationDirty: false` option) ✅
+- `lib/scene-appearance.ts`: canonical environment themes (moved out of SharedScene), Pascal-style material preset catalog (plaster/paint/brick/concrete/wood/tile/marble/carpet/metal/fabric/custom), `applyNodeAppearance` merge (built-in → scene surface default → node override), `resolveSceneLighting` used by all canvases ✅
+- `lib/procedural-textures.ts`: canvas-generated albedo+normal texture pairs for 7 styles with style/repeat-keyed caching; original floor tile + wall plaster generators moved here ✅
+- Rendering wired in `SharedScene.tsx` (lighting, floor, walls, doors, windows, obstructions) and all canvases (`WorkspaceCanvas`, `CompareView`, `CameraWallView`, `PathReplayView`, `SceneFeedCanvas`); selection/locked/glass state styling always wins over cosmetic overrides ✅
+- UI: `SceneAppearancePanel` replaces the inspector's empty no-selection state (lighting sliders per active env mode, fog, IBL/exposure/shadows, floor/wall material pickers with reset affordances); `NodeAppearanceSection` (+ new `ColorInput` control) added to Obstruction/Wall/DoorWindow inspectors; store actions `updateSceneAppearance` / `updateNodeAppearance` ✅
+- Tests: 20 unit tests in `lib/__tests__/scene-appearance.test.ts`, 4 schema round-trip/strip tests in `schema/__tests__/security-scene.test.ts`; verified live in the browser (brick walls + wood floor + lighting slider, sim stays `Up to date`) ✅
+- Known pre-existing unrelated failure: `agents/__tests__/provider-selection.test.ts` "summarizes estimated cost and latency policy per stage" fails when API keys are present in the environment (asserts `blocked` without keys) — not touched by this work.
+- Follow-up completed same day: true-2D plan + 2.5D modes (see D-323 section above).
 
 ## Brainstorm-driven features (2026-06-21)
 
@@ -460,9 +480,12 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Canvas reset now re-centers the 3D workspace without forcing a full canvas remount, so view resets are cheaper and less disruptive ✅
 - Camera placement presets are now reactive and store-backed instead of hidden module state, so the camera tool picker reflects the current preset and placement reads one canonical source ✅
 - The scene workbench now supports a canonical duplicate-node action with keyboard shortcut support, so selected cameras/obstructions/walls/zones/paths can be copied and reselected instead of rebuilt manually ✅
+- Camera selection now participates in the canonical transform contract: arrow keys nudge the selected camera/object, `PageUp`/`PageDown` adjust vertical position, and `Q`/`E` rotate through the same store-backed contextual action model that powers the right-click menu and drag handles ✅
+- The shared transform contract now also surfaces wall height controls in the right-click menu and keeps the same movement/rotate affordances visible for lights and other editables, so vertical movement is discoverable instead of being camera-only UI knowledge ✅
 - The scene workbench now has shared grouped selection state, shift/meta multi-select, and drag-select bounds so the canvas can capture more than one object without losing the primary inspector selection ✅
 - The scene workbench now supports grouped move/delete/duplicate operations from the shared selection model, so multi-select behaves like a real edit set instead of just a visual highlight ✅
 - The workbench transform layer now exposes obstruction width/depth resize handles and camera pitch affordances in addition to move/rotate/height controls ✅
+- The camera inspector now includes an explicit move/rotate help card that points operators at the on-canvas handles, keyboard shortcuts, and right-click menu, so the transform affordances are visible instead of being discoverable only from source or memory ✅
 - Path editing now includes segment-insert handles, so routes can be reshaped from the middle instead of only dragging existing waypoints ✅
 - The inspector now surfaces grouped selection actions plus a waypoint list for paths, so multi-select and route editing are visible in the right dock instead of being canvas-only concepts ✅
 - View mode switching is implemented for Map / Camera View / Camera Wall / Path Replay ✅

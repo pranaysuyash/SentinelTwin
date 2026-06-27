@@ -340,9 +340,9 @@ function MiniMapCompact({
   hoveredNodeId: string | null;
   activePathId: string | null;
   mapState: { zoom: number; pan: [number, number] };
-  onSetZoom: (target: "minimap" | "pathMap", zoom: number) => void;
-  onSetPan: (target: "minimap" | "pathMap", pan: [number, number]) => void;
-  onFit: (target: "minimap" | "pathMap") => void;
+  onSetZoom: (target: "minimap" | "pathMap" | "planView", zoom: number) => void;
+  onSetPan: (target: "minimap" | "pathMap" | "planView", pan: [number, number]) => void;
+  onFit: (target: "minimap" | "pathMap" | "planView") => void;
   onNodeSelect: (id: string | null) => void;
   onNodeHover: (id: string | null) => void;
   onMapClick: (point: [number, number]) => void;
@@ -491,9 +491,9 @@ function MiniMapExpanded({
   hoveredNodeId: string | null;
   activePathId: string | null;
   mapState: { zoom: number; pan: [number, number] };
-  onSetZoom: (target: "minimap" | "pathMap", zoom: number) => void;
-  onSetPan: (target: "minimap" | "pathMap", pan: [number, number]) => void;
-  onFit: (target: "minimap" | "pathMap") => void;
+  onSetZoom: (target: "minimap" | "pathMap" | "planView", zoom: number) => void;
+  onSetPan: (target: "minimap" | "pathMap" | "planView", pan: [number, number]) => void;
+  onFit: (target: "minimap" | "pathMap" | "planView") => void;
   onNodeSelect: (id: string | null) => void;
   onNodeHover: (id: string | null) => void;
   onMapClick: (point: [number, number]) => void;

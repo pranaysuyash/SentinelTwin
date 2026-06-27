@@ -525,17 +525,17 @@ export function buildContextualMenuModel(
 
   const moveGroup: ContextAction[] = [];
   moveGroup.push(
-    { id: "move_forward", label: "Front", hint: "W", enabled: true },
-    { id: "move_back", label: "Back", hint: "S", enabled: true },
-    { id: "move_left", label: "Left", hint: "A", enabled: true },
-    { id: "move_right", label: "Right", hint: "D", enabled: true },
+    { id: "move_forward", label: "Front", hint: "↑", enabled: true },
+    { id: "move_back", label: "Back", hint: "↓", enabled: true },
+    { id: "move_left", label: "Left", hint: "←", enabled: true },
+    { id: "move_right", label: "Right", hint: "→", enabled: true },
   );
 
   const verticalGroup: ContextAction[] = [];
-  if (node.nodeType === "camera" || node.nodeType === "security_light" || node.nodeType === "obstruction" || node.nodeType === "door" || node.nodeType === "window" || node.nodeType === "entry_point") {
+  if (node.nodeType === "camera" || node.nodeType === "security_light" || node.nodeType === "obstruction" || node.nodeType === "door" || node.nodeType === "window" || node.nodeType === "entry_point" || node.nodeType === "wall") {
     verticalGroup.push(
-      { id: "move_up", label: "Up", hint: "R", enabled: true },
-      { id: "move_down", label: "Down", hint: "F", enabled: true },
+      { id: "move_up", label: "Up", hint: "PgUp", enabled: true },
+      { id: "move_down", label: "Down", hint: "PgDn", enabled: true },
     );
   }
 

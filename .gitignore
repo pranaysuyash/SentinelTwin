@@ -37,6 +37,10 @@ tmp/
 .playwright-browsers/
 .playwright-mcp/
 *.zip
+curl-res*.json
+health-err*.txt
+lsof-*.txt
+proc-*.txt
 
 # Generated QA artifact outputs
 outputs/webwright_view_settings_*/

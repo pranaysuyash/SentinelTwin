@@ -242,4 +242,190 @@ describe("camera live connection probe", () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  test("disconnect action produces a disconnected record with idle session state", async () => {
+    const probe = await probeCameraLiveConnection({
+      source: "camera-inspector",
+      action: "disconnect",
+      protocol: "onvif",
+      endpointUrl: null,
+      liveFeedUrl: null,
+      cameraId: "cam-disconnect",
+      cameraName: "Disconnect Cam",
+      sceneId: "scene-disconnect",
+      sceneName: "Disconnect Scene",
+      submittedAt: 1710000020000,
+      liveSessionId: "live_session_disconnect_1",
+      liveSessionStartedAt: 1710000010000,
+      liveSessionConfirmedAt: 1710000015000,
+      transportSessionId: "transport_session_disconnect_1",
+      raw: "",
+    });
+
+    expect(probe.ok).toBe(true);
+    expect(probe.action).toBe("disconnect");
+    expect(probe.record.liveConnectionStatus).toBe("disconnected");
+    expect(probe.record.liveSessionState).toBe("idle");
+    expect(probe.record.transportSessionState).toBe("closing");
+    expect(probe.record.authState).toBe("unauthenticated");
+    expect(probe.record.liveSessionId).toBe("live_session_disconnect_1");
+    expect(probe.record.transportSessionId).toBe("transport_session_disconnect_1");
+    expect(probe.record.liveSessionExpiresAt).toBeNull();
+    expect(probe.record.lastHeartbeatAt).toBeNull();
+    expect(probe.record.probeCount).toBe(0);
+  });
+
+  test("heartbeat action preserves active session fields and increments probe count", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          cameraId: "cam-heartbeat",
+          cameraName: "Heartbeat Cam",
+          liveFeedUrl: "rtsp://camera.example.com/live",
+          liveFeedLabel: "Heartbeat Feed",
+          liveConnectionMode: "onvif",
+          liveConnectionStatus: "connected",
+          liveSessionId: "live_session_heartbeat_1",
+          liveSessionState: "connected",
+          liveSessionStartedAt: 1710000010000,
+          liveSessionConfirmedAt: 1710000015000,
+          liveSessionExpiresAt: 1710000035000,
+          transportSessionId: "transport_session_heartbeat_1",
+          transportSessionState: "active",
+          lastHeartbeatAt: 1710000025000,
+          probeCount: 5,
+          protocolProfile: "onvif_device",
+          authMode: "onvif_digest",
+          authState: "authenticated",
+          authRealm: "camera-gateway",
+          authSessionId: "auth_session_heartbeat_1",
+          authSessionExpiresAt: 1710000035000,
+          transportResponseStatus: 200,
+          transportResponseStatusText: "OK",
+          authChallengeHeader: null,
+          authChallengeScheme: null,
+          authChallengeRealm: null,
+          eventSubscriptionUri: "http://camera.example.com/onvif/events",
+          eventSubscriptionReference: "http://camera.example.com/onvif/events/subscription/1",
+          eventSubscriptionExpiresAt: 1710000040000,
+          notes: "Heartbeat accepted",
+          timestamp: 1710000025000,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )) as unknown as typeof fetch;
+
+    try {
+      const probe = await probeCameraLiveConnection({
+        source: "camera-inspector",
+        action: "heartbeat",
+        protocol: "onvif",
+        endpointUrl: "https://camera.example.com/onvif",
+        liveFeedUrl: "rtsp://camera.example.com/live",
+        feedLabel: "Heartbeat Feed",
+        cameraId: "cam-heartbeat",
+        cameraName: "Heartbeat Cam",
+        sceneId: "scene-heartbeat",
+        sceneName: "Heartbeat Scene",
+        submittedAt: 1710000025000,
+        liveSessionId: "live_session_heartbeat_1",
+        liveSessionStartedAt: 1710000010000,
+        liveSessionConfirmedAt: 1710000015000,
+        transportSessionId: "transport_session_heartbeat_1",
+        authMode: "onvif_digest",
+        authState: "authenticated",
+        authSessionId: "auth_session_heartbeat_1",
+        authSessionExpiresAt: 1710000035000,
+        raw: "",
+      });
+
+      expect(probe.ok).toBe(true);
+      expect(probe.action).toBe("heartbeat");
+      expect(probe.record.liveConnectionStatus).toBe("connected");
+      expect(probe.record.liveSessionState).toBe("connected");
+      expect(probe.record.transportSessionState).toBe("active");
+      expect(probe.record.liveSessionId).toBe("live_session_heartbeat_1");
+      expect(probe.record.transportSessionId).toBe("transport_session_heartbeat_1");
+      expect(probe.record.liveFeedUrl).toBe("rtsp://camera.example.com/live");
+      expect(probe.record.liveFeedLabel).toBe("Heartbeat Feed");
+      expect(probe.record.authMode).toBe("onvif_digest");
+      expect(probe.record.authState).toBe("authenticated");
+      expect(probe.record.authSessionId).toBe("auth_session_heartbeat_1");
+      expect(probe.record.probeCount).toBe(1);
+      expect(probe.record.lastHeartbeatAt).not.toBeNull();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("refresh action reuses provided session identifiers and confirms connection", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          cameraId: "cam-refresh",
+          cameraName: "Refresh Cam",
+          liveFeedUrl: "rtsp://refresh.example.com/live",
+          liveFeedLabel: "Refresh Feed",
+          liveConnectionMode: "rtsp",
+          liveConnectionStatus: "connected",
+          liveSessionId: "live_session_refresh_1",
+          liveSessionState: "connected",
+          liveSessionStartedAt: 1710000010000,
+          liveSessionConfirmedAt: 1710000015000,
+          liveSessionExpiresAt: 1710000035000,
+          transportSessionId: "transport_session_refresh_1",
+          transportSessionState: "active",
+          lastHeartbeatAt: 1710000030000,
+          probeCount: 3,
+          protocolProfile: "rtsp_session",
+          authMode: "digest",
+          authState: "authenticated",
+          authRealm: "camera-gateway",
+          authSessionId: "auth_session_refresh_1",
+          authSessionExpiresAt: 1710000035000,
+          transportResponseStatus: 200,
+          transportResponseStatusText: "OK",
+          authChallengeHeader: null,
+          authChallengeScheme: null,
+          authChallengeRealm: null,
+          eventSubscriptionUri: null,
+          eventSubscriptionReference: null,
+          eventSubscriptionExpiresAt: null,
+          notes: "Refreshed",
+          timestamp: 1710000030000,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )) as unknown as typeof fetch;
+
+    try {
+      const probe = await probeCameraLiveConnection({
+        source: "camera-inspector",
+        action: "refresh",
+        protocol: "rtsp",
+        endpointUrl: "https://refresh.example.com/probe",
+        liveFeedUrl: null,
+        cameraId: "cam-refresh",
+        cameraName: "Refresh Cam",
+        sceneId: "scene-refresh",
+        sceneName: "Refresh Scene",
+        submittedAt: 1710000030000,
+        liveSessionId: "live_session_refresh_1",
+        liveSessionStartedAt: 1710000010000,
+        transportSessionId: "transport_session_refresh_1",
+        raw: "",
+      });
+
+      expect(probe.ok).toBe(true);
+      expect(probe.action).toBe("refresh");
+      expect(probe.record.liveConnectionStatus).toBe("connected");
+      expect(probe.record.liveConnectionMode).toBe("rtsp");
+      expect(probe.record.liveSessionId).toBe("live_session_refresh_1");
+      expect(probe.record.transportSessionId).toBe("transport_session_refresh_1");
+      expect(probe.record.liveFeedUrl).toBe("rtsp://refresh.example.com/live");
+      expect(probe.record.protocolProfile).toBe("rtsp_session");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

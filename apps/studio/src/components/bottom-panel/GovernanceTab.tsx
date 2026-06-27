@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/shared/Badge";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { cn } from "@/lib/cn";
 import {
   summarizeWorkspaceGovernance,
@@ -763,8 +764,11 @@ export function GovernanceTab() {
               <Badge variant={statusTone(workspaceGovernance.sceneStatus)}>{summary.sceneStatusLabel}</Badge>
             </div>
           </div>
-          <div className="mt-2 text-[9px] leading-4 text-[#6f7c96]">
-            SentinelTwin treats publish as an auditable control action. If approval is required, publish will convert into a review request until a reviewer or admin approves it.
+          <div className="mt-2 flex items-center justify-between">
+            <div className="text-[9px] leading-4 text-[#6f7c96]">
+              SentinelTwin treats publish as an auditable control action. If approval is required, publish will convert into a review request until a reviewer or admin approves it.
+            </div>
+            <TruthBadge label="configured" />
           </div>
         </Section>
 

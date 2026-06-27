@@ -25,7 +25,8 @@ describe("view settings entrypoints", () => {
     expect(viewControlsSource).toContain('aria-label="Open View Settings"');
     expect(viewControlsSource).toContain('aria-label="Reset canvas view"');
     expect(viewControlsSource).toContain('aria-label="Switch to 3D orbit"');
-    expect(viewControlsSource).toContain('aria-label="Switch to 2D top-down"');
+    expect(viewControlsSource).toContain('aria-label="Switch to 2.5D top-down"');
+    expect(viewControlsSource).toContain('aria-label="Switch to 2D plan"');
     // WorkspaceCanvas mounts ViewControls and the coverage legend
     expect(canvasSource).toContain("ViewControls");
     expect(canvasSource).toContain("visibleComponents.coverage_legend");

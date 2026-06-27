@@ -200,3 +200,43 @@ phone-only fallback defeats that use case. The V3 type scale is tablet-aware
 legible scale without per-component media queries. The ScanSiteWizard (I2)
 layout is authored against the tablet-aware scale.
 **Implemented in:** V3 (globals.css tablet media query + TYPE_SCALE).
+
+### OQ-3D-01 | 3D skill whitelist
+Should SentinelTwin maintain a project-local 3D skill whitelist (`Docs/quality/SKILL_WHITELIST.md`) so parallel agents know which 3D skills are in-bounds for security digital twin work versus game/VFX work? Without it, agents may default to flashy VFX skills that conflict with deterministic, professional coverage visualization.
+
+### OQ-3D-02 | Camera Wall CI performance budget
+Should the Camera Wall performance budget (`apps/studio/src/lib/camera-wall-performance-budget.ts`) be enforced by an automated CI test, or is manual QA sufficient until v1? A CI test would need a headless WebGL environment and stable baseline fixtures.
+
+### OQ-3D-03 RESOLVED | Adaptive DPR for single-canvas modes
+**Status:** Resolved by D-321.
+
+**Decision:** Single-canvas modes (`CameraViewMode` and `PathReplayView`) use the same `PerformanceMonitor` + `AdaptiveDpr` wrapper pattern as `CameraWallView`, but with their own dedicated budget constants (`SINGLE_*`). The single-canvas DPR range (`[0.85, 1.5]`) is higher than the wall range to preserve full-screen crispness, while the lower bound still protects lower-end GPUs when the heatmap/path/actor are all visible.
+
+**Implementation:** `apps/studio/src/components/view/CameraViewMode.tsx` and `apps/studio/src/components/view/PathReplayView.tsx` now wrap their `<Canvas>` children with `<PerformanceMonitor>` + `<AdaptiveDpr pixelated />`. Budget helpers live in `apps/studio/src/lib/adaptive-dpr-budget.ts`.
+
+**Remaining work:** Add a headless Playwright/CI test that asserts the adaptive DPR path stays within budget on representative scenes (see OQ-3D-02).
+
+### OQ-3D-04 RESOLVED | Shared IBL / Environment source across all canvases
+**Status:** Resolved by D-322 (2026-07-07).
+
+**Decision:** One shared source, customized per scene rather than per mode. All canvases use the same `RoomEnvironment` IBL (`SceneEnvironmentSetup`) and the same theme resolution path (`resolveSceneLighting` in `apps/studio/src/lib/scene-appearance.ts`), which merges the built-in day/dusk/night themes with the scene-persisted `scene.sceneAppearance` overrides. Per-mode divergence is expressed only through quality tiers and the caller's fog-distance defaults, not separate lighting systems.
+
+### OQ-3D-05 RESOLVED | Canonical surface material library
+**Status:** Resolved by D-322 (2026-07-07).
+
+**Decision:** Two layers. (1) `apps/studio/src/lib/pbr-materials.ts` remains the canonical built-in PBR parameter library per surface kind. (2) User-facing customization goes through the appearance preset catalog (`APPEARANCE_PRESETS` in `apps/studio/src/lib/scene-appearance.ts`: plaster, paint, brick, concrete, wood, tile, marble, carpet, metal, fabric, custom) resolved as preset + explicit overrides — the pattern adopted from pascalorg/editor's material schema. Procedural textures for the presets live in `apps/studio/src/lib/procedural-textures.ts`.
+
+### OQ-3D-06 | Camera-feed post-processing policy
+Should the synthetic camera-feed post-processing (film grain, vignette, scanlines, chromatic aberration) be quality-tier gated, or always-on for all camera views? The effects improve realism but can obscure fine detail and may be inappropriate for analytical verification work.
+
+### OQ-3D-07 | Coverage-engine CPU→GPU threshold
+At what scene size should the deterministic coverage engine move from CPU+BVH raycasting to WebGPU compute shaders? Current CPU performance is ~10.8 ms for 40×28 grid × 2 cameras. We need a concrete threshold (grid cells, camera count, recomputation time) plus an exactness test harness before committing to GPU compute.
+
+### OQ-3D-08 | WASM/Rust geometry core
+Should `@sentineltwin/simulation` port its pure-geometry BVH build and batched raycast core to Rust/WASM for deterministic performance? The package is already zero-React and the BVH/raycast math is self-contained. A WASM port would be worker-friendly and could become a long-term performance foundation.
+
+### OQ-3D-09 | SSAO for depth perception
+Should SentinelTwin add screen-space ambient occlusion (SSAO) to improve depth perception, or does it conflict with the analytical/clean look of the security map and risk darkening coverage heatmap readability? If added, it must be quality-tier gated and off by default.
+
+### OQ-3D-10 | Visual realism regression strategy
+How should rendering realism improvements be regression-tested without visual drift? Options: a `Docs/quality/VISUAL_SCORECARD.md`, Playwright canvas pixel snapshots, or deterministic shader-output unit tests. We need a strategy before adding PBR/IBL/post-processing so changes can be defended.

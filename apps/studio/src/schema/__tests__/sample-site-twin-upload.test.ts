@@ -33,7 +33,7 @@ describe("sample Site Twin upload", () => {
 
     expect(session.draft?.source).toBe("json");
     expect(session.stage).toBe("review");
-    expect(session.draft?.entityCounts.cameras).toBe(1);
+    expect(session.draft?.entityCounts.cameras).toBe(2);
     expect(session.draft?.entityCounts.criticalZones).toBe(1);
     expect(session.draft?.entityCounts.entryPoints).toBe(1);
 

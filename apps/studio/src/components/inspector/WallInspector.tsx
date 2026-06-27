@@ -7,7 +7,9 @@ import {
   SelectInput,
   TextInput,
 } from "@/components/inspector/inspector-controls";
+import { NodeAppearanceSection } from "@/components/inspector/NodeAppearanceSection";
 import { SectionCard } from "@/components/shared/SectionCard";
+import { WALL_PRESET_CHOICES } from "@/lib/scene-appearance";
 import type { WallNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -61,6 +63,13 @@ export function WallInspector() {
           <NumberInput label="Thickness" value={wall.thicknessM} min={0.05} step={0.01} unit="m" onChange={(value) => updateNode(wall.id, { thicknessM: value })} />
           <NumberInput label="Light through (%)" value={wall.visionTransmission} min={0} max={1} step={0.05} onChange={(value) => updateNode(wall.id, { visionTransmission: value })} />
         </SectionCard>
+
+        <NodeAppearanceSection
+          appearance={wall.appearance}
+          presetChoices={WALL_PRESET_CHOICES}
+          showTextureScale
+          onChange={(next) => useStudioStore.getState().updateNodeAppearance(wall.id, next)}
+        />
       </div>
 
       <div className="border-t border-[#1e2130] px-3 py-3">

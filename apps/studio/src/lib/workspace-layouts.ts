@@ -49,6 +49,7 @@ export const ANALYSIS_MODULE_IDS: BottomTab[] = [
 export type WorkspaceLayoutSnapshot = {
   viewMode: ViewMode;
   workspacePreset: WorkspacePreset;
+  bottomTab: BottomTab | null;
   canvasMode: CanvasMode;
   leftDockCollapsed: boolean;
   rightDockCollapsed: boolean;
@@ -118,7 +119,7 @@ function isViewMode(value: unknown): value is ViewMode {
 }
 
 function isCanvasMode(value: unknown): value is CanvasMode {
-  return value === "orbit_3d" || value === "topdown_2d";
+  return value === "orbit_3d" || value === "topdown_2d" || value === "plan_2d";
 }
 
 function isBottomTab(value: unknown): value is BottomTab {
@@ -435,6 +436,7 @@ export function getPresetLayoutSnapshot(preset: WorkspacePreset, layerVisibility
   return {
     viewMode: PRESET_VIEW_MODES[preset],
     workspacePreset: preset,
+    bottomTab: null,
     canvasMode: PRESET_CANVAS_MODES[preset],
     // Default to minimized docks; users expand intentionally as needed.
     leftDockCollapsed: true,

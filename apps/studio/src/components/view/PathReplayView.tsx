@@ -1,6 +1,6 @@
 "use client";
 
-import { Html, OrbitControls } from "@react-three/drei";
+import { Html, OrbitControls, PerformanceMonitor, AdaptiveDpr } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { motion } from "framer-motion";
 import { ListRestart, Pause, Play, SkipBack, SkipForward } from "lucide-react";
@@ -23,6 +23,8 @@ import {
   CoverageHeatmapInstanced,
   CoverageSegmentPath,
   PathActor,
+  SceneEnvironmentSetup,
+  SceneShadowCaster,
 } from "@/components/workspace/SharedScene";
 import { pathLength } from "@/components/workspace/editing/editor-geometry";
 import { samplePathQuality } from "@/components/map/path-quality";
@@ -36,6 +38,14 @@ import { buildCoverageGrid } from "@sentineltwin/core";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { SceneHtml } from "@/components/shared/SceneHtml";
+import {
+  SINGLE_PERF_MONITOR_ITERATIONS,
+  SINGLE_PERF_MONITOR_MS,
+  SINGLE_PERF_DPR_STEP,
+  SINGLE_PERF_FLIPFLOPS,
+  singlePerformanceBounds,
+  computeSingleCanvasDpr,
+} from "@/lib/adaptive-dpr-budget";
 import {
   buildReplayStateByCameraAtTime,
   clampPathDuration,
@@ -65,8 +75,8 @@ function SceneView() {
   return (
     <>
       <SceneLighting theme={PATH_REPLAY_THEME} />
-      <SceneFloor width={width} depth={depth} />
-      <SceneWalls walls={scene.walls} />
+      <SceneFloor width={width} depth={depth} appearance={scene.sceneAppearance?.surfaces?.floor} />
+      <SceneWalls walls={scene.walls} defaultAppearance={scene.sceneAppearance?.surfaces?.wall} />
       <SceneDoors doors={scene.doors} />
       <SceneWindows windows={scene.windows} />
       <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
@@ -992,6 +1002,7 @@ export function PathReplayView() {
   const setPathReplaySpeed = useStudioStore((s) => s.setPathReplaySpeed);
   const pathReplaySpeed = useStudioStore((s) => s.pathReplay.speed);
   const followActor = useStudioStore((s) => s.pathReplay.followActor);
+  const compactViewport = useStudioStore((s) => s.compactViewport);
   const coverageFailurePath = result?.adversarialPath;
   const activePath = useMemo(() => {
     if (!scene.paths.length || !activePathId) return null;
@@ -1234,52 +1245,52 @@ export function PathReplayView() {
     controlsRef.current.update?.();
   }, [actorPosition, followActor]);
 
-  // Reset
-  const handleReset = useCallback(() => {
-    setPlaying(false);
-    setCurrentTime(0);
-    setPathReplayPlaying(false);
-    setPathReplayProgress(0);
-  }, [setPathReplayPlaying, setPathReplayProgress]);
+// Reset
+   const handleReset = useCallback(() => {
+     setPlaying(false);
+     setCurrentTime(0);
+     setPathReplayPlaying(false);
+     setPathReplayProgress(0);
+   }, [setPlaying, setCurrentTime, setPathReplayPlaying, setPathReplayProgress]);
 
-  // Play/pause toggle
-  const handlePlayPause = useCallback(() => {
-    if (safeCurrentTime >= totalDuration && totalDuration > 0) {
-      // At end, reset first
-      setCurrentTime(0);
-      setPathReplayProgress(clampReplayProgress(0));
-    }
-    setPlaying((prev) => {
-      const next = !prev;
-      setPathReplayPlaying(next);
-      if (!next) {
-        setPathReplayProgress(clampReplayProgress(totalDuration > 0 ? safeCurrentTime / totalDuration : 0));
-      }
-      return next;
-    });
-  }, [safeCurrentTime, setPathReplayPlaying, setPathReplayProgress, totalDuration]);
+// Play/pause toggle
+   const handlePlayPause = useCallback(() => {
+     if (safeCurrentTime >= totalDuration && totalDuration > 0) {
+       // At end, reset first
+       setCurrentTime(0);
+       setPathReplayProgress(clampReplayProgress(0));
+     }
+     setPlaying((prev) => {
+       const next = !prev;
+       setPathReplayPlaying(next);
+       if (!next) {
+         setPathReplayProgress(clampReplayProgress(totalDuration > 0 ? safeCurrentTime / totalDuration : 0));
+       }
+       return next;
+     });
+   }, [safeCurrentTime, setPlaying, setCurrentTime, setPathReplayPlaying, setPathReplayProgress, totalDuration]);
 
-  // Seek
-  const handleSeek = useCallback((t: number) => {
-    const clamped = clampPathDuration(Math.min(t, totalDuration));
-    setCurrentTime(clamped);
-    setPathReplayProgress(clampReplayProgress(totalDuration > 0 ? clamped / totalDuration : 0));
-    setPlaying((prev) => {
-      // Re-anchor RAF if currently playing (seek-while-playing edge case)
-      if (prev) {
-        playbackAnchorRef.current = { startWallTime: performance.now(), startPlaybackTime: clamped };
-      }
-      return prev; // don't change playing state
-    });
-  }, [setPathReplayProgress, totalDuration]);
+// Seek
+   const handleSeek = useCallback((t: number) => {
+     const clamped = clampPathDuration(Math.min(t, totalDuration));
+     setCurrentTime(clamped);
+     setPathReplayProgress(clampReplayProgress(totalDuration > 0 ? clamped / totalDuration : 0));
+     setPlaying((prev) => {
+       // Re-anchor RAF if currently playing (seek-while-playing edge case)
+       if (prev) {
+         playbackAnchorRef.current = { startWallTime: performance.now(), startPlaybackTime: clamped };
+       }
+       return prev; // don't change playing state
+     });
+   }, [setCurrentTime, setPathReplayProgress, setPlaying, totalDuration]);
 
-  const handlePathChange = useCallback((nextPathId: string | null) => {
-    setActivePathId(nextPathId);
-    setPlaying(false);
-    setCurrentTime(0);
-    setPathReplayPlaying(false);
-    setPathReplayProgress(0);
-  }, [setActivePathId, setPathReplayPlaying, setPathReplayProgress]);
+const handlePathChange = useCallback((nextPathId: string | null) => {
+     setActivePathId(nextPathId);
+     setPlaying(false);
+     setCurrentTime(0);
+     setPathReplayPlaying(false);
+     setPathReplayProgress(0);
+   }, [setActivePathId, setPlaying, setCurrentTime, setPathReplayPlaying, setPathReplayProgress]);
 
   const handleEditPath = useCallback(() => {
     if (!activePath) return;
@@ -1291,10 +1302,10 @@ export function PathReplayView() {
     setActiveTool("path");
   }, [activePath, setActiveTool, setBottomTab, setPathReplayPlaying, setPathReplayProgress, setViewMode, setWorkspacePreset]);
 
-  const handleSpeedChange = useCallback((nextSpeed: number) => {
-    setSpeed(nextSpeed);
-    setPathReplaySpeed(nextSpeed);
-  }, [setPathReplaySpeed]);
+const handleSpeedChange = useCallback((nextSpeed: number) => {
+     setSpeed(nextSpeed);
+     setPathReplaySpeed(nextSpeed);
+   }, [setSpeed, setPathReplaySpeed]);
 
   if (waypoints.length < 2) {
     return <EmptyReplayState showActivePathHint={Boolean(scene.paths.length)} />;
@@ -1303,30 +1314,34 @@ export function PathReplayView() {
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07090d]" style={{ paddingTop: "var(--st-full-canvas-safe-top, 4.25rem)" }}>
       {immersiveMode ? (
-        <div className="absolute left-3 top-3 z-20 max-w-[420px] rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
+        <div className={`absolute left-3 top-3 z-20 max-w-[420px] rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2 shadow-[0_12px_34px_rgba(0,0,0,0.35)]${compactViewport ? " max-w-[180px]" : ""}`}>
           <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Replay Focus Mode</div>
           <div className="mt-1 text-[13px] font-medium text-white">{selectedPathLabel}</div>
-          <div className="mt-1 text-[9px] leading-4 text-[#9fb0c9]">
-            Path replay, camera responsibility, and visible-now state are still active. Press F to exit focus.
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] text-[#8ea5cc]">
-            <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5">Time {safeCurrentTime.toFixed(1)}s</span>
-            <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5">Visible {activePathResult ? `${replayCameraStateSummary.visibleNow.length}/${scene.cameras.length}` : "--"}</span>
-            <button
-              type="button"
-              onClick={handlePlayPause}
-              className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-200 transition-colors hover:bg-emerald-500/20"
-            >
-              {playing ? "Pause" : "Play"}
-            </button>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5 font-medium text-[#c7d0e4] transition-colors hover:text-white"
-            >
-              Reset
-            </button>
-          </div>
+          {!compactViewport && (
+            <div className="mt-1 text-[9px] leading-4 text-[#9fb0c9]">
+              Path replay, camera responsibility, and visible-now state are still active. Press F to exit focus.
+            </div>
+          )}
+          {!compactViewport && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] text-[#8ea5cc]">
+              <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5">Time {safeCurrentTime.toFixed(1)}s</span>
+              <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5">Visible {activePathResult ? `${replayCameraStateSummary.visibleNow.length}/${scene.cameras.length}` : "--"}</span>
+              <button
+                type="button"
+                onClick={handlePlayPause}
+                className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-200 transition-colors hover:bg-emerald-500/20"
+              >
+                {playing ? "Pause" : "Play"}
+              </button>
+              <button
+                type="button"
+                onClick={handleReset}
+                className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5 font-medium text-[#c7d0e4] transition-colors hover:text-white"
+              >
+                Reset
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex items-center justify-between gap-4 border-b border-[#1f2536] bg-[#0b0f17] px-4 py-3">
@@ -1427,44 +1442,59 @@ export function PathReplayView() {
 
       <Canvas
         camera={{ position: [12.8, 7.6, 11.6], fov: 31, near: 0.1, far: 200 }}
-        shadows="percentage"
-        gl={{ antialias: true }}
+        shadows="soft"
+        dpr={computeSingleCanvasDpr(1)}
+        gl={{ antialias: true, powerPreference: "high-performance" }}
         className="flex-1 min-h-0"
         style={{ background: "#0a0d13" }}
       >
-        <Suspense fallback={<CanvasLoadingOverlay label="Loading replay scene" />}>
-          <SceneView />
-        </Suspense>
-
-        <CoverageTileFloor cells={result?.coverageCells ?? []} />
-
-        {/* Coverage-failure path line — colored segments by DORI quality */}
-        {!activePath && coverageFailurePath && (
-          <CoverageSegmentPath waypoints={coverageFailurePath.waypoints} />
-        )}
-        <PathMarkers waypoints={waypoints} />
-
-        {/* Actor */}
-        <PathActor waypoints={waypoints} currentIndex={currentIndex} progress={progress} />
-
-        {/* Replay proof overlays */}
-        <ReplayCameraCones />
-        <ReplayCollisionMarkers samples={replaySamples} />
-
-        {/* Camera markers */}
-        <CameraMarkers />
-
-        <OrbitControls
-          ref={handleControlsRef}
-          makeDefault
-          target={[5.05, 0.6, 3.8]}
-          minDistance={5.5}
-          maxDistance={22}
-          minPolarAngle={Math.PI / 4.2}
-          maxPolarAngle={Math.PI / 2.08}
-          enableDamping
-          dampingFactor={0.08}
+        <SceneEnvironmentSetup tier="high" />
+        <SceneShadowCaster
+          tier="high"
+          maxDimension={Math.max(scene.dimensions.width, scene.dimensions.depth)}
         />
+        <PerformanceMonitor
+          iterations={SINGLE_PERF_MONITOR_ITERATIONS}
+          ms={SINGLE_PERF_MONITOR_MS}
+          step={SINGLE_PERF_DPR_STEP}
+          flipflops={SINGLE_PERF_FLIPFLOPS}
+          bounds={singlePerformanceBounds}
+        >
+          <AdaptiveDpr pixelated />
+          <Suspense fallback={<CanvasLoadingOverlay label="Loading replay scene" />}>
+            <SceneView />
+          </Suspense>
+
+          <CoverageTileFloor cells={result?.coverageCells ?? []} />
+
+          {/* Coverage-failure path line — colored segments by DORI quality */}
+          {!activePath && coverageFailurePath && (
+            <CoverageSegmentPath waypoints={coverageFailurePath.waypoints} />
+          )}
+          <PathMarkers waypoints={waypoints} />
+
+          {/* Actor */}
+          <PathActor waypoints={waypoints} currentIndex={currentIndex} progress={progress} />
+
+          {/* Replay proof overlays */}
+          <ReplayCameraCones />
+          <ReplayCollisionMarkers samples={replaySamples} />
+
+          {/* Camera markers */}
+          <CameraMarkers />
+
+          <OrbitControls
+            ref={handleControlsRef}
+            makeDefault
+            target={[5.05, 0.6, 3.8]}
+            minDistance={5.5}
+            maxDistance={22}
+            minPolarAngle={Math.PI / 4.2}
+            maxPolarAngle={Math.PI / 2.08}
+            enableDamping
+            dampingFactor={0.08}
+          />
+        </PerformanceMonitor>
       </Canvas>
 
       {immersiveMode ? null : (

@@ -6,6 +6,7 @@ import { startTransition, useCallback, useEffect, useMemo, useRef, useState } fr
 import { useShallow } from "zustand/react/shallow";
 import { useSimulation } from "@/hooks/use-simulation";
 import { useStudioKeyboard } from "@/hooks/use-studio-keyboard";
+import { useStudioBootstrap } from "@/hooks/use-studio-bootstrap";
 import { useStudioStore, type ViewMode } from "@/store/studio-store";
 import { TopBar } from "./TopBar";
 import { StatusBar } from "./StatusBar";
@@ -22,7 +23,7 @@ import { LeftPanel } from "@/components/left-panel/LeftPanel";
 import PathReplayClock from "./PathReplayClock";
 import WorkspaceArea from "./WorkspaceArea";
 import ShortcutsModal from "./ShortcutsModal";
-import FirstRunGuide from "./FirstRunGuide";
+import FirstRunGuide, { hasDismissedFirstRunGuide } from "./FirstRunGuide";
 import { STUDIO_SHORTCUT_EVENTS } from "@/lib/studio-shortcuts";
 
 const FULL_CANVAS_SAFE_ZONE_STYLE = {
@@ -34,10 +35,10 @@ const FULL_CANVAS_SAFE_ZONE_STYLE = {
 
 export default function StudioShell() {
   const [hydrated, setHydrated] = useState(false);
+  useStudioBootstrap();
   useSimulation(hydrated);
   useStudioKeyboard();
   const [studioBypassMode, setStudioBypassMode] = useState(false);
-  const [compactViewport, setCompactViewport] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showFirstRunGuide, setShowFirstRunGuide] = useState(false);
   const rightRailAutoSetRef = useRef(false);
@@ -47,6 +48,8 @@ export default function StudioShell() {
   const setLaunchNotice = useStudioStore((s) => s.setLaunchNotice);
   const workspacePreset = useStudioStore((s) => s.workspacePreset);
   const focusMode = useStudioStore((s) => s.focusMode);
+  const compactViewport = useStudioStore((s) => s.compactViewport);
+  const setCompactViewport = useStudioStore((s) => s.setCompactViewport);
   const visibleComponents = useStudioStore((s) => s.visibleComponents);
   const scene = useStudioStore((s) => s.scene);
   const uiDensity = useStudioStore((s) => s.uiDensity);
@@ -157,12 +160,10 @@ export default function StudioShell() {
   }, []);
 
   useEffect(() => {
-    const key = "sentineltwin_first_run_guide_seen_v1";
     if (typeof window === "undefined") return;
-    if (!window.localStorage.getItem(key)) {
+    if (!hasDismissedFirstRunGuide()) {
       queueMicrotask(() => {
         setShowFirstRunGuide(true);
-        window.localStorage.setItem(key, "1");
       });
     }
   }, []);

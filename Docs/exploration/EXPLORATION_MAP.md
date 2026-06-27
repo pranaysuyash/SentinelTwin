@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-06-27 (Floor-plan demo-language and wizard-step boundary clarity pass.)
+**Last updated:** 2026-06-30 (Floor-plan recovery run + wide-open-brainstorm loop artifacts)
 
 ---
 
@@ -17,7 +17,7 @@
 
 ### Thread 11b: Floor-plan comprehension & source-profile tuning (live-demo loop)
 
-**Status:** In progress
+**Status:** Active recovery loop (6/30 documented; implementation follow-through pending)
 **Problem:** Buyers reading live floor-plan imports cannot tell whether wall counts represent raw detector candidates or kept geometry, and they cannot quickly map plan source quality differences (`architectural` vs `hand_drawn` vs `low_res_scan`).
 
 **2026-06-18 findings and actions:**
@@ -33,6 +33,8 @@
 - 2026-06-19: added in-session review-clarity pass for checklist scalability (`Show all` toggles) and explicit flow boundary copy (`Next: Review` vs `Create Draft Scene`).
 - 2026-06-27: tightened live demo lane grammar for the floor-plan review flow (`Next: Review` and explicit `Create Draft Scene` finalization), and aligned detector copy to “raw candidates vs kept shell.” Remaining open follow-up: improve visual confirmation that calibration edits changed scene footprint before moving forward.
 - 2026-06-28: updated floor-plan extraction config contract assertions and test coverage for `borderTrimPx` / `longWallSeedPx`; added agent reuse path fix by creating a symlink from `/Users/pranay/.agents/skills/sentineltwin-demo-walkthrough` to the canonical project skill.
+- 2026-06-30: added full live demo recovery artifact in `Docs/notes/live_demo_session_2026-06-30.md` and issue review `Docs/notes/sentineltwin_issue_review_2026-06-30.md`; added `wide-open-brainstorm` reusable skill at `/Users/pranay/Projects/skills/wide-open-brainstorm` for future recovery sessions.
+- 2026-06-30: remaining open follow-ups now include deterministic route bootstrap, explicit calibration audit-row in preview, and stronger raw/kept candidate provenance for large plans.
 
 ### Thread 0: Product integrity hardening spine
 **Status:** Implemented in code (2026-05-30).
@@ -511,6 +513,7 @@ bad derived-data path during module evaluation.
 - The fastest recovery path for local verification is to clear the rebuildable `apps/studio/.next`
   cache, restart `next dev`, then re-run the browser check. Do not treat the blank canvas as
   proof of a broken scene until the cache has been reset.
+- Automated browser testing (`record_full_demo.py` via Playwright) can false-pass or false-fail if text matchers (`wait_any_text`) match string titles already present in `localStorage` recent scenes on the parent Hub view before modal/page navigation completes. Always use component-exclusive header strings or explicit container selectors when asserting state transitions in automated demos.
 
 **Next:** Keep a short checklist in the repo docs or dev notes for cache reset + browser
 retest when the studio view suddenly becomes blank after a Turbopack crash.
@@ -5416,8 +5419,18 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 - The per-node truth ladder now surfaces review status, source trace coverage, and geometry validity in Report Lite, Scene Intelligence, and report exports, so credibility is visible alongside coverage.
 - Path Replay now keeps its playback state in the shared store, which lets Camera View and Camera Wall follow the same replay progress instead of diverging on a local timer.
 
+**2026-07-01 update (trust-audit CI + single-canvas adaptive DPR + dashboard/launcher truth labels):**
+- Added `trust-audit` as a Turbo pipeline task in `turbo.json`, with studio and root script aliases, so the surface manifest runs as a first-class CI gate.
+- Extended the manifest with 9 new surfaces: adaptive DPR budget contract, SectionCard truth-label API, AnalyticsDashboardView cards, launcher metric/status cards, StudioDashboardHome header, CameraInspector sections, ReportView stat groups.
+- Replaced misleading "Live" language in `StudioDashboardHome` and `SecurityStatusPanel` with explicit `TruthBadge` labels keyed to actual provenance (`displayCoverage != null ? "simulated" : "placeholder"`).
+- Applied truth labels to 12 `SectionCard`s in `AnalyticsDashboardView` and 15 `SectionCard`s in `CameraInspector`, and to 4 outer `StatGroup`s in `ReportView`.
+- Generalized adaptive DPR budget module (`adaptive-dpr-budget.ts`) to serve both CameraWall and single-canvas modes with distinct constants, and wrapped `CameraViewMode` and `PathReplayView` canvases in `PerformanceMonitor` + `AdaptiveDpr` using the single-canvas budget.
+- Backwards-compat shim retained at `camera-wall-performance-budget.ts` to avoid breaking existing imports/tests.
+- Tests: `camera-wall-performance-budget.test.ts` (8), `camera-wall-perf-guard.test.ts` (14 incl. single-canvas integration), `truth-audit.test.ts` (diagnostics), full suite 1164 pass.
+
 **Operational note for SentinelTwin:**
 - Keep explicit truth labels on the most claim-heavy summary surfaces and extend the trust-audit manifest whenever a new user-facing claim surface appears.
+- Whenever a new R3F canvas is added, route its adaptive DPR through the unified budget module and add a perf-guard test.
 
 ## Thread 29: Shared-workspace RBAC/ABAC action gates
 
@@ -5451,6 +5464,120 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 - Keeping provider governance in the debug panel makes the control plane visible without duplicating the selection logic.
 - The product now also needs a visible model-eval suite so prompt and provider changes can be exercised against the same structured-output fixtures that power command parsing, counterfactuals, report generation, and AI layout drafting.
 - The model-eval suite now also persists a compact local run history with stage-budget and trend comparison, which makes the provider-control plane measurable across sessions instead of only at a single point in time.
+
+---
+
+## 2026-06-30 - Route continuity and scaffold boundary audit
+
+### Thread 31: Route continuity and scaffold boundaries
+
+**Status:** New findings from the 2026-06-30 docs/code audit.
+
+**Source signals:**
+- `apps/studio/src/store/product-view-store.ts`
+- `apps/studio/src/components/product/ProductViewRouter.tsx`
+- `apps/studio/src/components/layout/StudioShell.tsx`
+- `apps/studio/src/lib/scan-adapters/registry.ts`
+- `apps/studio/src/lib/import-adapters/adapters/cad-adapter.ts`
+- `apps/studio/src/lib/import-adapters/adapters/pdf-adapter.ts`
+- `apps/studio/src/lib/import-adapters/adapters/glb-adapter.ts`
+- `apps/studio/src/components/view/CameraViewMode.tsx`
+
+**Key findings:**
+- The root route is intentionally stateful. `/` can land in different product views based on stored workspace/product state, and the router intentionally sends first-time/no-workspace users into intake.
+- The studio shell is a real workspace shell, but the app still uses explicit adapter boundaries in the scan/import layer rather than pretending those integrations are complete.
+- The import registry exposes stub-backed defaults for key adapters, and the CAD/IFC, PDF vector, and GLB/OBJ adapters are explicitly returning boundary warnings rather than parsed geometry.
+- Camera verification should stay described as operator assist rather than forensic verification until live-video temporal alignment and frame extraction exist.
+
+**Why it matters:**
+- This keeps the product audit honest at the page and feature level: a built shell is not the same thing as a complete capture/import pipeline.
+- It also gives the next build discussion a cleaner dependency map: route continuity, adapter depth, and verification maturity are separate workstreams.
+
+**Follow-up:**
+- Keep this thread updated if root-route landing behavior, import adapter maturity, or the footage-verification boundary changes in code.
+
+---
+
+## 2026-06-30 - Market adjacency research for next feature ideas
+
+### Thread 32: ONVIF Profile M metadata stream as a first-class live evidence lane
+
+**Status:** New research finding.
+
+**Source signals:**
+- ONVIF Profile M official page: metadata streaming, analytics configuration/query, object classification, geolocation, vehicle, license plate, human face, and human body metadata.
+- ONVIF Profile M specification: metadata stream is mandatory for conformant products, with event transport options including XML events and JSON/MQTT event delivery.
+- ONVIF blog explainer: Profile M reduces pairing complexity between cameras, VMS, and software platforms by standardizing metadata streams.
+
+**Key findings:**
+- Profile M is not just a camera compatibility checkbox; it is a live metadata/event model that can justify a much richer “camera evidence” lane in SentinelTwin.
+- The current camera/sensor ingest surface can evolve from “probe and store” into “stream, classify, filter, and replay metadata” without inventing a parallel semantics layer.
+- This naturally supports event-centric features like person/vehicle/license-plate evidence cards, timeline filters, watchlists, and incident replay tagging.
+
+**Product ideas worth keeping:**
+- metadata stream viewer with filters by object type and confidence
+- event timeline with ONVIF metadata snapshots
+- watchlist / rule-based event triggers tied to scene zones
+- metadata-backed camera health and activity summaries in the inspector and report
+
+**Why it matters:**
+- SentinelTwin already has a strong deterministic scene model. Profile M suggests a concrete way to attach live device evidence to that model instead of treating live camera support as a one-off proof-of-connection.
+
+### Thread 33: openBIM / IFC / DXF as a real import strategy, not just a parser boundary
+
+**Status:** New research finding.
+
+**Source signals:**
+- buildingSMART IFC docs and openBIM pages: IFC 4.3.2 is the latest official version; openBIM centers validation, shared terminology, and issue management.
+- Autodesk DXF docs/reference: DXF is a real, documented CAD interchange format with both ASCII and binary forms and stable group-code conventions.
+
+**Key findings:**
+- IFC and DXF are good candidates for a “serious import” lane because the standards are explicit, validated, and widely used in architecture/construction workflows.
+- This is materially different from image-based floor plans: IFC/DXF can become a pre-construction / as-designed workflow instead of a cleaned-up raster interpretation workflow.
+- SentinelTwin’s current CAD/IFC/PDF adapter boundaries could become a proper import taxonomy:
+  - raster floor plans
+  - vector floor plans
+  - BIM/openBIM
+  - visual mesh reference layers
+
+**Product ideas worth keeping:**
+- openBIM import review with semantic object grouping
+- DXF layer/filter mapping into security objects
+- IFC validation and source-trace panel before compile
+- “as-designed vs as-observed” comparison mode
+
+**Why it matters:**
+- This expands SentinelTwin from “analyzer of photographs” toward “a system that can twin a site before it exists,” which is a meaningful market extension.
+
+### Thread 34: VMS-style operational dashboards, maps, and camera walls as product patterns
+
+**Status:** New research finding.
+
+**Source signals:**
+- Genetec Omnicast / Security Center docs and product pages: maps, dashboards, multi-sensor views, and real-time monitoring.
+- Milestone XProtect docs: Smart Maps, System Monitor dashboards, camera tiles, and map-based preview of live video.
+- Verkada docs/pages: video walls, unified map-based timeline, live monitoring, health/status, occupancy trends, alerts, and remote access.
+- Rhombus docs/pages: centralized dashboard, camera/sensor status, analytics charts, location-level data, and remote management.
+
+**Key findings:**
+- The market repeatedly converges on the same control-plane patterns:
+  - map-centric situational awareness
+  - camera wall / grid monitoring
+  - system health dashboards
+  - incident timeline / unified review
+  - occupancy or movement analytics
+- SentinelTwin already has fragments of these patterns; the opportunity is to make them read as a coherent operational lens rather than separate tabs.
+- “Observed vs planned” and “health vs coverage” are especially strong patterns for SentinelTwin because they can unify simulation truth with live operational truth.
+
+**Product ideas worth keeping:**
+- camera/system health summary tiles alongside coverage metrics
+- map-based incident timeline with live and simulated layers
+- occupancy trends / movement summaries as a first-class analytical signal
+- camera wall layouts saved as review presets
+- interactive smart-map incident drill-down from dashboard cards
+
+**Why it matters:**
+- These vendors show that the operator market expects dashboards, maps, and grids as the default grammar. SentinelTwin can differentiate by making those dashboards evidence-backed and simulation-aware instead of just camera-admin oriented.
 - The debug panel now also exposes a provider-health dashboard plus a canonical prompt registry, and the command bar plus AI draft launcher now mirror provider health, estimated budget classes, the latest measured AI action, and a simple recent-vs-previous trend summary at the point of use. The remaining open question is richer aggregation and whether that should live in a broader operational dashboard once the measured trail matures.
 
 **Operational note for SentinelTwin:**
@@ -7416,3 +7543,107 @@ pass.
 - The simulation engine is not the problem (~10.8ms / 40×28 / 2 cameras, golden-claim tests, deterministic). The UI under-leverages a strong engine.
 - The `truth-audit` harness is good and should be extended to catch confidence-language violations (T1) so the 06-17 failure cannot regress.
 - Parallel-agent density is visible in the codebase: many operator-grade surfaces (ONVIF, Model Eval, Support Delivery, Identity Conflict) read like defensible parallel work that was all surfaced simultaneously. Cure = contextual arrangement (D3 / Option 4), not deletion or static hiding (per `motto_v3 §11`).
+
+---
+
+### Thread 12: 3D Design Skill Inventory — Rendering Pipeline Skill Fit
+
+**Status:** Discovery complete, documented 2026-07-01. Implementation decisions pending.
+
+**Problem:** SentinelTwin's rendering pipeline (R3F viewer + Three.js simulation worker) has many 3D-design-related agent skills available across multiple skill paths, but no project-wide inventory of which skills are appropriate for a security digital twin versus game/SFX work. Risk of agents defaulting to flashy VFX or game-loop patterns that conflict with deterministic, professional coverage visualization.
+
+**Action taken:**
+- Searched all configured skill locations (`~/.opencode/skills/`, `~/.agents/skills/`, `~/.codex/skills/`, `~/.hermes/skills/`, `~/Projects/external-skills/`) and found ~60+ unique 3D/game-related skills.
+- Installed two requested external packs:
+  - `npx threejs-awesome-graphics-agent-skills@latest install --agent codex` → 22 skills in `~/.codex/skills`
+  - `npx skills add majidmanzarpour/threejs-game-skills --skill '*' -a codex -g -y` → 9 skills in `~/.agents/skills`
+- Dispatched 4 parallel agents to evaluate skill sets against SentinelTwin's architecture and next-build priorities (full report in `Docs/exploration/3D_DESIGN_SKILL_INVENTORY_2026-07-01.md`).
+
+**Key findings:**
+- **Highest relevance:** `r3f-drei`, `threejs-performance`, `threejs-fundamentals`, `threejs-geometry`, `threejs-shaders`, `threejs-interaction`, `threejs-animation`, `threejs-visual-validation`, `threejs-procedural-animation`, `threejs-procedural-geometry`, `threejs-skill-router`, `threejs-debug-profiler`, `threejs-qa-release`.
+- **Selective use:** `threejs-procedural-architecture`, `threejs-procedural-materials`, `threejs-exposure-color-grading`, `threejs-camera-direction`, `threejs-shadow-systems`, `threejs-screen-space-ambient-occlusion`, `threejs-aaa-graphics-builder`, `threejs-game-ui-designer`, `threejs-3d-generator`, `threejs-image-generator`.
+- **Skill bloat / remove:** `threejs-procedural-planets`, `threejs-spectral-ocean`, `threejs-water-optics`, `threejs-volumetric-clouds`, `threejs-raymarched-space-effects`, `threejs-procedural-vfx`, `threejs-temporal-surfaces`, `threejs-procedural-fields`, `threejs-procedural-vegetation`, `threejs-bloom`, `threejs-atmosphere-aerial-perspective`, `threejs-game-director`, `threejs-gameplay-systems`, `threejs-audio-generator`.
+- **License check passed:** All scaffolds use MIT/Apache 2.0 dependencies; no GPL/AGPL/CC-BY-NC/BSL found.
+- **Conflict with D-018:** Some skills mention GSAP, but project decision already mandates Framer Motion; agents must ignore GSAP recommendations.
+
+**Immediate recommendations:**
+1. Adopt `r3f-drei` + `threejs-performance` patterns for `CameraWallView` tiles (`frameloop="demand"`, `dpr` cap, `PerformanceMonitor` + `AdaptiveDpr`).
+2. Establish Camera Wall performance budget contract (draw calls < 100, GPU memory < 100MB per tile).
+3. Adapt `threejs-qa-release/scripts/inspect-threejs-canvas.mjs` into `tools/webwright` for canvas verification.
+4. Create SentinelTwin visual scorecard in `Docs/quality/VISUAL_SCORECARD.md`.
+
+**Near-term recommendations:**
+5. Translate `threejs-shaders` DORI-ring recipe into an R3F `ShaderMaterial` component for Camera View.
+6. Spike `threejs-procedural-architecture` against Pascal primitives and decide adoption.
+7. Implement `threejs-visual-validation` regression protocol for coverage heatmap and path replay.
+
+**Open questions (→ `OPEN_QUESTIONS_ADDENDUM.md` OQ-3D-01..03):**
+- Should SentinelTwin maintain a project-local 3D skill whitelist?
+- Should Camera Wall have a CI performance-budget test?
+- Should hero security assets be Tripo-generated or stay procedural?
+
+**Code anchors:** `apps/studio/src/components/view/CameraWallView.tsx`; `apps/studio/src/components/workspace/SharedScene.tsx`; `apps/studio/src/components/workspace/CameraViewMode.tsx`; `apps/studio/src/simulation/coverage.ts`; `tools/webwright/run-sentineltwin-qa.sh`.
+
+**Status update 2026-07-01 — D-321 IMPLEMENTED.** Camera Wall tiles now use Drei `PerformanceMonitor` + `AdaptiveDpr` with a unified budget module (`apps/studio/src/lib/adaptive-dpr-budget.ts`). Both the per-camera POV canvas and the `WallOverviewPanel` overview canvas are wrapped; dense mode gets a lower DPR cap. `CameraViewMode` and `PathReplayView` now also use the same adaptive wrapper with a dedicated single-canvas DPR range (`[0.85, 1.5]`). Tests added: `apps/studio/src/lib/__tests__/camera-wall-performance-budget.test.ts` and extended `apps/studio/src/components/view/__tests__/camera-wall-perf-guard.test.ts`. Decision logged as D-321 in `Docs/decisions/DECISION_LOG_ADDENDUM.md`; OQ-3D-03 resolved in `OPEN_QUESTIONS_ADDENDUM.md`.
+
+**Non-findings worth recording:**
+- Skill installation itself does not create duplicate code paths, but unbounded skill availability creates decision-noise for agents. A documented whitelist is the durable fix.
+- The most valuable output of the game-skills pack is not the game director, but the cross-cutting debug/profiler/QA tooling and the visual-scorecard discipline.
+- `threejs-awesome-graphics-agent-skills` is heavily VFX/cinematic; only ~11 of 22 skills are keepers for a professional security tool.
+
+---
+
+### Thread 13: Realistic 3D Rendering — Roadmap 2026-07-04
+
+**Status:** Research complete, documented 2026-07-04. Implementation decisions pending.
+
+**Problem:** SentinelTwin's 3D visuals are credible but not yet *believable* to a non-technical buyer. The rendering stack is modern (R3F v9.6, Three.js r184, Drei 10.7, three-mesh-bvh, Framer Motion), but materials are flat, lighting is basic, shadows are minimal, and the camera-feed look is CSS-driven. We need a first-principles roadmap for realism that preserves simulation determinism, performance, and the analytical readability of the security map.
+
+**Action taken:**
+- Refreshed current stack from `Docs/architecture/07_RENDERING_PIPELINE.md`, `07_RENDERING_PIPELINE_ADDENDUM_2026-05-29.md`, and `apps/studio/package.json`.
+- Surveyed current source: `SharedScene.tsx`, `WorkspaceCanvas.tsx`, `CameraViewMode.tsx`, `CameraWallView.tsx`, `PathReplayView.tsx`, `packages/simulation/src/vision-collider-mesh.ts`.
+- Researched realistic rendering techniques (PBR/IBL, shadows, SSAO, post-processing, procedural textures) and low-level acceleration (WebGPU, WebGL2, WASM/Web Workers).
+- Evaluated libraries against SentinelTwin constraints: license (MIT-only), deterministic simulation, performance, local-first data sensitivity.
+- Loaded relevant skills: `threejs-skills`, `threejs-performance`, `webgpu`, `wasm-rust`.
+
+**Key findings:**
+- **PBR + IBL is the biggest low-risk realism win.** Drei `<Environment>` + `RoomEnvironment` (procedural, no network asset) can immediately make walls, floors, and camera housings look real without external textures.
+- **One shadow-casting directional light + `ContactShadows` fallback** is the right shadow architecture. PCSS is optional polish; CSM is deferred until campus scale.
+- **SSAO adds depth but must be tier-gated and off by default** so it does not darken coverage heatmap readability.
+- **Post-processing belongs only on camera-feed surfaces**, not the map view. `@react-three/postprocessing` gives grain/vignette/film cheaply for synthetic POV tiles.
+- **WebGPU compute for coverage grid is a frontier option**, not a V0.1/V0.2 need. CPU+BVH already hits ~10.8 ms for typical scenes. Move to GPU only after profiling proves a bottleneck.
+- **WASM/Rust geometry core is the durable performance bet** for `@sentineltwin/simulation` because the package is already pure-geometry/zero-React. A Rust port of BVH build + batched raycast would be deterministic and worker-friendly.
+- **All evaluated libraries are MIT** and compatible with SentinelTwin's Apache-2.0 / no-GPL policy.
+
+**Phased recommendations:**
+1. **Phase A (immediate):** procedural IBL with fallback; PBR material parameters per surface type; one credible shadow; tone mapping + output color space.
+2. **Phase B (camera-feed realism):** synthetic POV post-processing (noise/vignette/film) linked to feed mode; shader-based IR/thermal look.
+3. **Phase C (frontier):** WebGPU compute coverage spike; WASM geometry core in simulation; SSAO as high-tier option.
+4. **Phase D (defer):** GPU path tracing for static export only; cascaded shadow maps; gaussian splat visual layer (already Thread 17).
+
+**Open questions (→ `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` OQ-3D-04..10):**
+- OQ-3D-04: Shared Environment/IBL source across canvases or per-mode presets?
+- OQ-3D-05: Canonical surface material library for walls, floors, cameras, obstructions, doors, windows?
+- OQ-3D-06: Camera-feed post-processing quality-tier gated or always-on?
+- OQ-3D-07: Scene-size threshold for moving coverage engine from CPU+BVH to WebGPU compute?
+- OQ-3D-08: Port `@sentineltwin/simulation` geometry/BVH core to Rust/WASM?
+- OQ-3D-09: Add SSAO at all, or keep analytical clean look?
+- OQ-3D-10: Visual regression / scorecard strategy for rendering realism?
+
+**Code anchors:** `apps/studio/src/components/workspace/SharedScene.tsx`; `apps/studio/src/components/workspace/WorkspaceCanvas.tsx`; `apps/studio/src/components/view/CameraViewMode.tsx`; `apps/studio/src/components/view/CameraWallView.tsx`; `apps/studio/src/components/view/PathReplayView.tsx`; `packages/simulation/src/vision-collider-mesh.ts`; `packages/simulation/src/coverage.ts`.
+
+**Decision trace:** D-018 (GSAP→Framer Motion), D-321 (adaptive DPR) in `Docs/decisions/DECISION_LOG_ADDENDUM.md`; Thread 12 (3D Design Skill Inventory).
+
+**Non-findings worth recording:**
+- Photorealism is not the product goal; *believable* visualization that supports coverage explainability is.
+- Most heavy post-processing (bloom, motion blur, depth-of-field) would hurt, not help, a professional security tool.
+- The simulation engine is already performant enough; rendering realism should not be used as an excuse to add undifferentiated complexity.
+
+**Status update 2026-07-04 — Phase A + Phase C WASM-spike IMPLEMENTED.** All four R3F Canvases (`WorkspaceCanvas`, `CameraViewMode`, `CameraWallView`, `PathReplayView`) plus the inspector `CameraFeedCanvas` now apply the canonical `r3f-rendering` preset (ACES Filmic tone mapping, sRGB output, IBL via `RoomEnvironment`, one PCFSoft shadow-casting directional light gated by quality tier). `SharedScene.tsx` floor, walls, doors, windows, glass panes, and the path actor resolve their PBR parameters through the new `pbr-materials` library; selected surfaces use the canonical selection overlay. The simulation package now exports a `VisionBridge` contract with two deterministic backends — `BvhJsVisionBridge` (existing `three-mesh-bvh` path) and `WasmVisionBridge` (a hand-built WebAssembly module compiled at runtime from inline bytes that proves the linear-memory contract a future Rust port would honor). `wasm-vision-bridge.test.ts` asserts byte-exact parity between the JS and WASM backends. New modules: `apps/studio/src/lib/pbr-materials.ts`, `apps/studio/src/lib/r3f-rendering.ts`, `packages/simulation/src/wasm-vision-bridge.ts`. New tests: `apps/studio/src/lib/__tests__/pbr-materials.test.ts`, `apps/studio/src/lib/__tests__/r3f-rendering.test.ts`, `packages/simulation/src/__tests__/wasm-vision-bridge.test.ts`. Runtime addendum: `Docs/architecture/07_RENDERING_PIPELINE_ADDENDUM_2026-05-29.md`. All 9 packages typecheck and all 1383+ tests across the monorepo pass.
+
+**Cross-blast-radius fixes that were in scope per motto_v3 §0.1 and §0.6:**
+- Fixed two parallel-agent drift bugs in `packages/simulation/src/simulate-studio.ts` (missing `accumulatedCameraQuality` declaration; stale `obstructionLabel` reference at the counterfactual recommendation site) so the simulation package typechecks after the new module imports were added.
+- Updated `packages/simulation/src/__tests__/coverage.test.ts` and `lighting.test.ts` to expect the obstruction `id` rather than `label` in `blockedBy` / `shadowedBy`, matching the canonical data contract introduced in `vision-collider-mesh.ts` (a parallel-agent refactor already changed the runtime to emit ids; the test contract now matches).
+
+**OQ-3D-04..10 still open.** Phase B (camera-feed post-processing) and Phase C SSAO are deliberately deferred until Phase A is observed in production and the visual scorecard (OQ-3D-10) is in place.
+- WebGPU is attractive but brings cross-browser determinism challenges that must be tested before becoming canonical.

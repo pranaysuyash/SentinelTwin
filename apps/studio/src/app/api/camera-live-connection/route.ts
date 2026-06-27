@@ -1,13 +1,24 @@
 import { appendCameraLiveConnectionHistory, loadCameraLiveConnectionHistory } from "@/lib/camera-live-connection-history";
-import { appendCameraLiveSessionRecord, closeCameraLiveSessionRecord, pruneExpiredCameraLiveSessionRegistry, renewCameraLiveSessionRecord, type CameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
-import { CameraLiveConnectionProbeRequestSchema, probeCameraLiveConnection, type CameraLiveConnectionProbeRequest, type CameraLiveConnectionProbeResponse } from "@/lib/camera-live-connection";
+import { appendCameraLiveSessionRecord, closeCameraLiveSessionRecord, pruneExpiredCameraLiveSessionRegistry, renewCameraLiveSessionRecord, toCameraLiveSessionRecord, type CameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
+import { buildCameraLiveConnectionRecord, CameraLiveConnectionProbeRequestSchema, probeCameraLiveConnection, type CameraLiveConnectionProbeRequest, type CameraLiveConnectionProbeResponse } from "@/lib/camera-live-connection";
 import { OnvifClient } from "@/lib/onvif-client";
 import { corsJson, corsNoContent } from "@/lib/api-cors";
 import { API_METHODS, apiJson, parseValidatedJsonBody } from "@/lib/api-response";
+import { startSubscriptionScheduler, runSubscriptionCycle } from "@/lib/subscription-scheduler";
 
 import { NextRequest } from "next/server";
 
 const ONVIF_EVENT_SUBSCRIPTION_RENEWAL_WINDOW_MS = 5 * 60 * 1000;
+
+let scheduler: { stop: () => void } | null = null;
+
+function ensureScheduler() {
+  if (typeof globalThis !== "undefined" && !scheduler) {
+    scheduler = startSubscriptionScheduler();
+  }
+}
+
+ensureScheduler();
 
 function shouldRenewOnvifSubscription(activeSession: CameraLiveSessionRecord | null, storedAt: number) {
   if (!activeSession) return false;
@@ -108,82 +119,50 @@ export async function POST(request: NextRequest) {
         liveFeedUrl: parsed.data.liveFeedUrl ?? parsed.data.endpointUrl ?? null,
         feedLabel: parsed.data.feedLabel ?? activeSession?.feedLabel ?? null,
         summary: `Heartbeat renewed the live session for ${parsed.data.cameraName}. ${authSummary}.${renewalSummary ? ` ${renewalSummary}` : ""}`.trim(),
-        record: {
-          cameraId: parsed.data.cameraId,
-          cameraName: parsed.data.cameraName,
-          liveSessionId: sessionId,
-          liveSessionState: "connected" as const,
-          liveSessionStartedAt: activeSession?.liveSessionStartedAt ?? storedAt,
-          liveSessionConfirmedAt: storedAt,
-          liveSessionExpiresAt: storedAt + 120_000,
-          transportSessionId,
-          transportSessionState: "active" as const,
-          lastHeartbeatAt: storedAt,
-          probeCount: (activeSession?.probeCount ?? 0) + 1,
-          protocolProfile: activeSession?.protocolProfile ?? (parsed.data.protocol === "onvif" ? "onvif_device" : parsed.data.protocol === "rtsp" ? "rtsp_session" : parsed.data.protocol === "mjpeg" ? "mjpeg_stream" : parsed.data.protocol === "http" ? "http_poll" : "proxy"),
-          authMode,
-          authState,
-          authRealm,
-          onvifUsername: parsed.data.onvifUsername ?? activeSession?.onvifUsername ?? null,
-          onvifPassword: parsed.data.onvifPassword ?? activeSession?.onvifPassword ?? null,
-          authSessionId,
-          authSessionExpiresAt,
-          transportResponseStatus,
-          transportResponseStatusText,
-          authChallengeHeader,
-          authChallengeScheme,
-          authChallengeRealm,
-          eventSubscriptionUri,
-          eventSubscriptionReference,
-          eventSubscriptionExpiresAt,
-          liveFeedUrl: parsed.data.liveFeedUrl ?? activeSession?.liveFeedUrl ?? null,
-          liveFeedLabel: parsed.data.feedLabel ?? activeSession?.feedLabel ?? null,
-          liveConnectionMode: parsed.data.protocol,
-          liveConnectionStatus: "connected" as const,
-          notes: parsed.data.notes ?? activeSession?.summary ?? null,
-          timestamp: storedAt,
-        },
+        record: buildCameraLiveConnectionRecord(
+          {
+            ...parsed.data,
+            action: "heartbeat",
+            liveSessionId: sessionId,
+            liveSessionStartedAt: activeSession?.liveSessionStartedAt ?? storedAt,
+            liveSessionConfirmedAt: storedAt,
+            transportSessionId,
+            authMode,
+            authState,
+            authRealm,
+            authSessionId,
+            authSessionExpiresAt,
+            submittedAt: storedAt,
+          },
+          {
+            status: "connected",
+            liveConnectionMode: parsed.data.protocol,
+            liveFeedUrl: parsed.data.liveFeedUrl ?? activeSession?.liveFeedUrl ?? null,
+            liveFeedLabel: parsed.data.feedLabel ?? activeSession?.feedLabel ?? null,
+            responseStatus: transportResponseStatus,
+            responseStatusText: transportResponseStatusText,
+            authChallengeHeader,
+            authChallengeScheme,
+            authChallengeRealm,
+            eventSubscriptionUri,
+            eventSubscriptionReference,
+            eventSubscriptionExpiresAt,
+          },
+        ),
         errors: [],
         sourceCount: 0,
       };
 
-      renewCameraLiveSessionRecord({
-        sessionId,
-        cameraId: parsed.data.cameraId,
-        cameraName: parsed.data.cameraName,
-        sceneId: parsed.data.sceneId ?? null,
-        sceneName: parsed.data.sceneName ?? null,
-        liveFeedUrl: heartbeatRecord.record.liveFeedUrl,
-        feedLabel: heartbeatRecord.record.liveFeedLabel,
-        liveConnectionMode: heartbeatRecord.record.liveConnectionMode,
-        liveConnectionStatus: heartbeatRecord.record.liveConnectionStatus,
-        liveSessionState: heartbeatRecord.record.liveSessionState,
-        liveSessionStartedAt: heartbeatRecord.record.liveSessionStartedAt,
-        liveSessionConfirmedAt: heartbeatRecord.record.liveSessionConfirmedAt,
-        liveSessionExpiresAt: heartbeatRecord.record.liveSessionExpiresAt,
-        transportSessionId,
-        transportSessionState: heartbeatRecord.record.transportSessionState,
-        lastHeartbeatAt: storedAt,
-        probeCount: heartbeatRecord.record.probeCount,
-        protocolProfile: heartbeatRecord.record.protocolProfile,
-        authMode,
-        authState,
-        authRealm,
-        onvifUsername: parsed.data.onvifUsername ?? activeSession?.onvifUsername ?? null,
-        onvifPassword: parsed.data.onvifPassword ?? activeSession?.onvifPassword ?? null,
-        authSessionId,
-        authSessionExpiresAt,
-        transportResponseStatus,
-        transportResponseStatusText,
-        authChallengeHeader,
-        authChallengeScheme,
-        authChallengeRealm,
-        eventSubscriptionUri,
-        eventSubscriptionReference,
-        eventSubscriptionExpiresAt,
-        sessionExpiresAt: heartbeatRecord.record.liveSessionExpiresAt,
-        summary: heartbeatRecord.summary,
-      });
+      renewCameraLiveSessionRecord(
+        toCameraLiveSessionRecord(heartbeatRecord.record, {
+          sceneId: parsed.data.sceneId ?? null,
+          sceneName: parsed.data.sceneName ?? null,
+          summary: heartbeatRecord.summary,
+          lastAction: "heartbeat",
+          lastObservedAt: storedAt,
+          sessionExpiresAt: heartbeatRecord.record.liveSessionExpiresAt,
+        }),
+      );
 
       const history = appendCameraLiveConnectionHistory({
         ...heartbeatRecord,
@@ -224,44 +203,17 @@ export async function POST(request: NextRequest) {
       if (parsed.data.action === "disconnect") {
         closeCameraLiveSessionRecord(sessionId, summary.summary);
       } else {
-        appendCameraLiveSessionRecord({
-          sessionId,
-          status: summary.record.liveConnectionStatus === "connected" || summary.record.liveConnectionStatus === "connecting" ? "active" : "expired",
-          cameraId: summary.record.cameraId,
-          cameraName: summary.record.cameraName,
-          sceneId: parsed.data.sceneId ?? null,
-          sceneName: parsed.data.sceneName ?? null,
-          liveFeedUrl: summary.record.liveFeedUrl,
-          feedLabel: summary.record.liveFeedLabel,
-          liveConnectionMode: summary.record.liveConnectionMode,
-          liveConnectionStatus: summary.record.liveConnectionStatus,
-          liveSessionState: summary.record.liveSessionState,
-          liveSessionStartedAt: summary.record.liveSessionStartedAt,
-          liveSessionConfirmedAt: summary.record.liveSessionConfirmedAt,
-          liveSessionExpiresAt: summary.record.liveSessionExpiresAt,
-          transportSessionId: summary.record.transportSessionId,
-          transportSessionState: summary.record.transportSessionState,
-          lastHeartbeatAt: summary.record.lastHeartbeatAt,
-          probeCount: summary.record.probeCount,
-          protocolProfile: summary.record.protocolProfile,
-          authMode: summary.record.authMode,
-          authState: summary.record.authState,
-          authRealm: summary.record.authRealm,
-          onvifUsername: summary.record.onvifUsername ?? null,
-          onvifPassword: summary.record.onvifPassword ?? null,
-          authSessionId: summary.record.authSessionId,
-          authSessionExpiresAt: summary.record.authSessionExpiresAt,
-          transportResponseStatus: summary.record.transportResponseStatus,
-          transportResponseStatusText: summary.record.transportResponseStatusText,
-          authChallengeHeader: summary.record.authChallengeHeader,
-          authChallengeScheme: summary.record.authChallengeScheme,
-          authChallengeRealm: summary.record.authChallengeRealm,
-          eventSubscriptionUri: summary.record.eventSubscriptionUri,
-          eventSubscriptionReference: summary.record.eventSubscriptionReference,
-          eventSubscriptionExpiresAt: summary.record.eventSubscriptionExpiresAt,
-          sessionExpiresAt: summary.record.liveSessionExpiresAt,
-          summary: summary.summary,
-        } as Parameters<typeof appendCameraLiveSessionRecord>[0]);
+        appendCameraLiveSessionRecord(
+          toCameraLiveSessionRecord(summary.record, {
+            sceneId: parsed.data.sceneId ?? null,
+            sceneName: parsed.data.sceneName ?? null,
+            summary: summary.summary,
+            lastAction: summary.action,
+            lastObservedAt: storedAt,
+            sessionExpiresAt: summary.record.liveSessionExpiresAt,
+            status: summary.record.liveConnectionStatus === "connected" || summary.record.liveConnectionStatus === "connecting" ? "active" : "closed",
+          }),
+        );
       }
     }
     const history = appendCameraLiveConnectionHistory({

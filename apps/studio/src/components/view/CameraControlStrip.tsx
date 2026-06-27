@@ -201,7 +201,7 @@ export function CameraControlStrip({
   );
 
   return (
-    <div className="absolute inset-x-3 bottom-14 z-30 flex flex-wrap items-center gap-1.5 rounded-xl border border-[#27364e] bg-[#0b0f17]/92 px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
+    <div className="absolute left-1/2 -translate-x-1/2 bottom-14 z-30 flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1.5 rounded-xl border border-[#27364e] bg-[#0b0f17]/95 px-3 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.4)] backdrop-blur">
       <CameraYawControl yawDeg={camera.yawDeg} onYawChange={updateYaw} />
       <div className="h-7 w-px bg-[#27364e]" />
       <CameraTiltControl pitchDeg={camera.pitchDeg} onPitchChange={updatePitch} />

@@ -126,6 +126,7 @@ export function TopBar() {
   const refreshSavedScenesList = useStudioStore((s) => s.refreshSavedScenesList);
   const exportScene = useStudioStore((s) => s.exportScene);
   const running = useStudioStore((s) => s.simulationRunning);
+  const dirty = useStudioStore((s) => s.simulationDirty);
   const progress = useStudioStore((s) => s.simulationProgress);
   const demoMode = useStudioStore((s) => s.demoMode);
   const setDemoMode = useStudioStore((s) => s.setDemoMode);
@@ -627,12 +628,14 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
         <button type="button"
           onClick={runSimulation}
           disabled={running}
-          title="Run the site review and refresh coverage, route exposure, redundancy, and report evidence."
+          title={dirty ? "Edits detected! Re-run simulation to update coverage and risk metrics." : "Run the site review and refresh coverage, route exposure, redundancy, and report evidence."}
           className={cn(
-            "relative inline-flex h-7 items-center justify-center gap-1.5 overflow-hidden rounded-lg px-3 text-[11px] font-semibold transition-colors",
+            "relative inline-flex h-7 items-center justify-center gap-1.5 overflow-hidden rounded-lg px-3 text-[11px] font-semibold transition-all duration-300",
             running
               ? "border border-green-900/40 bg-green-900/25 text-green-600"
-              : "bg-green-600 text-white shadow-lg shadow-green-900/25 hover:bg-green-500",
+              : dirty
+                ? "border border-amber-500/40 bg-amber-600 text-white shadow-lg shadow-amber-900/50 animate-pulse hover:bg-amber-500"
+                : "bg-green-600 text-white shadow-lg shadow-green-900/25 hover:bg-green-500",
           )}
         >
           {running && progress !== null ? (
@@ -644,7 +647,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           ) : null}
           <span className="relative inline-flex items-center gap-1.5">
             {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
-            {running ? `Reviewing${progress !== null && progress > 0 ? ` ${Math.round(progress * 100)}%` : ""}` : "Run Review"}
+            {running ? `Reviewing${progress !== null && progress > 0 ? ` ${Math.round(progress * 100)}%` : ""}` : dirty ? "Update Review (Stale)" : "Run Review"}
           </span>
         </button>
 

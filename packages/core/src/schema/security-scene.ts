@@ -81,6 +81,105 @@ export const collisionLayerSchema = z.object({
 });
 export type CollisionLayer = z.infer<typeof collisionLayerSchema>;
 
+// ── Visual appearance layer (rendering-only) ─────────────────────────────
+//
+// The appearance layer customizes how the scene LOOKS (materials, textures,
+// lighting, fog, environment). It is strictly cosmetic and MUST NEVER be
+// consumed by the simulation engine (D-003: coverage is deterministic
+// geometry). Simulation-relevant surface semantics stay in the existing
+// `material` / `visionTransmission` fields on walls, windows, and
+// obstructions. `cloneSecuritySceneSimulation` strips `sceneAppearance`
+// so the engine cannot observe it even accidentally.
+//
+// Pattern adopted from pascalorg/editor (MIT): preset id + explicit property
+// overrides, resolved by merging preset defaults with user overrides
+// (see their `packages/core/src/schema/material.ts` / `material-library.ts`).
+
+/** Cosmetic material preset vocabulary. `default` keeps the built-in look for the surface. */
+export const appearancePresetIdSchema = z.enum([
+  "default",
+  "plaster",
+  "paint",
+  "brick",
+  "concrete",
+  "wood",
+  "tile",
+  "marble",
+  "carpet",
+  "metal",
+  "fabric",
+  "custom",
+]);
+
+/** Per-node / per-surface cosmetic override. All fields optional; preset supplies base values. */
+export const nodeAppearanceSchema = z.object({
+  preset: appearancePresetIdSchema.default("default"),
+  /** Hex tint, e.g. "#8b5e34". Overrides the preset / built-in color. */
+  color: z.string().optional(),
+  roughness: z.number().min(0).max(1).optional(),
+  metalness: z.number().min(0).max(1).optional(),
+  opacity: z.number().min(0).max(1).optional(),
+  emissiveColor: z.string().optional(),
+  emissiveIntensity: z.number().min(0).optional(),
+  /** Procedural texture repeat multiplier (1 = default density). */
+  textureScale: z.number().positive().optional(),
+});
+
+/** Lighting override for one environment mode; merged over the built-in theme. */
+export const environmentLightingOverrideSchema = z.object({
+  background: z.string().optional(),
+  ambient: z.number().min(0).optional(),
+  hemisphere: z.number().min(0).optional(),
+  directional: z.number().min(0).optional(),
+  fill: z.number().min(0).optional(),
+  keyLightColor: z.string().optional(),
+  fillLightColor: z.string().optional(),
+  /** Warm ceiling practical point lights on/off. */
+  practicalLights: z.boolean().optional(),
+  practicalIntensity: z.number().min(0).optional(),
+});
+
+/** Scene-level visual customization. Everything optional; absent = built-in defaults. */
+export const sceneAppearanceSchema = z.object({
+  /** Per-environment-mode lighting overrides. */
+  lighting: z
+    .object({
+      day: environmentLightingOverrideSchema.optional(),
+      dusk: environmentLightingOverrideSchema.optional(),
+      night: environmentLightingOverrideSchema.optional(),
+    })
+    .optional(),
+  fog: z
+    .object({
+      enabled: z.boolean().default(true),
+      color: z.string().optional(),
+      near: z.number().min(0).optional(),
+      far: z.number().positive().optional(),
+    })
+    .optional(),
+  environment: z
+    .object({
+      /** IBL intensity multiplier over the quality-tier preset (0 disables reflections). */
+      iblIntensityScale: z.number().min(0).max(4).optional(),
+      toneMappingExposure: z.number().min(0.1).max(4).optional(),
+      shadows: z.boolean().optional(),
+    })
+    .optional(),
+  /** Default appearance per architectural surface; node-level `appearance` wins over these. */
+  surfaces: z
+    .object({
+      floor: nodeAppearanceSchema.optional(),
+      wall: nodeAppearanceSchema.optional(),
+      ceiling: nodeAppearanceSchema.optional(),
+    })
+    .optional(),
+});
+
+export type AppearancePresetId = z.infer<typeof appearancePresetIdSchema>;
+export type NodeAppearance = z.infer<typeof nodeAppearanceSchema>;
+export type EnvironmentLightingOverride = z.infer<typeof environmentLightingOverrideSchema>;
+export type SceneAppearance = z.infer<typeof sceneAppearanceSchema>;
+
 export const wallNodeSchema = z.object({
   id: z.string().startsWith("wall_"),
   nodeType: z.literal("wall"),
@@ -91,6 +190,8 @@ export const wallNodeSchema = z.object({
   thicknessM: z.number().positive(),
   material: z.enum(["solid", "glass", "grill", "partial"]),
   visionTransmission: z.number().min(0).max(1).default(0),
+  /** Cosmetic only — never read by the simulation engine. */
+  appearance: nodeAppearanceSchema.optional(),
   source: sceneSourceSchema,
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
@@ -115,6 +216,8 @@ export const doorNodeSchema = z.object({
   state: z.enum(["open", "closed", "locked", "restricted"]),
   wallId: z.string().optional(),
   accessControl: doorAccessControlSchema.optional(),
+  /** Cosmetic only — never read by the simulation engine. */
+  appearance: nodeAppearanceSchema.optional(),
   source: sceneSourceSchema,
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
@@ -133,6 +236,8 @@ export const windowNodeSchema = z.object({
   state: z.enum(["closed_glass", "open", "grill", "curtain", "reflective"]),
   visionTransmission: z.number().min(0).max(1),
   wallId: z.string().optional(),
+  /** Cosmetic only — never read by the simulation engine. */
+  appearance: nodeAppearanceSchema.optional(),
   source: sceneSourceSchema,
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
@@ -322,6 +427,8 @@ export const obstructionNodeSchema = z.object({
     "curtain",
     "other",
   ]),
+  /** Cosmetic only — never read by the simulation engine. */
+  appearance: nodeAppearanceSchema.optional(),
   source: sceneSourceSchema,
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
@@ -583,6 +690,7 @@ export const securityIssueSchema = z.object({
   affectedZones: z.array(z.string()),
   affectedCameras: z.array(z.string()),
   pathId: z.string().optional(),
+  affectedNodeId: z.string().optional(),
 });
 
 export const qualityThresholdSchema = z.object({
@@ -591,6 +699,83 @@ export const qualityThresholdSchema = z.object({
   recognition: z.number().positive(),
   identification: z.number().positive(),
 });
+
+export const coverageEntropySchema = z.object({
+  cellCount: z.number().int().nonnegative(),
+  entropyBits: z.number().min(0),
+  normalizedEntropy: z.number().min(0).max(1),
+  dominantQuality: doriQualitySchema,
+  dominantQualityCount: z.number().int().nonnegative(),
+  dominantQualityShare: z.number().min(0).max(100),
+  qualityCounts: z.record(doriQualitySchema, z.number().int().nonnegative()),
+});
+
+export type CoverageEntropySummary = z.infer<typeof coverageEntropySchema>;
+
+export const coverageUncertaintySchema = z.object({
+  sampleCount: z.number().int().positive(),
+  positionSigmaM: z.number().min(0),
+  yawSigmaDeg: z.number().min(0),
+  pitchSigmaDeg: z.number().min(0),
+  rangeSigmaPct: z.number().min(0),
+  fovSigmaDeg: z.number().min(0),
+  meanCoveragePct: z.number().min(0).max(100),
+  p5CoveragePct: z.number().min(0).max(100),
+  p95CoveragePct: z.number().min(0).max(100),
+  meanRecognitionAreaPct: z.number().min(0).max(100),
+  meanIdentificationAreaPct: z.number().min(0).max(100),
+  worstZoneLabel: z.string().nullable(),
+  worstZonePassRate: z.number().min(0).max(1).nullable(),
+  zonePassRates: z.array(z.object({
+    zoneId: z.string(),
+    label: z.string(),
+    passRate: z.number().min(0).max(1),
+  })),
+});
+
+export type CoverageUncertaintySummary = z.infer<typeof coverageUncertaintySchema>;
+
+export const coveragePostureZoneSummarySchema = z.object({
+  zoneId: z.string(),
+  label: z.string(),
+  requiredQuality: doriQualitySchema,
+  actualQuality: doriQualitySchema,
+  status: z.enum(["pass", "fail"]),
+  coveragePct: z.number().min(0).max(100),
+  coveringCameras: z.array(z.string()),
+});
+
+export const coveragePostureProfileSummarySchema = z.object({
+  profileId: z.string(),
+  label: z.string(),
+  targetHeightM: z.number().min(0),
+  description: z.string(),
+  totalCoveragePct: z.number().min(0).max(100),
+  blindspotPct: z.number().min(0).max(100),
+  recognitionAreaPct: z.number().min(0).max(100),
+  identificationAreaPct: z.number().min(0).max(100),
+  averageWalkableQuality: z.number().min(0),
+  zonesPassing: z.number().int().nonnegative(),
+  zonesTotal: z.number().int().nonnegative(),
+  worstZoneLabel: z.string().nullable(),
+  worstZoneStatus: z.enum(["pass", "fail"]).nullable(),
+  worstZoneActualQuality: doriQualitySchema.nullable(),
+  worstZoneRequiredQuality: doriQualitySchema.nullable(),
+  zoneSummaries: z.array(coveragePostureZoneSummarySchema),
+});
+
+export const coveragePostureVariationSchema = z.object({
+  baselineProfileLabel: z.string(),
+  profiles: z.array(coveragePostureProfileSummarySchema),
+  worstProfileLabel: z.string().nullable(),
+  worstProfileCoveragePct: z.number().min(0).max(100).nullable(),
+  largestDropProfileLabel: z.string().nullable(),
+  largestDropDeltaPct: z.number().nullable(),
+  worstZoneLabel: z.string().nullable(),
+  worstZoneProfileLabel: z.string().nullable(),
+});
+
+export type CoveragePostureVariationSummary = z.infer<typeof coveragePostureVariationSchema>;
 
 export const adversarialWaypointSchema = z.object({
   position: point2Schema,
@@ -942,6 +1127,9 @@ export const simulationResultSchema = z.object({
     })),
   })).optional(),
   coverageThresholds: qualityThresholdSchema.optional(),
+  coverageEntropy: coverageEntropySchema.optional(),
+  coverageUncertainty: coverageUncertaintySchema.optional(),
+  coveragePostureVariation: coveragePostureVariationSchema.optional(),
   fragilitySummary: z.object({
     meanFragility: z.number().min(0).max(1),
     fragileCellCount: z.number().int().nonnegative(),
@@ -1027,6 +1215,57 @@ export const simulationResultSchema = z.object({
     blindGates: z.array(z.object({ gateId: z.string(), gateLabel: z.string() })),
     breachedSegments: z.array(z.object({ segmentId: z.string(), label: z.string() })),
   }).optional(),
+});
+
+// ── Counterfactual Engine Types ──
+
+export const counterfactualConstraintSchema = z.object({
+  maxBudget: z.number().min(0).optional(),
+  noNewWiring: z.boolean().default(false),
+  privacyPreserving: z.boolean().default(true),
+});
+
+export const counterfactualActionSchema = z.object({
+  actionId: z.string(),
+  type: z.enum([
+    "move_object",
+    "rotate_camera",
+    "add_camera",
+    "add_light",
+    "change_fov",
+    "remove_object",
+    "other",
+  ]),
+  description: z.string(),
+  affectedNodeId: z.string().optional(),
+  suggestedPosition: point3Schema.optional(),
+  suggestedYawDeg: z.number().optional(),
+  suggestedPitchDeg: z.number().optional(),
+  suggestedFovHorizontalDeg: z.number().optional(),
+  suggestedFovVerticalDeg: z.number().optional(),
+  estimatedCost: z.number().min(0).default(0),
+});
+
+export const counterfactualZoneDeltaSchema = z.object({
+  zoneId: z.string(),
+  baselineStatus: z.string(),
+  proposedStatus: z.string(),
+  coverageChangePct: z.number(),
+  improved: z.boolean(),
+});
+
+export const counterfactualPlanSchema = z.object({
+  planId: z.string(),
+  label: z.string(),
+  actions: z.array(counterfactualActionSchema),
+  simulatedCoveragePct: z.number().min(0).max(100).optional(),
+  simulatedImprovementPct: z.number().optional(),
+  totalCost: z.number().min(0).default(0),
+  confidenceScore: z.number().min(0).max(1).default(1),
+  privacyScore: z.number().min(0).max(1).default(1),
+  simulationResult: simulationResultSchema.optional(),
+  zoneResults: z.array(zoneResultSchema).optional(),
+  zoneDeltas: z.array(counterfactualZoneDeltaSchema).optional(),
 });
 
 // ── Temporal Simulation Types (defined before base scene schema to avoid TDZ) ──
@@ -1275,6 +1514,8 @@ const securitySceneBaseSchema = z.object({
   mismatchReports: z.array(mismatchReportSchema).default([]),
   assumptions: simulationAssumptionsSchema,
   calibrationConstants: calibrationConstantsSchema.optional(),
+  /** Visual customization (lighting, fog, surface materials). Rendering-only. */
+  sceneAppearance: sceneAppearanceSchema.optional(),
   timeSchedule: timeScheduleSchema.optional(),
   eventConfig: eventConfigSchema.optional(),
   crowdProfiles: z.array(crowdProfileSchema).default([]),
@@ -1385,6 +1626,9 @@ export type ScenarioState = z.infer<typeof scenarioStateSchema>;
 export type ScenarioBatchResult = z.infer<typeof scenarioBatchResultSchema>;
 export type CounterfactualResult = z.infer<typeof counterfactualResultSchema>;
 export type CounterfactualSearchResult = z.infer<typeof counterfactualSearchResultSchema>;
+export type CounterfactualConstraint = z.infer<typeof counterfactualConstraintSchema>;
+export type CounterfactualAction = z.infer<typeof counterfactualActionSchema>;
+export type CounterfactualPlan = z.infer<typeof counterfactualPlanSchema>;
 
 export type ReviewStatus = z.infer<typeof reviewStatusSchema>;
 export type SceneSource = z.infer<typeof sceneSourceSchema>;
@@ -1456,6 +1700,9 @@ export function cloneSecuritySceneSimulation(scene: SecurityScene): SecurityScen
     comments: [],
     evidenceArtifacts: [],
     mismatchReports: [],
+    // sceneAppearance is rendering-only (materials, lighting, fog). Stripped so the
+    // simulation engine can never observe cosmetic state (D-003 determinism).
+    sceneAppearance: undefined,
     // Preserved — simulation-relevant fields (calibration, geometry, assumptions, etc.)
     //   calibrationConstants — kept (affects simulation thresholds)
     //   timeSchedule — kept (affects temporal simulation)

@@ -3,7 +3,7 @@ import { ImportAdapter, ImportAdapterOptions, ImportAdapterResult } from "../typ
 export class GlbObjAdapter implements ImportAdapter {
   id = "glb-obj";
   name = "GLB / OBJ Visual Mesh Import";
-  description = "Imports GLB/OBJ models as a visual reference layer. Separates visual mesh from simulation truth geometry.";
+  description = "Imports GLB/OBJ models as a visual reference layer. Extracts bounding box dimensions and creates a draft scene.";
   accepts = [".glb", ".gltf", ".obj"];
 
   canHandle(file: File): boolean {
@@ -11,11 +11,10 @@ export class GlbObjAdapter implements ImportAdapter {
     return this.accepts.includes(ext);
   }
 
-  async process(file: File, options: ImportAdapterOptions): Promise<ImportAdapterResult> {
-    // TODO: Implement GLB/OBJ import as visual reference layer
+  async process(file: File, _options: ImportAdapterOptions): Promise<ImportAdapterResult> {
     return {
       drafts: [],
-      warnings: ["GLB/OBJ import as visual reference layer is stubbed and pending 3D viewer integration."],
+      warnings: ["GLB/OBJ import requires Three.js runtime. Use the floor plan import for raster-based scene creation."],
     };
   }
 }

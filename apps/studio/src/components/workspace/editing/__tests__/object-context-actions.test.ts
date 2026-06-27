@@ -6,6 +6,8 @@ import {
   createCriticalZoneNode,
   createDoorNode,
   createScenarioPathNode,
+  createObstructionNode,
+  createSecurityLightNode,
   createWallNode,
   createWindowNode,
 } from "@/lib/node-factory";
@@ -19,6 +21,8 @@ import {
 function buildScene() {
   const scene = createBlankSecurityScene();
   scene.cameras = [createCameraNode([2.5, 2.8, 2.5])];
+  scene.securityLights = [createSecurityLightNode([1.5, 2.8, 1.5])];
+  scene.obstructions = [createObstructionNode([3.5, 1, 3.5], "shelf")];
   scene.criticalZones = [createCriticalZoneNode([
     [2, 2],
     [4, 2],
@@ -55,6 +59,46 @@ describe("buildContextualMenuModel", () => {
     expect(alignGroup?.actions.find((action) => action.id === "aim_at_selected_zone")?.enabled).toBe(true);
   });
 
+  it("labels the camera transform shortcuts with the canonical keyboard contract", () => {
+    const scene = buildScene();
+    const camera = findContextualNode(scene, scene.cameras[0]!.id);
+    const model = buildContextualMenuModel(scene, camera!, []);
+
+    const moveGroup = model.groups.find((group) => group.id === "move");
+    const heightGroup = model.groups.find((group) => group.id === "height");
+    const rotateGroup = model.groups.find((group) => group.id === "rotate");
+
+    expect(moveGroup?.actions.map((action) => action.hint)).toEqual(["↑", "↓", "←", "→"]);
+    expect(heightGroup?.actions.map((action) => action.hint)).toEqual(["PgUp", "PgDn"]);
+    expect(rotateGroup?.actions.map((action) => action.hint)).toEqual(["Q", "E", "X"]);
+  });
+
+  it("surfaces wall height controls alongside wall rotation", () => {
+    const scene = buildScene();
+    const wall = findContextualNode(scene, scene.walls[0]!.id);
+    const model = buildContextualMenuModel(scene, wall!, []);
+
+    const heightGroup = model.groups.find((group) => group.id === "height");
+    const rotateGroup = model.groups.find((group) => group.id === "rotate");
+
+    expect(heightGroup?.actions.map((action) => action.hint)).toEqual(["PgUp", "PgDn"]);
+    expect(rotateGroup?.actions.map((action) => action.hint)).toEqual(["Q", "E", "X"]);
+  });
+
+  it("surfaces the same height and rotate contract for lights and obstructions", () => {
+    const scene = buildScene();
+    const light = findContextualNode(scene, scene.securityLights[0]!.id);
+    const obstruction = findContextualNode(scene, scene.obstructions[0]!.id);
+
+    const lightModel = buildContextualMenuModel(scene, light!, []);
+    const obstructionModel = buildContextualMenuModel(scene, obstruction!, []);
+
+    expect(lightModel.groups.find((group) => group.id === "height")?.actions.map((action) => action.hint)).toEqual(["PgUp", "PgDn"]);
+    expect(lightModel.groups.find((group) => group.id === "rotate")?.actions.map((action) => action.hint)).toEqual(["Q", "E", "X"]);
+    expect(obstructionModel.groups.find((group) => group.id === "height")?.actions.map((action) => action.hint)).toEqual(["PgUp", "PgDn"]);
+    expect(obstructionModel.groups.find((group) => group.id === "rotate")?.actions.map((action) => action.hint)).toEqual(["Q", "E", "X"]);
+  });
+
   it("surfaces door wall snapping and state controls", () => {
     const scene = buildScene();
     const door = findContextualNode(scene, scene.doors[0]!.id);
@@ -78,6 +122,30 @@ describe("planContextualAction", () => {
     const patch = plan.patch as { mountType?: string; position?: [number, number, number] };
     expect(patch.mountType).toBe("wall");
     expect((patch.position as [number, number, number])[1]).toBeCloseTo(2.75, 2);
+  });
+
+  it("nudges and rotates cameras with the canonical transform actions", () => {
+    const scene = buildScene();
+    const camera = scene.cameras[0]!;
+
+    const movePlan = planContextualAction(scene, camera, "move_forward", []);
+    expect(movePlan.kind).toBe("patch");
+    if (movePlan.kind !== "patch") return;
+    const movePatch = movePlan.patch as { position?: [number, number, number] };
+    expect(movePatch.position?.[2]).toBeLessThan(camera.position[2]);
+
+    const liftPlan = planContextualAction(scene, camera, "move_up", []);
+    expect(liftPlan.kind).toBe("patch");
+    if (liftPlan.kind !== "patch") return;
+    const liftPatch = liftPlan.patch as { position?: [number, number, number]; mountHeightM?: number };
+    expect(liftPatch.position?.[1]).toBeGreaterThan(camera.position[1]);
+    expect(liftPatch.mountHeightM).toBeGreaterThan(camera.position[1] - 0.01);
+
+    const rotatePlan = planContextualAction(scene, camera, "rotate_left", []);
+    expect(rotatePlan.kind).toBe("patch");
+    if (rotatePlan.kind !== "patch") return;
+    const rotatePatch = rotatePlan.patch as { yawDeg?: number };
+    expect(rotatePatch.yawDeg).toBe(camera.yawDeg - 15);
   });
 
   it("snaps doors to the nearest wall", () => {

@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useStudioStore } from "@/store/studio-store";
 import { VIEW_MODE_KEYS, VIEW_MODE_PRESETS, TOOL_SHORTCUTS } from "@/lib/studio-constants";
 import { STUDIO_SHORTCUT_EVENTS } from "@/lib/studio-shortcuts";
+import { isTypingTarget } from "@/lib/input-guard";
+import { findContextualNode, planContextualAction } from "@/components/workspace/editing/object-context-actions";
 
 export function useStudioKeyboard() {
   const activeTool = useStudioStore((s) => s.activeTool);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  const scene = useStudioStore((s) => s.scene);
   const viewMode = useStudioStore((s) => s.viewMode);
   const focusMode = useStudioStore((s) => s.focusMode);
   const editor = useStudioStore((s) => s.editor);
@@ -30,12 +33,27 @@ export function useStudioKeyboard() {
   const restorePreviousLayout = useStudioStore((s) => s.restorePreviousLayout);
 
   const handleKeyDownRef = useRef<((e: KeyboardEvent) => void) | null>(null);
+  const selectionIds = selectedNodeIds.length > 0 ? selectedNodeIds : selectedNodeId ? [selectedNodeId] : [];
+  const selectionCanTransform = selectionIds.length > 0 && editor.editorMode === "idle" && activeTool !== "measure" && activeTool !== "comment";
+
+  const applySelectionAction = useCallback((actionId: "move_up" | "move_down" | "rotate_left" | "rotate_right") => {
+    if (!scene || selectionIds.length === 0) return;
+
+    const state = useStudioStore.getState();
+    for (const nodeId of selectionIds) {
+      const node = findContextualNode(scene, nodeId);
+      if (!node) continue;
+      const plan = planContextualAction(scene, node, actionId, selectionIds);
+      if (plan.kind === "patch") {
+        state.updateNode(nodeId, plan.patch);
+      }
+    }
+  }, [scene, selectionIds]);
 
   useEffect(() => {
     handleKeyDownRef.current = (e: KeyboardEvent) => {
-    // Don't intercept when user is typing in an input
-    const tag = (e.target as HTMLElement)?.tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      // Don't intercept when user is typing in an input
+      if (isTypingTarget(e.target)) return;
 
     const isCtrlOrMeta = e.ctrlKey || e.metaKey;
 
@@ -103,7 +121,7 @@ export function useStudioKeyboard() {
       return;
     }
 
-    if (activeTool === "select" && (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") && (selectedNodeId || selectedNodeIds.length > 0)) {
+    if (selectionCanTransform && (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
       e.preventDefault();
       const baseStep = editor.snapEnabled ? editor.gridSnapM : 0.1;
       const step = e.shiftKey ? baseStep * 4 : e.altKey ? baseStep / 4 : baseStep;
@@ -115,6 +133,18 @@ export function useStudioKeyboard() {
             ? [-step, 0]
             : [step, 0];
       translateSelectedNodes(delta);
+      return;
+    }
+
+    if (selectionCanTransform && (e.key === "PageUp" || e.key === "PageDown")) {
+      e.preventDefault();
+      applySelectionAction(e.key === "PageUp" ? "move_up" : "move_down");
+      return;
+    }
+
+    if (selectionCanTransform && (e.key.toLowerCase() === "q" || e.key.toLowerCase() === "e")) {
+      e.preventDefault();
+      applySelectionAction(e.key.toLowerCase() === "q" ? "rotate_left" : "rotate_right");
       return;
     }
 
@@ -194,8 +224,10 @@ export function useStudioKeyboard() {
     duplicateNode,
     editor.gridSnapM,
     editor.snapEnabled,
+    editor.editorMode,
     enterFocusMode,
     focusMode,
+    applySelectionAction,
     redo,
     removeSelectedNodes,
     restorePreviousLayout,
@@ -204,6 +236,7 @@ export function useStudioKeyboard() {
     saveSnapshot,
     selectedNodeId,
     selectedNodeIds,
+    scene,
     setActiveTool,
     setBottomTab,
     setViewMode,

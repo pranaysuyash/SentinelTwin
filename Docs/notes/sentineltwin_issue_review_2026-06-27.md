@@ -55,3 +55,30 @@
 - Route mismatch remains a context/state issue (`localhost:3001` opening prior view). This is still captured as user-visible follow-up until navigation bootstrap is explicitly validated end-to-end.
 - Calibration visual delta remains subtle when geometry is pixel-anchored; this must be treated as a known UX confirmation gap rather than a data corruption issue.
 
+
+## 2026-06-27 Recovery update (this pass)
+
+### What changed in-code
+
+- `apps/studio/src/lib/floor-plan-import.ts`
+  - Added border-aware prefiltering for wall candidates with `borderTrimPx` and `longWallSeedPx` handling.
+  - Wired extractor presets from `floor-plan-extraction-config.ts` through to extraction so source profile tuning also controls border-noise suppression.
+  - `removeNoisyWallComponents` now honors `minWallLengthPx` from config.
+
+- `apps/studio/src/components/scan-to-scene/ImportReview.tsx`
+  - Fixed wall/door/window picker indexing when list preview is paginated.
+  - Wall picker now maps visible rows back to global indexes so clicks in the first-`N` slice do not toggle the wrong element.
+  - Door/window checkbox toggles now use visible-row global indexes to prevent hidden-row false toggles.
+
+- `apps/studio/src/components/scan-to-scene/SceneBuilderWizard.tsx`
+  - Removed stale review-copy artifact (“Next: Review and Commit”) and aligned messaging to `Next: Review` for the floor-plan flow.
+- `apps/studio/src/lib/__tests__/floor-plan-import.test.ts`
+  - Extended extraction-config assertions to include the new `borderTrimPx` and `longWallSeedPx` fields for both architectural and hand-drawn profiles.
+- Agent tooling
+  - Verified `sentineltwin-demo-walkthrough` exists under `Projects/skills` and added symlink availability under `/Users/pranay/.agents/skills/sentineltwin-demo-walkthrough` so all agents can discover it.
+
+### Demo guidance impact
+
+- The same screen is now explicit that the floor-plan step is review/cleanup (not creation).
+- Wall metric wording + picker behavior now better matches the actual interaction model.
+- Remaining ambiguity to monitor: first-pass scaling and anchor behavior still appear subtle in image preview by design; this should be presented as a scale-driven authoritative update rather than an immediate image deformation.

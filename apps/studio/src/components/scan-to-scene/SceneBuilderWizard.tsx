@@ -623,7 +623,7 @@ function ConfigureStep({
 
         {value.floorPlanResult == null ? (
           <div className="rounded-lg border border-[#22314b] bg-[#0f1828] p-2 text-[9px] text-[#9bb0ce]">
-            You are in the floor-plan review lane. Complete trust checks here, then click <span className="font-semibold text-[#cdd9ee]">Next: Review and Commit</span> when ready for final summary.
+            You are in the floor-plan review lane. Complete trust checks here, then click <span className="font-semibold text-[#cdd9ee]">Next: Review</span> when ready for final summary.
           </div>
         ) : null}
 

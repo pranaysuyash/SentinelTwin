@@ -217,6 +217,8 @@ describe("SceneBuilderWizard floor-plan extraction config", () => {
       scalePixelsPerMeter: 72,
       edgeThreshold: 46,
       minWallLengthPx: 28,
+      borderTrimPx: 28,
+      longWallSeedPx: 160,
     });
   });
 
@@ -234,6 +236,8 @@ describe("SceneBuilderWizard floor-plan extraction config", () => {
       scalePixelsPerMeter: 72,
       edgeThreshold: 26,
       minWallLengthPx: 12,
+      borderTrimPx: 18,
+      longWallSeedPx: 110,
     });
   });
 

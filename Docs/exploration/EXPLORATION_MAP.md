@@ -30,8 +30,9 @@
 - Measure how often each source profile improves confidence for real-world hand-drawn plans vs scans.
 - Add a calibration change audit row (before/after values + px/m) so visual confirmation is immediate.
 - Add optional plan-source preprocessing toggles for denoising legend layers and text strokes.
-- 2026-06-19: added in-session review-clarity pass for checklist scalability (`Show all` toggles) and explicit flow boundary copy (`Next: Review and Commit` vs `Create Draft Scene`).
+- 2026-06-19: added in-session review-clarity pass for checklist scalability (`Show all` toggles) and explicit flow boundary copy (`Next: Review` vs `Create Draft Scene`).
 - 2026-06-27: tightened live demo lane grammar for the floor-plan review flow (`Next: Review` and explicit `Create Draft Scene` finalization), and aligned detector copy to “raw candidates vs kept shell.” Remaining open follow-up: improve visual confirmation that calibration edits changed scene footprint before moving forward.
+- 2026-06-28: updated floor-plan extraction config contract assertions and test coverage for `borderTrimPx` / `longWallSeedPx`; added agent reuse path fix by creating a symlink from `/Users/pranay/.agents/skills/sentineltwin-demo-walkthrough` to the canonical project skill.
 
 ### Thread 0: Product integrity hardening spine
 **Status:** Implemented in code (2026-05-30).

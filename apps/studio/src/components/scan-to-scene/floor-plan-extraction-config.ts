@@ -13,6 +13,8 @@ export interface FloorPlanSourceProfilePreset {
   hint: string;
   edgeThreshold: number;
   minWallLengthPx: number;
+  borderTrimPx: number;
+  longWallSeedPx: number;
 }
 
 export function getFloorPlanSourceProfileHint(profile: FloorPlanSourceProfile): string {
@@ -36,6 +38,8 @@ const FLOOR_PLAN_SOURCE_PRESETS: readonly FloorPlanSourceProfilePreset[] = [
     hint: "Best for precise linework and labels: use higher edge threshold and stronger noise suppression so annotations are less likely to become walls.",
     edgeThreshold: 46,
     minWallLengthPx: 28,
+    borderTrimPx: 28,
+    longWallSeedPx: 160,
   },
   {
     profile: "hand_drawn",
@@ -43,6 +47,8 @@ const FLOOR_PLAN_SOURCE_PRESETS: readonly FloorPlanSourceProfilePreset[] = [
     hint: "Looser detection with lower edge threshold. Good for pencil, marker, and uneven strokes, but expect more false positives in legends and room notes.",
     edgeThreshold: 26,
     minWallLengthPx: 12,
+    borderTrimPx: 18,
+    longWallSeedPx: 110,
   },
   {
     profile: "low_res_scan",
@@ -50,6 +56,8 @@ const FLOOR_PLAN_SOURCE_PRESETS: readonly FloorPlanSourceProfilePreset[] = [
     hint: "Moderate sensitivity for noisy scans. Use with a manual calibration pass; expect medium correction effort.",
     edgeThreshold: 34,
     minWallLengthPx: 18,
+    borderTrimPx: 22,
+    longWallSeedPx: 130,
   },
 ];
 
@@ -74,5 +82,7 @@ export function getFloorPlanExtractionConfig(state: {
     scalePixelsPerMeter: state.floorPlanScalePixelsPerMeter,
     edgeThreshold: preset.edgeThreshold,
     minWallLengthPx: preset.minWallLengthPx,
+    borderTrimPx: preset.borderTrimPx,
+    longWallSeedPx: preset.longWallSeedPx,
   };
 }

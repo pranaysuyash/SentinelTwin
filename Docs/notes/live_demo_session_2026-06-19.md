@@ -72,10 +72,17 @@ Run the same buyer floor-plan flow with the recovery script from the updated imp
   2) calibration model, 3) correction UX throughput.
 - File blockers in `Docs/notes/sentineltwin_issue_review_2026-06-18.md` and route follow-up into `Docs/exploration/EXPLORATION_MAP.md` thread 11b.
 
+## 2026-06-27 recovery and closeout pass (post config wiring)
+
+- Floor-plan flow is now explicit that `Next: Review` is the transition into the review summary and not scene creation.
+- In this flow, `Create Draft Scene` is only used after the review gate summary is clean enough.
+- Source-profile tuning now includes border-trim and long-wall seed values in the extraction config chain and tests.
+- Demo recovery artifacts were updated with the same buyer-facing wording in `Docs/notes/sentineltwin_issue_review_2026-06-27.md`.
+
 ## 2026-06-19 follow-up pass execution notes (post UX hardening)
 
 - New runtime behavior expected after recovery:
-  - Step labels in floor-plan configure/review read as review-lane actions: `Next: Review and Commit` (not finalize).
+- Step labels in floor-plan configure/review read as review-lane actions: `Next: Review` (not final scene creation).
   - Floor-plan import preview is larger and has explicit kept/exclude semantics in the checkbox legend.
   - Wall/door/window rows are capped with an explicit `Show all` toggle to prevent overload on noisy plans.
   - The wall count language now distinguishes raw candidates from kept geometry in both configure and review summaries.

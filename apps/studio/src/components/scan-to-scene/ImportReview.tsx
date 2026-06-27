@@ -164,9 +164,18 @@ export function ImportReview({
   }, [draftWalls, shortWallThresholdPx, wallMask]);
   const wallListLimit = 24;
   const doorWindowListLimit = 16;
-  const visibleWallRows = useMemo(() => (showAllWallRows ? draftWalls : draftWalls.slice(0, wallListLimit)), [draftWalls, showAllWallRows]);
-  const visibleDoorRows = useMemo(() => (showAllDoorRows ? draftDoors : draftDoors.slice(0, doorWindowListLimit)), [draftDoors, showAllDoorRows]);
-  const visibleWindowRows = useMemo(() => (showAllWindowRows ? draftWindows : draftWindows.slice(0, doorWindowListLimit)), [draftWindows, showAllWindowRows]);
+  const visibleWallRows = useMemo(() => {
+    const rows = draftWalls.map((wall, index) => ({ wall, index }));
+    return showAllWallRows ? rows : rows.slice(0, wallListLimit);
+  }, [draftWalls, showAllWallRows]);
+  const visibleDoorRows = useMemo(() => {
+    const rows = draftDoors.map((opening, index) => ({ opening, index }));
+    return showAllDoorRows ? rows : rows.slice(0, doorWindowListLimit);
+  }, [draftDoors, showAllDoorRows]);
+  const visibleWindowRows = useMemo(() => {
+    const rows = draftWindows.map((opening, index) => ({ opening, index }));
+    return showAllWindowRows ? rows : rows.slice(0, doorWindowListLimit);
+  }, [draftWindows, showAllWindowRows]);
   const duplicateWallIndexes = useMemo(() => {
     const next = new Set<number>();
     for (let i = 0; i < draftWalls.length; i += 1) {
@@ -705,13 +714,15 @@ export function ImportReview({
                 running stats above, bulk actions below. See
                 `Docs/review/UI_REVIEW_2026-06-19.md` I3. */}
             <WallCanvasPicker
-              walls={visibleWallRows}
+              walls={visibleWallRows.map(({ wall }) => wall)}
               mask={wallMask}
               sourceWidthPx={result.imageWidth}
               sourceHeightPx={result.imageHeight}
               onToggle={(index) => {
+                const wallIndex = visibleWallRows[index]?.index;
+                if (wallIndex === undefined) return;
                 const next = [...wallMask];
-                next[index] = !(next[index] ?? true);
+                next[wallIndex] = !(next[wallIndex] ?? true);
                 setWallMask(next);
               }}
             />
@@ -753,16 +764,16 @@ export function ImportReview({
               <div className="max-h-24 space-y-1.5 overflow-y-auto pr-1">
                 {visibleDoorRows.length === 0 ? (
                   <div className="text-[11px] text-[#4f5a72]">None detected</div>
-                ) : visibleDoorRows.map((door, index) => (
-                  <label key={`door-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
-                    <span>D{index + 1}: {door.widthM}m @ ({door.position.x},{door.position.y})</span>
+                ) : visibleDoorRows.map(({ opening, index: globalIndex }, visibleIndex) => (
+                  <label key={`door-${globalIndex}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
+                    <span>D{visibleIndex + 1}: {opening.widthM}m @ ({opening.position.x},{opening.position.y})</span>
                     <input
                       type="checkbox"
-                      aria-label={`Keep door ${index + 1}`}
-                      checked={doorMask[index] ?? true}
+                      aria-label={`Keep door ${visibleIndex + 1}`}
+                      checked={doorMask[globalIndex] ?? true}
                       onChange={(event) => {
                         const next = [...doorMask];
-                        next[index] = event.target.checked;
+                        next[globalIndex] = event.target.checked;
                         setDoorMask(next);
                       }}
                     />
@@ -804,16 +815,16 @@ export function ImportReview({
               <div className="max-h-24 space-y-1.5 overflow-y-auto pr-1">
                 {visibleWindowRows.length === 0 ? (
                   <div className="text-[11px] text-[#4f5a72]">None detected</div>
-                ) : visibleWindowRows.map((window, index) => (
-                  <label key={`window-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
-                    <span>Wn{index + 1}: {window.widthM}m @ ({window.position.x},{window.position.y})</span>
+                ) : visibleWindowRows.map(({ opening, index: globalIndex }, visibleIndex) => (
+                  <label key={`window-${globalIndex}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
+                    <span>Wn{visibleIndex + 1}: {opening.widthM}m @ ({opening.position.x},{opening.position.y})</span>
                     <input
                       type="checkbox"
-                      aria-label={`Keep window ${index + 1}`}
-                      checked={windowMask[index] ?? true}
+                      aria-label={`Keep window ${visibleIndex + 1}`}
+                      checked={windowMask[globalIndex] ?? true}
                       onChange={(event) => {
                         const next = [...windowMask];
-                        next[index] = event.target.checked;
+                        next[globalIndex] = event.target.checked;
                         setWindowMask(next);
                       }}
                     />

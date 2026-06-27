@@ -86,6 +86,10 @@ export interface FloorPlanConfig {
   edgeThreshold?: number;
   /** Minimum wall length in pixels to consider (default: 20). */
   minWallLengthPx?: number;
+  /** Crop margin in pixels around image edges to suppress legend/title artifacts. */
+  borderTrimPx?: number;
+  /** Keep long wall candidates when touching page edges; shorter border noise is dropped. */
+  longWallSeedPx?: number;
 }
 
 const DEFAULT_CONFIG: Required<FloorPlanConfig> = {
@@ -93,6 +97,8 @@ const DEFAULT_CONFIG: Required<FloorPlanConfig> = {
   roomHeightM: 3,
   edgeThreshold: 40,
   minWallLengthPx: 20,
+  borderTrimPx: 20,
+  longWallSeedPx: 135,
 };
 const DEFAULT_TIER1_QUALITY_THRESHOLD = 0.45;
 const NOISE_CLEANUP_COMPONENT_TOLERANCE_PX = 12;
@@ -116,7 +122,20 @@ export async function extractFloorPlan(
 
   // Step 3: Trace wall contours from edges, then clean noisy fragments for stable shells.
   const wallCandidates = traceWalls(gradient, width, height, cfg.minWallLengthPx);
-  const wallSegments = removeNoisyWallComponents(wallCandidates, width, height, cfg.scalePixelsPerMeter);
+  const borderPrunedWallCandidates = pruneBorderNoiseCandidates(
+    wallCandidates,
+    width,
+    height,
+    cfg.borderTrimPx,
+    cfg.longWallSeedPx,
+  );
+  const wallSegments = removeNoisyWallComponents(
+    borderPrunedWallCandidates,
+    width,
+    height,
+    cfg.scalePixelsPerMeter,
+    cfg.minWallLengthPx,
+  );
 
   // Step 4: Detect openings (doors/windows) from wall gaps
   const { doors, windows } = detectOpenings(wallSegments);
@@ -654,17 +673,54 @@ function traceWalls(
   return segments;
 }
 
+function pruneBorderNoiseCandidates(
+  walls: WallSegment[],
+  imageWidth: number,
+  imageHeight: number,
+  borderTrimPx: number,
+  longWallSeedPx: number,
+): WallSegment[] {
+  if (walls.length === 0 || borderTrimPx <= 0) {
+    return walls;
+  }
+
+  const safeTrimX = Math.max(0, Math.min(Math.floor(borderTrimPx), Math.max(0, imageWidth / 3)));
+  const safeTrimY = Math.max(0, Math.min(Math.floor(borderTrimPx), Math.max(0, imageHeight / 3)));
+  const safeLongWallSeed = Math.max(1, Math.floor(longWallSeedPx));
+
+  return walls.filter((wall) => {
+    const touchesLeft = wall.start.x <= safeTrimX || wall.end.x <= safeTrimX;
+    const touchesRight = wall.start.x >= imageWidth - safeTrimX || wall.end.x >= imageWidth - safeTrimX;
+    const touchesTop = wall.start.y <= safeTrimY || wall.end.y <= safeTrimY;
+    const touchesBottom = wall.start.y >= imageHeight - safeTrimY || wall.end.y >= imageHeight - safeTrimY;
+
+    const touchesBorder = touchesLeft || touchesRight || touchesTop || touchesBottom;
+    if (!touchesBorder) {
+      return true;
+    }
+
+    return wallLengthPx(wall) >= safeLongWallSeed;
+  });
+}
+
 function removeNoisyWallComponents(
   walls: WallSegment[],
   _imageWidth: number,
   _imageHeight: number,
   scalePixelsPerMeter: number,
+  minWallLengthPx?: number,
 ): WallSegment[] {
   if (walls.length === 0) return walls;
 
+  const minimumSegmentLength = Math.max(
+    12,
+    minWallLengthPx ?? scalePixelsPerMeter * 0.2,
+    scalePixelsPerMeter * 0.2,
+  );
+
   const candidateWallIndexes = walls
     .map((wall, index) => ({ wall, index, lengthPx: wallLengthPx(wall) }))
-    .filter(({ lengthPx }) => lengthPx >= Math.max(12, scalePixelsPerMeter * 0.2));
+    .filter(({ lengthPx }) => lengthPx >= minimumSegmentLength);
 
   if (candidateWallIndexes.length <= 1) return candidateWallIndexes.map((entry) => entry.wall);
 

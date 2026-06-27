@@ -256,29 +256,35 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
   const floorPlanStepLabels = ["Room Setup", "Method", "Floor-Plan Review", "Review"];
   const defaultStepLabels = ["Room Setup", "Method", "Configure", "Review"];
   const stepLabels = isFloorPlan ? floorPlanStepLabels : defaultStepLabels;
-  const nextActionLabel =
-    state.step === 2
-      ? isFloorPlan
-        ? "Next: Review and Commit"
-        : "Next"
-      : "Next";
-  const primaryActionLabel = isFloorPlan && state.step === 3 ? "Create Draft Scene" : "Create Scene";
+  const isFinalReview = state.step === 3;
+  const nextActionLabel = state.step === 2
+    ? isFloorPlan
+      ? "Next: Review"
+      : "Next"
+    : "Next";
+  const primaryActionLabel = isFinalReview
+    ? isFloorPlan
+      ? "Create Draft Scene"
+      : "Create Scene"
+    : "Create Scene";
   const backActionLabel = state.step === 0
     ? "Cancel"
     : state.step === 1
       ? "Back to Room Name"
     : state.step === 2
       ? isFloorPlan
-        ? "Back to Method"
+        ? "Back to Floor-Plan Setup"
         : "Back to Method"
-      : "Back to Import Review";
+      : "Back to Floor-Plan Review";
   const navigationHint =
     state.step === 2
       ? isFloorPlan
-        ? "This is the floor-plan review lane. Keep the flow here until geometry is credible, then click Next: Review and Commit."
+        ? "This is the floor-plan review lane. Use this step for cleanup, calibration, and calibration locking. After it looks credible, click Next: Review."
         : "Configure method-specific options, then click Next."
       : state.step === 3
-        ? "Review step: confirm the final summary, then use Create Draft Scene."
+        ? isFloorPlan
+          ? "You are in final review. Confirm summary items, then click Create Draft Scene."
+          : "Review step: confirm the final summary, then use Create Scene."
         : "";
 
   return (
@@ -323,7 +329,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
       <div className="flex-1 overflow-y-auto p-4">
         {state.step === 0 && <RoomSetupStep value={state} onChange={update} />}
         {state.step === 1 && <MethodStep value={state} onChange={update} onTemplateSelect={handleTemplateSelect} />}
-        {state.step === 2 && (
+      {state.step === 2 && (
           <ConfigureStep
             value={state}
             onChange={update}

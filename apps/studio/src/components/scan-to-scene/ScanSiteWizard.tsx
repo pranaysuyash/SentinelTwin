@@ -25,6 +25,9 @@ import { startTransition, useCallback, useEffect, useMemo, useRef, useState, typ
 
 import { SurfaceButton } from "@/components/shared/SurfaceButton";
 import { compileScanSessionToScene, createScanCandidate, createScanSession, SCAN_CANDIDATE_TYPES, summarizeScanProvenance, type ScanCandidate, type ScanCandidateKind, type ScanCompilationWarning, type ScanSession } from "@/lib/scan-to-scene";
+// Intake Pass I2 — extracted guided-flow components (design-pack §23).
+import { ScanProgressStepper } from "@/components/site-intake/ScanProgressStepper";
+import { ScanProgressSidebar } from "@/components/site-intake/ScanProgressSidebar";
 import { useStudioStore } from "@/store/studio-store";
 
 import type { SecurityScene } from "@/schema/security-scene";
@@ -722,18 +725,45 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
   }, []);
 
   if (isGuided) {
-    const guidedSteps = [
-      "Set room dimensions",
-      "Upload overview photos",
-      "Mark front wall / room shell",
-      "Mark entry point",
-      "Mark critical zone",
-      "Mark existing cameras",
-      "Mark obstructions",
-      "Mark lights & windows",
-      "Mark path",
-      "Review & compile",
-    ];
+    // Intake Pass I2 — the guided branch previously rendered a single static
+    // "Step 1" screen regardless of `guidedStep` (the variable incremented but
+    // changed nothing), the Back button exited the wizard, and the progress
+    // count was hardcoded "1 of 10". Per the design-pack §23 contract
+    // ("Step status must be derived from actual scan session state, not
+    // hardcoded UI"), the stepper + sidebar are now the extracted components
+    // (`ScanProgressStepper` / `ScanProgressSidebar`) driven by real session
+    // state, the heading is derived from `guidedStep`, and Back actually
+    // steps back. Steps 3-9 preset `activeKind` so the canvas is ready for
+    // the step's marking task; step 10 shows the review prompt.
+    const guidedStepKindMap: Record<number, ScanCandidateKind | null> = {
+      2: "wall",
+      3: "entry_point",
+      4: "critical_zone",
+      5: "camera",
+      6: "obstruction",
+      7: "light",
+      8: "path_point",
+    };
+    const guidedHeading = [
+      "Set Room Dimensions",
+      "Upload Overview Photos",
+      "Mark Front Wall / Room Shell",
+      "Mark Entry Point",
+      "Mark Critical Zone",
+      "Mark Existing Cameras",
+      "Mark Obstructions",
+      "Mark Lights & Windows",
+      "Mark Path",
+      "Review & Compile",
+    ][guidedStep] ?? "Set Room Dimensions";
+    // When entering a marking step, preset the canvas's activeKind so the
+    // operator's first click places the right element type. Use a layout
+    // effect to avoid a flash of the previous kind.
+    const presetKind = guidedStepKindMap[guidedStep];
+    if (presetKind && presetKind !== activeKind) {
+      // Defer to next tick to avoid setState-during-render.
+      queueMicrotask(() => setActiveKind(presetKind));
+    }
     const photoSlots = Array.from({ length: 6 }, (_, index) => session.photos[index] ?? null);
     const createdAtLabel = new Intl.DateTimeFormat("en-US", {
       month: "long",
@@ -744,7 +774,9 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
       hour12: true,
       timeZone: "UTC",
     }).format(new Date(session.createdAt));
-    const nextLabel = "Next: Mark Entry";
+    const guidedCompleted = Array.from({ length: guidedStep }, (_, i) => i);
+    const isFinalStep = guidedStep === 9;
+    const nextLabel = isFinalStep ? "Compile Scene" : "Next";
 
     return (
       <div className="flex h-full flex-col overflow-hidden bg-[#08101a] text-slate-200">
@@ -869,43 +901,18 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
             </div>
 
             <div className="px-5 lg:px-6">
-              <div className="grid grid-cols-10 gap-0 rounded-[18px] border border-white/8 bg-white/[0.015] px-4 py-5">
-                {guidedSteps.map((label, index) => {
-                  const active = index === guidedStep;
-                  const complete = index < guidedStep;
-                  return (
-                    <div key={label} className="flex min-w-0 flex-col items-center">
-                      <div className="flex w-full items-center">
-                        {index > 0 ? <div className="h-px flex-1 bg-white/10" /> : null}
-                        <div
-                          className={[
-                            "flex h-9 w-9 flex-none items-center justify-center rounded-full border text-[15px] font-medium",
-                            complete
-                              ? "border-emerald-500/40 bg-emerald-500 text-white"
-                              : active
-                                ? "border-blue-500/50 bg-blue-500/20 text-blue-300"
-                                : "border-white/20 bg-transparent text-slate-400",
-                          ].join(" ")}
-                        >
-                          {complete ? <Check className="h-4 w-4" /> : index + 1}
-                        </div>
-                        {index < guidedSteps.length - 1 ? <div className="h-px flex-1 bg-white/10" /> : null}
-                      </div>
-                      <div className={[
-                        "mt-3 px-1 text-center text-[15px] leading-[1.15]",
-                        active ? "text-white" : "text-slate-300",
-                      ].join(" ")}>
-                        {label}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <ScanProgressStepper
+                current={guidedStep}
+                completed={guidedCompleted}
+                onJump={(index) => setGuidedStep(index)}
+              />
             </div>
 
             <div className="grid min-h-0 flex-1 gap-5 px-5 py-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-6">
               <section className="min-w-0 rounded-[22px] border border-white/8 bg-white/[0.015] p-5">
-                <h2 className="text-[31px] font-medium tracking-[-0.03em] text-white">Step 1 of 10: Set Room Dimensions</h2>
+                <h2 className="text-[31px] font-medium tracking-[-0.03em] text-white">
+                  Step {guidedStep + 1} of 10: {guidedHeading}
+                </h2>
 
                 <div className="mt-8 grid gap-5 xl:grid-cols-[330px_minmax(0,1fr)]">
                   <div className="space-y-6 pt-4">
@@ -1040,74 +1047,14 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                 </div>
               </section>
 
-              <aside className="min-w-0 rounded-[22px] border border-white/8 bg-[#0b1320] p-5">
-                <div>
-                  <div className="text-[18px] font-medium text-white">Your progress</div>
-                  <div className="mt-4 h-2 rounded-full bg-white/8">
-                    <div className="h-2 w-[10%] rounded-full bg-[#2563eb]" />
-                  </div>
-                  <div className="mt-3 text-[15px] text-slate-300">1 of 10 steps completed</div>
-                </div>
-
-                <div className="mt-7 border-t border-white/8 pt-5">
-                  <div className="text-[18px] font-medium text-white">Steps overview</div>
-                  <div className="mt-4 space-y-2">
-                    {guidedSteps.map((label, index) => {
-                      const active = index === guidedStep;
-                      return (
-                        <div
-                          key={label}
-                          className={[
-                            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px]",
-                            active ? "bg-[#1b325c] text-white" : "text-slate-400",
-                          ].join(" ")}
-                        >
-                          <div className={[
-                            "flex h-6 w-6 items-center justify-center rounded-full border text-[12px]",
-                            active ? "border-blue-500/40 bg-blue-500/20 text-blue-300" : "border-white/20 text-slate-400",
-                          ].join(" ")}>
-                            {index + 1}
-                          </div>
-                          <span className="leading-5">{label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="mt-7 border-t border-white/8 pt-5">
-                  <div className="text-[18px] font-medium text-white">Session info</div>
-                  <div className="mt-4 space-y-4 text-[15px] text-slate-300">
-                    <div className="flex items-center justify-between gap-3">
-                      <span>Session ID</span>
-                      <span className="text-white">{session.id}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span>Created</span>
-                      <span className="text-white">{createdAtLabel}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span>Photos uploaded</span>
-                      <span className="text-white">{session.photos.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span>Est. time remaining</span>
-                      <span className="text-white">15–25 min</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-7 rounded-[14px] border border-sky-500/20 bg-[#0d1f36] px-4 py-4 text-[15px] text-slate-100">
-                  <div className="flex items-start gap-3">
-                    <ScanSearch className="mt-0.5 h-5 w-5 flex-none text-sky-300" />
-                    <div>
-                      <div className="font-medium text-white">Guided photo marking</div>
-                      <div className="mt-1 leading-6 text-slate-200">You confirm all elements.</div>
-                      <div className="mt-1 leading-6 text-slate-300">Automatic photo detection is not enabled for this workflow yet.</div>
-                    </div>
-                  </div>
-                </div>
-              </aside>
+              <ScanProgressSidebar
+                current={guidedStep}
+                completed={guidedCompleted}
+                sessionId={session.id}
+                createdAtLabel={createdAtLabel}
+                photosUploaded={session.photos.length}
+                estimatedTimeRemainingLabel="15–25 min"
+              />
             </div>
 
             <div className="mx-5 mb-5 flex items-center justify-between gap-4 rounded-[18px] border border-white/8 bg-white/[0.02] px-5 py-4 lg:mx-6">
@@ -1119,13 +1066,24 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                 <button
                   type="button"
                   className="flex h-11 items-center rounded-xl border border-white/8 bg-white/[0.03] px-4 text-[15px] text-slate-200 transition-colors hover:bg-white/[0.06]"
-                  onClick={onClose}
+                  // Intake Pass I2 — Back now steps back within the wizard
+                  // instead of exiting (the prior behavior discarded in-progress
+                  // work on every Back press). At step 0, Back exits to intake.
+                  onClick={() => setGuidedStep((current) => (current > 0 ? current - 1 : current))}
+                  disabled={guidedStep === 0}
                 >
                   Back
                 </button>
                 <button
                   type="button"
-                  onClick={() => setGuidedStep((current) => Math.min(current + 1, 9))}
+                  onClick={() => {
+                    if (isFinalStep) {
+                      // Compile uses the same path as manual mode's compile.
+                      handleCompile();
+                    } else {
+                      setGuidedStep((current) => Math.min(current + 1, 9));
+                    }
+                  }}
                   className="flex h-11 items-center gap-2 rounded-xl bg-[#2563eb] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#2b6df0]"
                 >
                   <span>{nextLabel}</span>

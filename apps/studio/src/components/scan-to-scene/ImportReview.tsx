@@ -138,7 +138,6 @@ export function ImportReview({
     detectorCandidateCount: result.rawWallSegmentCount ?? result.walls.length,
   });
   const confidencePct = renderedConfidence.pct;
-  const confidenceBand = renderedConfidence.band;
   const hasManualCalibration = Boolean(result.manualCalibration);
   const qualityPct = semanticContext ? Math.round(semanticContext.qualityScore * 100) : null;
   const rawWallSegmentCount = result.rawWallSegmentCount ?? result.walls.length;
@@ -348,13 +347,15 @@ export function ImportReview({
             <div className="text-[#6f82a4]">Openings</div>
             <div>{result.doors.length + result.windows.length} total</div>
           </div>
-          <div className="rounded-xl border border-[#1f2a3e] bg-[#0a101d] px-3 py-2 text-[#9fb2d1]">
-            <div className="text-[#6f82a4]">Walls</div>
-            <div>{keptWallCount} / {rawWallSegmentCount} kept</div>
-            <div className="text-[9px] text-[#6d819f]">
-              {rawWallSegmentCount > keptWallCount ? `${removedBeforeDraftCount} removed by pre-filter` : "No pre-filter removals"}
+            <div className="rounded-xl border border-[#1f2a3e] bg-[#0a101d] px-3 py-2 text-[#9fb2d1]">
+              <div className="text-[#6f82a4]">Detected walls</div>
+              <div>{rawWallSegmentCount} raw candidates · {keptWallCount} kept</div>
+              <div className="text-[9px] text-[#6d819f]">
+              {rawWallSegmentCount > keptWallCount
+                ? `${rawWallSegmentCount - keptWallCount} removed during cleanup or excluded from working shell`
+                : "No pre-filter removals"}
+              </div>
             </div>
-          </div>
         </div>
       </div>
 
@@ -690,7 +691,7 @@ export function ImportReview({
 
         <div className="space-y-3">
           <div className="rounded-lg border border-[#1f2a3e] bg-[#0a0f18] px-2 py-1.5 text-[10px] text-[#a5b8da]">
-            Checkbox = keep/exclude. Checked keeps an item in the draft shell, unchecked excludes it from the shell.
+            Wall picker is canvas-first: click a wall segment to toggle keep/exclude. Kept segments are blue/cyan/green; excluded segments are red dashed.
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between">

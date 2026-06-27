@@ -49,6 +49,7 @@ import { buildReportSummaryLines } from "@/lib/report-summary";
 import { buildOutcomeDrivenReportMarkdown } from "@/lib/report-outcome-markdown";
 import { truthLabelDetail } from "@/lib/truth-labels";
 import { buildPlainLanguageReport, formatPlainLanguageMarkdown } from "@/lib/report-plain-language";
+import { buildCoverageProvenance, formatProvenanceMarkdown } from "@/lib/coverage-provenance";
 
 type InfrastructureEstimate = {
   cameraCount: number;
@@ -440,6 +441,19 @@ export function ReportLiteTab() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportProvenance = () => {
+    if (!result) return;
+    const provenance = buildCoverageProvenance(scene, result, { postureScore });
+    const md = formatProvenanceMarkdown(provenance);
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sentineltwin-provenance-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleExportMarkdown = () => {
     const filenameBase = reportMode === "compare"
       ? `sentineltwin-compare-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`
@@ -749,6 +763,13 @@ export function ReportLiteTab() {
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
               <Database className="h-3 w-3" /> Export Evidence Bundle
+            </button>
+            <button type="button"
+              onClick={handleExportProvenance}
+              disabled={!result}
+              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white disabled:opacity-40"
+            >
+              <Database className="h-3 w-3" /> Export Provenance
             </button>
             <button type="button"
               onClick={() => {

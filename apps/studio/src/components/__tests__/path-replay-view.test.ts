@@ -35,7 +35,9 @@ describe("PathReplayView", () => {
     expect(source).toContain("Incident Review");
     expect(source).toContain("Replay Focus Mode");
     expect(source).toContain("Press F to exit focus");
-    expect(source).toContain("setImmersiveMode((value) => !value)");
+    expect(source).toContain("toggleActiveSurfaceFocus");
+    expect(source).toContain("const toggleImmersiveMode = useCallback(() => {");
+    expect(source).toContain("window.addEventListener(STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus, toggleImmersiveMode);");
     expect(source).toContain("Focus");
     expect(source).toContain("--st-full-canvas-safe-top");
   });

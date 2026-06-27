@@ -73,5 +73,5 @@
   - Camera View shows the camera inspection chrome, DORI context, verification controls, and replay-related overlays in standard mode.
   - Path Replay shows the route summary, play/pause controls, and visibility timeline in standard mode.
   - Camera Wall shows the multi-feed grid, active/offline counts, and route context in standard mode.
-- Finding: the shell-level `F` shortcut toggles the global focus layout, not the in-surface immersive copy that the view components expose in their own local headers.
-- Practical implication: browser QA should assert both the shell focus preset and the per-surface chrome state separately so the operator-facing shortcut contract stays honest.
+- Finding: the shell-level `F` shortcut now dispatches to the active surface focus bridge, so the in-surface immersive copy is the visible result in Camera View, Path Replay, and Camera Wall.
+- Practical implication: browser QA should now assert that the shell shortcut and the per-surface chrome state stay aligned, because they are intentionally the same operator contract in the full-canvas review views.

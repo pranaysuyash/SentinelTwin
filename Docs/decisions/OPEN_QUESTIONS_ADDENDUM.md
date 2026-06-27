@@ -160,3 +160,43 @@ ScanSiteWizard guided flow (I2) needs a tablet-first layout.
 tablet-aware sizes).
 **Priority:** P2 — affects Intake Pass layout but does not block Trust Pass.
 **Source:** UI review Group F1; `StudioShell.tsx:124-130` (single compact-viewport breakpoint).
+
+## Resolutions — Added 2026-06-23 (Visual / Intake / Density passes)
+
+The three OQ-UI questions below were resolved by first-principles reasoning
+during the V1-V3 / I1-I3 / D2-D3 implementation pass (per motto_v3 §0 —
+"Build for the best app, not the safest small change"; the motto is the
+answer, not the user). Documented here so future sessions inherit the
+decisions rather than re-asking.
+
+### OQ-UI-01 RESOLVED: Primary persona — default to buyer, disclose operator.
+**Decision:** The UI defaults to buyer/consultant legibility on first run and
+progressively discloses operator surfaces. Rationale from first principles:
+the product thesis is a live security digital twin (operator framing), but the
+06-17 demo was a buyer moment, and you can't sell to a buyer who bounces.
+Operators are return users who'll learn the power surface; buyers are
+one-shot. The D1 foreground+overflow model and D3 dashboard priority split
+both implement this: buyer-relevant sections/tabs foreground; operator-grade
+surfaces (Governance, Workspace library, Project Settings, Assumptions)
+surface behind overflow but remain reachable in one interaction.
+**Implemented in:** D1 (BottomPanel), D3 (StudioDashboardHome section picker).
+
+### OQ-UI-03 RESOLVED: Density direction — Option 4 (contextual priority) canonical.
+**Decision:** Option 4 is the committed direction. Options 1/2/3 remain
+documented as evolution paths but are not being pursued — re-architecting now
+would be the unbounded rewrite motto_v3 §0.13 forbids, and Option 4 is built,
+tested, and working. The "three navigation grammars" (ProductView / ViewMode /
+BottomTab) are NOT collapsed — they are documented as a deliberate layered
+model (intent → canvas → analysis) in `product-view-store.ts`. The four
+"studio sub-view" ProductView entries are deliberate intent-driven deep links,
+not parallel truth.
+**Implemented in:** D1, D2 (product-view-store.ts header comment).
+
+### OQ-UI-04 RESOLVED: Field-tablet form factor — V1 commitment.
+**Decision:** On-site tablet is V1. First principles: the primary real-world
+intake context is an operator on-site with a tablet scanning the site — a
+phone-only fallback defeats that use case. The V3 type scale is tablet-aware
+(CSS variables bump up at ≤1024px width) so the on-site scan flow gets a
+legible scale without per-component media queries. The ScanSiteWizard (I2)
+layout is authored against the tablet-aware scale.
+**Implemented in:** V3 (globals.css tablet media query + TYPE_SCALE).

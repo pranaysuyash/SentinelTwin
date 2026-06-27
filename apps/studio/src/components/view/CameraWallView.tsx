@@ -21,6 +21,7 @@ import {
 import { CameraRigFixed, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
 import { useStudioStore } from "@/store/studio-store";
 import type { CameraNode, DoriQuality, SimulationResult } from "@/schema/security-scene";
+import { STUDIO_SHORTCUT_EVENTS } from "@/lib/studio-shortcuts";
 import { QUALITY_RANK } from "@/lib/quality-display";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import {
@@ -664,6 +665,9 @@ export function CameraWallView() {
   const [syncTime, setSyncTime] = useState(true);
   const [freeRunningTimestamp, setFreeRunningTimestamp] = useState(() => Date.now());
   const [immersiveMode, setImmersiveMode] = useState(false);
+  const toggleImmersiveMode = useCallback(() => {
+    setImmersiveMode((value) => !value);
+  }, []);
 
   const cameras = useMemo(() => {
     return orderCamerasForReplayPlayback(scene.cameras, selectedCameraId, selectedId);
@@ -743,18 +747,9 @@ export function CameraWallView() {
   }, [syncTime]);
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
-      if (event.key !== "f" && event.key !== "F") return;
-      const target = event.target as HTMLElement | null;
-      if (!target) return;
-      if (["INPUT", "TEXTAREA", "SELECT", "OPTION", "BUTTON"].includes(target.tagName)) return;
-      setImmersiveMode((value) => !value);
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+    window.addEventListener(STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus, toggleImmersiveMode);
+    return () => window.removeEventListener(STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus, toggleImmersiveMode);
+  }, [toggleImmersiveMode]);
 
   const activeCount = cameras.filter((cam) => cam.status === "on").length;
   const offlineCount = cameras.length - activeCount;
@@ -920,7 +915,7 @@ export function CameraWallView() {
 
       <button
         type="button"
-        onClick={() => setImmersiveMode((value) => !value)}
+        onClick={toggleImmersiveMode}
         className="absolute right-3 top-[calc(var(--st-full-canvas-safe-top,4.25rem)+0.5rem)] z-30 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#3a4a66] hover:text-white"
       >
         {immersiveMode ? "Exit Focus" : "Focus"}

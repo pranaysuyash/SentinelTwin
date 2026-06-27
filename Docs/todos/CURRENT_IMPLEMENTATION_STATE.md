@@ -1,6 +1,6 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-06-21 (session 39+40+41: brainstorm convergent features — camera model library, posture score + store + UI, adversary shadow, FORECAST, temporal-crowd integration, analytics dedup, fix ranker audit, Thread 147 audit)
+**Updated:** 2026-06-22 (session 39+40+41+42: brainstorm convergent features — camera model library, posture score + store + UI, adversary shadow, FORECAST, temporal-crowd integration, analytics dedup, fix ranker audit, Thread 147 audit, plain-language report, coverage provenance)
 
 ## Brainstorm-driven features (2026-06-21)
 
@@ -35,6 +35,18 @@ Full audit confirmed all layers are wired: simulation engine (Poisson model), 4 
 ### Analytics Deduplication
 Removed redundant `computeCrowdOcclusion` sweep from `buildTemporalAnalytics` in `security-analytics.ts`. The temporal engine now handles crowd integration directly — analytics reads `overallCoveragePct` (crowd-adjusted) and `geometricCoveragePct` (baseline) from hourly snapshots instead of recomputing. Eliminated unused `CrowdProfile`, `CoverageCellResult` imports and simplified function signature ✅
 
+### Plain-Language Report Translation
+`lib/report-plain-language.ts` — pure function that converts technical simulation data into everyday English narrative for non-security-professionals. `PlainLanguageReport` interface: headline, overallAssessment, coverageNarrative, zoneNarrative, vulnerabilityNarrative, postureNarrative, temporalNarrative, crowdNarrative, actionItems, confidence. Translation maps convert DORI qualities to plain descriptions ("identification" → "identify individuals by face"), coverage percentages to descriptive bands, posture scores to credit-score analogies. Generates concrete action items from simulation recommendations. `formatPlainLanguageMarkdown()` renders sections into readable markdown. Wired into `ReportLiteTab` as "Plain Language" mode alongside Technical and Before/After. Tests: 14 tests ✅
+
+### Coverage Provenance / Forensic Audit Trail
+`lib/coverage-provenance.ts` — ties every coverage claim back to specific cameras, zones, and simulation engine outputs with verification paths. `CoverageClaimAnchor` interface: claimId, claim, value, evidenceSources, confidence, verificationPath. Claims generated: total coverage (with per-camera evidence + obstruction impact), DORI quality distribution, per-zone compliance (with covering camera references), adversarial path exposure, k-robustness, posture score (5 factor breakdown). Camera evidence chain captures review status and geometry validity per camera. Zone evidence chain maps covering camera names. Audit notes auto-flag: unreviewed cameras, suspect geometry, uncalibrated scene, AI-extracted source. `formatProvenanceMarkdown()` renders full audit trail with evidence chain tables. "Export Provenance" button added to ReportLiteTab. Tests: 15 tests ✅
+
+### SectionCard action prop
+`SectionCard` extended with optional `action?: React.ReactNode` prop, rendered alongside truthLabel in header. Used by `EventConfigPanel` for inline header actions ✅
+
+### Camera preset icon fallback
+`cameraPresetIcon` changed from `Record<CameraPresetId, string>` to `Partial<Record<...>>` with property-based fallback logic — PTZ → ⚙, thermal → ⚡, fisheye → ◉, ceiling → ◔, wall → ▶, default → ○. Handles all 23 preset IDs including manufacturer models without requiring explicit icon mapping ✅
+
 ## Temporal simulation, GDPR report, and component refactors (2026-06-17)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
@@ -49,8 +61,8 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Tool constants (`TOOL_GHOST_COLORS`, `TOOL_ICONS`, `TOOL_LABELS`) extracted from `WorkspaceCanvas.tsx` to `lib/tool-constants.tsx` ✅
 - `InspectorPanel.tsx` (2390 lines) split into 9 focused sub-inspectors plus a thin routing component; no behavioral changes ✅
 - The top-canvas `ViewModeBar` now acts like a real studio navigator, with grouped workspace/review mode chips, descriptive tab labels, keyboard shortcut hints, and richer active-mode context chips for map, camera, wall, replay, compare, report, and analytics modes ✅
-- Camera View now has Focus Mode (`F`) to prioritize a full-iframe operator canvas while collapsing nonessential overlays and retaining a quick path back to map review. ✅
-- Path Replay and Camera Wall now also expose the same Focus Mode shortcut (`F`) so the three main review surfaces share one low-chrome inspection pattern. ✅
+- Camera View now has Focus Mode (`F`) to prioritize a full-iframe operator canvas while collapsing nonessential overlays and retaining a quick path back to map review; the shell now routes `F` to the active full-canvas surface instead of a separate global layout state. ✅
+- Path Replay and Camera Wall now also expose the same Focus Mode shortcut (`F`) through the same active-surface shortcut bridge, so the three main review surfaces share one low-chrome inspection pattern. ✅
 - `ScheduleEditor` component added at `components/inspector/ScheduleEditor.tsx` — full site-schedule configuration UI covering interior lights, exterior lights, occupancy periods, guard patrol rounds, and site location for seasonal lighting ✅
 - `SectionCard` extended with optional `icon` prop, wired into the section header ✅
 - `updateTimeSchedule` store action added to `scene-slice.ts` — patches `scene.timeSchedule` via `commitSceneChange` for undo/redo compatibility ✅

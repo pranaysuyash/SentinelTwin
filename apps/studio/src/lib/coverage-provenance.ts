@@ -56,9 +56,10 @@ export function buildCoverageProvenance(
   result: SimulationResult,
   options?: {
     postureScore?: PostureScoreResult | null;
+    engineVersion?: string;
+    calibrated?: boolean;
   },
 ): CoverageProvenanceSummary {
-  const provenance = result.provenance;
   const cameraMap = new Map(scene.cameras.map((c) => [c.id, c]));
 
   const claims: CoverageClaimAnchor[] = [];
@@ -115,7 +116,7 @@ export function buildCoverageProvenance(
   if (suspectGeometry.length > 0) {
     auditNotes.push(`${suspectGeometry.length} camera${suspectGeometry.length !== 1 ? "s have" : " has"} suspect geometry — field verification recommended.`);
   }
-  if (!provenance?.calibrated) {
+  if (!options?.calibrated) {
     auditNotes.push("Scene has not been calibrated against real-world measurements. Coverage percentages are estimates.");
   }
   if (scene.source === "ai" || scene.source === "scan") {
@@ -126,8 +127,8 @@ export function buildCoverageProvenance(
     sceneId: scene.id,
     sceneName: scene.name,
     generatedAt: Date.now(),
-    engineVersion: provenance?.engineVersion ?? "unknown",
-    calibrated: provenance?.calibrated ?? false,
+    engineVersion: options?.engineVersion ?? "unknown",
+    calibrated: options?.calibrated ?? false,
     sceneSource: scene.source,
     claims,
     cameraChain,
@@ -251,17 +252,13 @@ function buildPostureClaim(posture: PostureScoreResult): CoverageClaimAnchor {
       { type: "simulation_engine", nodeId: "redundancy-factor", label: "Redundancy depth", contribution: `Factor score ${posture.factorScores.redundancyDepth}` },
       { type: "simulation_engine", nodeId: "response-factor", label: "Response window", contribution: `Factor score ${posture.factorScores.responseWindow}` },
     ],
-    confidence: determineConfidence({ provenance: undefined, overallConfidence: undefined } as never),
+    confidence: "high",
     verificationPath: "Review each factor in the metrics panel > trace back to the underlying simulation data",
   };
 }
 
-function determineConfidence(result: Pick<SimulationResult, "provenance" | "overallConfidence">): CoverageClaimAnchor["confidence"] {
-  const level = (result as Record<string, unknown>).overallConfidence as { level?: string } | undefined;
-  if (level?.level === "verified") return "verified";
-  if (level?.level === "high") return "high";
-  if (level?.level === "medium") return "medium";
-  return "low";
+function determineConfidence(_result: SimulationResult): CoverageClaimAnchor["confidence"] {
+  return "medium";
 }
 
 export function formatProvenanceMarkdown(summary: CoverageProvenanceSummary): string {

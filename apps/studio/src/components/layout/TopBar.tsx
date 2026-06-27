@@ -33,6 +33,7 @@ import { SurfaceButton } from "@/components/shared/SurfaceButton";
 import { ExplainBadge } from "@/components/shared/ExplainBadge";
 import { useProductViewStore } from "@/store/product-view-store";
 import { useStudioStore } from "@/store/studio-store";
+import { STUDIO_SHORTCUT_EVENTS } from "@/lib/studio-shortcuts";
 import { WorkspacePresetSwitcher } from "@/components/dock/WorkspacePresetSwitcher";
 import { BranchSwitcher } from "@/components/top-bar/BranchSwitcher";
 import { FixSandboxBar } from "@/components/top-bar/FixSandboxBar";
@@ -755,7 +756,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 Export Site Twin File
               </button>
               <button type="button"
-                onClick={() => { window.dispatchEvent(new CustomEvent("sentineltwin:toggle-shortcuts")); setMoreOpen(false); }}
+                onClick={() => { window.dispatchEvent(new CustomEvent(STUDIO_SHORTCUT_EVENTS.toggleShortcuts)); setMoreOpen(false); }}
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
               >
                 <Keyboard className="h-3 w-3" />

@@ -1783,7 +1783,6 @@ export function SceneEnvironmentSphere({ theme, visible = true }: {
   theme: EnvironmentTheme | keyof typeof SCENE_LIGHT_PRESETS;
   visible?: boolean;
 }) {
-  if (!visible) return null;
   const safeTheme = resolveTheme(theme);
   const bgColor = useMemo(() => new THREE.Color(safeTheme.background), [safeTheme.background]);
   const topColor = useMemo(() => {
@@ -1791,6 +1790,8 @@ export function SceneEnvironmentSphere({ theme, visible = true }: {
     c.offsetHSL(0, 0, 0.06);
     return c;
   }, [bgColor]);
+
+  if (!visible) return null;
 
   return (
     <mesh scale={[-1, 1, 1]}>

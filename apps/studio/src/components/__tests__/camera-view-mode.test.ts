@@ -116,9 +116,10 @@ describe("CameraViewMode", () => {
     expect(source).toContain("st-camera-view-safe-zone");
     expect(source).toContain("--st-full-canvas-safe-top");
     expect(source).toContain("const \[immersiveMode, setImmersiveMode\] = useState(false);");
+    expect(source).toContain("toggleActiveSurfaceFocus");
     expect(source).toContain("Press F to exit focus");
-    expect(source).toContain("setImmersiveMode((value) => !value);");
-    expect(source).toContain("event.key !== \"f\" && event.key !== \"F\"");
+    expect(source).toContain("const toggleImmersiveMode = useCallback(() => {");
+    expect(source).toContain("window.addEventListener(STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus, toggleImmersiveMode);");
     expect(chromeSource).toContain("Exit Focus");
     expect(chromeSource).toContain("Feed mode:");
   });

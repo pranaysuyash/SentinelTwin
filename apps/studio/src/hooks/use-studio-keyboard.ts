@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useStudioStore } from "@/store/studio-store";
 import { VIEW_MODE_KEYS, VIEW_MODE_PRESETS, TOOL_SHORTCUTS } from "@/lib/studio-constants";
+import { STUDIO_SHORTCUT_EVENTS } from "@/lib/studio-shortcuts";
 
 export function useStudioKeyboard() {
   const activeTool = useStudioStore((s) => s.activeTool);
@@ -71,7 +72,7 @@ export function useStudioKeyboard() {
 
     // ?: Toggle shortcuts modal
     if (e.key === "?") {
-      window.dispatchEvent(new CustomEvent("sentineltwin:toggle-shortcuts"));
+      window.dispatchEvent(new CustomEvent(STUDIO_SHORTCUT_EVENTS.toggleShortcuts));
       return;
     }
 
@@ -150,9 +151,13 @@ export function useStudioKeyboard() {
       e.preventDefault();
       if (focusMode) {
         restorePreviousLayout();
-      } else {
-        enterFocusMode();
+        return;
       }
+      if (viewMode === "camera_view" || viewMode === "wall" || viewMode === "replay") {
+        window.dispatchEvent(new CustomEvent(STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus));
+        return;
+      }
+      enterFocusMode();
       return;
     }
 

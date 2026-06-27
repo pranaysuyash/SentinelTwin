@@ -96,18 +96,24 @@ type DashboardSectionId =
   | "assumptions"
   | "projectSettings";
 
-const DASHBOARD_SECTION_ITEMS: { id: DashboardSectionId; label: string; group: string }[] = [
-  { id: "overview", label: "Current site twin", group: "Main" },
-  { id: "preview", label: "Map preview", group: "Main" },
-  { id: "metrics", label: "Summary metrics", group: "Main" },
-  { id: "workspaces", label: "Workspace shortcuts", group: "Main" },
-  { id: "recent", label: "Recent site twins", group: "Main" },
-  { id: "create", label: "Create and import", group: "Main" },
-  { id: "library", label: "Workspace library", group: "Main" },
-  { id: "securityStatus", label: "Security status", group: "Side panel" },
-  { id: "issues", label: "Open issues", group: "Side panel" },
-  { id: "assumptions", label: "Simulation assumptions", group: "Side panel" },
-  { id: "projectSettings", label: "Project Settings", group: "Side panel" },
+const DASHBOARD_SECTION_ITEMS: { id: DashboardSectionId; label: string; group: string; priority: "foreground" | "overflow" }[] = [
+  // Density Pass D3 — foreground/overflow priority mirrors the D1 bottom-panel
+  // model. Foreground = buyer-default sections (the answer to "what is this
+  // site, am I covered"). Overflow = operator/power-user sections surfaced on
+  // demand. Per OQ-UI-01 resolution (default to buyer, disclose operator):
+  // first-run buyers see the foreground cluster; operators expand the overflow.
+  // Nothing is removed — every section remains toggleable (§11 hide-don't-delete).
+  { id: "overview", label: "Current site twin", group: "Main", priority: "foreground" },
+  { id: "preview", label: "Map preview", group: "Main", priority: "foreground" },
+  { id: "metrics", label: "Summary metrics", group: "Main", priority: "foreground" },
+  { id: "securityStatus", label: "Security status", group: "Side panel", priority: "foreground" },
+  { id: "issues", label: "Open issues", group: "Side panel", priority: "foreground" },
+  { id: "recent", label: "Recent site twins", group: "Main", priority: "foreground" },
+  { id: "create", label: "Create and import", group: "Main", priority: "foreground" },
+  { id: "workspaces", label: "Workspace shortcuts", group: "Main", priority: "overflow" },
+  { id: "library", label: "Workspace library", group: "Main", priority: "overflow" },
+  { id: "assumptions", label: "Simulation assumptions", group: "Side panel", priority: "overflow" },
+  { id: "projectSettings", label: "Project Settings", group: "Side panel", priority: "overflow" },
 ];
 
 const DEFAULT_DASHBOARD_VISIBILITY: Record<DashboardSectionId, boolean> = {
@@ -1033,28 +1039,54 @@ export function StudioDashboardHome({
                   </button>
                 </div>
                 <div className="max-h-[62vh] overflow-y-auto py-1">
-                  {DASHBOARD_SECTION_ITEMS.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setDashboardSectionVisible(item.id, !dashboardVisibility[item.id])}
-                      className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/[0.04]"
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-xs font-medium text-white">{item.label}</span>
-                        <span className="block text-[10px] text-[color:var(--st-muted)]">{item.group}</span>
-                      </span>
-                      <span className={cn(
-                        "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px]",
-                        dashboardVisibility[item.id]
-                          ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
-                          : "border-slate-400/20 bg-slate-500/8 text-slate-300",
-                      )}>
-                        {dashboardVisibility[item.id] ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                        {dashboardVisibility[item.id] ? "Shown" : "Hidden"}
-                      </span>
-                    </button>
-                  ))}
+                  {/* Density Pass D3 — foreground/overflow split mirrors D1.
+                      Foreground = buyer-default sections; overflow = operator/
+                      power-user sections. The toggle still works on both groups
+                      (nothing removed, per §11); the split just makes the
+                      default buyer experience less dense. */}
+                  {(() => {
+                    const renderSectionButton = (item: typeof DASHBOARD_SECTION_ITEMS[number]) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setDashboardSectionVisible(item.id, !dashboardVisibility[item.id])}
+                        className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/[0.04]"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-xs font-medium text-white">{item.label}</span>
+                          <span className="block text-[10px] text-[color:var(--st-muted)]">{item.group}</span>
+                        </span>
+                        <span className={cn(
+                          "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px]",
+                          dashboardVisibility[item.id]
+                            ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
+                            : "border-slate-400/20 bg-slate-500/8 text-slate-300",
+                        )}>
+                          {dashboardVisibility[item.id] ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                          {dashboardVisibility[item.id] ? "Shown" : "Hidden"}
+                        </span>
+                      </button>
+                    );
+                    const foreground = DASHBOARD_SECTION_ITEMS.filter((item) => item.priority === "foreground");
+                    const overflow = DASHBOARD_SECTION_ITEMS.filter((item) => item.priority === "overflow");
+                    return (
+                      <>
+                        <div className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--st-muted)]">
+                          Default (buyer)
+                        </div>
+                        {foreground.map(renderSectionButton)}
+                        {overflow.length > 0 ? (
+                          <>
+                            <div className="mt-2 border-t border-white/8" />
+                            <div className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--st-muted)]">
+                              Operator tools
+                            </div>
+                            {overflow.map(renderSectionButton)}
+                          </>
+                        ) : null}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             ) : null}

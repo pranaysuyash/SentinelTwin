@@ -70,5 +70,5 @@
 - Environment: local Studio shell on `http://127.0.0.1:3011/?qa=1`
 - Scene: `Small Retail Shop Demo`
 - Verified that Camera View renders the standard operator chrome correctly in the live shell and preserves the selected scene/camera context.
-- Finding: the shell-wide `F` shortcut enters the global focus layout; it does not by itself surface the local Camera View immersive header copy that the component-level focus state can render.
-- Practical implication: the camera-view header copy and the shell focus shortcut should remain documented as separate interaction layers so browser QA can test each one on purpose rather than assuming they are the same control path.
+- Finding: the shell-wide `F` shortcut now routes to the active surface focus bridge, so Camera View presents its local immersive header copy instead of a different global layout state.
+- Practical implication: the camera-view header copy and the surface-focus shortcut now share the same control path in the full-canvas review mode, which is the contract browser QA should assert.

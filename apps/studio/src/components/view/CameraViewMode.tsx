@@ -4,7 +4,7 @@ import Image from "next/image";
 import { PerspectiveCamera } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Camera as CameraIcon, CircleSmall, VideoOff } from "lucide-react";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useStudioStore } from "@/store/studio-store";
 import "@/lib/three-compat";
@@ -25,6 +25,7 @@ import { alignmentQualityLabel } from "@/components/view/camera-verification-uti
 import { computeOperationalEvidenceFusionSummary, computeSensorFusionSummary } from "@/lib/sensor-fusion";
 import type { CameraNode, DoriQuality } from "@/schema/security-scene";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
+import { STUDIO_SHORTCUT_EVENTS } from "@/lib/studio-shortcuts";
 import {
   buildReplayStateByCameraAtTime,
   clampPathDuration,
@@ -136,6 +137,9 @@ export function CameraViewMode() {
   const [feedMode, setFeedMode] = useState<CameraFeedMode>("normal");
   const [flags, setFlags] = useState<OverlayFlags>({ overlays: true, dori: true, path: false, zones: true, timestamp: true, grid: false });
   const [immersiveMode, setImmersiveMode] = useState(false);
+  const toggleImmersiveMode = useCallback(() => {
+    setImmersiveMode((value) => !value);
+  }, []);
   const canvasFilter =
     feedMode === "normal"
       ? "brightness(0.82) contrast(1.08) saturate(0.92)"
@@ -275,26 +279,11 @@ export function CameraViewMode() {
   );
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
-        return;
-      }
-      if (event.key !== "f" && event.key !== "F") {
-        return;
-      }
-      const target = event.target as HTMLElement | null;
-      if (!target) return;
-      if (["INPUT", "TEXTAREA", "SELECT", "OPTION", "BUTTON"].includes(target.tagName)) {
-        return;
-      }
-      setImmersiveMode((value) => !value);
-    };
-
-    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener(STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus, toggleImmersiveMode);
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener(STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus, toggleImmersiveMode);
     };
-  }, []);
+  }, [toggleImmersiveMode]);
 
   const replayQualityLabel = activeCameraTimelineEvent?.quality
     ? activeCameraTimelineEvent.quality.toUpperCase()
@@ -593,9 +582,7 @@ export function CameraViewMode() {
               setViewMode("map");
             }}
             immersiveMode={immersiveMode}
-            onToggleImmersive={() => {
-              setImmersiveMode((value) => !value);
-            }}
+            onToggleImmersive={toggleImmersiveMode}
           />
         </>
       ) : (

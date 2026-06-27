@@ -29,6 +29,7 @@ import { samplePathQuality } from "@/components/map/path-quality";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
 import { safeParseSecurityScene, type DoriQuality, type ScenarioPath } from "@/schema/security-scene";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
+import { STUDIO_SHORTCUT_EVENTS } from "@/lib/studio-shortcuts";
 import { getYawPitchDirection } from "@sentineltwin/core";
 import { getCameraColorForId } from "@/lib/camera-colors";
 import { buildCoverageGrid } from "@sentineltwin/core";
@@ -1006,6 +1007,9 @@ export function PathReplayView() {
   const [currentTime, setCurrentTime] = useState(0);
   const [speed, setSpeed] = useState(pathReplaySpeed);
   const [immersiveMode, setImmersiveMode] = useState(false);
+  const toggleImmersiveMode = useCallback(() => {
+    setImmersiveMode((value) => !value);
+  }, []);
 
   useEffect(() => {
     startTransition(() => {
@@ -1014,18 +1018,9 @@ export function PathReplayView() {
   }, [pathReplaySpeed]);
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
-      if (event.key !== "f" && event.key !== "F") return;
-      const target = event.target as HTMLElement | null;
-      if (!target) return;
-      if (["INPUT", "TEXTAREA", "SELECT", "OPTION", "BUTTON"].includes(target.tagName)) return;
-      setImmersiveMode((value) => !value);
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+    window.addEventListener(STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus, toggleImmersiveMode);
+    return () => window.removeEventListener(STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus, toggleImmersiveMode);
+  }, [toggleImmersiveMode]);
 
   // Derived data
   const playbackWaypoints = useMemo(() => {
@@ -1399,7 +1394,7 @@ export function PathReplayView() {
 
       <button
         type="button"
-        onClick={() => setImmersiveMode((value) => !value)}
+        onClick={toggleImmersiveMode}
         className="absolute right-3 top-3 z-30 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#3a4a66] hover:text-white"
       >
         {immersiveMode ? "Exit Focus" : "Focus"}

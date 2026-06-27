@@ -1,5 +1,24 @@
 "use client";
 
+/**
+ * QuickStartSection — the dashboard's returning-user surface (Intake Pass I1
+ * scope-clarification).
+ *
+ * Role: recent projects + workspace shortcuts + create-new actions for an
+ * operator coming back to a known site. This is NOT a competing intake
+ * surface — the canonical first-run intake for buyers/consultants is
+ * `SiteIntakeHub` (`src/components/site-intake/`), which carries the
+ * honest-maturity limitations block (truth-audited) and the source-card
+ * chooser. The 2026-06-19 UI review (Group D1) flagged "three competing
+ * intake surfaces" — on inspection, two of the three are distinct concerns
+ * (this = returning-user; SiteIntakeHub = first-run buyer) and the third
+ * (`ProjectStartLauncher`) is dead code now marked deprecated.
+ *
+ * The `onScanSite`/`onAiDraft`/etc. callbacks here delegate to the same
+ * handlers SiteIntakeHub uses, so the two surfaces stay in sync — no
+ * parallel vocabulary for the same actions.
+ */
+
 import type { SavedProjectRecord } from "@/store/studio-store";
 import type { SecurityScene, SecurityIssue, SimulationResult } from "@/schema/security-scene";
 import { Camera, FileUp, LayoutDashboard, MapIcon, Play, Plus, ScanSearch, Sparkles } from "lucide-react";

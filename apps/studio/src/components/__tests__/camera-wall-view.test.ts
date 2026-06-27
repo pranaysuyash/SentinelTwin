@@ -22,7 +22,9 @@ describe("CameraWallView", () => {
     expect(source).toContain("Synchronized Time");
     expect(source).toContain("Camera Wall Focus Mode");
     expect(source).toContain("Press F to exit focus");
-    expect(source).toContain("setImmersiveMode((value) => !value)");
+    expect(source).toContain("toggleActiveSurfaceFocus");
+    expect(source).toContain("const toggleImmersiveMode = useCallback(() => {");
+    expect(source).toContain("window.addEventListener(STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus, toggleImmersiveMode);");
     expect(source).toContain("Focus");
     expect(source).toContain("const CameraFeedPanel = memo(function CameraFeedPanel");
     expect(source).toContain("const pathVisibilityByCameraId = useMemo(() =>");

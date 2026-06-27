@@ -23,6 +23,7 @@ import PathReplayClock from "./PathReplayClock";
 import WorkspaceArea from "./WorkspaceArea";
 import ShortcutsModal from "./ShortcutsModal";
 import FirstRunGuide from "./FirstRunGuide";
+import { STUDIO_SHORTCUT_EVENTS } from "@/lib/studio-shortcuts";
 
 const FULL_CANVAS_SAFE_ZONE_STYLE = {
   "--st-view-mode-bar-top": "0.75rem",
@@ -138,8 +139,8 @@ export default function StudioShell() {
 
   useEffect(() => {
     const handler = () => setShowShortcuts((v) => !v);
-    window.addEventListener("sentineltwin:toggle-shortcuts", handler);
-    return () => window.removeEventListener("sentineltwin:toggle-shortcuts", handler);
+    window.addEventListener(STUDIO_SHORTCUT_EVENTS.toggleShortcuts, handler);
+    return () => window.removeEventListener(STUDIO_SHORTCUT_EVENTS.toggleShortcuts, handler);
   }, []);
 
   useEffect(() => {

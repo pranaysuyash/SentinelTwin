@@ -1220,3 +1220,59 @@ If a commit has already been created with an AI-agent co-author trailer, do not 
 For every repo, check whether a pre-commit / commit-msg / pre-push guard already exists to block AI co-author trailers. If it exists, use it. If it does not exist, propose adding one.
 
 No agent should dismiss this by saying "I did not find it in instructions." Search the actual hooks, scripts, configs, and commit tooling.
+
+---
+
+## 21. Code Is Evidence, Not a Boundary
+
+Existing code is evidence of an earlier stage or an earlier decision, not a constraint on what is possible or correct.
+
+Decisions change. New information arrives from client input, exploration, research, internal review, or a better first-principles understanding. When a decision changes, the code that encoded the old decision must be refactored to match the new one. **That refactor is a first-class consequence of the decision — it is in scope for the work that made the decision, on the same quality bar — not deferred debt, not optional cleanup, not a follow-up ticket to be lost.**
+
+This is the positive counterpart to rules 5, 6, and 7:
+
+- Rule 5 (Stale State) says: re-check before you act.
+- Rule 6 ("Pre-existing" Is Not an Excuse) says: don't use "it was already like this" to skip fixing what's broken.
+- Rule 7 (Supersession) says: migrate to the canonical path; don't keep two truth sources.
+- **Rule 21 (this one) says: when a decision changes, the refactor it requires is part of the decision's deliverable — do it now, to the same standard, aligned to long-term outcomes and first principles.**
+
+What this rule requires:
+
+1. **Name the refactor as a deliverable.** When a decision changes the shape of the code (hardcoded values that must become data-driven; a single author that must become multi-author; an in-memory store that must become persisted; a plaintext field that must become hashed), the work that lands the decision *includes* landing the refactor. Record it in the decision's derived scope. Do not leave it as "TODO: refactor later."
+2. **Same quality bar as new code.** A refactor driven by a decision change is not a shortcut, a hack, or a degraded fix. It gets the full standard: tests, type checks, docs updated in the same pass, audit trail, ADR where architectural.
+3. **Long-term and first-principles aligned.** The refactor targets the correct long-term shape (the one the new decision implies), not the smallest local patch. First principles over expedience. Rule 0 ("build for the best app, not the safest small change") applies.
+4. **Compose with scope control (rule 6.1).** "The refactor is in scope" does not authorize unbounded rewrites. If the decision-driven refactor is broad, stage it deliberately and ask before the broad part — but the *first coherent stage* that realizes the decision is still in scope and still happens now. Staging is execution discipline, not a deferral mechanism.
+5. **Decision is the trigger; refactor is the consequence.** Never refactor without a decision that justifies it (that would be rule 6.1 scope creep). Never make a decision without owning the refactor it requires (that would be silent debt).
+
+The failure modes this rule exists to prevent:
+
+- "We decided the catalog should be data-driven, but the code still hardcodes it" — a decision whose refactor was never landed.
+- "We decided secrets should never be plaintext, but the plaintext field is still there because it was too much work" — a decision downgraded to a suggestion by deferred work.
+- "We'll clean that up later" — the later that never comes.
+
+Decisions and their refactors are one deliverable. Land both, or the decision has not actually been made.
+
+---
+
+## 22. Automated Checks Are Advisory, Not Authority
+
+Linters (ruff, eslint, etc.), type checkers (mypy, pyright, tsc), formatters, security scanners, AI suggestions, and CI gates are **advisory input, not authority.** Each optimizes for its own rule set — not for long-term architecture, first principles, product correctness, or this motto. When a tool's demand conflicts with the correct long-term design, the design wins; the conflict is resolved at the root, never by silently downgrading the design to satisfy the tool.
+
+**The failure mode this rule exists to prevent:** engineers downgrade a correct design because a tool complained, then cite the tool as the justification. "I had to use `Any` because mypy couldn't infer it," "I silenced the lint with a comment because fixing it properly was too big," "the scanner demanded this rewrite so I did it." Each is rule 21 in disguise — a decision (correct types / clean structure / right abstraction) downgraded to a suggestion because a tool said so, with no refactor owned and no reasoning recorded.
+
+**What this rule requires:**
+
+1. **Resolve at the root, never paper over.** If mypy/ruff flag something, the default is to fix the underlying code so the tool is satisfied *and* the design is correct. Silencing (`# type: ignore`, `noqa`, `eslint-disable`) without an inline reason is forbidden — it hides a real issue.
+2. **Conscious, recorded deviation when the tool is wrong.** If a tool's demand genuinely conflicts with first-principles / long-term / motto alignment (a real, demonstrable conflict — not preference), you may deviate. The deviation must carry: (a) why the tool's demand is wrong here, with reasoning; (b) why the chosen path is correct, with first-principles justification; (c) the deviation recorded as a decision (rule 0.12) where architectural. "Trust me" is not a deviation; reasoning is.
+3. **The evidence bar is on the deviation, not the tool.** Tools err on the side of their rules by default; that is their job. Overriding them is allowed but must be justified the same way any decision is — not asserted. If you cannot articulate *why* the tool is wrong in product/architecture terms, the tool is probably right; fix the code.
+4. **Tools must still pass unless explicitly deviated.** This rule does **not** authorize ignoring `mypy --strict`, `ruff`, or the project's validation rules (rule 14, rule 1.1). "A check must pass" and "a check is advisory" compose as follows: the check passes either because the code is correct *or* because there is a recorded, reasoned deviation for that specific case. It never silently fails, and it never fails-by-default with a vague "I disagreed."
+
+**Worked examples:**
+
+- *Mypy can't infer a complex generic and suggests `Any`.* **Wrong response:** `def get(x: Any) -> Any: ...` with `# type: ignore`. **Right response:** fix the generic / add the type annotation / narrow the type so mypy is satisfied *and* callers get real types. If a correct annotation genuinely isn't expressible in the current type system, deviate with reasoning on that one symbol — not blanket `Any`.
+- *Ruff flags a long function and demands a refactor.* **Wrong response:** mechanically split the function to silence the rule, degrading cohesion. **Right response:** if the length is a real smell, refactor properly (rule 21); if the function is genuinely cohesive and the rule is wrong here, a scoped `noqa` with a one-line reason is a recorded deviation.
+- *A security scanner demands plaintext-secret elimination that breaks HMAC verification.* **Wrong response:** "the scanner says no plaintext, so store a hash" — which is non-functional for HMAC auth. **Right response:** recognize the scanner's rule is correct *in spirit* but wrong *in mechanism* for this case; design the right secret shape (e.g. envelope-encrypted or secrets-manager-ref) that honors the intent (no plaintext at rest) while preserving HMAC functionality. Deviate from the scanner's literal demand, record why, and satisfy its intent.
+
+**Relationship to rule 14 (Validation Rules) and rule 1.1:** those rules require checks to pass and typecheck to be clean. This rule does not weaken them — it sharpens them: "passing" means the check is satisfied by correct code or by a reasoned, recorded deviation, never by silent suppression or by degrading the design.
+
+**Relationship to rule 21 (Code Is Evidence, Not a Boundary):** rule 21 says decision-driven refactors are not optional; this rule says tool-driven downgrades are not acceptable. Together: refactor when a decision changes (rule 21); never refactor *downward* just because a tool complained (rule 22).

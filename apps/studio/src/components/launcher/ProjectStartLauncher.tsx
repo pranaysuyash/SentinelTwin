@@ -1,5 +1,25 @@
 "use client";
 
+/**
+ * @deprecated Intake Pass I1 — superseded by `SiteIntakeHub` (the canonical
+ * first-run intake at the `site_intake` product view). This component is no
+ * longer mounted in production — verified via `rg "<ProjectStartLauncher"` —
+ * the only remaining reference is its own test
+ * (`src/components/__tests__/project-start-launcher.test.ts`).
+ *
+ * Per `motto_v3 §11` ("Do not delete overbuilt features... hide them from the
+ * UI instead of deleting the code") and §15 ("If logic is preserved but not
+ * used, inventory it before deleting or archiving"), this file is marked
+ * deprecated rather than removed. Its job-intent picker pattern may be
+ * valuable for a future "guided first-run" surface; if that surface ships,
+ * migrate the useful bits and remove this file. Until then: do not extend,
+ * do not wire into the product.
+ *
+ * Canonical intake: `SiteIntakeHub` (`src/components/site-intake/`).
+ * Returning-user surface: `QuickStartSection` (recent projects + workspace
+ * shortcuts — distinct concern, not a competing intake).
+ */
+
 import {
   Camera,
   FileText,

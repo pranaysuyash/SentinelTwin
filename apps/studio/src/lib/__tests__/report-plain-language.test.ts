@@ -55,8 +55,8 @@ describe("plain-language report", () => {
   test("handles failing zones in plain language", () => {
     const result = makeResult({
       criticalZoneResults: [
-        { zoneId: "z1", label: "Main Entrance", requiredQuality: "recognition", actualQuality: "detection", status: "fail", coveringCameras: ["cam1"], criticalZoneTotalCount: 1, criticalZonePassCount: 0 },
-        { zoneId: "z2", label: "Server Room", requiredQuality: "identification", actualQuality: "observation", status: "fail", coveringCameras: [], criticalZoneTotalCount: 1, criticalZonePassCount: 0 },
+        { zoneId: "z1", label: "Main Entrance", requiredQuality: "recognition", actualQuality: "detection", status: "fail", coveringCameras: ["cam1"], redundancyCameraCount: 1, failureReasons: ["quality below threshold"] },
+        { zoneId: "z2", label: "Server Room", requiredQuality: "identification", actualQuality: "observation", status: "fail", coveringCameras: [], redundancyCameraCount: 0, failureReasons: ["no coverage"] },
       ],
     });
     const report = buildPlainLanguageReport(makeScene(), result);
@@ -137,7 +137,7 @@ describe("plain-language report", () => {
   test("all zones passing produces positive narrative", () => {
     const result = makeResult({
       criticalZoneResults: [
-        { zoneId: "z1", label: "Entrance", requiredQuality: "detection", actualQuality: "recognition", status: "pass", coveringCameras: ["cam1"], criticalZoneTotalCount: 1, criticalZonePassCount: 1 },
+        { zoneId: "z1", label: "Entrance", requiredQuality: "detection", actualQuality: "recognition", status: "pass", coveringCameras: ["cam1"], redundancyCameraCount: 1, failureReasons: [] },
       ],
     });
     const report = buildPlainLanguageReport(makeScene(), result);

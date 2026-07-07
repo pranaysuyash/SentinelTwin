@@ -1886,12 +1886,26 @@ function formatMultiplier(value: number | undefined): string {
   return `${(value * 100).toFixed(0)}%`;
 }
 
+const HEATMAP_CARD_DWELL_MS = 350;
+
 function HeatmapCellExplainabilityCard() {
   const hover = useStudioStore((s) => s.heatmapHover);
   const scene = useStudioStore((s) => s.scene);
   const heatmapMode = useStudioStore((s) => s.heatmapMode);
+  const editorMode = useStudioStore((s) => s.editor.editorMode);
+  // Dwell gate: the card only appears once the pointer rests on a cell.
+  // Every hover update (i.e. any pointer movement) restarts the timer, so
+  // sweeping the mouse across the heatmap stays visually quiet while the
+  // full explainability data remains one short pause away.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    setSettled(false);
+    if (!hover) return undefined;
+    const timer = window.setTimeout(() => setSettled(true), HEATMAP_CARD_DWELL_MS);
+    return () => window.clearTimeout(timer);
+  }, [hover]);
 
-  if (!hover) return null;
+  if (!hover || !settled || editorMode === "transforming") return null;
 
   const cameraEvaluations = Object.entries(hover.cell.cameraEvaluations ?? {}).sort(([, a], [, b]) => {
     const qualityDelta = (b.probability ?? 0) - (a.probability ?? 0);
@@ -2131,6 +2145,14 @@ export function WorkspaceCanvas() {
   }, [layerVisibility.heatmap, setHeatmapHover]);
 
   const handleHeatmapHover = useCallback((cell: CoverageCellResult, event: ThreeEvent<PointerEvent>) => {
+    // Quiet hover: never surface cell explainability while a mouse button is
+    // down (orbiting, box-selecting, or dragging a transform handle) — the
+    // pointer sweeping across the floor during those gestures used to pop
+    // the card constantly and made the canvas feel overloaded.
+    if (event.nativeEvent.buttons !== 0) {
+      setHeatmapHover(null);
+      return;
+    }
     setHeatmapHover({
       cell,
       screenX: event.nativeEvent.clientX,
@@ -2230,7 +2252,7 @@ export function WorkspaceCanvas() {
         <PlanView2D />
       ) : (
       <Canvas
-        shadows="soft"
+        shadows
         gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
         style={{ width: "100%", height: "100%", background: lighting.background }}
       >

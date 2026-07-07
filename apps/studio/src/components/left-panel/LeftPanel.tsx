@@ -90,6 +90,8 @@ function SectionTitle({
 export function LeftPanel() {
   const activeTool = useStudioStore((s) => s.activeTool);
   const setActiveTool = useStudioStore((s) => s.setActiveTool);
+  const workspacePreset = useStudioStore((s) => s.workspacePreset);
+  const viewMode = useStudioStore((s) => s.viewMode);
   const layerVis = useStudioStore((s) => s.layerVisibility);
   const toggleLayer = useStudioStore((s) => s.toggleLayer);
   const visibleComponents = useStudioStore((s) => s.visibleComponents);
@@ -126,8 +128,24 @@ export function LeftPanel() {
   };
 
   return (
-    <aside className="flex h-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto border-r border-[#1e2130] bg-[#0d1017]">
-      <div className="space-y-2 px-2 py-2">
+    <aside className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-r border-[#1e2130] bg-[#0d1017]">
+      <div className="flex shrink-0 items-center gap-2 border-b border-[#1e2130] bg-[#0b0f17] px-2.5 py-1">
+        <div className="flex h-5 w-5 items-center justify-center rounded-md border border-sky-500/20 bg-sky-500/12">
+          <Layers className="h-3 w-3 text-sky-400" />
+        </div>
+        <div className="min-w-0">
+          <div className="truncate text-[11px] font-semibold text-white">Scene Authoring</div>
+          <div className="truncate text-[10px] uppercase tracking-[0.14em] text-[#64738f]">
+            {workspacePreset.replace(/_/g, " ")} · {viewMode.replace(/_/g, " ")}
+          </div>
+        </div>
+        <div className="ml-auto inline-flex min-w-0 items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[10px] text-[#9fb1d1]">
+          <span className={cn("truncate font-mono", editor.snapEnabled ? "text-emerald-400 font-bold" : "text-[#6c768f]")}>
+            {editor.snapEnabled ? "Snap ON" : "Snap OFF"}
+          </span>
+        </div>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col space-y-2 overflow-x-hidden overflow-y-auto p-2">
         <section>
           <SectionTitle
             title="Scene Tools"

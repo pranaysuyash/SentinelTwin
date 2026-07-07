@@ -1029,10 +1029,18 @@ export function SceneObstructions({
 
 // ── Path Actor (animated figure along waypoints) ──
 
-export function PathActor({ waypoints, currentIndex, progress }: {
+export function PathActor({
+  waypoints,
+  currentIndex,
+  progress,
+  label = "ACTOR / TARGET",
+  showRing = true,
+}: {
   waypoints: [number, number][];
   currentIndex: number;
   progress: number;
+  label?: string;
+  showRing?: boolean;
 }) {
   const groupRef = useRef<THREE.Group>(null!);
   const safeWaypoints = sanitizeScenePath(waypoints);
@@ -1082,6 +1090,25 @@ export function PathActor({ waypoints, currentIndex, progress }: {
         <circleGeometry args={[0.25, 16]} />
         <meshBasicMaterial color="#000" transparent opacity={0.2} />
       </mesh>
+      {showRing && (
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+            <ringGeometry args={[0.28, 0.36, 32]} />
+            <meshBasicMaterial color="#38bdf8" transparent opacity={0.8} />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 0]}>
+            <ringGeometry args={[0.38, 0.42, 32]} />
+            <meshBasicMaterial color="#38bdf8" transparent opacity={0.35} />
+          </mesh>
+        </>
+      )}
+      {label && (
+        <Html position={[0, 1.45, 0]} center distanceFactor={15} zIndexRange={[100, 0]}>
+          <div className="pointer-events-none select-none whitespace-nowrap rounded-md border border-sky-500/40 bg-black/85 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-sky-200 shadow-[0_4px_12px_rgba(0,0,0,0.6)] backdrop-blur-sm">
+            {label}
+          </div>
+        </Html>
+      )}
       <mesh position={[0, 0.8, 0]} castShadow>
         <capsuleGeometry args={[0.12, 0.35, 4, 8]} />
         <meshStandardMaterial {...pbrToStandardMaterialProps(surfaceMaterial("actor_body"))} />

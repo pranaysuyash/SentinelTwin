@@ -1,6 +1,5 @@
 "use client";
 
-import { Html } from "@react-three/drei";
 import { SceneHtml } from "@/components/shared/SceneHtml";
 import { useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
@@ -18,6 +17,7 @@ import type {
   WallNode,
 } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { AxisArrow, CenterPuck, GIZMO_AXIS_COLORS, GizmoRig, RotationRing } from "./GizmoParts";
 import { makeSnapEngine } from "./SnapEngine";
 import { insertPolygonVertex, pathLength, removePathPoint, removePolygonVertex, type Point2 } from "./editor-geometry";
 
@@ -31,7 +31,21 @@ export type TransformableNode =
   | PrivacyZoneNode
   | ScenarioPath;
 
-type HandleKind = "move" | "rotate" | "height" | "pitch" | "scale_x" | "scale_z" | "wall_start" | "wall_end" | "vertex" | "path_point" | "path_insert" | "polygon_insert";
+export type HandleKind = "move" | "move_x" | "move_z" | "rotate" | "height" | "pitch" | "scale_x" | "scale_z" | "wall_start" | "wall_end" | "vertex" | "path_point" | "path_insert" | "polygon_insert";
+
+const MOVE_HANDLES: ReadonlySet<HandleKind> = new Set(["move", "move_x", "move_z"]);
+
+/**
+ * Axis-constrained gizmo arrows zero out the other axis (Unity-style).
+ * Exported for unit tests — this is the contract the X/Z arrows rely on.
+ */
+export function constrainMoveDelta(
+  handle: HandleKind,
+  deltaX: number,
+  deltaZ: number,
+): [number, number] {
+  return [handle === "move_z" ? 0 : deltaX, handle === "move_x" ? 0 : deltaZ];
+}
 
 type DragState = {
   handle: HandleKind;
@@ -131,10 +145,13 @@ function updateDraft(
   const snappedPoint = snapEngine.snapForPlacement(currentPoint, false).point;
   const wallPoint = snapEngine.snapForPlacement(currentPoint, true).point;
   const gridPoint = snapEngine.snapToGrid(currentPoint);
-  const deltaX = snappedPoint[0] - startPoint[0];
-  const deltaZ = snappedPoint[1] - startPoint[1];
+  const [deltaX, deltaZ] = constrainMoveDelta(
+    drag.handle,
+    snappedPoint[0] - startPoint[0],
+    snappedPoint[1] - startPoint[1],
+  );
 
-  if (drag.handle === "move") {
+  if (MOVE_HANDLES.has(drag.handle)) {
     if (next.nodeType === "camera" || next.nodeType === "security_light" || next.nodeType === "sensor" || next.nodeType === "obstruction") {
       const sn = drag.startNode as CameraNode | SecurityLightNode | SensorNode | ObstructionNode;
       next.position = [sn.position[0] + deltaX, sn.position[1], sn.position[2] + deltaZ];
@@ -269,21 +286,44 @@ function HandleSphere({
   color,
   onPointerDown,
   label,
+  dim = false,
 }: {
   position: [number, number, number];
   color: string;
   onPointerDown: (event: ReactPointerEvent) => void;
   label?: string;
+  /** Secondary handles (e.g. midpoint inserts) stay faint until hovered. */
+  dim?: boolean;
 }) {
+  // Labels are hover-only: a selected object used to sprout a cloud of
+  // permanent chips (Move/Height/Yaw/W/D/V1..Vn) which was the single
+  // biggest source of on-click visual overload. The handles remain always
+  // visible and grabbable; their names appear when the pointer reaches them.
+  const [hovered, setHovered] = useState(false);
   return (
-    <group position={position} onPointerDown={onPointerDown}>
-      <mesh>
+    <group
+      position={position}
+      onPointerDown={onPointerDown}
+      onPointerOver={(event) => {
+        event.stopPropagation();
+        setHovered(true);
+      }}
+      onPointerOut={() => setHovered(false)}
+    >
+      <mesh scale={hovered ? 1.35 : 1}>
         <sphereGeometry args={[0.08, 16, 16]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.4} roughness={0.3} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={hovered ? 0.75 : 0.4}
+          roughness={0.3}
+          transparent={dim && !hovered}
+          opacity={dim && !hovered ? 0.45 : 1}
+        />
       </mesh>
-      {label ? (
-        <SceneHtml center position={[0, 0.18, 0]} style={{ pointerEvents: "none" }}>
-          <div className="rounded border border-[#24304a] bg-[#0b0f17]/90 px-1.5 py-0.5 text-[8px] font-semibold text-[#d2d9e8]">
+      {label && hovered ? (
+        <SceneHtml center position={[0, 0.22, 0]} style={{ pointerEvents: "none" }}>
+          <div className="rounded border border-[#24304a] bg-[#0b0f17]/92 px-1.5 py-0.5 text-[8px] font-semibold text-[#d2d9e8] whitespace-nowrap">
             {label}
           </div>
         </SceneHtml>
@@ -306,6 +346,7 @@ export function TransformHandles() {
     const collections: TransformableNode[] = [
       ...scene.cameras,
       ...scene.securityLights,
+      ...scene.sensors,
       ...scene.obstructions,
       ...scene.walls,
       ...scene.criticalZones,
@@ -332,6 +373,7 @@ export function TransformHandles() {
           const collections: TransformableNode[] = [
             ...scene.cameras,
             ...scene.securityLights,
+            ...scene.sensors,
             ...scene.obstructions,
             ...scene.walls,
             ...scene.criticalZones,
@@ -376,7 +418,7 @@ export function TransformHandles() {
   useEffect(() => {
     const onMove = (event: MouseEvent) => {
       if (!dragRef.current || !selected) return;
-      if (isGroupSelection && dragRef.current.handle === "move") {
+      if (isGroupSelection && MOVE_HANDLES.has(dragRef.current.handle)) {
         const currentPoint = getPointFromEvent(event, camera, size, raycaster, 0) ?? dragRef.current.startWorld;
         const snappedPoint = snapEngine.snapForPlacement(currentPoint, false).point;
         dragRef.current.currentWorld = snappedPoint;
@@ -389,10 +431,13 @@ export function TransformHandles() {
 
     const onUp = () => {
       if (!dragRef.current || !selected) return;
-      if (isGroupSelection && dragRef.current.handle === "move") {
+      if (isGroupSelection && MOVE_HANDLES.has(dragRef.current.handle)) {
         const finalPoint = dragRef.current.currentWorld;
-        const deltaX = finalPoint[0] - dragRef.current.startWorld[0];
-        const deltaZ = finalPoint[1] - dragRef.current.startWorld[1];
+        const [deltaX, deltaZ] = constrainMoveDelta(
+          dragRef.current.handle,
+          finalPoint[0] - dragRef.current.startWorld[0],
+          finalPoint[1] - dragRef.current.startWorld[1],
+        );
         if (deltaX !== 0 || deltaZ !== 0) {
           translateSelectedNodes([deltaX, deltaZ]);
         }
@@ -532,9 +577,11 @@ export function TransformHandles() {
   if (node.nodeType === "camera") {
     if (isGroupSelection) {
       return (
-        <group>
-          <HandleSphere position={[groupAnchor[0], node.position[1], groupAnchor[1]]} color="#60a5fa" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
-        </group>
+        <GizmoRig center={[groupAnchor[0], 0.05, groupAnchor[1]]}>
+          <CenterPuck color="#60a5fa" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+          <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+          <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+        </GizmoRig>
       );
     }
 
@@ -542,21 +589,21 @@ export function TransformHandles() {
 
     return (
       <group>
-        {/* Yaw ring arc — thin torus segment showing the yaw direction plane */}
-        <mesh position={[node.position[0], node.position[1] + 0.02, node.position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.74, 0.82, 48]} />
-          <meshBasicMaterial color="#22c55e" transparent opacity={0.2} side={THREE.DoubleSide} depthWrite={false} />
-        </mesh>
-        {/* Directional arc indicator on the ring — highlights the viewing direction quadrant */}
-        <mesh position={[node.position[0], node.position[1] + 0.025, node.position[2]]} rotation={[-Math.PI / 2, 0, yawRad - Math.PI / 4]}>
-          <ringGeometry args={[0.74, 0.84, 12, 1, 0, Math.PI / 2]} />
-          <meshBasicMaterial color="#22c55e" transparent opacity={0.5} side={THREE.DoubleSide} depthWrite={false} />
-        </mesh>
-        {/* Handle spheres */}
-        <HandleSphere position={[node.position[0], node.position[1], node.position[2]]} color="#60a5fa" onPointerDown={beginDrag("move")} label="Move" />
-        <HandleSphere position={[node.position[0], Math.max(0.5, node.position[1] + 0.7), node.position[2]]} color="#f59e0b" onPointerDown={beginDrag("height")} label="Height" />
-        <HandleSphere position={[node.position[0], node.position[1] + 0.95, node.position[2] + 0.12]} color="#38bdf8" onPointerDown={beginDrag("pitch")} label="Pitch" />
-        <HandleSphere position={[node.position[0] + Math.cos(yawRad) * 0.8, node.position[1], node.position[2] + Math.sin(yawRad) * 0.8]} color="#22c55e" onPointerDown={beginDrag("rotate")} label="Yaw" />
+        {/* Native-style gizmo at the camera's floor anchor: axis arrows for
+            constrained moves, ring for yaw, green up-arrow for mount height. */}
+        <GizmoRig center={[node.position[0], 0.05, node.position[2]]}>
+          <CenterPuck color="#e2e8f0" onPointerDown={beginDrag("move")} label="Move" />
+          <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+          <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+          <AxisArrow direction={[0, 1, 0]} color={GIZMO_AXIS_COLORS.y} length={0.85} onPointerDown={beginDrag("height")} label="Height" />
+          <RotationRing radius={0.85} color="#22c55e" onPointerDown={beginDrag("rotate")} label="Yaw" />
+          {/* Yaw direction tick on the ring so the facing quadrant stays readable. */}
+          <mesh position={[Math.sin(yawRad) * 0.85, 0.05, Math.cos(yawRad) * 0.85]} renderOrder={998}>
+            <sphereGeometry args={[0.055, 10, 10]} />
+            <meshBasicMaterial color="#22c55e" depthTest={false} />
+          </mesh>
+        </GizmoRig>
+        <HandleSphere position={[node.position[0], node.position[1] + 0.4, node.position[2]]} color="#38bdf8" onPointerDown={beginDrag("pitch")} label="Pitch" />
       </group>
     );
   }
@@ -564,17 +611,33 @@ export function TransformHandles() {
   if (node.nodeType === "security_light") {
     if (isGroupSelection) {
       return (
-        <group>
-          <HandleSphere position={[groupAnchor[0], node.position[1], groupAnchor[1]]} color="#eab308" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
-        </group>
+        <GizmoRig center={[groupAnchor[0], 0.05, groupAnchor[1]]}>
+          <CenterPuck color="#eab308" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+          <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+          <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+        </GizmoRig>
       );
     }
 
     return (
-      <group>
-        <HandleSphere position={[node.position[0], node.position[1], node.position[2]]} color="#eab308" onPointerDown={beginDrag("move")} label="Move" />
-        <HandleSphere position={[node.position[0], node.position[1] + 0.7, node.position[2]]} color="#f59e0b" onPointerDown={beginDrag("height")} label="Height" />
-      </group>
+      <GizmoRig center={[node.position[0], 0.05, node.position[2]]}>
+        <CenterPuck color="#eab308" onPointerDown={beginDrag("move")} label="Move" />
+        <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+        <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+        <AxisArrow direction={[0, 1, 0]} color={GIZMO_AXIS_COLORS.y} length={0.85} onPointerDown={beginDrag("height")} label="Height" />
+      </GizmoRig>
+    );
+  }
+
+  if (node.nodeType === "sensor") {
+    // Sensors previously had no on-canvas manipulation at all; the shared
+    // XZ gizmo gives them the same move affordance as other point nodes.
+    return (
+      <GizmoRig center={[node.position[0], 0.05, node.position[2]]}>
+        <CenterPuck color="#a78bfa" onPointerDown={beginDrag("move")} label="Move" />
+        <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+        <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+      </GizmoRig>
     );
   }
 
@@ -583,19 +646,27 @@ export function TransformHandles() {
     const { xAxis, zAxis } = getObstructionAxis(node.rotationYDeg);
     if (isGroupSelection) {
       return (
-        <group>
-          <HandleSphere position={[groupAnchor[0], node.position[1], groupAnchor[1]]} color="#fb923c" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
-        </group>
+        <GizmoRig center={[groupAnchor[0], 0.05, groupAnchor[1]]}>
+          <CenterPuck color="#fb923c" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+          <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+          <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+        </GizmoRig>
       );
     }
 
     return (
       <group>
-        <HandleSphere position={[node.position[0], node.position[1], node.position[2]]} color="#fb923c" onPointerDown={beginDrag("move")} label="Move" />
-        <HandleSphere position={[node.position[0], node.position[1] + h / 2 + 0.3, node.position[2]]} color="#f59e0b" onPointerDown={beginDrag("height")} label="Height" />
-        <HandleSphere position={[node.position[0] + Math.cos((node.rotationYDeg * Math.PI) / 180) * (Math.max(w, d) / 2 + 0.45), node.position[1] + 0.1, node.position[2] + Math.sin((node.rotationYDeg * Math.PI) / 180) * (Math.max(w, d) / 2 + 0.45)]} color="#22c55e" onPointerDown={beginDrag("rotate")} label="Rotate" />
-        <HandleSphere position={[node.position[0] + xAxis[0] * (w / 2 + 0.45), node.position[1] + 0.08, node.position[2] + xAxis[1] * (w / 2 + 0.45)]} color="#38bdf8" onPointerDown={beginDrag("scale_x")} label="W" />
-        <HandleSphere position={[node.position[0] + zAxis[0] * (d / 2 + 0.45), node.position[1] + 0.08, node.position[2] + zAxis[1] * (d / 2 + 0.45)]} color="#38bdf8" onPointerDown={beginDrag("scale_z")} label="D" />
+        <GizmoRig center={[node.position[0], 0.05, node.position[2]]}>
+          <CenterPuck color="#e2e8f0" onPointerDown={beginDrag("move")} label="Move" />
+          <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+          <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+          <AxisArrow direction={[0, 1, 0]} color={GIZMO_AXIS_COLORS.y} length={0.85} onPointerDown={beginDrag("height")} label="Height" />
+          <RotationRing radius={0.85} color="#22c55e" onPointerDown={beginDrag("rotate")} label="Rotate" />
+        </GizmoRig>
+        {/* Size handles stay on the box edges (they are dimension-relative). */}
+        <HandleSphere position={[node.position[0] + xAxis[0] * (w / 2 + 0.45), node.position[1] + 0.08, node.position[2] + xAxis[1] * (w / 2 + 0.45)]} color="#38bdf8" onPointerDown={beginDrag("scale_x")} label="Width" dim />
+        <HandleSphere position={[node.position[0] + zAxis[0] * (d / 2 + 0.45), node.position[1] + 0.08, node.position[2] + zAxis[1] * (d / 2 + 0.45)]} color="#38bdf8" onPointerDown={beginDrag("scale_z")} label="Depth" dim />
+        <HandleSphere position={[node.position[0], node.position[1] + h / 2 + 0.3, node.position[2]]} color="#f59e0b" onPointerDown={beginDrag("height")} label="Height" dim />
       </group>
     );
   }
@@ -603,22 +674,24 @@ export function TransformHandles() {
   if (node.nodeType === "wall") {
     if (isGroupSelection) {
       return (
-        <group>
-          <HandleSphere
-            position={[groupAnchor[0], 0.1, groupAnchor[1]]}
-            color="#22c55e"
-            onPointerDown={beginDrag("move")}
-            label={`Move ${groupSelection.length}`}
-          />
-        </group>
+        <GizmoRig center={[groupAnchor[0], 0.05, groupAnchor[1]]}>
+          <CenterPuck color="#22c55e" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+          <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+          <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+        </GizmoRig>
       );
     }
 
     return (
       <group>
-        <HandleSphere position={[node.start[0], 0.08, node.start[1]]} color="#60a5fa" onPointerDown={beginDrag("wall_start")} label="A" />
-        <HandleSphere position={[node.end[0], 0.08, node.end[1]]} color="#60a5fa" onPointerDown={beginDrag("wall_end")} label="B" />
-        <HandleSphere position={[center[0], 0.1, center[1]]} color="#22c55e" onPointerDown={beginDrag("move")} label="Move" />
+        <HandleSphere position={[node.start[0], 0.08, node.start[1]]} color="#60a5fa" onPointerDown={beginDrag("wall_start")} label="Endpoint A" />
+        <HandleSphere position={[node.end[0], 0.08, node.end[1]]} color="#60a5fa" onPointerDown={beginDrag("wall_end")} label="Endpoint B" />
+        <GizmoRig center={[center[0], 0.05, center[1]]}>
+          <CenterPuck color="#e2e8f0" onPointerDown={beginDrag("move")} label="Move" />
+          <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+          <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+          <AxisArrow direction={[0, 1, 0]} color={GIZMO_AXIS_COLORS.y} length={0.85} onPointerDown={beginDrag("height")} label="Wall height" />
+        </GizmoRig>
       </group>
     );
   }
@@ -626,24 +699,21 @@ export function TransformHandles() {
   if (node.nodeType === "critical_zone" || node.nodeType === "privacy_zone") {
     if (isGroupSelection) {
       return (
-        <group>
-          <HandleSphere
-            position={[groupAnchor[0], 0.08, groupAnchor[1]]}
-            color={node.nodeType === "critical_zone" ? "#22c55e" : "#8b5cf6"}
-            onPointerDown={beginDrag("move")}
-            label={`Move ${groupSelection.length}`}
-          />
-        </group>
+        <GizmoRig center={[groupAnchor[0], 0.05, groupAnchor[1]]}>
+          <CenterPuck color={node.nodeType === "critical_zone" ? "#22c55e" : "#8b5cf6"} onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+          <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+          <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+        </GizmoRig>
       );
     }
 
     return (
       <group>
-        <mesh position={[center[0], 0.014, center[1]]}>
-          <ringGeometry args={[0.16, 0.24, 20]} />
-          <meshBasicMaterial color={node.nodeType === "critical_zone" ? "#22c55e" : "#8b5cf6"} transparent opacity={0.85} />
-        </mesh>
-        <HandleSphere position={[center[0], 0.08, center[1]]} color={node.nodeType === "critical_zone" ? "#22c55e" : "#8b5cf6"} onPointerDown={beginDrag("move")} label="Move" />
+        <GizmoRig center={[center[0], 0.05, center[1]]}>
+          <CenterPuck color={node.nodeType === "critical_zone" ? "#22c55e" : "#8b5cf6"} onPointerDown={beginDrag("move")} label="Move zone" />
+          <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+          <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+        </GizmoRig>
         {node.polygon.map((point, index) => (
           <HandleSphere
             key={`${node.id}-${point[0].toFixed(1)}-${point[1].toFixed(1)}`}
@@ -674,7 +744,8 @@ export function TransformHandles() {
               position={midpoint}
               color="#38bdf8"
               onPointerDown={beginDrag("polygon_insert", index)}
-              label="+"
+              label="Add point"
+              dim
             />
           );
         })}
@@ -686,15 +757,21 @@ export function TransformHandles() {
     const points = node.points.map((point) => point.position);
     if (isGroupSelection) {
       return (
-        <group>
-          <HandleSphere position={[groupAnchor[0], 0.06, groupAnchor[1]]} color="#fb923c" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
-        </group>
+        <GizmoRig center={[groupAnchor[0], 0.05, groupAnchor[1]]}>
+          <CenterPuck color="#fb923c" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+          <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+          <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+        </GizmoRig>
       );
     }
 
     return (
       <group>
-        <HandleSphere position={[center[0], 0.06, center[1]]} color="#fb923c" onPointerDown={beginDrag("move")} label="Move" />
+        <GizmoRig center={[center[0], 0.05, center[1]]}>
+          <CenterPuck color="#fb923c" onPointerDown={beginDrag("move")} label="Move path" />
+          <AxisArrow direction={[1, 0, 0]} color={GIZMO_AXIS_COLORS.x} onPointerDown={beginDrag("move_x")} label="Move X" />
+          <AxisArrow direction={[0, 0, 1]} color={GIZMO_AXIS_COLORS.z} onPointerDown={beginDrag("move_z")} label="Move Z" />
+        </GizmoRig>
         {points.slice(0, -1).map((point, index) => {
           const nextPoint = points[index + 1]!;
           const midpoint: [number, number, number] = [
@@ -708,7 +785,8 @@ export function TransformHandles() {
               position={midpoint}
               color="#38bdf8"
               onPointerDown={beginDrag("path_insert", index)}
-              label="+"
+              label="Add point"
+              dim
             />
           );
         })}

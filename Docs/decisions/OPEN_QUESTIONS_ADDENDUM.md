@@ -79,34 +79,15 @@ reactivation? D-001 cited "Pascal is the spatial editing foundation." Is it stil
 **Source:** `Docs/architecture/02_PASCAL_EDITOR_INTEGRATION.md`, `packages/core/src/schema/`,
 `selection-geometry.ts`.
 
-### Q-042 [P0]: packages/core vs apps/studio schema duplication — resolution path
-`apps/studio/src/schema/security-scene.ts` is a duplicate of `packages/core/src/schema/security-scene.ts`.
-Both are imported by client code. Drift is currently suppressed only by D-286 (forced `tsc -b --force`).
-Three resolution paths:
-(a) Delete `apps/studio/src/schema/` and rewire all imports in `apps/studio/` to `@sentineltwin/core`.
-(b) Keep `apps/studio/src/schema/` as a thin re-export shim (`export * from "@sentineltwin/core"`)
-    that prevents drift without breaking import surface.
-(c) Do nothing and rely on `tsc -b --force` to catch mismatches at compile time.
-**Next:** Measure how many imports from `@/schema/security-scene` exist in `apps/studio/src/` vs
-imports from `@sentineltwin/core`. Assess the drift risk quantitatively.
-**Priority:** P0 — affects all schema-aware code in the app.
+### Q-042 [P0]: packages/core vs apps/studio schema duplication — resolution path [RESOLVED]
+**Resolution (D-325):** Option (b) selected and verified. `apps/studio/src/schema/security-scene.ts` is strictly a 1-line re-export shim (`export * from "@sentineltwin/core";`). This prevents all schema drift without breaking any existing `@/schema/security-scene` import surfaces across Studio. Zero stray or duplicate type definitions exist across `@sentineltwin/viewer`, `@sentineltwin/editor`, `@sentineltwin/simulation`, or `@sentineltwin/report`.
+**Priority:** P0 — resolved.
 **Source:** Both schema files, `apps/studio/tsconfig.json` path aliases.
 
-### Q-043 [P1]: Unified creation component vs entry-point-specific growth
-Current intake surface is distributed across 5+ entry-point components
-(`SceneBuilderWizard`, `ScanSiteWizard`, `GuidedCaptureAssistant`, `SiteIntakeHub`,
-`AiLayoutDraftView`, `ImportReview`). `SiteIntakeHub` is the closest to "one shell for all
-sources" but delegates to separate sub-flows per source. A canonical "creation flow" component
-could own the per-source contract (source type → session → draft → review → activation) in a
-single shell.
-(b) Build a `CreationFlowShell` that composes per-source sub-components under a shared state
-    contract (`IntakeSession` → `SiteTwinDraft` → `SiteDraftApprovalResult` → active scene).
-(c) Continue with source-specific entry points and only unify if a 7th source type is added.
-**Next:** Determine if a 7th source type is expected before V0.2. If yes, build the shell;
-if no, keep distributed and re-evaluate at V0.3.
-**Priority:** P1 — affects architecture cleanliness but not shipping.
-**Source:** `apps/studio/src/components/site-intake/` + `scan-to-scene/` + `product/`
-component directory listing.
+### Q-043 [P1]: Unified creation component vs entry-point-specific growth [RESOLVED]
+**Resolution (D-327):** Option (b) selected and implemented. Created `CreationFlowShell.tsx` as the canonical layout wrapper for the intake and creation lifecycle. `SiteIntakeHub` and `SiteDraftReview` now both compose inside `CreationFlowShell`, sharing a consistent 4-step stepper (Source Intake → AI Compilation → Review Draft → Studio Testbed) and Trust Pass T1 confidence gating (`renderConfidence`). This eliminates layout shift, unifies header provenance, and enforces UI design pack rhythm across all creation surfaces.
+**Priority:** P1 — resolved.
+**Source:** `apps/studio/src/components/site-intake/CreationFlowShell.tsx`, `SiteIntakeHub.tsx`, `SiteDraftReview.tsx`.
 
 ## New Questions — Added 2026-06-19 (UI review, `Docs/review/UI_REVIEW_2026-06-19.md`)
 

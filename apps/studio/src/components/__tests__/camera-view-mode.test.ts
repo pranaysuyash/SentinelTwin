@@ -24,6 +24,8 @@ describe("CameraViewMode", () => {
 
     expect(source).toContain("VerificationPanel as SharedVerificationPanel");
     expect(source).toContain("Camera Focus Mode");
+    expect(source).toContain("UI_TONES.info.text");
+    expect(source).toContain("TYPE_SCALE.caption.class");
     expect(panelSource).toContain("Footage Verification");
 
     expect(combinedSource).toContain("Back to Map View");

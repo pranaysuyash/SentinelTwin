@@ -1,11 +1,12 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, CheckCircle2, Play, GitCompare, FileText, Columns2, Route, Shield, Play as PlayIcon, X, AlertTriangle, Sparkles } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
+import { UI_TONES } from "@/lib/design-tokens";
 import { useStudioStore } from "@/store/studio-store";
-import type { CameraNode } from "@/schema/security-scene";
+import { cloneSecurityScene, type CameraNode, type SecurityScene } from "@/schema/security-scene";
 
 const DEMO_STEPS = [
   {
@@ -134,8 +135,8 @@ function formatPct(value: number | null | undefined) {
 }
 
 function StepStatusIcon({ completed, current }: { completed: boolean; current: boolean }) {
-  if (completed) return <CheckCircle2 className="h-4 w-4 text-emerald-400" />;
-  if (current) return <Play className="h-3.5 w-3.5 text-cyan-400" />;
+  if (completed) return <CheckCircle2 className={cn("h-4 w-4", UI_TONES.success.text)} />;
+  if (current) return <Play className={cn("h-3.5 w-3.5", UI_TONES.info.text)} />;
   return <div className="h-2 w-2 rounded-full bg-[#2a3246]" />;
 }
 
@@ -151,23 +152,35 @@ function DemoMetricCard({ label, value, delta, accent }: { label: string; value:
 
 function CoverageMetricsPanel({ className }: { className?: string }) {
   const result = useStudioStore((s) => s.simulationResult);
-  const scene = useStudioStore((s) => s.scene);
+  const _scene = useStudioStore((s) => s.scene);
   const zoneResults = result?.criticalZoneResults ?? [];
   const counterZone = zoneResults.find((z) => z.zoneId === "zone_cash_counter");
   const issues = result?.issues ?? [];
 
   const criticalIssues = issues.filter((i) => i.severity === "critical" || i.severity === "high");
   const passCount = zoneResults.filter((z) => z.status === "pass").length;
+  const coverageTone = result?.totalCoveragePct != null && result.totalCoveragePct >= 70
+    ? UI_TONES.success.text
+    : result?.totalCoveragePct != null && result.totalCoveragePct >= 50
+      ? UI_TONES.warning.text
+      : UI_TONES.danger.text;
+  const counterTone = counterZone?.status === "pass" ? UI_TONES.success.text : UI_TONES.danger.text;
+  const issueTone = criticalIssues.length > 0 ? UI_TONES.warning.text : UI_TONES.success.text;
 
   return (
     <div className={cn("grid grid-cols-2 gap-1.5", className)}>
-      <DemoMetricCard label="Coverage" value={formatPct(result?.totalCoveragePct)} accent={result?.totalCoveragePct != null && result.totalCoveragePct >= 70 ? "text-emerald-300" : result?.totalCoveragePct != null && result.totalCoveragePct >= 50 ? "text-amber-300" : "text-red-300"} />
+      <DemoMetricCard label="Coverage" value={formatPct(result?.totalCoveragePct)} accent={coverageTone} />
       <DemoMetricCard label="Zones Passed" value={`${passCount}/${zoneResults.length}`} />
-      <DemoMetricCard label="Counter Zone" value={counterZone?.status === "pass" ? "Pass" : counterZone?.status === "partial" ? "Partial" : "Fail"} accent={counterZone?.status === "pass" ? "text-emerald-300" : "text-red-300"} />
-      <DemoMetricCard label="Issues" value={`${criticalIssues.length} critical/high`} accent={criticalIssues.length > 0 ? "text-amber-300" : "text-emerald-300"} />
+      <DemoMetricCard label="Counter Zone" value={counterZone?.status === "pass" ? "Pass" : counterZone?.status === "partial" ? "Partial" : "Fail"} accent={counterTone} />
+      <DemoMetricCard label="Issues" value={`${criticalIssues.length} critical/high`} accent={issueTone} />
     </div>
   );
 }
+
+type DemoFailureRecoveryState = {
+  scene: SecurityScene;
+  environmentMode: "day" | "night" | "dusk";
+};
 
 type DemoWalkthroughPanelProps = {
   onFinish: () => void;
@@ -180,14 +193,16 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
   const simulationResult = useStudioStore((s) => s.simulationResult);
   const simulationRunning = useStudioStore((s) => s.simulationRunning);
   const simulationDirty = useStudioStore((s) => s.simulationDirty);
-  const scene = useStudioStore((s) => s.scene);
+  const _scene = useStudioStore((s) => s.scene);
   const snapshots = useStudioStore((s) => s.snapshots);
   const runSimulation = useStudioStore((s) => s.runSimulation);
   const updateNode = useStudioStore((s) => s.updateNode);
   const setEnvironmentMode = useStudioStore((s) => s.setEnvironmentMode);
+  const commitSceneChange = useStudioStore((s) => s.commitSceneChange);
 
   const [failureCaseApplied, setFailureCaseApplied] = useState(false);
   const [lastActionStep, setLastActionStep] = useState<number | null>(null);
+  const failureRecoveryRef = useRef<DemoFailureRecoveryState | null>(null);
 
   const step = DEMO_STEPS[demoStep];
   const isFirst = demoStep === 0;
@@ -198,11 +213,25 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
     return lastActionStep != null && lastActionStep >= demoStep;
   }, [lastActionStep, demoStep]);
 
-  const simulationComplete = !!simulationResult && !simulationDirty;
   const hasSnapshotToCompare = snapshots.length >= 2;
+
+  const restoreFailureCase = useCallback(() => {
+    const recovery = failureRecoveryRef.current;
+    if (!recovery) return false;
+
+    failureRecoveryRef.current = null;
+    commitSceneChange(
+      () => cloneSecurityScene(recovery.scene),
+      "Demo walkthrough failure state restored",
+    );
+    setEnvironmentMode(recovery.environmentMode);
+    runSimulation();
+    return true;
+  }, [commitSceneChange, runSimulation, setEnvironmentMode]);
 
   const handleNext = useCallback(() => {
     if (isLast) {
+      void restoreFailureCase();
       setDemoMode(false);
       setDemoStep(0);
       onFinish();
@@ -211,7 +240,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
     const nextIndex = demoStep + 1;
     setDemoStep(nextIndex);
     DEMO_STEPS[nextIndex]?.transition?.();
-  }, [demoStep, isLast, onFinish, setDemoMode, setDemoStep]);
+  }, [demoStep, isLast, onFinish, restoreFailureCase, setDemoMode, setDemoStep]);
 
   const handlePrev = useCallback(() => {
     if (demoStep <= 0) return;
@@ -221,10 +250,11 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
   }, [demoStep, setDemoStep]);
 
   const handleSkip = useCallback(() => {
+    void restoreFailureCase();
     setDemoMode(false);
     setDemoStep(0);
     onFinish();
-  }, [onFinish, setDemoMode, setDemoStep]);
+  }, [onFinish, restoreFailureCase, setDemoMode, setDemoStep]);
 
   const handleAction = useCallback(() => {
     if (demoStep === 4) {
@@ -240,6 +270,13 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
         const targetCameraId = state.scene.cameras.find((camera) => camera.id === "cam_1")?.id ?? fallbackCamera;
         if (!targetCameraId) return false;
 
+        if (!failureRecoveryRef.current) {
+          failureRecoveryRef.current = {
+            scene: cloneSecurityScene(state.scene),
+            environmentMode: state.environmentMode,
+          };
+        }
+
         setEnvironmentMode("night");
         updateNode(targetCameraId, { status: "off" as CameraNode["status"] });
         runSimulation();
@@ -253,20 +290,23 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
     }
   }, [demoStep, runSimulation, setEnvironmentMode, updateNode]);
 
-  const canAction = useMemo(() => {
-    if (demoStep === 4) return !simulationRunning;
-    if (demoStep === 6) return !failureCaseApplied && !simulationRunning;
-    return false;
-  }, [demoStep, failureCaseApplied, simulationRunning]);
-
   const Icon = step?.icon ?? Shield;
   const showRerunWarning = demoStep > 0 && simulationDirty && !failureCaseApplied;
   const simulationStepComplete = lastActionStep != null && lastActionStep >= 4;
   const failureStepComplete = lastActionStep != null && lastActionStep >= 6;
+  const canAction = useMemo(() => {
+    if (demoStep === 4) return !simulationRunning;
+    if (demoStep === 6) return simulationStepComplete && !failureCaseApplied && !simulationRunning;
+    return false;
+  }, [demoStep, failureCaseApplied, simulationRunning, simulationStepComplete]);
 
   useEffect(() => {
     DEMO_STEPS[demoStep]?.transition?.();
   }, [demoStep]);
+
+  useEffect(() => () => {
+    void restoreFailureCase();
+  }, [restoreFailureCase]);
 
   return (
     <div         className="pointer-events-auto absolute inset-y-0 left-0 z-40 flex w-[340px] max-w-[90vw] flex-col border-r border-[#1e2130] bg-[#0b0f17]/95 shadow-[4px_0_24px_rgba(0,0,0,0.3)]">
@@ -357,6 +397,12 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
             <div className="mt-3">
               <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">Judge focus areas</div>
               <CoverageMetricsPanel />
+              {hasSnapshotToCompare ? (
+                <div className="mt-2 rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-2 text-[9px] text-[#8b96ab]">
+                  <div className={cn("font-semibold uppercase tracking-[0.14em]", UI_TONES.info.text)}>Comparison ready</div>
+                  <div className="mt-0.5">Two or more snapshots are available for compare and report surfaces.</div>
+                </div>
+              ) : null}
               <div className="mt-2 rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-2 text-[10px] text-[#8b96ab]">
                 <div className="flex items-center gap-1.5 text-emerald-300 font-semibold mb-1">
                   <Sparkles className="h-3 w-3" />

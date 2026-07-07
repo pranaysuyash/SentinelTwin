@@ -388,7 +388,7 @@ export function CameraFeedCanvas({
       <div className={cn("absolute inset-0", canvasFilterClass)}>
         <Canvas
           camera={{ position: camera.position, fov: camera.fovHorizontalDeg, near: 0.1, far: 50 }}
-          shadows="soft"
+          shadows
           gl={{ preserveDrawingBuffer: true, powerPreference: "high-performance" }}
         >
           <SceneEnvironmentSetup tier="medium" />

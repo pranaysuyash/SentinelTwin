@@ -8,6 +8,8 @@ import { Suspense, startTransition, useCallback, useEffect, useMemo, useRef, use
 import * as THREE from "three";
 
 import { QUALITY_ABBR, QUALITY_COLOR, QUALITY_RANK } from "@/lib/quality-display";
+import { TYPE_SCALE, UI_TONES } from "@/lib/design-tokens";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 import { useStudioStore } from "@/store/studio-store";
 import "@/lib/three-compat";
 import {
@@ -65,6 +67,33 @@ const MIN_PATH_SEGMENT_DURATION_DISTANCE_M = 0.22;
 const DEFAULT_PATH_SPEED_MPS = 1.2;
 const MIN_PLAYBACK_STEP_SECONDS = 2;
 const MIN_PLAYBACK_WAYPOINT_TIME_GAP_S = 0.0001;
+const REPLAY_CHROME = {
+  border: UI_TONES.neutral.border,
+  text: UI_TONES.neutral.text,
+  mutedText: UI_TONES.neutral.text,
+  infoText: UI_TONES.info.text,
+  infoBg: UI_TONES.info.bg,
+};
+const REPLAY_SURFACES = {
+  page: UI_SURFACES.page,
+  panel: UI_SURFACES.panelMuted,
+  panelSoft: UI_SURFACES.panelSoft,
+  card: UI_SURFACES.card,
+  cardStrong: UI_SURFACES.cardStrong,
+  cardMuted: UI_SURFACES.cardMuted,
+  border: UI_SURFACES.border,
+  borderSubtle: UI_SURFACES.borderSubtle,
+  borderThin: UI_SURFACES.borderThin,
+  mutedText: UI_SURFACES.textMuted2,
+  mutedText2: UI_SURFACES.textMuted4,
+  bodyText: UI_SURFACES.textBody,
+  bodyText2: UI_SURFACES.textBody2,
+  accentText: UI_SURFACES.textAccent,
+  accentBg: "bg-sky-500/20",
+  hoverBg: UI_SURFACES.hoverBg,
+  hoverBgAlt: UI_SURFACES.hoverBgAlt,
+  hoverText: UI_SURFACES.hoverText,
+};
 
 function SceneView() {
   const scene = useStudioStore((s) => s.scene);
@@ -484,7 +513,7 @@ function ReplayCollisionMarkers({
         </lineSegments>
       )}
       <SceneHtml position={[firstCollision.rawPosition[0], 0.55, firstCollision.rawPosition[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-        <div className="rounded-md border border-[#f97316]/50 bg-black/80 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#fdba74]">
+        <div className={`rounded-md border border-[#f97316]/50 bg-black/80 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#fdba74]`}>
           Collision corrected
         </div>
       </SceneHtml>
@@ -529,10 +558,10 @@ function PlaybackControls({
       initial={{ y: 40, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 260, damping: 22, delay: 0.15 }}
-      className="absolute bottom-0 left-0 right-0 z-10 bg-linear-to-t from-black/90 via-black/70 to-transparent px-4 pb-3 pt-10"
+      className={`absolute bottom-3 left-3 right-3 z-20 rounded-2xl border ${REPLAY_CHROME.border} ${REPLAY_SURFACES.panel} px-5 py-3.5 shadow-[0_16px_48px_rgba(0,0,0,0.65)] backdrop-blur-md`}
     >
       {/* Progress bar with coverage quality bands */}
-      <div className="group relative mb-1.5">
+      <div className="group relative mb-2">
         {/* Coverage quality bands rendered behind the slider */}
         {coverageBands && (
           <CoverageQualityBands waypoints={coverageBands} totalDuration={duration} />
@@ -544,9 +573,9 @@ function PlaybackControls({
           step={0.05}
           value={currentTime}
           onChange={(e) => onSeek(parseFloat(e.target.value))}
-          className="relative h-1.5 w-full cursor-pointer appearance-none rounded-full bg-transparent [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#60a5fa] [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(96,165,250,0.5)] [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150 [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:active:scale-90"
+          className="relative h-1.5 w-full cursor-pointer appearance-none rounded-full bg-transparent [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#38bdf8] [&::-webkit-slider-thumb]:shadow-[0_0_12px_rgba(56,189,248,0.8)] [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150 [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:active:scale-90"
           style={{
-            background: `linear-gradient(to right, #60a5fa ${progress * 100}%, #1f2536 ${progress * 100}%)`,
+            background: `linear-gradient(to right, #38bdf8 ${progress * 100}%, #1f2536 ${progress * 100}%)`,
           }}
         />
       </div>
@@ -567,7 +596,7 @@ function PlaybackControls({
             whileHover="hover"
             whileTap="tap"
             onClick={onReset}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-[#5b667c] hover:bg-[#1a2333] hover:text-white"
+            className={`flex h-7 w-7 items-center justify-center rounded-md ${REPLAY_CHROME.text} ${REPLAY_SURFACES.hoverBg} ${REPLAY_SURFACES.hoverText}`}
             title="Reset"
           >
             <ListRestart className="h-3.5 w-3.5" />
@@ -578,7 +607,7 @@ function PlaybackControls({
             whileHover="hover"
             whileTap="tap"
             onClick={() => onSeek(Math.max(0, currentTime - MIN_PLAYBACK_STEP_SECONDS))}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-[#5b667c] hover:bg-[#1a2333] hover:text-white"
+            className={`flex h-7 w-7 items-center justify-center rounded-md ${REPLAY_CHROME.text} ${REPLAY_SURFACES.hoverBg} ${REPLAY_SURFACES.hoverText}`}
             title={`Skip back ${MIN_PLAYBACK_STEP_SECONDS}s`}
           >
             <SkipBack className="h-3.5 w-3.5" />
@@ -591,8 +620,8 @@ function PlaybackControls({
             onClick={onPlayPause}
             className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ${
               playing
-                ? "bg-[#60a5fa] text-white shadow-[0_0_14px_rgba(96,165,250,0.5)] hover:shadow-[0_0_20px_rgba(96,165,250,0.6)]"
-                : "bg-[#1a2333] text-[#93c5fd] hover:bg-[#253454]"
+                ? "bg-gradient-to-br from-[#38bdf8] to-[#0284c7] text-white shadow-[0_0_16px_rgba(56,189,248,0.6)] hover:shadow-[0_0_24px_rgba(56,189,248,0.8)]"
+                : `${UI_TONES.info.bg} ${UI_TONES.info.text} ${REPLAY_SURFACES.hoverBgAlt} ${REPLAY_SURFACES.hoverText}`
             }`}
             title={playing ? "Pause" : "Play"}
           >
@@ -610,7 +639,7 @@ function PlaybackControls({
             whileHover="hover"
             whileTap="tap"
             onClick={() => onSeek(Math.min(duration, currentTime + MIN_PLAYBACK_STEP_SECONDS))}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-[#5b667c] hover:bg-[#1a2333] hover:text-white"
+            className={`flex h-7 w-7 items-center justify-center rounded-md ${REPLAY_CHROME.text} ${REPLAY_SURFACES.hoverBg} ${REPLAY_SURFACES.hoverText}`}
             title={`Skip forward ${MIN_PLAYBACK_STEP_SECONDS}s`}
           >
             <SkipForward className="h-3.5 w-3.5" />
@@ -619,11 +648,11 @@ function PlaybackControls({
 
         {/* Center: time display */}
         <div className="flex items-center gap-3">
-      <motion.span
+          <motion.span
             key={currentTime}
             initial={{ opacity: 0.5 }}
             animate={{ opacity: 1 }}
-            className="text-[10px] font-mono tabular-nums text-[#8b96ab]"
+            className={`${TYPE_SCALE.caption.class} font-mono font-bold tabular-nums tracking-wider ${REPLAY_CHROME.infoText}`}
           >
             {formatTime(currentTime)} / {formatTime(duration)}
           </motion.span>
@@ -631,18 +660,18 @@ function PlaybackControls({
 
         {/* Right: speed selector */}
         <div className="flex items-center gap-0.5">
-            {REPLAY_SPEED_OPTIONS.map((s) => (
-              <motion.button
+          {REPLAY_SPEED_OPTIONS.map((s) => (
+            <motion.button
               key={s}
               variants={controlBtnVariants}
               initial="rest"
               whileHover="hover"
               whileTap="tap"
               onClick={() => onSpeedChange(s)}
-              className={`rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors ${
+              className={`rounded px-1.5 py-0.5 ${TYPE_SCALE.micro.class} font-medium transition-colors ${
                 speed === s
-                  ? "bg-[#1a2333] text-[#93c5fd]"
-                  : "text-[#4a5568] hover:bg-[#131a28] hover:text-[#8b96ab]"
+                  ? `${UI_TONES.info.bg} ${UI_TONES.info.text}`
+                : `${UI_TONES.neutral.text} hover:bg-[#131a28] ${REPLAY_SURFACES.mutedText2}`
               }`}
             >
               {s}×
@@ -819,11 +848,11 @@ function InfoOverlay({
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 280, damping: 24 }}
-      className="absolute left-3 z-10 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3.5 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)]"
+      className={`absolute left-3 z-10 rounded-xl border ${REPLAY_SURFACES.borderSubtle} ${REPLAY_SURFACES.panelSoft} px-3.5 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)]`}
       style={{ top: "calc(var(--st-full-canvas-safe-top, 4.25rem) + 0.75rem)" }}
     >
       <div className="mb-2.5 flex items-center gap-3">
-        <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5b667c]">{pathLabel}</div>
+        <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${REPLAY_SURFACES.mutedText}`}>{pathLabel}</div>
         {hasCoverageRisk && (
           <span className="rounded-md bg-red-500/15 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.12em] text-red-400">
             Critical Zone Reachable
@@ -834,16 +863,16 @@ function InfoOverlay({
       {/* Main stats */}
       <div className="mb-2.5 grid grid-cols-3 gap-3">
         <div>
-          <div className="text-[8px] text-[#5b667c]">Waypoints</div>
-          <div className="mt-0.5 text-[11px] font-mono font-semibold text-[#c7d0e4]">{waypointCount}</div>
+          <div className={`text-[8px] ${REPLAY_SURFACES.mutedText}`}>Waypoints</div>
+          <div className={`mt-0.5 text-[11px] font-mono font-semibold ${REPLAY_SURFACES.bodyText}`}>{waypointCount}</div>
         </div>
         <div>
-          <div className="text-[8px] text-[#5b667c]">Exposure</div>
-          <div className="mt-0.5 text-[11px] font-mono font-semibold text-[#f43f5e]">{exposureLabel}</div>
+          <div className={`text-[8px] ${REPLAY_SURFACES.mutedText}`}>Exposure</div>
+          <div className={`mt-0.5 text-[11px] font-mono font-semibold ${UI_TONES.danger.text}`}>{exposureLabel}</div>
         </div>
         <div>
-          <div className="text-[8px] text-[#5b667c]">Status</div>
-          <div className={`mt-0.5 text-[11px] font-semibold ${hasCoverageRisk ? "text-red-400" : "text-[#5b667c]"}`}>
+          <div className={`text-[8px] ${REPLAY_SURFACES.mutedText}`}>Status</div>
+          <div className={`mt-0.5 text-[11px] font-semibold ${hasCoverageRisk ? UI_TONES.danger.text : REPLAY_SURFACES.mutedText}`}>
             {hasCoverageSummary
               ? hasCoverageRisk
                 ? "Coverage Failure Risk"
@@ -853,23 +882,26 @@ function InfoOverlay({
         </div>
       </div>
 
-      <div className="mb-2 rounded-lg border border-[#243146] bg-[#111521] px-2 py-1.5">
-        <div className="text-[7px] font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">Current state</div>
-        <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-[#d2d9e8]">
-          <div>
-            <span className="text-[#6a748b]">Time:</span> {currentTime.toFixed(1)}s
-          </div>
-          <div className="truncate">
-            <span className="text-[#6a748b]">Quality:</span> {currentQualityLabel ?? "—"}
-          </div>
-          <div className="col-span-2 truncate">
-            <span className="text-[#6a748b]">Segment:</span> {currentSegmentLabel ?? "Route summary"}
-          </div>
-          <div className="col-span-2 truncate">
-            <span className="text-[#6a748b]">Best camera:</span> {bestCameraLabel ?? "unavailable"}
+      <div className={`mb-2.5 rounded-xl border ${REPLAY_SURFACES.border} ${REPLAY_SURFACES.cardStrong} px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.4)]`}>
+        <div className="flex items-center justify-between gap-2">
+          <span className={`text-[8px] font-bold uppercase tracking-[0.18em] ${REPLAY_SURFACES.accentText}`}>Current state</span>
+          <span className={`rounded ${REPLAY_SURFACES.accentBg} px-1.5 py-0.5 text-[8px] font-mono font-bold ${UI_TONES.info.text}`}>
+            {currentTime.toFixed(1)}s
+          </span>
+        </div>
+        <div className={`mt-2 grid grid-cols-2 gap-x-2 gap-y-1.5 text-[9px] ${REPLAY_SURFACES.bodyText2}`}>
+          <div className={`col-span-2 flex items-center justify-between rounded ${REPLAY_SURFACES.cardMuted} px-2 py-1 border ${REPLAY_SURFACES.border}`}>
+            <span className={REPLAY_SURFACES.mutedText}>Quality Band:</span>
+            <span className="font-semibold text-white">{currentQualityLabel ?? "Unmonitored"}</span>
           </div>
           <div className="col-span-2 truncate">
-            <span className="text-[#6a748b]">Next event:</span> {nextEventLabel ?? "No upcoming event"}
+            <span className={REPLAY_SURFACES.mutedText}>Segment:</span> <span className={`font-medium ${REPLAY_SURFACES.bodyText}`}>{currentSegmentLabel ?? "Route summary"}</span>
+          </div>
+          <div className="col-span-2 truncate">
+            <span className={REPLAY_SURFACES.mutedText}>Best camera:</span> <span className={`font-medium ${UI_TONES.info.text}`}>{bestCameraLabel ?? "unavailable"}</span>
+          </div>
+          <div className="col-span-2 truncate">
+            <span className={REPLAY_SURFACES.mutedText}>Next event:</span> <span className={REPLAY_SURFACES.mutedText2}>{nextEventLabel ?? "No upcoming event"}</span>
           </div>
         </div>
       </div>
@@ -886,16 +918,16 @@ function InfoOverlay({
       )}
 
       {/* Coverage quality exposure breakdown */}
-      <div className="border-t border-[#1f2536]/60 pt-2">
-        <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.15em] text-[#4a5568]">Exposure by quality</div>
+      <div className={`border-t ${REPLAY_SURFACES.borderSubtle}/60 pt-2`}>
+        <div className={`mb-1.5 text-[9px] font-semibold uppercase tracking-[0.15em] ${REPLAY_SURFACES.mutedText}`}>Exposure by quality</div>
         <div className="space-y-1">
           {EXPOSURE_KEYS.map((key) => (
             <div key={key} className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: QUALITY_COLOR[key] }} />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[7px] uppercase tracking-wider text-[#5b667c]">{key}</span>
-                  <span className="text-[7px] font-mono text-[#8b96ab]">
+                  <span className={`text-[7px] uppercase tracking-wider ${REPLAY_SURFACES.mutedText}`}>{key}</span>
+                  <span className={`text-[7px] font-mono ${REPLAY_SURFACES.mutedText2}`}>
                     {(qualityBands[key] ?? 0).toFixed(0)}s
                   </span>
                 </div>
@@ -922,7 +954,7 @@ function InfoOverlay({
 
 function EmptyReplayState({ showActivePathHint }: { showActivePathHint: boolean }) {
   return (
-    <div className="flex h-full items-center justify-center bg-[#07090d]">
+    <div className={`flex h-full items-center justify-center ${REPLAY_SURFACES.page}`}>
       <RunSimulationPrompt
         className="px-4"
         message={
@@ -944,39 +976,51 @@ function CurrentVisibilityPanel({
   visibleNow: ReplayCameraStateSummary[];
   lostNow: ReplayCameraStateSummary[];
 }) {
+  const isDetected = visibleNow.length > 0;
   return (
     <div
-      className="absolute right-3 z-10 w-76 rounded-xl border border-[#1f2536] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)]"
+      className={`absolute right-3 z-10 w-76 rounded-2xl border ${REPLAY_SURFACES.border} ${REPLAY_SURFACES.panel} px-3.5 py-3 shadow-[0_16px_48px_rgba(0,0,0,0.5)] backdrop-blur-md`}
       style={{ top: "calc(var(--st-full-canvas-safe-top, 4.25rem) + 0.875rem)" }}
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">Current Visibility</div>
-        <div className="text-[8px] font-mono text-[#8b96ab]">@ {currentTime.toFixed(1)}s</div>
+        <div className={`text-[8px] font-semibold uppercase tracking-[0.2em] ${REPLAY_SURFACES.accentText}`}>Current Visibility</div>
+        <div className={`text-[9px] font-mono font-bold ${REPLAY_SURFACES.accentText}`}>@ {currentTime.toFixed(1)}s</div>
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-1.5">
+      {/* Prominent Current-State Badge */}
+      <div className={`mt-2.5 flex items-center justify-between rounded-lg border px-2.5 py-1.5 ${
+        isDetected
+          ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+          : "border-rose-500/40 bg-rose-500/15 text-rose-200 shadow-[0_0_12px_rgba(244,63,94,0.2)]"
+      }`}>
+        <span className="text-[9px] font-bold uppercase tracking-wider">
+          {isDetected ? `ACTOR DETECTED (${visibleNow.length} CAM)` : "COVERAGE GAP / ACTOR LOST"}
+        </span>
+        <span className={`h-2 w-2 rounded-full ${isDetected ? "bg-emerald-400 animate-pulse" : "bg-rose-500"}`} />
+      </div>
+      <div className="mt-2.5 grid grid-cols-2 gap-1.5">
         <div className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-1">
-          <div className="text-[7px] uppercase tracking-[0.14em] text-[#86efac]">Visible now</div>
-          <div className="mt-0.5 text-[12px] font-semibold text-emerald-200">{visibleNow.length}</div>
+          <div className={`text-[7px] uppercase tracking-[0.14em] ${UI_TONES.success.text}`}>Visible now</div>
+          <div className={`mt-0.5 text-[12px] font-semibold ${UI_TONES.success.text}`}>{visibleNow.length}</div>
         </div>
         <div className="rounded-md border border-rose-500/25 bg-rose-500/10 px-2 py-1">
-          <div className="text-[7px] uppercase tracking-[0.14em] text-[#fda4af]">Lost now</div>
-          <div className="mt-0.5 text-[12px] font-semibold text-rose-200">{lostNow.length}</div>
+          <div className={`text-[7px] uppercase tracking-[0.14em] ${UI_TONES.danger.text}`}>Lost now</div>
+          <div className={`mt-0.5 text-[12px] font-semibold ${UI_TONES.danger.text}`}>{lostNow.length}</div>
         </div>
       </div>
-      <div className="mt-2 space-y-1.5">
+      <div className="mt-2.5 space-y-1.5">
         {[...visibleNow.slice(0, 3), ...lostNow.slice(0, 2)].map((entry) => (
-          <div key={entry.cameraId} className="rounded-md border border-[#243146] bg-[#111521] px-2 py-1">
+          <div key={entry.cameraId} className={`rounded-md border ${REPLAY_SURFACES.border} ${REPLAY_SURFACES.card} px-2 py-1.5`}>
             <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-[9px] font-medium text-[#d2d9e8]">{entry.cameraName}</span>
+              <span className={`truncate text-[9px] font-medium ${REPLAY_SURFACES.bodyText2}`}>{entry.cameraName}</span>
               <span
-                className={`rounded px-1 py-0.5 text-[7px] font-semibold uppercase tracking-[0.12em] ${
-                  entry.visible ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200"
+                className={`rounded px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.12em] ${
+                  entry.visible ? "bg-emerald-500/20 text-emerald-200 border border-emerald-500/30" : "bg-rose-500/20 text-rose-200 border border-rose-500/30"
                 }`}
               >
                 {entry.visible ? "Visible" : "Lost"}
               </span>
             </div>
-            <div className="mt-0.5 truncate text-[8px] text-[#8b96ab]">
+            <div className={`mt-0.5 truncate text-[8px] ${REPLAY_SURFACES.mutedText2}`}>
               {entry.quality ? `${entry.quality.toUpperCase()} • ` : ""}{entry.reason ?? "No reason annotation"}
             </div>
           </div>
@@ -1312,18 +1356,18 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
   }
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07090d]" style={{ paddingTop: "var(--st-full-canvas-safe-top, 4.25rem)" }}>
+    <div className={`relative flex h-full min-h-0 flex-col overflow-hidden ${REPLAY_SURFACES.page}`} style={{ paddingTop: "var(--st-full-canvas-safe-top, 4.25rem)" }}>
       {immersiveMode ? (
-        <div className={`absolute left-3 top-3 z-20 max-w-[420px] rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2 shadow-[0_12px_34px_rgba(0,0,0,0.35)]${compactViewport ? " max-w-[180px]" : ""}`}>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Replay Focus Mode</div>
+        <div className={`absolute left-3 top-3 z-20 max-w-[420px] rounded-xl border ${REPLAY_SURFACES.border} ${REPLAY_SURFACES.panelSoft} px-3 py-2 shadow-[0_12px_34px_rgba(0,0,0,0.35)]${compactViewport ? " max-w-[180px]" : ""}`}>
+          <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${REPLAY_SURFACES.accentText}`}>Replay Focus Mode</div>
           <div className="mt-1 text-[13px] font-medium text-white">{selectedPathLabel}</div>
           {!compactViewport && (
-            <div className="mt-1 text-[9px] leading-4 text-[#9fb0c9]">
+            <div className={`mt-1 text-[9px] leading-4 ${REPLAY_SURFACES.mutedText2}`}>
               Path replay, camera responsibility, and visible-now state are still active. Press F to exit focus.
             </div>
           )}
           {!compactViewport && (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] text-[#8ea5cc]">
+            <div className={`mt-2 flex flex-wrap items-center gap-1.5 text-[9px] ${REPLAY_SURFACES.mutedText2}`}>
               <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5">Time {safeCurrentTime.toFixed(1)}s</span>
               <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5">Visible {activePathResult ? `${replayCameraStateSummary.visibleNow.length}/${scene.cameras.length}` : "--"}</span>
               <button
@@ -1344,18 +1388,18 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
           )}
         </div>
       ) : (
-        <div className="flex items-center justify-between gap-4 border-b border-[#1f2536] bg-[#0b0f17] px-4 py-3">
-          <div className="min-w-0">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">
+          <div className={`flex items-center justify-between gap-4 border-b ${REPLAY_SURFACES.borderSubtle} ${REPLAY_SURFACES.panel} px-4 py-3`}>
+            <div className="min-w-0">
+            <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${REPLAY_SURFACES.accentText}`}>
               Incident Review — Coverage Replay
             </div>
-            <div className="mt-1 text-[9px] leading-4 text-[#556076]">
+            <div className={`mt-1 text-[9px] leading-4 ${REPLAY_SURFACES.mutedText}`}>
               Defensive analysis: subject visibility along the selected route.
               Use the timeline controls below to review camera responsibility and coverage loss events.
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <select
-                className="min-w-55 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[11px] font-medium text-[#d7deed] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                className={`min-w-55 rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-2.5 py-1.5 text-[11px] font-medium text-[#d7deed] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                 value={activePathId ?? ""}
                 onChange={(event) => handlePathChange(event.target.value || null)}
                 aria-label="Select active replay path"
@@ -1371,7 +1415,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
                 type="button"
                 onClick={handleEditPath}
                 disabled={!activePath}
-                className="rounded-lg border border-[#24283a] bg-[#111521] px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className={`rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-3 py-1.5 text-[10px] font-medium ${REPLAY_SURFACES.bodyText} transition-colors hover:border-[#32384d] ${REPLAY_SURFACES.hoverText} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 Edit Path
               </button>
@@ -1385,21 +1429,21 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
             </div>
           </div>
           <div className="grid grid-cols-4 gap-2 text-right text-[9px]">
-            <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
-              <div className="uppercase tracking-[0.16em] text-[#556076]">Path Length</div>
-              <div className="mt-0.5 font-mono text-[#c7d0e4]">{pathLengthM.toFixed(1)}m</div>
+            <div className={`rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-2.5 py-1.5`}>
+              <div className={`uppercase tracking-[0.16em] ${REPLAY_SURFACES.mutedText}`}>Path Length</div>
+              <div className={`mt-0.5 font-mono ${REPLAY_SURFACES.bodyText}`}>{pathLengthM.toFixed(1)}m</div>
             </div>
-            <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
-              <div className="uppercase tracking-[0.16em] text-[#556076]">Est. Time</div>
-              <div className="mt-0.5 font-mono text-[#c7d0e4]">{estimatedTimeS > 0 ? formatSecondsShort(estimatedTimeS) : "--"}</div>
+            <div className={`rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-2.5 py-1.5`}>
+              <div className={`uppercase tracking-[0.16em] ${REPLAY_SURFACES.mutedText}`}>Est. Time</div>
+              <div className={`mt-0.5 font-mono ${REPLAY_SURFACES.bodyText}`}>{estimatedTimeS > 0 ? formatSecondsShort(estimatedTimeS) : "--"}</div>
             </div>
-            <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
-              <div className="uppercase tracking-[0.16em] text-[#556076]">Start Time</div>
-              <div className="mt-0.5 font-mono text-[#c7d0e4]">{formatSecondsShort(playbackWaypoints[0]?.timeS ?? 0)}</div>
+            <div className={`rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-2.5 py-1.5`}>
+              <div className={`uppercase tracking-[0.16em] ${REPLAY_SURFACES.mutedText}`}>Start Time</div>
+              <div className={`mt-0.5 font-mono ${REPLAY_SURFACES.bodyText}`}>{formatSecondsShort(playbackWaypoints[0]?.timeS ?? 0)}</div>
             </div>
-            <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
-              <div className="uppercase tracking-[0.16em] text-[#556076]">Visible Now</div>
-              <div className="mt-0.5 font-mono text-[#c7d0e4]">
+            <div className={`rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-2.5 py-1.5`}>
+              <div className={`uppercase tracking-[0.16em] ${REPLAY_SURFACES.mutedText}`}>Visible Now</div>
+              <div className={`mt-0.5 font-mono ${REPLAY_SURFACES.bodyText}`}>
                 {activePathResult ? `${replayCameraStateSummary.visibleNow.length}/${scene.cameras.length}` : "--"}
               </div>
             </div>
@@ -1410,7 +1454,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
       <button
         type="button"
         onClick={toggleImmersiveMode}
-        className="absolute right-3 top-3 z-30 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#3a4a66] hover:text-white"
+        className={`absolute right-3 top-3 z-30 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium ${REPLAY_SURFACES.bodyText} transition-colors hover:border-[#3a4a66] ${REPLAY_SURFACES.hoverText}`}
       >
         {immersiveMode ? "Exit Focus" : "Focus"}
       </button>
@@ -1442,7 +1486,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
 
       <Canvas
         camera={{ position: [12.8, 7.6, 11.6], fov: 31, near: 0.1, far: 200 }}
-        shadows="soft"
+        shadows
         dpr={computeSingleCanvasDpr(1)}
         gl={{ antialias: true, powerPreference: "high-performance" }}
         className="flex-1 min-h-0"

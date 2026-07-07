@@ -135,3 +135,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get, store) => ({
   ...createTelemetrySlice(set, get),
   ...createDebugTogglesSlice(set, get),
 }));
+
+// Dev-only debugging handle: lets DevTools / automated QA read and drive the
+// canonical store without going through the UI. Stripped from production.
+if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+  (window as unknown as Record<string, unknown>).__SENTINEL_STUDIO_STORE__ = useStudioStore;
+}

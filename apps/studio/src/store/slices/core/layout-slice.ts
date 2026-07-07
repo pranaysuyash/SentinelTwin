@@ -1,4 +1,10 @@
 import {
+  UI_EXPOSURE_PRESETS,
+  persistUiExposure,
+  readPersistedUiExposure,
+  type UiExposureLevel,
+} from "@/lib/ui-exposure";
+import {
   getPresetLayoutSnapshot,
   DEFAULT_LAYERS,
   isWorkspaceLayoutModified,
@@ -338,8 +344,12 @@ export interface LayoutSlice {
   clientDemoOptions: { hideDebugModules: boolean; simplifiedLabels: boolean; criticalIssuesOnly: boolean; lockLayout: boolean };
   viewSettingsOpen: boolean;
   compactViewport: boolean;
+  /** App-wide chrome posture (D-326): showcase (demo) / focused (default) / full (pro). */
+  uiExposure: UiExposureLevel;
 
   setViewMode: (mode: ViewMode) => void;
+  /** Apply an exposure preset over the existing chrome toggles (composer, not a lock). */
+  setUiExposure: (level: UiExposureLevel) => void;
   setWorkspacePreset: (preset: WorkspacePreset) => void;
   setCanvasMode: (mode: CanvasMode) => void;
   resetCanvasView: () => void;
@@ -419,6 +429,20 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
     pendingTabAttention: [],
     recentIssueChangeKeys: [],
     clientDemoOptions: _initialLayout.clientDemoOptions,
+    uiExposure: readPersistedUiExposure() ?? "focused",
+
+    setUiExposure: (level) => {
+      const preset = UI_EXPOSURE_PRESETS[level];
+      persistUiExposure(level);
+      set((state: any) => ({
+        uiExposure: level,
+        visibleComponents: { ...state.visibleComponents, ...preset.visibleComponents },
+        leftDockCollapsed: preset.dockCollapsed.left,
+        rightDockCollapsed: preset.dockCollapsed.right,
+        bottomDockCollapsed: preset.dockCollapsed.bottom,
+        clientDemoOptions: { ...state.clientDemoOptions, ...preset.clientDemoOptions },
+      }));
+    },
 
     setViewMode: (mode) => {
       const preset = viewModeToPreset(mode);

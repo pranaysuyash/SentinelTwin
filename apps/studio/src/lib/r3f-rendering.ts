@@ -10,7 +10,7 @@
  *  - Image-Based Lighting: RoomEnvironment (procedural, zero network) as
  *    the default for every Canvas. Drei `<Environment preset>` is opt-in
  *    for high-quality marketing surfaces.
- *  - Shadows: one PCFSoft shadow-casting directional light, capped at
+ *  - Shadows: one PCF shadow-casting directional light, capped at
  *    2048 shadow map size. Drei `ContactShadows` for close-proximity
  *    grounding. The shadow budget is gated by the quality tier constant
  *    passed to `canvasOnCreated`.
@@ -51,7 +51,9 @@ export interface R3FCanvasPreset {
 const TONE_MAPPING = THREE.ACESFilmicToneMapping;
 const COLOR_SPACE = THREE.SRGBColorSpace;
 const TEXTURE_COLOR_SPACE = THREE.SRGBColorSpace;
-const SHADOW_TYPE = THREE.PCFSoftShadowMap;
+// PCFSoftShadowMap is deprecated in three r184+ (falls back to PCF with a
+// console warning per canvas). PCF is the supported soft-ish default.
+const SHADOW_TYPE = THREE.PCFShadowMap;
 
 /**
  * Quality tier → rendering preset. Each tier is a deliberate compromise

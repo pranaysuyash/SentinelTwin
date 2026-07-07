@@ -20,6 +20,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import type { SiteIntakeSource } from "@/lib/site-compiler";
+import { CreationFlowShell } from "@/components/site-intake/CreationFlowShell";
 
 export type { SiteIntakeSource };
 
@@ -359,245 +360,237 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
 
       {/* ── Main ────────────────────────────────────────────────────────── */}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6 py-6">
-          {/* Page header */}
-          <div className="mb-5">
-            <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-white">Create Site Twin</h1>
-            <p className="mt-1 text-[14px] text-[#7a8baa]">
-              Turn a physical site into a trusted, editable security model. Choose how you want to start.
-            </p>
-          </div>
-
-          {/* ── Grid + detail panel ──────────────────────────────────────── */}
-          <div className="flex min-h-0 flex-1 gap-5">
-            {/* Card grid */}
-            <div className="grid min-w-0 flex-1 auto-rows-min grid-cols-2 gap-3 content-start">
-              {SOURCES.map((card) => {
-                const isSelected = card.id === selectedId;
-                const Icon = card.icon;
-                return (
-                  <button
-                    key={card.id}
-                    type="button"
-                    onClick={() => setSelectedId(card.id)}
-                    className={[
-                      "relative flex flex-col rounded-xl border-l-2 border border-[#1a2030] bg-[#0b1420] p-4 text-left transition-all",
-                      card.accent.border,
-                      isSelected
-                        ? "border-[#232d40] bg-[#0d1828] ring-1 ring-white/8"
-                        : "hover:border-[#232d40] hover:bg-[#0d1828]",
-                    ].join(" ")}
-                  >
-                    {isSelected && (
-                      <div className="absolute right-3 top-3 text-sky-400">
-                        <CheckCircle2 className="h-4 w-4" />
-                      </div>
-                    )}
-
-                    <div className="flex items-start gap-3">
-                      <div className={`flex h-9 w-9 flex-none items-center justify-center rounded-lg ${card.accent.iconBg}`}>
-                        <Icon className={`h-4 w-4 ${card.accent.iconColor}`} />
-                      </div>
-                      <div className="min-w-0 flex-1 pr-5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[14px] font-medium text-white">{card.title}</span>
-                          {card.recommended && (
-                            <span className="rounded-md border border-sky-500/20 bg-sky-500/8 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-sky-300">
-                              Recommended
-                            </span>
-                          )}
+        <CreationFlowShell
+          activeStage="choose_source"
+          title="Create Site Twin"
+          subtitle="Turn a physical site into a trusted, editable security model. Choose how you want to start."
+          onExit={props.onEnterStudio}
+        >
+          <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6 py-6">
+            {/* ── Grid + detail panel ──────────────────────────────────────── */}
+            <div className="flex min-h-0 flex-1 gap-5">
+              {/* Card grid */}
+              <div className="grid min-w-0 flex-1 auto-rows-min grid-cols-2 gap-3 content-start">
+                {SOURCES.map((card) => {
+                  const isSelected = card.id === selectedId;
+                  const Icon = card.icon;
+                  return (
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => setSelectedId(card.id)}
+                      className={[
+                        "group relative flex flex-col justify-between rounded-2xl border p-4 text-left transition-all",
+                        isSelected
+                          ? `bg-[#0d1828] border-sky-500/50 shadow-[0_0_24px_rgba(14,165,233,0.12)] ${card.accent.border}`
+                          : "border-[#1a2030] bg-[#0b1420] hover:border-[#232d40] hover:bg-[#0d1828]",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-start gap-3.5">
+                        <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl transition-colors ${isSelected ? card.accent.iconBg : "bg-white/5 group-hover:bg-white/10"}`}>
+                          <Icon className={`h-5 w-5 ${isSelected ? card.accent.iconColor : "text-[#7a8baa] group-hover:text-white"}`} />
                         </div>
-                        <span className={[
-                          "mt-1 inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em]",
-                          card.status === "Working"
-                            ? card.accent.badge
-                            : "border-violet-500/20 bg-violet-500/8 text-violet-300",
-                        ].join(" ")}>
-                          {card.status}
+                        <div className="min-w-0 flex-1 pr-5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[14px] font-medium text-white">{card.title}</span>
+                            {card.recommended && (
+                              <span className="rounded-md border border-sky-500/20 bg-sky-500/8 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-sky-300">
+                                Recommended
+                              </span>
+                            )}
+                          </div>
+                          <span className={[
+                            "mt-1 inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em]",
+                            card.status === "Working"
+                              ? card.accent.badge
+                              : "border-violet-500/20 bg-violet-500/8 text-violet-300",
+                          ].join(" ")}>
+                            {card.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="mt-3 text-[13px] leading-5 text-[#7a8baa]">{card.description}</p>
+
+                      <div className="mt-3 flex items-center gap-3 border-t border-[#1a2030] pt-3 text-[11px] text-[#4a5568]">
+                        <span>Output: <span className="text-[#7a8baa]">{card.output}</span></span>
+                        <span className="text-[#2a3040]">·</span>
+                        <span>Review: <span className="text-[#7a8baa]">{card.review}</span></span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Detail panel */}
+              <aside className="w-[340px] flex-none">
+                <div className="sticky top-0 rounded-2xl border border-[#1a2030] bg-[#0b1420] p-5">
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl ${selected.accent.iconBg}`}>
+                      <selected.icon className={`h-5 w-5 ${selected.accent.iconColor}`} />
+                    </div>
+                    <div>
+                      <div className="text-[16px] font-semibold text-white">{selected.title}</div>
+                      <div className="mt-1 flex items-center gap-2 text-[12px] text-[#5a6882]">
+                        <span className="inline-flex items-center gap-1">
+                          <span className={[
+                            "rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em]",
+                            selected.status === "Working"
+                              ? selected.accent.badge
+                              : "border-violet-500/20 bg-violet-500/8 text-violet-300",
+                          ].join(" ")}>
+                            {selected.status}
+                          </span>
                         </span>
+                        {selected.recommended && (
+                          <span className="text-sky-400">· Recommended</span>
+                        )}
                       </div>
                     </div>
-
-                    <p className="mt-3 text-[13px] leading-5 text-[#7a8baa]">{card.description}</p>
-
-                    <div className="mt-3 flex items-center gap-3 border-t border-[#1a2030] pt-3 text-[11px] text-[#4a5568]">
-                      <span>Output: <span className="text-[#7a8baa]">{card.output}</span></span>
-                      <span className="text-[#2a3040]">·</span>
-                      <span>Review: <span className="text-[#7a8baa]">{card.review}</span></span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Detail panel */}
-            <aside className="w-[340px] flex-none">
-              <div className="sticky top-0 rounded-2xl border border-[#1a2030] bg-[#0b1420] p-5">
-                <div className="flex items-start gap-3">
-                  <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl ${selected.accent.iconBg}`}>
-                    <selected.icon className={`h-5 w-5 ${selected.accent.iconColor}`} />
                   </div>
-                  <div>
-                    <div className="text-[16px] font-semibold text-white">{selected.title}</div>
-                    <div className="mt-1 flex items-center gap-2 text-[12px] text-[#5a6882]">
-                      <span className="inline-flex items-center gap-1">
-                        <span className={[
-                          "rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em]",
-                          selected.status === "Working"
-                            ? selected.accent.badge
-                            : "border-violet-500/20 bg-violet-500/8 text-violet-300",
-                        ].join(" ")}>
-                          {selected.status}
-                        </span>
-                      </span>
-                      {selected.recommended && (
-                        <span className="text-sky-400">· Recommended</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
-                <p className="mt-4 text-[13px] leading-5 text-[#8ca3c8]">
-                  {selected.detail.headline}
-                </p>
+                  <p className="mt-4 text-[13px] leading-5 text-[#8ca3c8]">
+                    {selected.detail.headline}
+                  </p>
 
-                <div className="mt-5">
-                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.13em] text-[#4a5568]">
-                    What you&apos;ll do
-                  </div>
-                  <ol className="space-y-2">
-                    {selected.detail.steps.map((step, i) => (
-                      <li key={step} className="flex items-start gap-3 text-[13px] text-[#8ca3c8]">
-                        <span className="mt-px flex h-5 w-5 flex-none items-center justify-center rounded-full bg-sky-500/10 text-[11px] font-semibold text-sky-400 ring-1 ring-sky-500/20">
-                          {i + 1}
-                        </span>
-                        <span className="leading-5">{step}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-
-                {/* Honest-maturity limitations. Required by the truth-audit
-                    manifest and surfaced so buyers see what the path can and
-                    cannot do before they commit to it. Per `motto_v3 §0.11`. */}
-                {selected.detail.limitations && selected.detail.limitations.length > 0 ? (
                   <div className="mt-5">
-                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-amber-500/80">
-                      Maturity &amp; limits
+                    <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.13em] text-[#4a5568]">
+                      What you&apos;ll do
                     </div>
-                    <ul className="space-y-1.5">
-                      {selected.detail.limitations.map((limitation) => (
-                        <li key={limitation} className="flex items-start gap-2 text-[12px] leading-5 text-[#7a8aa8]">
-                          <span className="mt-1.5 h-1 w-1 flex-none rounded-full bg-amber-500/60" />
-                          <span>{limitation}</span>
+                    <ol className="space-y-2">
+                      {selected.detail.steps.map((step, i) => (
+                        <li key={step} className="flex items-start gap-3 text-[13px] text-[#8ca3c8]">
+                          <span className="mt-px flex h-5 w-5 flex-none items-center justify-center rounded-full bg-sky-500/10 text-[11px] font-semibold text-sky-400 ring-1 ring-sky-500/20">
+                            {i + 1}
+                          </span>
+                          <span className="leading-5">{step}</span>
                         </li>
                       ))}
-                    </ul>
+                    </ol>
                   </div>
-                ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const action = props[selected.action] as (() => void) | undefined;
-                    if (action) action();
-                  }}
-                  className={[
-                    "mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-xl border text-[14px] font-medium transition-colors",
-                    selected.accent.cta,
-                  ].join(" ")}
-                >
-                  {selected.detail.cta}
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-
-                {selected.id === "json" && (
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <a
-                      href={SAMPLE_SECURITY_SCENE_IMPORT_URL}
-                      download="sample-security-scene-import.json"
-                      className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#1a2030] bg-white/[0.02] text-[12px] text-[#7a8baa] transition-colors hover:bg-white/[0.04] hover:text-white"
-                    >
-                      <FileUp className="h-3.5 w-3.5" />
-                      Sample JSON
-                    </a>
-                    <a
-                      href={JEWELRY_STORE_SITE_TWIN_IMPORT_URL}
-                      download="jewelry-store-site-twin.json"
-                      className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#1a2030] bg-white/[0.02] text-[12px] text-[#7a8baa] transition-colors hover:bg-white/[0.04] hover:text-white"
-                    >
-                      <FileUp className="h-3.5 w-3.5" />
-                      Jewelry sample
-                    </a>
-                  </div>
-                )}
-
-                <p className="mt-4 text-[11px] leading-4 text-[#3a4560]">
-                  Local-only mode is available. Cloud-backed AI actions are explicitly labeled before use.
-                </p>
-              </div>
-            </aside>
-          </div>
-
-          {/* ── Recent site twins ──────────────────────────────────────────── */}
-          {props.recentSites.length > 0 && (
-            <div className="mt-6">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#4a5568]">
-                  Recent Site Twins
-                </div>
-                <button
-                  type="button"
-                  onClick={props.onEnterStudio}
-                  className="text-[12px] text-sky-400 hover:text-sky-300"
-                >
-                  View all →
-                </button>
-              </div>
-              <div className="flex gap-3 overflow-x-auto pb-1">
-                {props.recentSites.slice(0, 4).map((site) => (
-                  <button
-                    key={site.id}
-                    type="button"
-                    onClick={() =>
-                      props.onOpenRecentSite
-                        ? props.onOpenRecentSite(site.id)
-                        : props.onEnterStudio()
-                    }
-                    className="group flex w-[240px] flex-none items-center gap-3 rounded-xl border border-[#1a2030] bg-[#0b1420] p-3 text-left transition-all hover:border-[#232d40] hover:bg-[#0d1828]"
-                  >
-                    <div className="flex h-[60px] w-[90px] flex-none items-center justify-center rounded-lg bg-gradient-to-br from-sky-500/10 to-slate-700/10 ring-1 ring-white/5">
-                      <ShieldCheck className="h-5 w-5 text-[#2a3a50]" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate text-[13px] font-medium text-white">{site.name}</div>
-                      <div className="mt-0.5 text-[11px] text-[#4a5568]">{site.updatedLabel}</div>
-                      <div className={`mt-1.5 flex items-center gap-1.5 text-[11px] font-medium ${riskColor[site.riskLabel]}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${riskDot[site.riskLabel]}`} />
-                        {site.riskLabel}
+                  {/* Honest-maturity limitations. Required by the truth-audit
+                      manifest and surfaced so buyers see what the path can and
+                      cannot do before they commit to it. Per `motto_v3 §0.11`. */}
+                  {selected.detail.limitations && selected.detail.limitations.length > 0 ? (
+                    <div className="mt-5">
+                      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-amber-500/80">
+                        Maturity &amp; limits
                       </div>
+                      <ul className="space-y-1.5">
+                        {selected.detail.limitations.map((limitation) => (
+                          <li key={limitation} className="flex items-start gap-2 text-[12px] leading-5 text-[#7a8aa8]">
+                            <span className="mt-1.5 h-1 w-1 flex-none rounded-full bg-amber-500/60" />
+                            <span>{limitation}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const action = props[selected.action] as (() => void) | undefined;
+                      if (action) action();
+                    }}
+                    className={[
+                      "mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-xl border text-[14px] font-medium transition-colors",
+                      selected.accent.cta,
+                    ].join(" ")}
+                  >
+                    {selected.detail.cta}
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+
+                  {selected.id === "json" && (
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <a
+                        href={SAMPLE_SECURITY_SCENE_IMPORT_URL}
+                        download="sample-security-scene-import.json"
+                        className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#1a2030] bg-white/[0.02] text-[12px] text-[#7a8baa] transition-colors hover:bg-white/[0.04] hover:text-white"
+                      >
+                        <FileUp className="h-3.5 w-3.5" />
+                        Sample JSON
+                      </a>
+                      <a
+                        href={JEWELRY_STORE_SITE_TWIN_IMPORT_URL}
+                        download="jewelry-store-site-twin.json"
+                        className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#1a2030] bg-white/[0.02] text-[12px] text-[#7a8baa] transition-colors hover:bg-white/[0.04] hover:text-white"
+                      >
+                        <FileUp className="h-3.5 w-3.5" />
+                        Jewelry sample
+                      </a>
+                    </div>
+                  )}
+
+                  <p className="mt-4 text-[11px] leading-4 text-[#3a4560]">
+                    Local-only mode is available. Cloud-backed AI actions are explicitly labeled before use.
+                  </p>
+                </div>
+              </aside>
+            </div>
+
+            {/* ── Recent site twins ──────────────────────────────────────────── */}
+            {props.recentSites.length > 0 && (
+              <div className="mt-6">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#4a5568]">
+                    Recent Site Twins
+                  </div>
+                  <button
+                    type="button"
+                    onClick={props.onEnterStudio}
+                    className="text-[12px] text-sky-400 hover:text-sky-300"
+                  >
+                    View all →
+                  </button>
+                </div>
+                <div className="flex gap-3 overflow-x-auto pb-1">
+                  {props.recentSites.slice(0, 4).map((site) => (
+                    <button
+                      key={site.id}
+                      type="button"
+                      onClick={() =>
+                        props.onOpenRecentSite
+                          ? props.onOpenRecentSite(site.id)
+                          : props.onEnterStudio()
+                      }
+                      className="group flex w-[240px] flex-none items-center gap-3 rounded-xl border border-[#1a2030] bg-[#0b1420] p-3 text-left transition-all hover:border-[#232d40] hover:bg-[#0d1828]"
+                    >
+                      <div className="flex h-[60px] w-[90px] flex-none items-center justify-center rounded-lg bg-gradient-to-br from-sky-500/10 to-slate-700/10 ring-1 ring-white/5">
+                        <ShieldCheck className="h-5 w-5 text-[#2a3a50]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-[13px] font-medium text-white">{site.name}</div>
+                        <div className="mt-0.5 text-[11px] text-[#4a5568]">{site.updatedLabel}</div>
+                        <div className={`mt-1.5 flex items-center gap-1.5 text-[11px] font-medium ${riskColor[site.riskLabel]}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${riskDot[site.riskLabel]}`} />
+                          {site.riskLabel}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+
+                  {/* Quick import slot */}
+                  <button
+                    type="button"
+                    onClick={props.onImportJson}
+                    className="flex w-[240px] flex-none items-center gap-3 rounded-xl border border-dashed border-[#1a2030] bg-transparent p-3 text-left transition-all hover:border-sky-500/20 hover:bg-sky-500/4"
+                  >
+                    <div className="flex h-[60px] w-[90px] flex-none items-center justify-center rounded-lg border border-dashed border-[#1a2030]">
+                      <FileUp className="h-5 w-5 text-[#2a3a50]" />
+                    </div>
+                    <div>
+                      <div className="text-[13px] font-medium text-[#7a8baa]">Quick Import</div>
+                      <div className="mt-0.5 text-[11px] text-[#4a5568]">Import site twin JSON</div>
                     </div>
                   </button>
-                ))}
-
-                {/* Quick import slot */}
-                <button
-                  type="button"
-                  onClick={props.onImportJson}
-                  className="flex w-[240px] flex-none items-center gap-3 rounded-xl border border-dashed border-[#1a2030] bg-transparent p-3 text-left transition-all hover:border-sky-500/20 hover:bg-sky-500/4"
-                >
-                  <div className="flex h-[60px] w-[90px] flex-none items-center justify-center rounded-lg border border-dashed border-[#1a2030]">
-                    <FileUp className="h-5 w-5 text-[#2a3a50]" />
-                  </div>
-                  <div>
-                    <div className="text-[13px] font-medium text-[#7a8baa]">Quick Import</div>
-                    <div className="mt-0.5 text-[11px] text-[#4a5568]">Import site twin JSON</div>
-                  </div>
-                </button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </CreationFlowShell>
       </main>
     </div>
   );

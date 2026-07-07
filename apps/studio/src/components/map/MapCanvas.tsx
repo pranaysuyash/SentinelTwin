@@ -38,6 +38,8 @@ export type MapCanvasProps = {
   onPathSegmentSelect?: (pathId: string, segmentIndex: number) => void;
   onMapClick?: (scenePoint: [number, number]) => void;
   onMapDoubleClick?: (scenePoint: [number, number]) => void;
+  onMapMove?: (scenePoint: [number, number] | null) => void;
+  onMapContextMenu?: (scenePoint: [number, number], event: React.MouseEvent) => void;
   mapTarget: MapViewportTarget;
   zoom: number;
   pan: [number, number];
@@ -141,6 +143,8 @@ export function MapCanvas({
   onPathSegmentSelect,
   onMapClick,
   onMapDoubleClick,
+  onMapMove,
+  onMapContextMenu,
   mapTarget,
   zoom,
   pan,
@@ -200,14 +204,32 @@ export function MapCanvas({
   }, [pan]);
 
   const handlePointerMove = useCallback((event: PointerEvent<SVGSVGElement>) => {
-    if (!dragging) return;
+    if (!dragging) {
+      if (onMapMove) {
+        const point = scenePointFromEvent(projection, event);
+        onMapMove(point);
+      }
+      return;
+    }
     const dx = event.clientX - dragAnchor.current.x;
     const dy = event.clientY - dragAnchor.current.y;
     if (!dragMoved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
       setDragMoved(true);
     }
     onSetPan(mapTarget, [dragAnchor.current.panX + dx, dragAnchor.current.panY + dy]);
-  }, [dragging, dragMoved, mapTarget, onSetPan]);
+  }, [dragging, dragMoved, mapTarget, onSetPan, onMapMove, projection]);
+
+  const handleContextMenu = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
+    event.preventDefault();
+    if (onMapContextMenu) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const scene = projection.svgToScene({
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+      });
+      onMapContextMenu([scene[0], scene[1]], event);
+    }
+  }, [onMapContextMenu, projection]);
 
   const handlePointerUp = useCallback((event: PointerEvent<SVGSVGElement>) => {
     if (!dragging) return;
@@ -249,9 +271,11 @@ export function MapCanvas({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerLeave={() => onMapMove?.(null)}
         onWheel={handleWheel}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
         role="img"
         aria-label={`${mapId(mode)} map`}
         viewBox={`0 0 ${width} ${height}`}

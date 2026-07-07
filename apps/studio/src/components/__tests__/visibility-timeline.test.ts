@@ -20,6 +20,9 @@ describe("VisibilityTimeline", () => {
     expect(source).toContain("const rect = event.currentTarget.getBoundingClientRect();");
     expect(source).toContain("Math.min(Math.max(pct, 0), 1)");
     expect(source).toContain("Math.max(0, Math.min(100, (row.camData.visibleS / totalDuration) * 100))");
+    expect(source).toContain('role="slider"');
+    expect(source).toContain("onKeyDown={handleSeekKeys}");
+    expect(source).toContain("keyboardSeekStep");
     expect(source).toContain("const timelineEvents = useMemo(() => {");
     expect(source).not.toContain("function sortTimelineEvents");
     expect(source).not.toContain("function safeCurrentTime");

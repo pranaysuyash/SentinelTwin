@@ -22,6 +22,8 @@ describe("PathReplayView", () => {
     expect(source).toContain("setPathReplaySpeed(nextSpeed);");
     expect(source).toContain("CoverageTileFloor");
     expect(source).toContain("ReplayCameraCones");
+    expect(source).toContain("UI_TONES.info.bg");
+    expect(source).toContain("TYPE_SCALE.caption.class");
     expect(source).toContain("Collision guard");
     expect(source).toContain("Collision corrected");
     expect(source).toContain("Current state");

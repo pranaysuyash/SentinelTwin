@@ -34,5 +34,8 @@ describe("CompareView", () => {
     expect(source).toContain("Critical zones passed");
     expect(source).toContain("Detection range");
     expect(source).toContain("Compare - Before / After");
+    expect(source).toContain("Baseline —");
+    expect(source).toContain("Proposed / Hardened —");
+    expect(source).toContain("Apply Proposed / Hardened to Current Scene");
   });
 });

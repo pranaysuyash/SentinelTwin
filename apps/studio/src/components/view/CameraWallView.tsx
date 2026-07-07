@@ -8,6 +8,8 @@ import * as THREE from "three";
 
 import "@/lib/three-compat";
 import { cn } from "@/lib/cn";
+import { TYPE_SCALE, UI_TONES } from "@/lib/design-tokens";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 import {
   CoverageHeatmapInstanced,
   ENVIRONMENT_THEMES,
@@ -64,10 +66,23 @@ type CameraWallLayoutSpec = {
   viewCount: number;
 };
 const CAMERA_WALL_LAYOUTS: Record<CameraWallLayoutMode, CameraWallLayoutSpec> = {
-  auto: { cameraSlots: 3, gridClass: "grid-cols-2 grid-rows-2", viewCount: 4 },
-  quad: { cameraSlots: 3, gridClass: "grid-cols-2 grid-rows-2", viewCount: 4 },
-  overview: { cameraSlots: 5, gridClass: "grid-cols-3 grid-rows-2", viewCount: 6 },
-  dense: { cameraSlots: 15, gridClass: "grid-cols-4 grid-rows-4", viewCount: 16 },
+  auto: { cameraSlots: 4, gridClass: "grid-cols-2 grid-rows-2", viewCount: 4 },
+  quad: { cameraSlots: 4, gridClass: "grid-cols-2 grid-rows-2", viewCount: 4 },
+  overview: { cameraSlots: 6, gridClass: "grid-cols-3 grid-rows-2", viewCount: 6 },
+  dense: { cameraSlots: 16, gridClass: "grid-cols-4 grid-rows-4", viewCount: 16 },
+};
+const CAMERA_WALL_SURFACES = {
+  page: UI_SURFACES.page,
+  panel: UI_SURFACES.panel,
+  panelSoft: UI_SURFACES.panelSoft,
+  card: UI_SURFACES.card,
+  border: UI_SURFACES.border,
+  borderSubtle: UI_SURFACES.borderSubtle,
+  muted: UI_SURFACES.textMuted,
+  muted2: UI_SURFACES.textMuted2,
+  muted3: UI_SURFACES.textMuted3,
+  body: UI_SURFACES.textBody,
+  accent: UI_SURFACES.textAccent,
 };
 
 /** Short label like "CAM 1" from camera name */
@@ -80,18 +95,18 @@ function coverageStatusFromRatio(ratio: number) {
   if (ratio > 0.7) {
     return {
       label: "Strong Route Visibility",
-      className: "text-emerald-300",
+      className: UI_TONES.success.text,
     };
   }
   if (ratio > 0.35) {
     return {
       label: "Partial Route Visibility",
-      className: "text-amber-300",
+      className: UI_TONES.warning.text,
     };
   }
   return {
     label: "Weak Route Visibility",
-    className: "text-rose-300",
+    className: UI_TONES.danger.text,
   };
 }
 
@@ -189,26 +204,26 @@ function LiveFeedVideo({
       />
       {loadState === "error" ? (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-          <div className="rounded-md border border-amber-500/30 bg-amber-950/40 px-3 py-2 text-center">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+          <div className={`rounded-md border ${UI_TONES.warning.border} ${UI_TONES.warning.bg} px-3 py-2 text-center`}>
+            <div className={`font-semibold uppercase tracking-[0.18em] ${TYPE_SCALE.caption.class} ${UI_TONES.warning.text}`}>
               Feed Unreachable
             </div>
-            <div className="mt-1 max-w-[18ch] truncate font-mono text-[8px] text-amber-200/80">
+            <div className={`mt-1 max-w-[18ch] truncate font-mono ${TYPE_SCALE.micro.class} ${UI_TONES.warning.text}`}>
               {feedUrl}
             </div>
-            <div className="mt-1 text-[8px] text-amber-200/60">
+            <div className={`mt-1 ${TYPE_SCALE.micro.class} ${UI_TONES.warning.text}`}>
               Browser couldn't decode this URL. RTSP needs an HLS/MJPEG proxy.
             </div>
           </div>
         </div>
       ) : null}
       {loadState === "loading" ? (
-        <div className="absolute left-2 top-9 flex items-center gap-1.5 rounded bg-black/65 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-[#93c5fd]">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#93c5fd]" />
+        <div className={`absolute left-2 top-9 flex items-center gap-1.5 rounded ${UI_TONES.info.bg} px-2 py-0.5 uppercase tracking-[0.16em] ${TYPE_SCALE.micro.class} ${UI_TONES.info.text}`}>
+          <span className={`h-1.5 w-1.5 animate-pulse rounded-full ${UI_TONES.info.dot}`} />
           Connecting live feed
         </div>
       ) : null}
-      <div className="pointer-events-none absolute right-2 top-2 rounded bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-emerald-300">
+      <div className={`pointer-events-none absolute right-2 top-2 rounded px-1.5 py-0.5 font-semibold uppercase tracking-[0.16em] ${TYPE_SCALE.micro.class} ${UI_TONES.success.bg} ${UI_TONES.success.text}`}>
         Live
       </div>
       <LiveFeedOverlay
@@ -247,7 +262,7 @@ function DenseModePerfGuard({ cameraCount }: { cameraCount: number }) {
     <div
       role="status"
       data-testid="wall-dense-perf-guard"
-      className="ml-1 flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/8 px-2 py-0.5 text-[9px] font-semibold text-amber-200"
+      className={`ml-1 flex items-center gap-1.5 rounded-md border ${UI_TONES.warning.border} ${UI_TONES.warning.bg} px-2 py-0.5 ${TYPE_SCALE.micro.class} font-semibold ${UI_TONES.warning.text}`}
       title={`Rendering ${cameraCount} active camera${cameraCount === 1 ? "" : "s"} in 16-tile dense mode. Each tile is an R3F canvas; expect heavier GPU and CPU usage.`}
     >
       <span>Heavy: 16 R3F canvases</span>
@@ -303,18 +318,18 @@ function LiveFeedOverlay({
         <span
           className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.9)]" : "bg-red-400"}`}
         />
-        <span className="min-w-0 truncate text-[10px] font-bold tracking-wide text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
+        <span className={`min-w-0 truncate font-bold tracking-wide text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)] ${TYPE_SCALE.caption.class}`}>
           {shortTag(camData.name)} · {camData.name}
         </span>
         <span
-          className={`flex-shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-            isActive ? "bg-emerald-500/25 text-emerald-300" : "bg-red-500/25 text-red-300"
+          className={`flex-shrink-0 rounded px-1.5 py-0.5 ${TYPE_SCALE.micro.class} font-semibold uppercase tracking-wide ${
+            isActive ? `${UI_TONES.success.bg} ${UI_TONES.success.text}` : `${UI_TONES.danger.bg} ${UI_TONES.danger.text}`
           }`}
         >
           {isActive ? "Active" : "Offline"}
         </span>
         {isBestCamera ? (
-          <span className="hidden flex-shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200 md:inline">
+          <span className={`hidden flex-shrink-0 rounded px-1.5 py-0.5 ${TYPE_SCALE.micro.class} font-semibold uppercase tracking-wide md:inline ${UI_TONES.success.bg} ${UI_TONES.success.text}`}>
             Best feed
           </span>
         ) : null}
@@ -322,16 +337,16 @@ function LiveFeedOverlay({
 
       {/* Top-right: resolution + timestamp */}
       <div className="absolute right-2 top-2 flex flex-col items-end gap-0.5">
-        <span className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-[#93c5fd]">
+        <span className={`rounded px-1.5 py-0.5 ${TYPE_SCALE.micro.class} font-semibold ${UI_TONES.info.bg} ${UI_TONES.info.text}`}>
           {camData.resolutionMP}MP
         </span>
-        <span className="font-mono text-[10px] text-white/60 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
+        <span className={`font-mono ${TYPE_SCALE.micro.class} text-white/60 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]`}>
           {timestampLabel}
         </span>
       </div>
 
       {/* Bottom metadata */}
-      <div className="absolute bottom-1.5 left-2 flex max-w-[52%] items-center gap-1.5 overflow-hidden text-[10px]">
+      <div className={`absolute bottom-1.5 left-2 flex max-w-[52%] items-center gap-1.5 overflow-hidden ${TYPE_SCALE.micro.class}`}>
         <span className="text-white/50">{camData.fovHorizontalDeg}°</span>
         <span className="text-white/25">·</span>
         <span className="truncate capitalize text-white/50">{camData.mountType}</span>
@@ -341,27 +356,27 @@ function LiveFeedOverlay({
 
       <div className="absolute bottom-1.5 right-2 flex flex-col gap-1">
         {cameraResult ? (
-          <div className="rounded-md border border-emerald-500/25 bg-black/65 px-2 py-1">
-            <div className="text-[10px] uppercase tracking-[0.12em] text-[#86efac]">
+          <div className={`rounded-md border ${UI_TONES.success.border} bg-black/65 px-2 py-1`}>
+            <div className={`uppercase tracking-[0.12em] ${TYPE_SCALE.micro.class} ${UI_TONES.success.text}`}>
               Zone Quality
             </div>
-            <div className="text-[10px] font-semibold text-emerald-200">
+            <div className={`font-semibold ${TYPE_SCALE.micro.class} ${UI_TONES.success.text}`}>
               {bestZoneQuality.toUpperCase()}
             </div>
-            <div className="text-[10px] text-[#b6c2db]">
+            <div className={`text-[#b6c2db] ${TYPE_SCALE.micro.class}`}>
               {coveredZones} covered • {failedZones} failed
             </div>
           </div>
         ) : null}
         {pathVisibility ? (
-          <div className="rounded-md border border-[#27405f] bg-black/65 px-2 py-1">
-            <div className="text-[10px] uppercase tracking-[0.12em] text-[#7dd3fc]">
+          <div className={`rounded-md border ${UI_TONES.info.border} bg-black/65 px-2 py-1`}>
+            <div className={`uppercase tracking-[0.12em] ${TYPE_SCALE.micro.class} ${UI_TONES.info.text}`}>
               Route Visibility
             </div>
-            <div className={`text-[10px] font-semibold ${visibilityStatus.className}`}>
+            <div className={`font-semibold ${TYPE_SCALE.micro.class} ${visibilityStatus.className}`}>
               {visibilityStatus.label}
             </div>
-            <div className="text-[10px] text-[#b6c2db]">
+            <div className={`text-[#b6c2db] ${TYPE_SCALE.micro.class}`}>
               {visiblePct}% visible • max {pathVisibility.maxQuality.toUpperCase()}
             </div>
           </div>
@@ -369,17 +384,17 @@ function LiveFeedOverlay({
         {replayState ? (
           <div className={cn(
             "rounded-md border px-2 py-1",
-            replayState.visible ? "border-emerald-500/30 bg-emerald-500/10" : "border-rose-500/30 bg-rose-500/10",
+            replayState.visible ? `${UI_TONES.success.border} ${UI_TONES.success.bg}` : `${UI_TONES.danger.border} ${UI_TONES.danger.bg}`,
           )}>
-            <div className="text-[10px] uppercase tracking-[0.12em] text-[#e2e8f0]">
+            <div className={`uppercase tracking-[0.12em] ${TYPE_SCALE.micro.class} text-[#e2e8f0]`}>
               Current Replay
             </div>
-            <div className={cn("text-[10px] font-semibold", replayState.visible ? "text-emerald-200" : "text-rose-200")}>
+            <div className={cn(`font-semibold ${TYPE_SCALE.micro.class}`, replayState.visible ? UI_TONES.success.text : UI_TONES.danger.text)}>
               {replayState.visible ? "Actor visible now" : "Actor lost now"}
               {replayState.quality ? ` · ${replayState.quality.toUpperCase()}` : ""}
             </div>
             {replayState.reason ? (
-              <div className="text-[10px] text-[#b6c2db]">{replayState.reason}</div>
+              <div className={`text-[#b6c2db] ${TYPE_SCALE.micro.class}`}>{replayState.reason}</div>
             ) : null}
           </div>
         ) : null}
@@ -420,8 +435,12 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
   return (
     <div
       className={cn(
-        "relative h-full overflow-hidden rounded-lg border bg-[#07090d]",
-        isSelected ? "border-blue-500/70" : isBestCamera ? "border-emerald-400/70" : "border-[#1f2536]",
+        "relative h-full overflow-hidden rounded-lg border bg-[#07090d] transition-all duration-200",
+        isSelected
+          ? `border-2 ${UI_TONES.info.border} shadow-[0_0_20px_rgba(56,189,248,0.25)] ring-1 ring-[#38bdf8]/40`
+          : isBestCamera
+            ? `border-2 ${UI_TONES.success.border} shadow-[0_0_20px_rgba(52,211,153,0.25)] ring-1 ring-[#34d399]/40`
+            : "border-[#1e293b]/80 shadow-[0_4px_12px_rgba(0,0,0,0.4)] hover:border-[#334155]",
       )}
     >
       {isActive ? (
@@ -516,31 +535,31 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
               <VideoOff className="h-5 w-5 text-red-400/70" />
             </div>
             <div className="text-center">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-red-300/70">
+            <div className={`font-semibold uppercase tracking-[0.18em] ${TYPE_SCALE.caption.class} ${UI_TONES.danger.text}`}>
                 Camera Offline
               </div>
               <div className="mt-1 flex items-center justify-center gap-1">
-                <span className="rounded border border-red-500/30 bg-red-950/60 px-1.5 py-0.5 text-[8px] font-mono text-red-300">
+                <span className={`rounded border ${UI_TONES.danger.border} bg-red-950/60 px-1.5 py-0.5 font-mono ${TYPE_SCALE.micro.class} ${UI_TONES.danger.text}`}>
                   ⚠️ STREAM LEASE EXPIRED
                 </span>
               </div>
-              <div className="mt-0.5 text-[8px] text-[#4a5568]">{camData.name} · RTSP Bridge Unreachable</div>
+          <div className={`mt-0.5 ${CAMERA_WALL_SURFACES.muted} ${TYPE_SCALE.micro.class}`}>{camData.name} · RTSP Bridge Unreachable</div>
             </div>
           </div>
           {/* Offline overlay header */}
           <div className="absolute inset-x-0 top-0 px-2 pt-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                <span className="text-[9px] font-bold text-white/60">
+                <span className={`h-1.5 w-1.5 rounded-full ${UI_TONES.danger.dot}`} />
+                <span className={`font-bold text-white/60 ${TYPE_SCALE.micro.class}`}>
                   {shortTag(camData.name)} · {camData.name}
                 </span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[7px] font-semibold text-red-300">
+                <span className={`rounded px-1.5 py-0.5 font-semibold ${TYPE_SCALE.micro.class} ${UI_TONES.danger.bg} ${UI_TONES.danger.text}`}>
                   OFFLINE
                 </span>
-                <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[7px] font-semibold text-amber-300" title="Live session health check failed for this RTSP endpoint">
+                <span className={`rounded px-1.5 py-0.5 font-semibold ${TYPE_SCALE.micro.class} ${UI_TONES.warning.bg} ${UI_TONES.warning.text}`} title="Live session health check failed for this RTSP endpoint">
                   ERR_503
                 </span>
               </div>
@@ -567,13 +586,13 @@ const WallOverviewPanel = memo(function WallOverviewPanel({ isDense = false }: {
   }, [width, depth]);
 
   return (
-    <div className="relative h-full overflow-hidden rounded-lg border border-[#1f2536] bg-[#07090d]">
-      <div className="absolute left-3 top-3 z-20 rounded-lg border border-[#27364e] bg-black/55 px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#c7d0e4]">
+    <div className={`relative h-full overflow-hidden rounded-lg border ${UI_TONES.neutral.border} ${CAMERA_WALL_SURFACES.page}`}>
+      <div className={`absolute left-3 top-3 z-20 rounded-lg border ${UI_TONES.neutral.border} bg-black/55 px-2.5 py-1.5 ${TYPE_SCALE.micro.class} font-semibold uppercase tracking-[0.18em] ${UI_TONES.neutral.text}`}>
         3D Map
       </div>
       <Canvas
         camera={{ position: cameraPos, fov: 48, near: 0.1, far: 200 }}
-        shadows="soft"
+        shadows
         dpr={computeWallTileDpr(1, isDense)}
         frameloop="demand"
         gl={{ antialias: false, alpha: false, powerPreference: "low-power" }}
@@ -638,7 +657,7 @@ function CameraGhost() {
 
 function EmptySlot() {
   return (
-    <div className="relative flex h-full items-center justify-center overflow-hidden rounded-lg border border-dashed border-[#1f2536] bg-[#0a0d14]">
+    <div className={`relative flex h-full items-center justify-center overflow-hidden rounded-lg border border-dashed ${CAMERA_WALL_SURFACES.borderSubtle} bg-[#0a0d14]`}>
       <div
         className="pointer-events-none absolute inset-0 opacity-25"
         style={{
@@ -654,7 +673,7 @@ function EmptySlot() {
         </div>
         <div className="mt-2 flex items-center justify-center gap-1.5">
           <Camera className="h-2.5 w-2.5 text-[#2a3a54]" />
-          <p className="text-[9px] font-medium text-[#3a4a60]">Empty Slot</p>
+          <p className={`text-[9px] font-medium ${CAMERA_WALL_SURFACES.muted2}`}>Empty Slot</p>
         </div>
       </div>
       <style>{`
@@ -735,6 +754,7 @@ export function CameraWallView() {
   const pathReplay = useStudioStore((s) => s.pathReplay);
   const compactViewport = useStudioStore((s) => s.compactViewport);
   const [layoutMode, setLayoutMode] = useState<CameraWallLayoutMode>("auto");
+  const [showMapPreview, setShowMapPreview] = useState(false);
   const [syncTime, setSyncTime] = useState(true);
   const [freeRunningTimestamp, setFreeRunningTimestamp] = useState(() => Date.now());
   const [immersiveMode, setImmersiveMode] = useState(false);
@@ -876,7 +896,7 @@ export function CameraWallView() {
           <div className="mx-auto h-16 w-16 text-[#1f2c44]">
             <CameraGhost />
           </div>
-          <p className="mt-3 text-[11px] font-medium text-[#4a5568]">No cameras in scene</p>
+          <p className={`mt-3 text-[11px] font-medium ${CAMERA_WALL_SURFACES.muted}`}>No cameras in scene</p>
           <p className="mt-1 text-[9px] text-[#3a4158]">
             Place cameras on the map to see live POV feeds
           </p>
@@ -892,18 +912,18 @@ export function CameraWallView() {
     : "Action: Pick a route to prioritize wall feeds by visibility.";
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[#07090d] p-2.5" style={{ paddingTop: "var(--st-full-canvas-safe-top, 4.25rem)" }}>
+    <div className={`flex h-full flex-col overflow-hidden ${CAMERA_WALL_SURFACES.page} p-2.5`} style={{ paddingTop: "var(--st-full-canvas-safe-top, 4.25rem)" }}>
       {immersiveMode ? (
-        <div className={`mb-2 flex items-center justify-between rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-2${compactViewport ? "" : ""}`}>
+        <div className={`mb-2 flex items-center justify-between rounded-xl border ${CAMERA_WALL_SURFACES.borderSubtle} ${CAMERA_WALL_SURFACES.panel} px-3 py-2${compactViewport ? "" : ""}`}>
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Wall Focus Mode</div>
+            <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${CAMERA_WALL_SURFACES.accent}`}>Camera Wall Focus Mode</div>
             {!compactViewport && (
-              <div className="mt-0.5 text-[11px] text-[#94a3b8]">
+              <div className={`mt-0.5 text-[11px] ${CAMERA_WALL_SURFACES.muted3}`}>
                 {viewCount} view layout · {selectedCamera?.name ?? "None"}
               </div>
             )}
             {!compactViewport && (
-              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px] text-[#6b7c95]">
+              <div className={`mt-1 flex flex-wrap items-center gap-1.5 text-[9px] ${CAMERA_WALL_SURFACES.muted2}`}>
                 <span className="rounded-md border border-emerald-500/15 bg-emerald-500/8 px-2 py-0.5 text-emerald-300">Active {activeCount}</span>
                 <span className="rounded-md border border-rose-500/15 bg-rose-500/8 px-2 py-0.5 text-rose-300">Offline {offlineCount}</span>
                 <span className="rounded-md border border-sky-500/15 bg-sky-500/8 px-2 py-0.5 text-sky-300" title="Telemetry from /api/camera-live-session-health">
@@ -921,21 +941,21 @@ export function CameraWallView() {
               </div>
             )}
             {!compactViewport && (
-              <div className="mt-1 text-[9px] text-[#9fb0c9]">
+              <div className={`mt-1 text-[9px] ${CAMERA_WALL_SURFACES.muted3}`}>
                 Focus mode collapses the layout controls so the operator can read the wall at a glance. Press F to exit focus.
               </div>
             )}
           </div>
         </div>
       ) : (
-        <div className="mb-2 flex items-center justify-between rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-2">
+        <div className={`mb-2 flex items-center justify-between rounded-xl border ${CAMERA_WALL_SURFACES.borderSubtle} ${CAMERA_WALL_SURFACES.panel} px-3 py-2`}>
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Wall - Multi Camera</div>
-            <div className="mt-0.5 text-[11px] text-[#94a3b8]">
+            <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${CAMERA_WALL_SURFACES.accent}`}>Camera Wall - Multi Camera</div>
+            <div className={`mt-0.5 text-[11px] ${CAMERA_WALL_SURFACES.muted3}`}>
               {viewCount} view layout
               {hiddenCount > 0 ? ` · ${hiddenCount} more camera${hiddenCount === 1 ? "" : "s"}` : ""}
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px] text-[#6b7c95]">
+            <div className={`mt-1 flex flex-wrap items-center gap-1.5 text-[9px] ${CAMERA_WALL_SURFACES.muted2}`}>
               <span className="rounded-md border border-emerald-500/15 bg-emerald-500/8 px-2 py-0.5 text-emerald-300">
                 Active {activeCount}
               </span>
@@ -945,7 +965,7 @@ export function CameraWallView() {
               <span className="rounded-md border border-sky-500/15 bg-sky-500/8 px-2 py-0.5 text-sky-300" title="Telemetry from /api/camera-live-session-health">
                 Bridge Health: {sessionHealth?.totals?.active ?? activeCount} Active · {sessionHealth?.totals?.expired ?? offlineCount} Expired
               </span>
-              <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5 text-[#c7d0e4]">
+              <span className={`rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5 ${CAMERA_WALL_SURFACES.body}`}>
                 Selected {selectedCamera?.name ?? "None"}
               </span>
               {activePath ? (
@@ -984,10 +1004,10 @@ export function CameraWallView() {
                 {syncTime ? "Synchronized Time" : "Free Running Time"}
               </button>
             </div>
-            <div className="mt-1 text-[9px] text-[#9fb0c9]">{wallActionHint}</div>
+            <div className={`mt-1 text-[9px] ${CAMERA_WALL_SURFACES.muted3}`}>{wallActionHint}</div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 rounded-lg border border-[#27364e] bg-black/40 p-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
+            <div className={`flex items-center gap-1 rounded-lg border border-[#27364e] bg-black/40 p-1 text-[9px] font-semibold uppercase tracking-[0.16em] ${CAMERA_WALL_SURFACES.body}`}>
               <button
                 type="button"
                 onClick={() => setLayoutMode("quad")}
@@ -1020,8 +1040,15 @@ export function CameraWallView() {
               >
                 Auto Layout
               </button>
+              <button
+                type="button"
+                onClick={() => setShowMapPreview((prev) => !prev)}
+                className={`rounded-md px-2 py-1 transition-colors ${showMapPreview ? "bg-sky-500/20 text-sky-200" : "text-[#9ca3af]"}`}
+              >
+                3D Map
+              </button>
             </div>
-            <div className="rounded-lg border border-[#27364e] bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
+            <div className={`rounded-lg border border-[#27364e] bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] ${CAMERA_WALL_SURFACES.body}`}>
               {viewCount} Views
             </div>
           </div>
@@ -1031,12 +1058,12 @@ export function CameraWallView() {
       <button
         type="button"
         onClick={toggleImmersiveMode}
-        className="absolute right-3 top-[calc(var(--st-full-canvas-safe-top,4.25rem)+0.5rem)] z-30 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#3a4a66] hover:text-white"
+        className={`absolute right-3 top-[calc(var(--st-full-canvas-safe-top,4.25rem)+0.5rem)] z-30 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium ${CAMERA_WALL_SURFACES.body} transition-colors hover:border-[#3a4a66] hover:text-white`}
       >
         {immersiveMode ? "Exit Focus" : "Focus"}
       </button>
 
-      <div className={`grid flex-1 gap-2.5 ${layoutSpec.gridClass}`}>
+      <div className={`relative grid flex-1 gap-2 rounded-xl border border-[#141b28] bg-[#05070a]/60 p-1.5 ${layoutSpec.gridClass}`}>
         {effectiveLayout === "dense" ? (
           <>
             {visible.map((cam) => (
@@ -1058,7 +1085,6 @@ export function CameraWallView() {
             {Array.from({ length: Math.max(0, layoutSpec.cameraSlots - visible.length) }).map((_, index) => (
               <EmptySlot key={`dense-empty-${index}`} />
             ))}
-            <WallOverviewPanel isDense />
           </>
         ) : effectiveLayout === "overview" ? (
           <>
@@ -1081,7 +1107,6 @@ export function CameraWallView() {
             {Array.from({ length: Math.max(0, layoutSpec.cameraSlots - visible.length) }).map((_, index) => (
               <EmptySlot key={`overview-empty-${index}`} />
             ))}
-            <WallOverviewPanel isDense={false} />
           </>
         ) : (
           <>
@@ -1104,10 +1129,24 @@ export function CameraWallView() {
             {Array.from({ length: Math.max(0, layoutSpec.cameraSlots - visible.length) }).map((_, index) => (
               <EmptySlot key={`quad-empty-${index}`} />
             ))}
-            <WallOverviewPanel isDense={false} />
           </>
         )}
       </div>
+      {showMapPreview && (
+        <div className={`absolute bottom-5 right-5 z-40 h-60 w-80 overflow-hidden rounded-xl border border-[#27364e] ${CAMERA_WALL_SURFACES.panelSoft} shadow-[0_16px_48px_rgba(0,0,0,0.65)] backdrop-blur-md transition-all duration-300`}>
+          <div className={`absolute left-2.5 top-2.5 z-50 flex items-center gap-1.5 rounded-lg border border-[#27364e] bg-black/70 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.18em] ${CAMERA_WALL_SURFACES.accent}`}>
+            <span>3D Map Overview</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowMapPreview(false)}
+            className={`absolute right-2.5 top-2.5 z-50 rounded-lg border border-[#27364e] bg-black/70 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] ${CAMERA_WALL_SURFACES.muted3} transition-colors hover:border-[#4a5f80] hover:text-white`}
+          >
+            Hide
+          </button>
+          <WallOverviewPanel isDense={false} />
+        </div>
+      )}
     </div>
   );
 }

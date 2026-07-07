@@ -27,6 +27,7 @@ import {
 } from "@/components/workspace/SharedScene";
 import { cn } from "@/lib/cn";
 import { QUALITY_RANK, QUALITY_TEXT_COLOR } from "@/lib/quality-display";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import { clampPathDuration, sortTimelineEvents } from "@/components/view/camera-view-utils";
 import type { SceneSnapshot, SimulationResult } from "@/schema/security-scene";
@@ -50,6 +51,23 @@ type DoriThresholds = {
   observation: number;
   recognition: number;
   identification: number;
+};
+
+const COMPARE_SURFACES = {
+  page: UI_SURFACES.page,
+  panel: UI_SURFACES.panel,
+  card: UI_SURFACES.card,
+  cardStrong: UI_SURFACES.cardStrong,
+  cardMuted: UI_SURFACES.cardMuted,
+  border: UI_SURFACES.borderSubtle,
+  borderThin: UI_SURFACES.borderThin,
+  borderStrong: UI_SURFACES.borderStrong,
+  muted: UI_SURFACES.textMuted,
+  muted2: UI_SURFACES.textMuted2,
+  muted3: UI_SURFACES.textMuted3,
+  body: UI_SURFACES.textBody,
+  body2: UI_SURFACES.textBody2,
+  accent: UI_SURFACES.textAccent,
 };
 
 function computeCameraDoriRanges(camera: SceneSnapshot["scene"]["cameras"][number], ppm: DoriThresholds) {
@@ -209,19 +227,33 @@ function ScenePanel({
 
   return (
     <div className={cn(
-      "relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-[#07090d]",
-      accent === "baseline" ? "border-[#3b1f24]" : "border-[#1f3b27]",
+      "relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-[#07090d] shadow-md",
+      accent === "baseline" ? "border-rose-500/30" : "border-emerald-500/30",
     )}>
       <div className={cn(
-        "flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em]",
+        "flex items-center justify-between border-b px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.16em] shadow-xs",
         accent === "baseline"
-          ? "border-b border-red-500/15 bg-red-500/6 text-red-300"
-          : "border-b border-emerald-500/15 bg-emerald-500/6 text-emerald-300",
+          ? "border-rose-500/30 bg-linear-to-r from-rose-950/70 via-rose-900/30 to-transparent text-rose-200"
+          : "border-emerald-500/30 bg-linear-to-r from-emerald-950/70 via-emerald-900/30 to-transparent text-emerald-200",
       )}>
-        <span>{label}</span>
-        <span className="font-mono text-[10px] text-[#8090a8]">
-          {coverageCells.length > 0 ? `${Math.round((coverageCells.filter((c) => c.quality !== "none").length / coverageCells.length) * 100)}% covered` : "--"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={cn(
+            "rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-widest text-white shadow-xs",
+            accent === "baseline" ? "bg-rose-600/90 border border-rose-400/30" : "bg-emerald-600/90 border border-emerald-400/30"
+          )}>
+            {accent === "baseline" ? "BASELINE" : "HARDENED"}
+          </span>
+          <span className="text-white/90">{label}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] font-medium text-[#7a8da8]">ACTIVE COVERAGE:</span>
+          <span className={cn(
+            "font-mono text-[11px] font-bold",
+            accent === "baseline" ? "text-rose-300" : "text-emerald-300"
+          )}>
+            {coverageCells.length > 0 ? `${Math.round((coverageCells.filter((c) => c.quality !== "none").length / coverageCells.length) * 100)}%` : "--"}
+          </span>
+        </div>
       </div>
 
       <div className="relative min-h-0 flex-1">
@@ -276,6 +308,7 @@ function MetricCard({
   delta,
   tone,
   suffix = "%",
+  invertTone = false,
 }: {
   label: string;
   beforeValue: number | null;
@@ -283,23 +316,39 @@ function MetricCard({
   delta: number | null;
   tone: string;
   suffix?: string;
+  invertTone?: boolean;
 }) {
-  const positive = delta != null ? delta >= 0 : false;
+  const positive = delta != null ? (invertTone ? delta <= 0 : delta >= 0) : false;
 
   return (
-    <div className="flex min-w-[128px] flex-1 flex-col rounded-lg border border-[#1d2330] bg-[#0b1018] px-3 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#65718a]">{label}</div>
-      <div className="mt-0.5 flex items-end justify-between gap-2">
-        <div className="font-mono text-[16px] font-semibold text-white">{afterValue == null ? "--" : `${afterValue.toFixed(1)}${suffix}`}</div>
-        {delta != null ? (
-          <div className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", positive ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300")}>
+    <div className="flex min-w-[140px] flex-1 flex-col justify-between rounded-xl border border-[#1e2738] bg-linear-to-b from-[#111726] to-[#0a0f1a] p-3 shadow-md transition-all hover:border-[#2a3850]">
+      <div className="flex items-center justify-between gap-1">
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8090a8]">{label}</span>
+        {delta != null && delta !== 0 ? (
+          <div className={cn(
+            "rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wider shadow-xs",
+            positive ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300" : "border-rose-500/40 bg-rose-500/15 text-rose-300"
+          )}>
             {formatDelta(delta)}
+          </div>
+        ) : delta === 0 ? (
+          <div className="rounded-md border border-[#2a3246] bg-[#141b2a] px-1.5 py-0.5 font-mono text-[10px] font-medium text-[#74809a]">
+            NO CHANGE
           </div>
         ) : null}
       </div>
-      <div className="mt-0.5 flex items-center justify-between text-[10px] text-[#65718a]">
-        <span>{beforeValue == null ? "Baseline unavailable" : `Was ${beforeValue.toFixed(1)}${suffix}`}</span>
-        <span style={{ color: tone }} />
+      <div className="mt-2.5 flex items-baseline justify-between gap-2 border-t border-[#1a2234] pt-2">
+        <div className="flex flex-col">
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-rose-300/80">Baseline</span>
+          <span className="font-mono text-[13px] font-medium text-[#9aa6bf]">{beforeValue == null ? "--" : `${beforeValue.toFixed(1)}${suffix}`}</span>
+        </div>
+        <span className="text-[#3a4660]">→</span>
+        <div className="flex flex-col text-right">
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Proposed</span>
+          <span className="font-mono text-[16px] font-bold text-white" style={{ color: delta != null && delta !== 0 ? (positive ? "#6ee7b7" : "#fda4af") : "white" }}>
+            {afterValue == null ? "--" : `${afterValue.toFixed(1)}${suffix}`}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -379,7 +428,7 @@ function QualityTrend({
         </div>
         <div className="flex items-center gap-3 text-[10px]">
           <span className="flex items-center gap-1 text-[#9aa6bf]"><span className="h-1.5 w-1.5 rounded-full bg-red-400" />Baseline</span>
-          <span className="flex items-center gap-1 text-[#9aa6bf]"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Proposed</span>
+          <span className="flex items-center gap-1 text-[#9aa6bf]"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Proposed / Hardened</span>
         </div>
       </div>
       {activePathId ? (
@@ -440,7 +489,7 @@ function QualityTrend({
           <div className="mt-0.5 font-semibold text-red-300">{qualityLabel(qualityForScore(seriesA.at(-1)?.score ?? 0))}</div>
         </div>
         <div className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2 py-1.5">
-          <div className="text-[#556076]">Proposed quality</div>
+          <div className="text-[#556076]">Proposed / Hardened quality</div>
           <div className="mt-0.5 font-semibold text-emerald-300">{qualityLabel(qualityForScore(seriesB.at(-1)?.score ?? 0))}</div>
         </div>
         <div className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2 py-1.5">
@@ -476,7 +525,7 @@ function NotesPanel({
     <div className="flex h-full flex-col rounded-xl border border-[#1d2330] bg-[#0b1018] p-3">
       <div className="mb-2 flex items-center justify-between">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changes in Scenario B</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changes in Proposed / Hardened</div>
           <div className="text-[10px] text-[#556076]">What changed, what failed, and what got better.</div>
         </div>
         <ArrowLeftRight className="h-3.5 w-3.5 text-[#4a5568]" />
@@ -614,7 +663,7 @@ function ChangedObjectsPanel({ snapshotA, snapshotB }: { snapshotA: SceneSnapsho
     <div className="flex h-full flex-col rounded-xl border border-[#1d2330] bg-[#0b1018] p-3">
       <div className="mb-2">
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changed Objects</div>
-        <div className="text-[10px] text-[#556076]">Scenario B deltas vs Scenario A by object class and IDs.</div>
+        <div className="text-[10px] text-[#556076]">Proposed deltas vs Baseline by object class and IDs.</div>
       </div>
       <div className="space-y-2">
         {diffRows.map(({ label, diff }) => (
@@ -814,8 +863,8 @@ export function CompareView() {
   }, [compareReportData, sceneName]);
   const handleCopySummary = useCallback(async () => {
     const summary = [
-      `Scenario A: ${snapshotA?.label ?? "Baseline"}`,
-      `Scenario B: ${snapshotB?.label ?? "Proposed Fix"}`,
+      `Baseline: ${snapshotA?.label ?? "Baseline"}`,
+      `Proposed / Hardened: ${snapshotB?.label ?? "Proposed / Hardened"}`,
       `Coverage delta: ${mA && mB ? formatDelta(mB.covered - mA.covered) : "--"}`,
       `Recognition delta: ${mA && mB ? formatDelta(mB.recognition - mA.recognition) : "--"}`,
       `Blindspot delta: ${mA && mB ? formatDelta(mB.blindspot - mA.blindspot) : "--"}`,
@@ -954,7 +1003,7 @@ export function CompareView() {
 
     const topIssue = snapshotB?.simulation?.issues?.[0];
     if (topIssue?.description) {
-      actions.push(`Top issue in Scenario B: ${topIssue.description}`);
+      actions.push(`Top issue in Proposed / Hardened: ${topIssue.description}`);
     }
 
     if (actions.length === 0) {
@@ -979,11 +1028,11 @@ export function CompareView() {
   }
 
   const comparisonCards = [
-    { label: "Overall Coverage", beforeValue: mA?.covered ?? null, afterValue: mB?.covered ?? null, delta: mA && mB ? mB.covered - mA.covered : null, tone: "#9ae6b4" },
-    { label: "Recognition", beforeValue: mA?.recognition ?? null, afterValue: mB?.recognition ?? null, delta: mA && mB ? mB.recognition - mA.recognition : null, tone: "#93c5fd" },
-    { label: "Blindspot", beforeValue: mA?.blindspot ?? null, afterValue: mB?.blindspot ?? null, delta: mA && mB ? mB.blindspot - mA.blindspot : null, tone: "#fca5a5" },
-    { label: "Critical Zones", beforeValue: mA?.critZonePct ?? null, afterValue: mB?.critZonePct ?? null, delta: mA && mB ? mB.critZonePct - mA.critZonePct : null, tone: "#fdba74" },
-    { label: "Path Visibility", beforeValue: mA?.visiblePathPct ?? null, afterValue: mB?.visiblePathPct ?? null, delta: mA && mB ? mB.visiblePathPct - mA.visiblePathPct : null, tone: "#c4b5fd" },
+    { label: "Overall Coverage", beforeValue: mA?.covered ?? null, afterValue: mB?.covered ?? null, delta: mA && mB ? mB.covered - mA.covered : null, tone: "#9ae6b4", invertTone: false },
+    { label: "Recognition", beforeValue: mA?.recognition ?? null, afterValue: mB?.recognition ?? null, delta: mA && mB ? mB.recognition - mA.recognition : null, tone: "#93c5fd", invertTone: false },
+    { label: "Blindspot", beforeValue: mA?.blindspot ?? null, afterValue: mB?.blindspot ?? null, delta: mA && mB ? mB.blindspot - mA.blindspot : null, tone: "#fca5a5", invertTone: true },
+    { label: "Critical Zones", beforeValue: mA?.critZonePct ?? null, afterValue: mB?.critZonePct ?? null, delta: mA && mB ? mB.critZonePct - mA.critZonePct : null, tone: "#fdba74", invertTone: false },
+    { label: "Path Visibility", beforeValue: mA?.visiblePathPct ?? null, afterValue: mB?.visiblePathPct ?? null, delta: mA && mB ? mB.visiblePathPct - mA.visiblePathPct : null, tone: "#c4b5fd", invertTone: false },
   ] as const;
 
   return (
@@ -991,12 +1040,14 @@ export function CompareView() {
       <div className="flex flex-wrap items-center gap-2 border-b border-[#1e2130] bg-[#0c0f16] px-3 py-2">
         <div className="flex min-w-[260px] items-center gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#65718a]">Compare - Before / After</span>
-          <div className="rounded-md border border-red-500/20 bg-red-500/10 px-2 py-1 text-[10px] font-medium text-red-300">
-            {snapshotA?.label ?? "Scenario A"}
+          <div className="flex items-center gap-1.5 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-medium text-rose-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+            <span>{snapshotA?.label ?? "Baseline"}</span>
           </div>
           <ArrowLeftRight className="h-3 w-3 text-[#556076]" />
-          <div className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-medium text-emerald-300">
-            {snapshotB?.label ?? "Scenario B"}
+          <div className="flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[10px] font-medium text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <span>{snapshotB?.label ?? "Proposed / Hardened"}</span>
           </div>
         </div>
         <ToolbarButton
@@ -1126,12 +1177,12 @@ export function CompareView() {
       {(outcomeA || outcomeB) ? (
         <div className="border-b border-[#1e2130] px-3 py-1.5 text-[10px] text-[#8ea0bf]">
           <span>
-            Scenario A outcome: {outcomeA?.summary.status.replace(/_/g, " ") ?? "not_run"}
+            Baseline outcome: {outcomeA?.summary.status.replace(/_/g, " ") ?? "not_run"}
             {outcomeA?.summary.primaryRisk ? ` · risk: ${outcomeA.summary.primaryRisk}` : ""}
           </span>
           <span className="mx-2 text-[#556076]">|</span>
           <span>
-            Scenario B outcome: {outcomeB?.summary.status.replace(/_/g, " ") ?? "not_run"}
+            Proposed / Hardened outcome: {outcomeB?.summary.status.replace(/_/g, " ") ?? "not_run"}
             {outcomeB?.summary.primaryRisk ? ` · risk: ${outcomeB.summary.primaryRisk}` : ""}
           </span>
         </div>
@@ -1139,7 +1190,7 @@ export function CompareView() {
 
       <div className="grid grid-cols-2 gap-2 border-b border-[#1e2130] bg-[#0a0d14] px-3 py-2">
         <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-[#556076]">
-          <span className="min-w-[56px] text-[#9aa6bf]">Scenario A</span>
+          <span className="min-w-[64px] font-bold text-rose-300">Baseline (A)</span>
           <select
             value={validComparisonAId ?? ""}
             onChange={(event) => setComparisonAId(event.target.value)}
@@ -1156,7 +1207,7 @@ export function CompareView() {
           </select>
         </label>
         <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-[#556076]">
-          <span className="min-w-[56px] text-[#d2f5db]">Scenario B</span>
+          <span className="min-w-[76px] font-bold text-emerald-300">Proposed (B)</span>
           <select
             value={validComparisonBId ?? ""}
             onChange={(event) => setComparisonBId(event.target.value)}
@@ -1177,7 +1228,7 @@ export function CompareView() {
       {snapshotBSimulationMissing ? (
         <div className="mx-2 mt-2 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-[10px] text-amber-300">
           <div className="flex items-center justify-between gap-2">
-            <span>Scenario B has no saved simulation result yet. Run simulation before trusting before/after deltas.</span>
+            <span>Proposed / Hardened has no saved simulation result yet. Run simulation before trusting before/after deltas.</span>
             {latestSimulatedSnapshot ? (
               <div className="flex items-center gap-1.5">
                 <button
@@ -1186,12 +1237,12 @@ export function CompareView() {
                     if (!snapshotB) return;
                     const ok = simulateSnapshot(snapshotB.id);
                     if (!ok) return;
-                    setExportToast("Scenario B simulated");
+                    setExportToast("Proposed / Hardened simulated");
                     window.setTimeout(() => setExportToast(null), 2500);
                   }}
                   className="rounded border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-200 hover:bg-emerald-500/20"
                 >
-                  Simulate Scenario B Now
+                  Simulate Proposed / Hardened Now
                 </button>
                 <button
                   type="button"
@@ -1210,7 +1261,7 @@ export function CompareView() {
         <div ref={panelARef} className="min-h-0">
           {snapshotA ? (
             <ScenePanel
-              label={`Scenario A — ${snapshotA.label ?? "Baseline"}`}
+              label={`Baseline — ${snapshotA.label ?? "Baseline"}`}
               accent="baseline"
               scene={snapshotA.scene}
               coverageCells={cellsA}
@@ -1220,7 +1271,7 @@ export function CompareView() {
             />
           ) : (
             <SnapshotPlaceholder
-              title="Select Scenario A"
+              title="Select Baseline"
               description="Choose the baseline snapshot you want to compare against. Until then, this side stays empty on purpose."
             />
           )}
@@ -1228,7 +1279,7 @@ export function CompareView() {
         <div ref={panelBRef} className="min-h-0">
           {snapshotB ? (
             <ScenePanel
-              label={`Scenario B — ${snapshotB.label ?? "Proposed Fix"}`}
+              label={`Proposed / Hardened — ${snapshotB.label ?? "Proposed / Hardened"}`}
               accent="proposed"
               scene={snapshotB.scene}
               coverageCells={cellsB}
@@ -1238,7 +1289,7 @@ export function CompareView() {
             />
           ) : (
             <SnapshotPlaceholder
-              title="Select Scenario B"
+              title="Select Proposed / Hardened"
               description="Choose the proposed or after snapshot to compare. This avoids silently defaulting to the newest save."
             />
           )}
@@ -1255,6 +1306,7 @@ export function CompareView() {
               afterValue={card.afterValue}
               delta={card.delta}
               tone={card.tone}
+              invertTone={card.invertTone}
             />
           ))}
         </div>
@@ -1300,12 +1352,12 @@ export function CompareView() {
               type="button"
               onClick={() => {
                 const changedCards = comparisonCards.filter(c => c.delta != null && c.delta !== 0);
-                const summary = `Apply Scenario B: ${snapshotB.label ?? "Proposed Fix"}\n${changedCards.map(c => `${c.label}: ${c.beforeValue != null ? `${Math.round(c.beforeValue)}%` : "—"} → ${c.afterValue != null ? `${Math.round(c.afterValue)}%` : "—"} (${c.delta != null ? `${c.delta >= 0 ? "+" : ""}${Math.round(c.delta)}%` : "—"})`).join("\n")}`;
+                const summary = `Apply Proposed / Hardened: ${snapshotB.label ?? "Proposed / Hardened"}\n${changedCards.map(c => `${c.label}: ${c.beforeValue != null ? `${Math.round(c.beforeValue)}%` : "—"} → ${c.afterValue != null ? `${Math.round(c.afterValue)}%` : "—"} (${c.delta != null ? `${c.delta >= 0 ? "+" : ""}${Math.round(c.delta)}%` : "—"})`).join("\n")}`;
                 void writeClipboardText(summary);
               }}
               className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20"
             >
-              Apply Scenario B to Current Scene
+              Apply Proposed / Hardened to Current Scene
             </button>
           ) : null}
         </div>

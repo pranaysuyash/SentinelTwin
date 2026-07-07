@@ -12,6 +12,7 @@ import type { SecurityScene } from "@/schema/security-scene";
 import { type WorkspaceRole } from "@/lib/workspace-governance";
 // Trust Pass T1 — canonical confidence renderer (warning-gated, source-tagged).
 import { renderConfidence, CONFIDENCE_BAND_LABEL } from "@/lib/confidence-display";
+import { CreationFlowShell } from "@/components/site-intake/CreationFlowShell";
 
 const severityIcon: Record<ActionableWarning["severity"], React.ReactNode> = {
   blocking: <XCircle className="h-3.5 w-3.5 text-red-400" />,
@@ -408,36 +409,15 @@ export function SiteDraftReview({
       : `${SOURCE_APPROVAL_LABELS[draft.source] ?? "Approve"} (${personaPolicy.approveSuffix.review})`;
 
   return (
-    <div className="flex h-full w-full flex-col overflow-y-auto" style={{ background: "var(--bg)" }}>
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--text-dim)]">
-              <span>Site Twin Review</span>
-              <span className="text-[color:var(--border)]">·</span>
-              <span className="flex items-center gap-1 text-white">
-                {SOURCE_ICONS[draft.source]}
-                {draft.provenance.sourceLabel}
-              </span>
-              <span className="text-[color:var(--border)]">·</span>
-              <span className={sourceInfo.status === "Working" ? "text-emerald-300" : "text-violet-300"}>
-                {sourceInfo.status}
-              </span>
-            </div>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-white">
-              {draft.scene.name || "Untitled Site Twin"}
-            </h1>
-            <div className="mt-1 flex items-center gap-3 text-[13px] leading-5 text-[color:var(--text-muted)]">
-              <span>{draft.warnings.length} warning{draft.warnings.length !== 1 ? "s" : ""}</span>
-              <span className="text-[color:var(--border)]">·</span>
-              <span className={confidenceColor}>{confidencePct}% confidence ({CONFIDENCE_BAND_LABEL[renderedConfidence.band]})</span>
-              <span className="text-[color:var(--border)]">·</span>
-              <span>{draft.entityCounts.walls}w {draft.entityCounts.cameras}c {draft.entityCounts.criticalZones}z {draft.entityCounts.entryPoints}e</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 flex flex-1 gap-6">
+    <CreationFlowShell
+      activeStage="review"
+      session={session}
+      draft={draft}
+      onExit={() => onReject()}
+      onBack={() => onReject()}
+    >
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-6" style={{ background: "var(--bg)" }}>
+        <div className="flex flex-1 gap-6">
           <div className="flex min-w-0 flex-1 flex-col gap-4">
             <div className="rounded-2xl border border-[color:var(--border)] bg-white/[0.03] p-4">
               <div className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">Scene Preview</div>
@@ -683,7 +663,7 @@ export function SiteDraftReview({
           </div>
         </div>
       </div>
-    </div>
+    </CreationFlowShell>
   );
 }
 

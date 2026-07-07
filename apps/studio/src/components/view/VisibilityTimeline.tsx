@@ -1,8 +1,10 @@
 "use client";
 
-import { type MouseEvent, useMemo } from "react";
+import { type KeyboardEvent, type MouseEvent, useCallback, useMemo } from "react";
 
+import { cn } from "@/lib/cn";
 import { QUALITY_ABBR, QUALITY_COLOR } from "@/lib/quality-display";
+import { UI_TONES } from "@/lib/design-tokens";
 import type { DoriQuality } from "@/schema/security-scene";
 import type { PathVisibilityResult } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
@@ -162,8 +164,12 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
   }, [cameras, pathResult, timelineEvents, totalDuration]);
 
   const hasNoTimeline = !pathResult || totalDuration <= 0 || timelineEvents.length === 0 || cameraRows.length === 0;
+  const keyboardSeekStep = useMemo(
+    () => (totalDuration > 0 ? Math.max(0.5, Math.min(5, totalDuration / 10)) : 1),
+    [totalDuration],
+  );
 
-  const handleSeek = (event: MouseEvent<HTMLDivElement>) => {
+  const handleSeek = useCallback((event: MouseEvent<HTMLDivElement>) => {
     if (!onSeek) return;
 
     const rect = event.currentTarget.getBoundingClientRect();
@@ -171,7 +177,41 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
     const safePct = Number.isFinite(pct) ? Math.min(Math.max(pct, 0), 1) : 0;
     const safeTotalDuration = totalDuration > 0 ? totalDuration : 0;
     onSeek(safePct * safeTotalDuration);
-  };
+  }, [onSeek, totalDuration]);
+
+  const handleSeekKeys = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (!onSeek) return;
+
+    const step = keyboardSeekStep;
+    switch (event.key) {
+      case "ArrowLeft":
+      case "ArrowDown":
+        event.preventDefault();
+        onSeek(Math.max(0, safeCurrentTime - step));
+        break;
+      case "ArrowRight":
+      case "ArrowUp":
+        event.preventDefault();
+        onSeek(Math.min(totalDuration, safeCurrentTime + step));
+        break;
+      case "PageDown":
+        event.preventDefault();
+        onSeek(Math.max(0, safeCurrentTime - step * 4));
+        break;
+      case "PageUp":
+        event.preventDefault();
+        onSeek(Math.min(totalDuration, safeCurrentTime + step * 4));
+        break;
+      case "Home":
+        event.preventDefault();
+        onSeek(0);
+        break;
+      case "End":
+        event.preventDefault();
+        onSeek(totalDuration);
+        break;
+    }
+  }, [keyboardSeekStep, onSeek, safeCurrentTime, totalDuration]);
 
   if (hasNoTimeline) {
     return (
@@ -184,15 +224,15 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
 
   return (
     <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Camera Visibility</span>
-        <div className="flex items-center gap-2 text-[8px] text-[#4d566b]">
-          <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-sm bg-[#22c55e]" />
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Camera Visibility</span>
+          <div className="flex items-center gap-2 text-[8px] text-[#4d566b]">
+            <span className="flex items-center gap-1">
+            <span className={cn("h-2 w-2 rounded-sm", UI_TONES.success.dot)} />
             Visible
           </span>
           <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-sm bg-[#ef4444]" />
+            <span className={cn("h-2 w-2 rounded-sm", UI_TONES.danger.dot)} />
             Lost
           </span>
         </div>
@@ -213,7 +253,8 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
             const visiblePct = row.camData
               ? Math.max(0, Math.min(100, (row.camData.visibleS / totalDuration) * 100))
               : 0;
-                return (
+            const cameraLabel = row.camId.replace("cam_", "").replace(/_/g, " ");
+            return (
               <div key={row.camId} className="flex items-center gap-2">
                 {/* Camera label */}
                 <div className="w-20 flex-shrink-0 truncate text-[8px] font-medium text-[#8b96ab]" title={row.camId}>
@@ -222,8 +263,16 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
 
                 {/* Timeline bar (clickable for seeking) */}
                 <div
-                  className="relative h-4 flex-1 cursor-pointer overflow-hidden rounded-md border border-[#202536] bg-[#111521]"
+                  className="relative h-4 flex-1 cursor-pointer overflow-hidden rounded-md border border-[#202536] bg-[#111521] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#93c5fd]/70"
                   onClick={handleSeek}
+                  onKeyDown={handleSeekKeys}
+                  role="slider"
+                  tabIndex={0}
+                  aria-label={`${cameraLabel} visibility timeline`}
+                  aria-valuemin={0}
+                  aria-valuemax={totalDuration}
+                  aria-valuenow={safeCurrentTime}
+                  aria-valuetext={`${safeCurrentTime.toFixed(1)} seconds of ${totalDuration.toFixed(1)} seconds`}
                 >
                   {row.segments.map((seg, si) => (
                     <div

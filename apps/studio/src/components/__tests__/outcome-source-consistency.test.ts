@@ -34,11 +34,11 @@ describe("Security outcome source consistency", () => {
     expect(issuesSource).toContain("outcome.summary.primaryRisk");
   });
 
-  test("compare view derives scenario outcomes from canonical outcome model", () => {
+  test("compare view derives baseline/proposed outcomes from canonical outcome model", () => {
     const source = readFileSync(compareViewPath, "utf8");
     expect(source).toContain("buildSecurityOutcomeModel");
-    expect(source).toContain("Scenario A outcome");
-    expect(source).toContain("Scenario B outcome");
+    expect(source).toContain("Baseline outcome");
+    expect(source).toContain("Proposed / Hardened outcome");
     expect(source).toContain("summary.status");
     expect(source).toContain("summary.primaryRisk");
   });

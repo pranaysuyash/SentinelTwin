@@ -23,6 +23,8 @@ describe("CameraWallView", () => {
     expect(source).toContain("Camera Wall Focus Mode");
     expect(source).toContain("Press F to exit focus");
     expect(source).toContain("toggleActiveSurfaceFocus");
+    expect(source).toContain("UI_TONES.success.text");
+    expect(source).toContain("TYPE_SCALE.caption.class");
     expect(source).toContain("const toggleImmersiveMode = useCallback(() => {");
     expect(source).toContain("window.addEventListener(STUDIO_SHORTCUT_EVENTS.toggleActiveSurfaceFocus, toggleImmersiveMode);");
     expect(source).toContain("Focus");

@@ -23,6 +23,8 @@ import { CameraPositionIndicator } from "@/components/view/camera-position-indic
 import { CameraViewFloorAim } from "@/components/view/camera-view-floor-aim";
 import { useCameraVerificationWorkflow } from "@/components/view/camera-verification-workflow";
 import { alignmentQualityLabel } from "@/components/view/camera-verification-utils";
+import { TYPE_SCALE, UI_TONES } from "@/lib/design-tokens";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 import {
   SINGLE_PERF_MONITOR_ITERATIONS,
   SINGLE_PERF_MONITOR_MS,
@@ -46,21 +48,30 @@ import {
   sampleCameraReplayPose,
 } from "@/components/view/camera-view-utils";
 
+const CAMERA_SURFACES = {
+  page: UI_SURFACES.page,
+  panel: UI_SURFACES.panelSoft,
+  border: UI_SURFACES.border,
+  muted: UI_SURFACES.textMuted,
+  muted2: UI_SURFACES.textMuted3,
+  muted3: UI_SURFACES.textMuted4,
+};
+
 function OfflineFeed({ camera: cam }: { camera: CameraNode }) {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#070a10]">
-      <div className="rounded-full border border-red-500/20 bg-red-500/10 p-4">
-        <VideoOff className="size-8 text-red-400/60" />
+    <div className={`flex h-full w-full flex-col items-center justify-center gap-3 ${CAMERA_SURFACES.page}`}>
+      <div className={`rounded-full border ${UI_TONES.danger.border} ${UI_TONES.danger.bg} p-4`}>
+        <VideoOff className="size-8 text-rose-400/60" />
       </div>
       <div className="text-center">
-        <div className="text-[12px] font-semibold uppercase tracking-[0.2em] text-red-300/60">Camera Offline</div>
-        <div className="mt-1 text-[10px] text-[#4a5568]">{cam.name}</div>
+        <div className={`font-semibold uppercase tracking-[0.2em] ${TYPE_SCALE.label.class} text-rose-300/60`}>Camera Offline</div>
+        <div className={`mt-1 ${TYPE_SCALE.micro.class} ${CAMERA_SURFACES.muted}`}>{cam.name}</div>
       </div>
       <div className="absolute inset-x-0 top-0 px-3 pt-3">
         <div className="flex items-center gap-1.5">
-          <span className="size-1.5 rounded-full bg-red-400" />
-          <span className="text-[9px] font-bold tracking-wide text-white/60">{formatCameraTag(cam.name)} · {cam.name}</span>
-          <CircleSmall className="ml-auto size-3 text-red-300" />
+          <span className={`size-1.5 rounded-full ${UI_TONES.danger.dot}`} />
+          <span className={`font-bold tracking-wide text-white/60 ${TYPE_SCALE.micro.class}`}>{formatCameraTag(cam.name)} · {cam.name}</span>
+          <CircleSmall className={`ml-auto size-3 ${UI_TONES.danger.text}`} />
         </div>
       </div>
     </div>
@@ -313,18 +324,18 @@ export function CameraViewMode() {
       ? "Click a camera in the map view or use the camera selector above."
       : "Use the Map View editor to place cameras in the scene.";
     return (
-      <div className="flex h-full items-center justify-center bg-[#07090d]">
+      <div className={`flex h-full items-center justify-center ${CAMERA_SURFACES.page}`}>
         <div className="max-w-[320px] text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-sky-400/25 bg-sky-500/10">
+          <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border ${UI_TONES.info.border} ${UI_TONES.info.bg}`}>
             <CameraIcon className="h-7 w-7 text-sky-300" />
           </div>
           <p className="text-sm font-medium text-white">{title}</p>
-          <p className="mt-2 text-xs text-[#4a5568]">{subtitle1}</p>
-          <p className="mt-1 text-xs text-[#4a5568]">{subtitle2}</p>
+          <p className={`mt-2 text-xs ${CAMERA_SURFACES.muted}`}>{subtitle1}</p>
+          <p className={`mt-1 text-xs ${CAMERA_SURFACES.muted}`}>{subtitle2}</p>
           <button
             type="button"
             onClick={() => { setWorkspacePreset("edit"); setViewMode("map"); }}
-            className="mt-4 rounded-xl border border-sky-400/30 bg-sky-500/12 px-4 py-2 text-xs font-semibold text-sky-200 transition-colors hover:bg-sky-500/20"
+            className={`mt-4 rounded-xl border ${UI_TONES.info.border} ${UI_TONES.info.bg} px-4 py-2 text-xs font-semibold ${UI_TONES.info.text} transition-colors hover:bg-sky-500/20`}
           >
             {hasCameras ? "Select Camera in Map" : "Open Map View Editor"}
           </button>
@@ -332,8 +343,137 @@ export function CameraViewMode() {
       </div>
     );
   }
+
+  const leftAddons = (
+    <>
+      {flags.overlays && flags.path && activePathResult && visibilityForCurrentCamera ? (
+        <CameraPathVisibilityOverlay
+          cameraName={camera.name}
+          visibleSeconds={visibilityForCurrentCamera.visibleS}
+          totalSeconds={safeReplayDurationS}
+          maxQuality={visibilityForCurrentCamera.maxQuality}
+        />
+      ) : null}
+    </>
+  );
+
+  const rightAddons = (
+    <>
+      {flags.overlays && flags.dori ? (
+        selectedCriticalZone ? (
+          zoneAnalysis ? (
+            <DoriInsightCard
+              camera={camera}
+              zoneLabel={selectedCriticalZone.label}
+              targetType={selectedCriticalZone.targetType}
+              currentQuality={activeCameraTimelineEvent?.quality ?? zoneAnalysis.currentQuality}
+              requiredQuality={zoneResult?.requiredQuality ?? selectedCriticalZone.requiredQuality}
+              zoneStatus={zoneResult?.status ?? "unknown"}
+              bestCameraName={zoneAnalysis.bestCameraName}
+              distanceM={zoneAnalysis.distanceM}
+              angleDeg={zoneAnalysis.angleDeg}
+              lightingLabel={envMode === "night" ? "Night" : envMode === "dusk" ? "Dusk" : "Day"}
+              reasonLine={activeCameraTimelineEvent?.quality
+                ? `${zoneAnalysis.reasonLine}. Replay @ ${pathTimeS.toFixed(1)}s is ${activeCameraTimelineEvent.quality}${activeCameraTimelineEvent.reason ? ` (${activeCameraTimelineEvent.reason})` : ""}.`
+                : zoneAnalysis.reasonLine}
+              replayTimeS={activeCameraTimelineEvent ? pathTimeS : undefined}
+            />
+          ) : null
+        ) : (
+          <div className={`pointer-events-auto w-full rounded-xl border border-dashed ${CAMERA_SURFACES.border} ${CAMERA_SURFACES.panel} px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]`}>
+            <div className={`text-[8px] font-semibold uppercase tracking-[0.22em] ${UI_TONES.info.text}`}>DORI OVERLAY</div>
+            <div className={`mt-1 font-semibold text-white ${TYPE_SCALE.caption.class}`}>Select a critical zone</div>
+            <div className={`mt-1 ${TYPE_SCALE.micro.class} ${CAMERA_SURFACES.muted3}`}>
+              Click a zone on the map to inspect its distance, angle, and required quality for the current camera.
+            </div>
+          </div>
+        )
+      ) : null}
+      <SharedVerificationPanel
+        enabled={verification.verificationEnabled}
+        mode={verification.verificationMode}
+        opacity={verification.verificationOpacity}
+        split={verification.verificationSplit}
+        offsetX={verification.verificationOffsetX}
+        offsetY={verification.verificationOffsetY}
+        fileName={verification.verificationFileName}
+        alignmentScore={verification.alignmentQualityScore}
+        alignmentLabel={verification.alignmentQualityScore !== null ? alignmentQualityLabel(verification.alignmentQualityScore) : null}
+        alignmentMethod={verification.verificationAlignmentMethod}
+        autoAlignDelta={verification.verificationAutoAlignDelta}
+        scale={verification.verificationScale}
+        sourceType={verification.verificationSourceType}
+        videoDurationS={verification.verificationVideoDurationS}
+        sampleTimeS={verification.verificationSampleTimeS}
+        extractionInProgress={verification.verificationExtracting}
+        errorMessage={verification.verificationError}
+        canResample={verification.canResample}
+        canAutoAlign={verification.canAutoAlign}
+        videoCandidates={verification.verificationVideoCandidates}
+        selectedCandidateId={verification.verificationSelectedCandidateId}
+        bestCandidateId={verification.verificationBestCandidateId}
+        onSelectVideoCandidate={(candidateId) => {
+          if (!verification.verificationVideoFile) return;
+          const candidate = verification.verificationVideoCandidates.find((entry) => entry.id === candidateId);
+          if (!candidate) return;
+          verification.setVerificationSelectedCandidateId(candidateId);
+          verification.applyVideoCandidate(candidate, verification.verificationVideoFile.name);
+        }}
+        onAutoPickBestFrame={() => {
+          if (!verification.verificationBestCandidateId || !verification.verificationVideoFile) return;
+          const best = verification.verificationVideoCandidates.find((entry) => entry.id === verification.verificationBestCandidateId);
+          if (!best) return;
+          verification.setVerificationSelectedCandidateId(best.id);
+          verification.applyVideoCandidate(best, verification.verificationVideoFile.name);
+        }}
+        onSampleTimeChange={(value) => {
+          verification.setVerificationSampleTimeS(value);
+        }}
+        onResampleVideoFrame={() => {
+          verification.extractFromCurrentVideo(verification.verificationSampleTimeS ?? undefined);
+        }}
+        showHeatOverlay={verification.showDifferenceHeatOverlay}
+        snapshots={verification.snapshotsForCamera}
+        onToggle={verification.setVerificationEnabled}
+        onUpload={verification.handleUpload}
+        onSaveSnapshot={verification.handleSaveSnapshot}
+        onLoadSnapshot={verification.handleLoadSnapshot}
+        onDeleteSnapshot={verification.handleDeleteSnapshot}
+        onModeChange={verification.setVerificationMode}
+        onOpacityChange={verification.setVerificationOpacity}
+        onSplitChange={verification.setVerificationSplit}
+        onOffsetXChange={(value) => {
+          verification.setVerificationAlignmentMethod("manual");
+          verification.setVerificationAutoAlignDelta(null);
+          verification.setVerificationOffsetX(value);
+        }}
+        onOffsetYChange={(value) => {
+          verification.setVerificationAlignmentMethod("manual");
+          verification.setVerificationAutoAlignDelta(null);
+          verification.setVerificationOffsetY(value);
+        }}
+        onScaleChange={(value) => {
+          verification.setVerificationAlignmentMethod("manual");
+          verification.setVerificationAutoAlignDelta(null);
+          verification.setVerificationScale(value);
+        }}
+        onToggleHeatOverlay={verification.setShowDifferenceHeatOverlay}
+        onNudge={(dx, dy) => {
+          verification.handleNudge(dx, dy);
+        }}
+        onAutoAlign={verification.autoAlignVerification}
+        onResetAlign={() => {
+          verification.handleResetAlign();
+        }}
+        onClear={() => {
+          verification.handleClear();
+        }}
+      />
+    </>
+  );
+
   return (
-    <div ref={frameRootRef} className="st-camera-view-safe-zone relative h-full w-full overflow-hidden bg-[#07090d]">
+    <div ref={frameRootRef} className={`st-camera-view-safe-zone relative h-full w-full overflow-hidden ${CAMERA_SURFACES.page}`}>
       <style>{`
         .st-camera-view-safe-zone > .absolute.top-3 {
           top: var(--st-full-canvas-safe-top, 4.25rem);
@@ -343,14 +483,14 @@ export function CameraViewMode() {
         }
       `}</style>
       {immersiveMode ? (
-        <div className={`absolute left-3 top-3 z-30 rounded-xl border border-[#263246] bg-[#0b0f17]/92 px-3 py-2${compactViewport ? " max-w-[200px]" : ""}`}>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Focus Mode</div>
-          <div className="text-[13px] font-medium text-white">{camera.name}</div>
+        <div className={`absolute left-3 top-3 z-30 rounded-xl border ${UI_TONES.info.border} ${CAMERA_SURFACES.panel} px-3 py-2${compactViewport ? " max-w-[200px]" : ""}`}>
+          <div className={`font-semibold uppercase tracking-[0.18em] ${TYPE_SCALE.caption.class} ${UI_TONES.info.text}`}>Camera Focus Mode</div>
+          <div className={`font-medium text-white ${TYPE_SCALE.label.class}`}>{camera.name}</div>
           {!compactViewport && (
-            <div className="mt-1 text-[10px] text-[#8ea5cc]">{cameraIndex + 1}/{orderedCameras.length} • Press F to exit focus</div>
+            <div className={`mt-1 ${TYPE_SCALE.micro.class} ${CAMERA_SURFACES.muted2}`}>{cameraIndex + 1}/{orderedCameras.length} • Press F to exit focus</div>
           )}
           {!compactViewport && (
-            <div className="mt-2 rounded-lg border border-[#2a344a] bg-black/45 px-2 py-1 text-[9px] text-[#9ab0ce]">
+            <div className={`mt-2 rounded-lg border ${UI_TONES.neutral.border} bg-black/45 px-2 py-1 ${TYPE_SCALE.micro.class} ${CAMERA_SURFACES.muted3}`}>
               Frame, zoom, timeline, and overlays can be tuned after exiting focus mode.
             </div>
           )}
@@ -382,7 +522,7 @@ export function CameraViewMode() {
               near: 0.1,
               far: 60,
             }}
-            shadows="soft"
+            shadows
             dpr={computeSingleCanvasDpr(1)}
             gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
             style={{ width: "100%", height: "100%", filter: canvasFilter }}
@@ -466,6 +606,8 @@ export function CameraViewMode() {
               sensorEvent={latestSensorEvent}
               cameraMetadataEvent={latestCameraMetadataEvent}
               cameraLiveConnectionEvent={latestCameraLiveConnectionEvent}
+              leftAddons={leftAddons}
+              rightAddons={rightAddons}
             />
           )}
           {immersiveMode ? null : flags.overlays && flags.path && activePath && activePathResult ? (
@@ -478,127 +620,6 @@ export function CameraViewMode() {
               progressPct={pathReplay.progress}
             />
           ) : null}
-          {immersiveMode ? null : flags.overlays && flags.path && activePathResult && visibilityForCurrentCamera ? (
-            <CameraPathVisibilityOverlay
-              cameraName={camera.name}
-              visibleSeconds={visibilityForCurrentCamera.visibleS}
-              totalSeconds={safeReplayDurationS}
-              maxQuality={visibilityForCurrentCamera.maxQuality}
-            />
-          ) : null}
-          {immersiveMode ? null : flags.overlays && flags.dori && selectedCriticalZone ? (
-            zoneAnalysis ? (
-              <DoriInsightCard
-                camera={camera}
-                zoneLabel={selectedCriticalZone.label}
-                targetType={selectedCriticalZone.targetType}
-                currentQuality={activeCameraTimelineEvent?.quality ?? zoneAnalysis.currentQuality}
-                requiredQuality={zoneResult?.requiredQuality ?? selectedCriticalZone.requiredQuality}
-                zoneStatus={zoneResult?.status ?? "unknown"}
-                bestCameraName={zoneAnalysis.bestCameraName}
-                distanceM={zoneAnalysis.distanceM}
-                angleDeg={zoneAnalysis.angleDeg}
-                lightingLabel={envMode === "night" ? "Night" : envMode === "dusk" ? "Dusk" : "Day"}
-                reasonLine={activeCameraTimelineEvent?.quality
-                  ? `${zoneAnalysis.reasonLine}. Replay @ ${pathTimeS.toFixed(1)}s is ${activeCameraTimelineEvent.quality}${activeCameraTimelineEvent.reason ? ` (${activeCameraTimelineEvent.reason})` : ""}.`
-                  : zoneAnalysis.reasonLine}
-                replayTimeS={activeCameraTimelineEvent ? pathTimeS : undefined}
-              />
-            ) : null
-          ) : (
-            <div
-              className="absolute right-3 z-30 w-56 rounded-xl border border-dashed border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]"
-              style={{ top: "calc(var(--st-full-canvas-safe-top, 4.25rem) + 5.25rem)" }}
-            >
-              <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">DORI OVERLAY</div>
-              <div className="mt-1 text-[10px] font-semibold text-white">Select a critical zone</div>
-              <div className="mt-1 text-[9px] text-[#9ab0ce]">
-                Click a zone on the map to inspect its distance, angle, and required quality for the current camera.
-              </div>
-            </div>
-          )}
-          {immersiveMode ? null : (
-            <SharedVerificationPanel
-              enabled={verification.verificationEnabled}
-              mode={verification.verificationMode}
-              opacity={verification.verificationOpacity}
-              split={verification.verificationSplit}
-              offsetX={verification.verificationOffsetX}
-              offsetY={verification.verificationOffsetY}
-              fileName={verification.verificationFileName}
-              alignmentScore={verification.alignmentQualityScore}
-              alignmentLabel={verification.alignmentQualityScore !== null ? alignmentQualityLabel(verification.alignmentQualityScore) : null}
-              alignmentMethod={verification.verificationAlignmentMethod}
-              autoAlignDelta={verification.verificationAutoAlignDelta}
-              scale={verification.verificationScale}
-              sourceType={verification.verificationSourceType}
-              videoDurationS={verification.verificationVideoDurationS}
-              sampleTimeS={verification.verificationSampleTimeS}
-              extractionInProgress={verification.verificationExtracting}
-              errorMessage={verification.verificationError}
-              canResample={verification.canResample}
-              canAutoAlign={verification.canAutoAlign}
-              videoCandidates={verification.verificationVideoCandidates}
-              selectedCandidateId={verification.verificationSelectedCandidateId}
-              bestCandidateId={verification.verificationBestCandidateId}
-              onSelectVideoCandidate={(candidateId) => {
-                if (!verification.verificationVideoFile) return;
-                const candidate = verification.verificationVideoCandidates.find((entry) => entry.id === candidateId);
-                if (!candidate) return;
-                verification.setVerificationSelectedCandidateId(candidateId);
-                verification.applyVideoCandidate(candidate, verification.verificationVideoFile.name);
-              }}
-              onAutoPickBestFrame={() => {
-                if (!verification.verificationBestCandidateId || !verification.verificationVideoFile) return;
-                const best = verification.verificationVideoCandidates.find((entry) => entry.id === verification.verificationBestCandidateId);
-                if (!best) return;
-                verification.setVerificationSelectedCandidateId(best.id);
-                verification.applyVideoCandidate(best, verification.verificationVideoFile.name);
-              }}
-              onSampleTimeChange={(value) => {
-                verification.setVerificationSampleTimeS(value);
-              }}
-              onResampleVideoFrame={() => {
-                verification.extractFromCurrentVideo(verification.verificationSampleTimeS ?? undefined);
-              }}
-              showHeatOverlay={verification.showDifferenceHeatOverlay}
-              snapshots={verification.snapshotsForCamera}
-              onToggle={verification.setVerificationEnabled}
-              onUpload={verification.handleUpload}
-              onSaveSnapshot={verification.handleSaveSnapshot}
-              onLoadSnapshot={verification.handleLoadSnapshot}
-              onDeleteSnapshot={verification.handleDeleteSnapshot}
-              onModeChange={verification.setVerificationMode}
-              onOpacityChange={verification.setVerificationOpacity}
-              onSplitChange={verification.setVerificationSplit}
-              onOffsetXChange={(value) => {
-                verification.setVerificationAlignmentMethod("manual");
-                verification.setVerificationAutoAlignDelta(null);
-                verification.setVerificationOffsetX(value);
-              }}
-              onOffsetYChange={(value) => {
-                verification.setVerificationAlignmentMethod("manual");
-                verification.setVerificationAutoAlignDelta(null);
-                verification.setVerificationOffsetY(value);
-              }}
-              onScaleChange={(value) => {
-                verification.setVerificationAlignmentMethod("manual");
-                verification.setVerificationAutoAlignDelta(null);
-                verification.setVerificationScale(value);
-              }}
-              onToggleHeatOverlay={verification.setShowDifferenceHeatOverlay}
-              onNudge={(dx, dy) => {
-                verification.handleNudge(dx, dy);
-              }}
-              onAutoAlign={verification.autoAlignVerification}
-              onResetAlign={() => {
-                verification.handleResetAlign();
-              }}
-              onClear={() => {
-                verification.handleClear();
-              }}
-            />
-          )}
           <BottomControlStrip
             mode={feedMode}
             onModeChange={setFeedMode}

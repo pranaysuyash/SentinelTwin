@@ -4,6 +4,7 @@ import { Layers, RefreshCcw } from "lucide-react";
 
 import { MAP_COLORS } from "@/components/map/map-colors";
 import { cn } from "@/lib/cn";
+import { UI_EXPOSURE_PRESETS, nextUiExposure } from "@/lib/ui-exposure";
 import { useStudioStore } from "@/store/studio-store";
 
 export function ViewControls() {
@@ -11,9 +12,23 @@ export function ViewControls() {
   const setCanvasMode = useStudioStore((s) => s.setCanvasMode);
   const resetCanvasView = useStudioStore((s) => s.resetCanvasView);
   const toggleViewSettingsOpen = useStudioStore((s) => s.toggleViewSettingsOpen);
+  const uiExposure = useStudioStore((s) => s.uiExposure);
+  const setUiExposure = useStudioStore((s) => s.setUiExposure);
+  const exposurePreset = UI_EXPOSURE_PRESETS[uiExposure];
 
   return (
     <div className="absolute right-3 top-16 z-10 flex flex-col gap-1">
+      {/* UI exposure dial (D-326): cycles Showcase → Focused → Full. Composes
+          the existing chrome toggles; nothing is removed, only re-defaulted. */}
+      <button
+        type="button"
+        onClick={() => setUiExposure(nextUiExposure(uiExposure))}
+        aria-label={`UI exposure: ${exposurePreset.label}. Click to cycle.`}
+        title={`${exposurePreset.label} — ${exposurePreset.description}`}
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 text-[7px] font-bold tracking-wide text-[#9aa8c4] transition-colors hover:bg-[#171e30] hover:text-white"
+      >
+        {exposurePreset.shortLabel}
+      </button>
       <button
         type="button"
         onClick={() => setCanvasMode("orbit_3d")}

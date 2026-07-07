@@ -77,7 +77,7 @@ describe("r3f-rendering presets", () => {
     expect(calls).toContain("toneMappingExposure");
     expect(calls).toContain("outputColorSpace");
     expect(gl.shadowMap.enabled).toBe(true);
-    expect(gl.shadowMap.type).toBe(THREE.PCFSoftShadowMap);
+    expect(gl.shadowMap.type).toBe(THREE.PCFShadowMap);
   });
 
   test("defaultShadowCaster scales frustum to scene size", () => {

@@ -96,7 +96,7 @@ export function VerificationPanel({
   const bestCandidate = bestCandidateId ? (videoCandidates.find((candidate) => candidate.id === bestCandidateId) ?? null) : null;
   const selectedCandidate = selectedCandidateId ? (videoCandidates.find((candidate) => candidate.id === selectedCandidateId) ?? null) : null;
   return (
-    <div className="absolute right-3 top-82.5 z-30 w-64 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
+    <div className="pointer-events-auto w-full rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
       <div className="flex items-center justify-between gap-2">
         <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">Footage Verification</div>
         <label className="inline-flex cursor-pointer items-center gap-1 text-[9px] text-[#c5d4ef]">

@@ -434,6 +434,73 @@ durable exploration document, as a launchpad for any new component touching crea
 - `Docs/exploration/EXPLORATION_MAP.md` (Thread 99 appended)
 - `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` (Q-019, Q-020, Q-021 added)
 
+## D-327 | 2026-07-07 | Canonical 4-Step Creation Flow Shell (Q-043 Resolved)
+
+**Decision:** The intake and creation lifecycle across Studio (`SiteIntakeHub`, `SiteDraftReview`, and onboarding steps) is standardized around a canonical layout wrapper: `CreationFlowShell.tsx`. This shell enforces a consistent 4-step stepper (1. Source Intake, 2. AI Compilation, 3. Review Draft, 4. Studio Testbed) and a unified header displaying provenance, maturity badges, and warning-gated confidence via `renderConfidence` (Trust Pass T1).
+
+**Rationale:**
+- Prior to this standardization, the creation flow suffered from UI fragmentation: switching from intake selection (`SiteIntakeHub`) to review (`SiteDraftReview`) caused jarring layout shifts, inconsistent header titles, and differing confidence formatting.
+- Establishing a single container component (`CreationFlowShell`) ensures visual continuity, predictable navigation (Back / Return to Studio), and adherence to the layout rhythm and density defined in `SentinelTwin_UI_Design_Pack.md` (OQ-UI-03 Option 4 canonical).
+- It unifies the intake lifecycle from `SiteIntakeSession` → `SiteTwinDraft` → `SiteDraftApprovalResult` without requiring parallel state models or unbounded rewrites.
+
+**Alternatives rejected:**
+- Maintaining separate header and layout implementations per intake stage: rejected because it creates visual drift, duplicates confidence gating logic, and violates UI design pack alignment.
+
+**Updated in this pass:**
+- `apps/studio/src/components/site-intake/CreationFlowShell.tsx` (new canonical shell)
+- `apps/studio/src/components/site-intake/SiteIntakeHub.tsx` (rewired to compose inside CreationFlowShell)
+- `apps/studio/src/components/site-intake/SiteDraftReview.tsx` (rewired to compose inside CreationFlowShell)
+- `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` (Q-043 resolved)
+
+---
+
+## D-325 | 2026-07-07 | Canonical Schema Deduplication via Re-Export Shim
+
+**Decision:** The frontend Studio application (`apps/studio/src/schema/security-scene.ts`) strictly re-exports the canonical `SecurityScene` schema and Zod definitions from `@sentineltwin/core`. No parallel type definitions or duplicate Zod schemas are permitted in `studio`, `viewer`, `editor`, `simulation`, or `report`.
+
+**Rationale:**
+- SentinelTwin is built around the fundamental rule that `SecurityScene` is the single source of truth across all packages, simulation engines, UI panels, and AI agent prompts (D-002).
+- Defining duplicate or parallel interfaces in consuming apps risks silent schema drift where frontend components expect properties that simulation engines or backend validators do not know about.
+- A 1-line re-export shim (`export * from "@sentineltwin/core";`) preserves clean local import paths (`@/schema/security-scene`) while guaranteeing 100% type and runtime schema identity across the entire monorepo.
+
+**Alternatives rejected:**
+- Maintaining a separate UI-specific scene interface in `studio`: rejected because it violates D-002 (no parallel scene representations) and causes type mismatches during serialization/simulation.
+
+**Updated in this pass:**
+- `apps/studio/src/schema/security-scene.ts` (verified re-export shim)
+- `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` (Q-042 resolved)
+
+---
+
+## D-326 | 2026-07-07 | App-wide UI exposure dial: showcase / focused / full chrome postures
+
+**Decision:** One store-backed dial (`uiExposure` in layout-slice, persisted) composes the chrome controls that already existed (`visibleComponents`, dock collapse, `clientDemoOptions`, hint bars) into three coherent postures: **showcase** (sales demos: canvas-first, docks collapsed, simplified labels, hints/compass/minimap quiet), **focused** (default working posture: contextual docks, hints on, debug lanes hidden), **full** (everything pinned, debug/governance lanes included). Presets live in `apps/studio/src/lib/ui-exposure.ts`; the switcher is the DEMO/WORK/PRO cycle button in `ViewControls`. The dial is a composer, not a lock — it applies a preset over the existing toggles and users can still override any single control afterwards. Nothing is removed at any level.
+
+**Why (the Pascal lesson):** pascalorg/editor's entire editor chrome is ~5 components — one toolbar, contextual tooltips, a save button, a scene loader. Its smoothness is not animation polish; it is that the default surface is one canvas + one toolbar and everything else is progressive disclosure. SentinelTwin had ~12 chrome regions on by default (docks, hint bar, compass, minimap, legend, status, banners), each individually well-built but collectively overwhelming — especially in a sales demo. The levers existed; the missing piece was a single composed default.
+
+**Adoption path:** any new chrome must consume `visibleComponents`/`uiExposure` gating rather than rendering unconditionally. Surfaces not yet gated (product home rails, launcher maturity chips) adopt the same dial incrementally — tracked as follow-up, not silently dropped.
+
+**Files:** `lib/ui-exposure.ts` (+ 4 unit tests), `store/slices/core/layout-slice.ts`, `workspace/overlays/ViewControls.tsx`.
+
+---
+
+## D-324 | 2026-07-07 | Native-style transform gizmo + quiet hover chrome (no feature removals)
+
+**Decision:** Object manipulation now uses an industry-standard gizmo (Unity/three.js editor convention): red X arrow and blue Z arrow for axis-constrained moves, green up-arrow for height, a circular ground ring for rotation, and a center puck for free move — with hover-highlighted parts and hover-only labels. The gizmo is presentation only: every part routes into the existing `TransformHandles` drag machinery (SnapEngine, preview, `updateNode` commit, undo, evidence trail). New `move_x` / `move_z` handle kinds add axis-constrained movement (`constrainMoveDelta`, unit-tested); all previous handle kinds (wall endpoints, polygon/path vertices, midpoint inserts, camera pitch, obstruction W/D scale) are preserved, with inserts and secondary handles dimmed until hovered. Sensors — previously not manipulable on canvas — get the same move gizmo, and sensors were added to the selection lookup.
+
+**Why not `THREE.TransformControls` / drei `<TransformControls>`:** the stock control mutates an `Object3D` matrix directly, which would bypass the snap engine, schema validation, store commit/undo, and the evidence ledger — and half our nodes are not single transforms (walls are segments, zones are polygons, obstruction height re-anchors the pivot). Building the native *look* (arrows + ring, screen-constant scale via `GizmoRig`, depth-test-off overdraw) on the canonical drag pipeline keeps determinism and topology editing intact.
+
+**Hover overload fixes (features kept, presentation gated):**
+- Heatmap cell explainability card is dwell-gated (~350 ms pointer rest), never shows while a mouse button is held (orbit/box-select/drag sweeps used to pop it constantly), and hides during transforms.
+- Handle labels appear only when the pointer is over a handle; midpoint insert handles render at 45% opacity until hovered.
+- `SelectionContextBar` already hid while transforming; unchanged.
+
+**Also in this pass:** `PCFSoftShadowMap` (deprecated in three r184, warned once per canvas) replaced with `PCFShadowMap` across `r3f-rendering.ts` and all `<Canvas shadows>` call sites; `PlanView2D` now measures its container immediately (ResizeObserver alone never fires in throttled background tabs); dev-only `window.__SENTINEL_STUDIO_STORE__` handle for DevTools/QA automation.
+
+**Files:** `editing/GizmoParts.tsx` (new), `editing/TransformHandles.tsx`, `editing/__tests__/gizmo-constraints.test.ts` (new), `WorkspaceCanvas.tsx`, `PlanView2D.tsx`, `lib/r3f-rendering.ts` (+ test), `store/studio-store.ts`, view canvases (shadow prop).
+
+---
+
 ## D-323 | 2026-07-07 | Three-mode canvas: 3D orbit, 2.5D orthographic, and a true-2D architectural plan built on the map subsystem
 
 **Decision:** The workspace canvas now has three explicit representations. `orbit_3d` (unchanged) and `topdown_2d` — now labeled **2.5D** in the UI because it is an orthographic top-down projection of the extruded 3D geometry — remain R3F surfaces. A new `plan_2d` mode renders a **true 2D architectural plan** through the existing SVG map subsystem (`MapCanvas` / `MapLayers` / `MapProjection`, the same layers behind the minimap and path map), extended with an `architectural` rendering pass: walls drawn at real thickness with a poché core, door swing arcs (hinge + quarter-circle, suppressed for locked doors), wall-aligned window glazing lines, camera FOV wedges, zone fills, and the coverage heatmap.

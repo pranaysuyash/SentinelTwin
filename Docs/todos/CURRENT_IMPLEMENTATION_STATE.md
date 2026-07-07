@@ -1,6 +1,22 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-07-07 (scene appearance customization layer — D-322; true-2D plan + 2.5D canvas modes — D-323)
+**Updated:** 2026-07-07 (appearance D-322; 2D/2.5D D-323; gizmo + quiet hover D-324; UI exposure dial D-326)
+
+## UI exposure dial (2026-07-07, D-326)
+
+- `uiExposure` (showcase/focused/full) in layout-slice, persisted; presets in `lib/ui-exposure.ts` compose the existing `visibleComponents` + dock collapse + `clientDemoOptions` toggles — a composer, not a lock; no chrome removed at any level ✅
+- DEMO/WORK/PRO cycle button in `ViewControls`; 4 preset-invariant unit tests; typecheck clean ✅
+- Verification caveat: exercised via unit tests + typecheck; the dev-preview tab served stale chunks at session end, so give the cycle button one manual click-through. Remaining follow-up: gate launcher/product-home chrome through the same dial.
+
+## Transform gizmo + hover-chrome quieting (2026-07-07, D-324)
+
+- Unity/three.js-editor-style gizmo replaces the labeled handle-sphere cluster: X/Z axis arrows (new axis-constrained `move_x`/`move_z` handle kinds), green height arrow, circular rotation ring, center free-move puck; screen-constant scale (`GizmoRig`), depth-test-off overdraw, hover-highlight + hover-only labels. All existing handle kinds preserved (wall endpoints, vertices, midpoint inserts — now dimmed until hover, pitch, W/D scale). Presentation-only: same SnapEngine/preview/commit/undo pipeline (see D-324 for why stock `TransformControls` was rejected) ✅
+- Sensors added to the selection lookup and given the move gizmo (previously not manipulable on canvas) ✅
+- Heatmap cell explainability card: 350 ms dwell gate, suppressed while any mouse button is down and while transforming — pointer sweeps no longer spam the card ✅
+- `PCFSoftShadowMap` deprecation warnings eliminated (three r184): `PCFShadowMap` across presets and canvases ✅
+- `PlanView2D` container measurement hardened (immediate measure + resize fallback; ResizeObserver alone never fires in throttled tabs) ✅
+- Dev-only `window.__SENTINEL_STUDIO_STORE__` handle for DevTools/QA automation ✅
+- Verified live: obstruction gizmo (arrows/ring/puck) and camera gizmo (with yaw tick) render and stay quiet until hover; typecheck clean; suite 1241/1242 pass (the one failure is `operational-evidence-archive.test.ts` 5s-timeout flakiness under full parallel load — passes in isolation).
 
 ## True-2D architectural plan + 2.5D canvas modes (2026-07-07, D-323)
 
@@ -119,6 +135,9 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Path replay now has a single shell-owned shared progress clock for map/camera/wall modes. The 3D workspace actor consumes replay state without publishing global progress from the R3F frame loop, and replay progress publication is bounded to 24 Hz to reduce app-wide re-render churn while preserving Camera View / Camera Wall / Timeline synchronization ✅
 - Path Replay now writes its play/pause, seek, reset, and path-change state back into the shared replay store, so Camera View and Camera Wall stay synchronized with the active replay progress instead of reading a local-only loop ✅
 - The replay timeline now also surfaces a follow-actor focus cue, lead-camera summary, coverage reach count, and replay status strip so the operator can read the current path state without leaving the timeline surface ✅
+- The replay timeline camera bars are now keyboard-accessible timeline sliders with arrow/page/home/end seek support, and the demo walkthrough’s temporary night/off-camera failure case is restored on exit so the workspace does not stay tainted by the demo-only stress scenario ✅
+- Path Replay transport chrome, Camera Wall live-feed badges, and Camera View focus/offline chrome now consume canonical UI tone/type tokens for the visible status chrome, reducing raw color drift in the replay surfaces ✅
+- The same replay/camera/wall surfaces now also share a canonical studio surface helper for their dense dark panels and focus chips, so the highest-traffic chrome reads consistently across the audited views without inventing a second global token system ✅
 
 ## Shared-workspace access / identity conflict (2026-05-29)
 
@@ -471,7 +490,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Camera View mode now also renders the replay actor in the POV with a screen-space detection box and tighter CCTV-style exposure tuning so the subject reads in-frame like the reference footage ✅
 - Camera Wall mode now uses an adaptive live feed grid (selected-first, active-first) with 1-6 camera feeds plus a 3D map overview slot, active/offline counters, and per-camera zone-quality summaries sourced from the current simulation result ✅
 - Compare mode now renders side-by-side baseline/proposed 3D panels with delta cards, issue/recommendation notes, a quality-over-time trend, and scenario notes ✅
-- Compare mode now exposes explicit Scenario A / Scenario B selectors so comparison pairs do not drift silently when new snapshots are saved ✅
+- Compare mode now exposes explicit Baseline / Proposed selectors so comparison pairs do not drift silently when new snapshots are saved ✅
 - Compare mode now exports JSON, Markdown, and HTML compare artifacts, can open the active replay view directly, and still supports captured visual evidence for report export ✅
 - MiniMap now uses the shared 2D map system with reusable projection/layers, zoom/fit controls, hover/selection sync, and replay actor visibility ✅
 - MiniMap now supports collapsed / compact / expanded / hover-preview states, shared map tokens, layer/display controls, legend, scale, north, and empty-map focus handoff to the 3D workspace ✅
@@ -493,7 +512,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Path replay now renders replay-proof overlays: legalized samples avoid obvious obstruction overlap, the scene shows camera frustums, and the floor is tiled so breach/collision explanations read directly from the canvas ✅
 - Full-canvas replay mode now uses the workspace shell, not the docked layout ✅
 - Compare mode now renders a full before/after comparison shell with scene panels, comparison cards, and lower analysis bands; verified in production build via `?mode=compare` ✅
-- Compare mode now keeps the selected snapshot pair explicit in the header and still uses canonical `saveSnapshot()` for Add Scenario ✅
+- Compare mode now keeps the selected snapshot pair explicit in the header and still uses canonical `saveSnapshot()` for adding a comparison snapshot ✅
 - Path replay and compare are deep-linkable via `?mode=replay` and `?mode=compare`, which makes visual QA deterministic in the local browser flow ✅
 - `apps/studio/next.config.ts` now allows local dev origins (`127.0.0.1`, `localhost`) so browser-based QA can hydrate the app cleanly in development ✅
 - Path replay now uses the night-stage theme in the production bundle, which matches the reference mood more closely and keeps the replay surface distinct from map/compare ✅

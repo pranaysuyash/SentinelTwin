@@ -1060,8 +1060,14 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                   // Intake Pass I2 — Back now steps back within the wizard
                   // instead of exiting (the prior behavior discarded in-progress
                   // work on every Back press). At step 0, Back exits to intake.
-                  onClick={() => setGuidedStep((current) => (current > 0 ? current - 1 : current))}
-                  disabled={guidedStep === 0}
+                  onClick={() => {
+                    if (guidedStep > 0) {
+                      setGuidedStep((current) => current - 1);
+                    } else {
+                      onClose?.();
+                    }
+                  }}
+                  disabled={guidedStep === 0 && !onClose}
                 >
                   Back
                 </button>

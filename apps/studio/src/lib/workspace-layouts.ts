@@ -188,6 +188,7 @@ function normalizeWorkspaceLayoutRecordCandidate(candidate: UnknownRecord): Work
     rightPanelMode: isRightPanelMode(candidate.rightPanelMode) ? candidate.rightPanelMode : presetSnapshot.rightPanelMode,
     bottomDrawerMode: isBottomDrawer(candidate.bottomDrawerMode) ? candidate.bottomDrawerMode : presetSnapshot.bottomDrawerMode,
     pinnedAnalysisModule: isBottomTab(candidate.pinnedAnalysisModule) ? candidate.pinnedAnalysisModule : presetSnapshot.pinnedAnalysisModule,
+    bottomTab: isBottomTab(candidate.bottomTab) ? candidate.bottomTab : presetSnapshot.bottomTab,
     overlayDensity: isOverlayDensity(candidate.overlayDensity) ? candidate.overlayDensity : presetSnapshot.overlayDensity,
     showDebugOverlays: coerceBoolean(candidate.showDebugOverlays, presetSnapshot.showDebugOverlays),
     clientDemoOptions: {

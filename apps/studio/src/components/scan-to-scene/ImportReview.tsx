@@ -2,7 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, ImageUp, Lock, RotateCcw } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   getFloorPlanDiagnostics,
@@ -62,6 +62,17 @@ export function ImportReview({
     | null
   >(null);
   const [lastActionMessage, setLastActionMessage] = useState<string | null>(null);
+  // Capture pre-calibration detector-derived dimensions on mount for audit display.
+  // Frozen once manual calibration is active; resets when a fresh result loads.
+  const preCalibrationSnapshot = useRef<{ widthM: number; depthM: number; heightM: number; scalePxM: number } | null>(null);
+  if (!preCalibrationSnapshot.current && !result.manualCalibration) {
+    preCalibrationSnapshot.current = {
+      widthM: result.roomDimensions.widthM,
+      depthM: result.roomDimensions.depthM,
+      heightM: result.roomDimensions.heightM,
+      scalePxM: result.scalePixelsPerMeter,
+    };
+  }
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -181,7 +192,7 @@ export function ImportReview({
     for (let i = 0; i < draftWalls.length; i += 1) {
       for (let j = i + 1; j < draftWalls.length; j += 1) {
         if (!areWallsNearlyDuplicate(draftWalls[i], draftWalls[j])) continue;
-        const keepIndex = wallLengthPx(draftWalls[i]) < wallLengthPx(draftWalls[j]) ? i : j;
+        const keepIndex = wallLengthPx(draftWalls[i]) < wallLengthPx(draftWalls[j]) ? j : i;
         next.add(keepIndex);
       }
     }
@@ -881,6 +892,21 @@ export function ImportReview({
               <span className="font-semibold text-emerald-200">User-locked footprint:</span>{" "}
               {result.roomDimensions.widthM.toFixed(2)}m × {result.roomDimensions.depthM.toFixed(2)}m × {result.roomDimensions.heightM.toFixed(2)}m
               {" "}at {result.scalePixelsPerMeter.toFixed(2)} px/m. The detector cannot overwrite these values.
+            </span>
+          </div>
+        ) : null}
+        {preCalibrationSnapshot.current && hasManualCalibration ? (
+          <div className="mb-3 flex items-start gap-1.5 rounded border border-amber-500/20 bg-amber-500/8 px-2 py-1.5 text-[10px] leading-5 text-amber-100/80">
+            <span className="text-amber-300/70">Audit:</span>
+            <span>
+              Detector-derived: {preCalibrationSnapshot.current.widthM.toFixed(2)}m × {preCalibrationSnapshot.current.depthM.toFixed(2)}m × {preCalibrationSnapshot.current.heightM.toFixed(2)}m
+              (scale: {preCalibrationSnapshot.current.scalePxM.toFixed(0)} px/m)
+              {" → "}
+              User-locked: {result.roomDimensions.widthM.toFixed(2)}m × {result.roomDimensions.depthM.toFixed(2)}m × {result.roomDimensions.heightM.toFixed(2)}m
+              (scale: {result.scalePixelsPerMeter.toFixed(0)} px/m)
+              {" — "}delta:{" "}
+              {result.scalePixelsPerMeter > preCalibrationSnapshot.current.scalePxM ? "+" : ""}
+              {(result.scalePixelsPerMeter - preCalibrationSnapshot.current.scalePxM).toFixed(0)} px/m
             </span>
           </div>
         ) : null}

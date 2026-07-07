@@ -57,6 +57,7 @@ export function WorkspacePresetSwitcher() {
   const showDebugOverlays = useStudioStore((s) => s.showDebugOverlays);
   const clientDemoOptions = useStudioStore((s) => s.clientDemoOptions);
   const focusMode = useStudioStore((s) => s.focusMode);
+  const bottomTab = useStudioStore((s) => s.bottomTab);
   const setPreset = useStudioStore((s) => s.setWorkspacePreset);
   const restore = useStudioStore((s) => s.restorePreviousLayout);
   const setViewSettingsOpen = useStudioStore((s) => s.setViewSettingsOpen);
@@ -85,6 +86,7 @@ export function WorkspacePresetSwitcher() {
     showDebugOverlays,
     clientDemoOptions,
     focusMode,
+    bottomTab,
   }), [
     workspacePreset,
     viewMode,
@@ -105,6 +107,7 @@ export function WorkspacePresetSwitcher() {
     showDebugOverlays,
     clientDemoOptions,
     focusMode,
+    bottomTab,
   ]);
 
   const active = PRESETS.find((entry) => entry.id === workspacePreset) ?? PRESETS[0]!;

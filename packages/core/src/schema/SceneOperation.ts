@@ -44,7 +44,7 @@ export const sceneOperationSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("add_obstruction"),
     position: z.tuple([z.number(), z.number(), z.number()]),
-    obstructionType: z.enum(["shelf", "cabinet", "counter", "pillar", "partition", "vehicle", "tree", "gate", "signboard", "storage_boxes", "glass_display", "curtain", "other"]),
+    obstructionType: z.enum(["shelf", "cupboard", "counter", "pillar", "partition", "vehicle", "tree", "gate", "signboard", "storage_boxes", "glass_display", "curtain", "other"]),
     label: z.string().optional(),
     dimensions: z.tuple([z.number(), z.number(), z.number()]).optional(),
     rotationYDeg: z.number().optional(),

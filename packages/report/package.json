@@ -19,6 +19,7 @@
   "scripts": {
     "build": "tsc -b --force",
     "typecheck": "pnpm --filter @sentineltwin/core build && tsc --noEmit",
+    "test": "bun test",
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {

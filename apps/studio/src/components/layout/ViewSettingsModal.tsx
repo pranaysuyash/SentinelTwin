@@ -71,6 +71,7 @@ const COMPONENT_TOGGLES = [
   { key: "control_hint_bar", label: "Control Hints", description: "Interaction hints" },
   { key: "camera_preset_picker", label: "Camera Presets", description: "Quick camera placement presets" },
   { key: "minimap", label: "Minimap", description: "Mini scene navigator" },
+  { key: "level_switcher", label: "Level Switcher", description: "Multi-floor level picker" },
 ] as const;
 
 const RIGHT_PANEL_MODES = [

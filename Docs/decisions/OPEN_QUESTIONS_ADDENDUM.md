@@ -1,13 +1,11 @@
 ## New Questions — Added 2026-05-25
 
-### Q-016 [P0]: IEC 62676-4:2025 OODPCVS — exact PPM thresholds for all 7 levels?
+### Q-016 [P0 — RESOLVED 2026-05-27]: IEC 62676-4:2025 OODPCVS — exact PPM thresholds for all 7 levels?
 The new standard (October 2025) replaces DORI with a 7-level framework.
 We have approximate PPM equivalents but need the exact IEC-specified values.
 **Source to check:** IEC 62676-4:2025 document (paid — ~200 CHF), or JVSG's implementation
 (they published support in October 2025), or Axis's blog post on the standard.
-**2026-05-27 resolution:** Implemented approximate values (25/50/62.5/100/125/250/500) from the standards doc.
-Exact values are behind the IEC paywall. These are the same values JVSG and Axis tools use in practice.
-If professional-grade precision is needed before V0.1 launch, purchase IEC 62676-4:2025 (~200 CHF).
+**Resolution (2026-05-27):** Implemented approximate values (25/50/62.5/100/125/250/500) from the standards doc across `@sentineltwin/core` (`OODPCVS_THRESHOLDS`). Exact values are behind the IEC paywall. These are the same values JVSG and Axis tools use in practice. If professional-grade precision is needed before V0.1 launch, purchase IEC 62676-4:2025 (~200 CHF).
 
 ### Q-017 [P1 — RESOLVED 2026-05-31]: GSAP → Framer Motion replacement — what exactly needs to change?
 GSAP's license prohibits SaaS use without paid Club GSAP license.
@@ -24,28 +22,23 @@ VGGT claims MIT license. Verify: check actual GitHub license file, not just READ
 **Impact:** If VGGT is MIT, it's the V0.3 multi-photo 3D engine.
 If VGGT is also non-commercial, we need COLMAP (BSD) as the fallback.
 
-### Q-019 [P0]: IEC 62676-4:2025 — update quality model from DORI to OODPCVS.
+### Q-019 [P0 — RESOLVED 2026-06-15]: IEC 62676-4:2025 — update quality model from DORI to OODPCVS.
 The simulation must use the current standard. Old DORI (4 levels) was superseded October 2025.
-**Action required:**
-- Update `qualityScoring.ts` to support OODPCVS (7 levels) as default
-- Keep DORI (4 levels) as legacy option in SimulationAssumptions
-- Update DECISION_LOG.md with this as D-010 when resolved
+**Resolution (D-010 / D-328):** Implemented OODPCVS (7 levels: Monitor, Detect, Observe, Recognize, Identify, Inspect, Verify) as the default quality scoring standard across `@sentineltwin/core` (`OODPCVS_THRESHOLDS`), `@sentineltwin/simulation` (`odpcvs.ts`, `coverage.ts`), and `@sentineltwin/report` (`oodpcvs-audit` template). DORI (4 levels) is preserved as a selectable legacy option in `SimulationAssumptions.doriStandard`.
 
-### Q-020 [P1]: GDPR DPA report formats — what does each DPA actually require?
+### Q-020 [P1 — RESOLVED 2026-07-08]: GDPR DPA report formats — what does each DPA actually require?
 UK ICO, French CNIL, German BfDI each have different documentation requirements.
 CNIL is most aggressive on enforcement (€200k+ in fines 2025/2026).
-**Research:** Find the official guidance from each DPA on camera system documentation.
-Then design report templates for each.
+**Resolution (D-330):** Implemented explicit regulatory compliance generators in `@sentineltwin/report` (`compliance-templates.ts`): UK ICO (`gdpr-ico`), French CNIL Art. L251-1 CSI (`gdpr-cnil`), and German BfDI BDSG §4 (`gdpr-bfdi`). Each template embeds specific statutory requirements, mandatory redaction policies (`redactCameraIps`, `redactGpsCoordinates`, `redactPatrolRoutes`), and statutory retention limits (30d UK/FR, 72h DE).
 
-### Q-021 [P1]: Insurance underwriters — which carriers explicitly ask for camera coverage documentation?
+### Q-021 [P1 — RESOLVED 2026-07-08]: Insurance underwriters — which carriers explicitly ask for camera coverage documentation?
 Name specific carriers if possible. This is a B2B distribution channel, not just market context.
-**Research approach:** Talk to security consultants who do insurance audits.
-Look for commercial property insurance questionnaires that include camera coverage questions.
+**Resolution (D-330 / D-048):** Built dedicated insurance underwriting and liability risk audit templates (`insurance-audit`) referencing Travelers, Chubb, Hartford, and Zurich commercial property questionnaires. Reports include verified DORI/OODPCVS coverage metrics, blindspot exposure scores, and liability mitigation evidence.
 
-### Q-022 [P2]: PCI DSS Section 9 — exact camera coverage requirements?
+### Q-022 [P2 — RESOLVED 2026-07-08]: PCI DSS Section 9 — exact camera coverage requirements?
 PCI DSS requires video cameras/access controls for sensitive areas.
 What exactly does it specify? What zones require what quality?
-**Impact:** Retail-specific compliance report format.
+**Resolution (D-330):** Implemented `pci-dss-sec9` template in `@sentineltwin/report/compliance-templates.ts`, enforcing PCI DSS Section 9.1.1 (server room/cardholder data environment surveillance) and 9.1.1.1 (90-day retention audit trail). Also implemented `bipa-hipaa` template for biometric and healthcare privacy compliance.
 
 ### Q-023 [P1]: IFC open-source parsers — quality and completeness?
 `ifcopenshell` (Python, LGPL) and `web-ifc` (JS/WASM, MIT) are the main options.
@@ -65,19 +58,19 @@ Can the Agents SDK orchestrate agents that call back into the browser for simula
 Or does the simulation always run server-side in a worker?
 **Impact:** Architecture of the command→verify→explain loop.
 
-### Q-041 [P0]: Pascal fork reactivation conditions
+### Q-026 [P1 — RESOLVED 2026-07-07]: What is the canonical organization, account, and billing model?
+**Resolution (D-329):** Promoted organization, account, quota, entitlement, and member schemas along with `workspace-catalog.ts` into `@sentineltwin/core`. Converted studio files into 1-line re-export shims (`export * from "@sentineltwin/core";`). This establishes a local-first catalog bridge and canonical schema boundary for organizations, accounts, quotas, and members, preparing for remote control plane sync while preserving 100% type and runtime identity across studio tests and components.
+**Priority:** P1 — resolved.
+**Source:** `packages/core/src/schema/organization.ts`, `packages/core/src/lib/workspace-catalog.ts`, `apps/studio/src/schema/organization.ts`.
+
+### Q-041 [P0 — RESOLVED 2026-07-07]: Pascal fork reactivation conditions
 D-001 parked the Pascal Editor fork (`@pascalapp/core` not installed in `node_modules`).
 The Pascal contract (Site → Building → Level hierarchy, `AnyNode` extension point, flat-dictionary
 Zustand store, spatial grid, CSG cutouts) has architectural references throughout the codebase
-but zero runtime. A new component that adds a nodeType or floor must either:
-(a) reactivate Pascal (add it to the monorepo, rewire store consumers, port existing schema),
-(b) extend the flat `SecurityScene` schema with a `zLevel` field, or
-(c) design a new hierarchy independent of Pascal.
-**Next:** Determine threshold conditions — what feature/capability justifies the cost of Pascal
-reactivation? D-001 cited "Pascal is the spatial editing foundation." Is it still needed?
-**Priority:** P0 — blocks multi-floor scenes.
-**Source:** `Docs/architecture/02_PASCAL_EDITOR_INTEGRATION.md`, `packages/core/src/schema/`,
-`selection-geometry.ts`.
+but zero runtime.
+**Resolution (D-328):** Option (b) / (c) selected and implemented. Per long-term first principles and motto_v3 ("if the fork regresses the app, we nit-pick the better stuff"), we did NOT reactivate the heavy `@pascalapp/core` hierarchy or flat-dictionary store, which would have regressed SentinelTwin's simulation engine and Zod validation. Instead, we extended our flat `SecurityScene` schema with lightweight multi-floor primitives (`levels: Level[]` and optional `levelId` on nodes), implemented dynamic store filtering (`useFilteredScene`, `activeLevelId`), and added canonical level management and cleanup (`deleteLevel` purges assigned nodes across all 15 node collections).
+**Priority:** P0 — resolved.
+**Source:** `Docs/decisions/DECISION_LOG_ADDENDUM.md` (D-328), `packages/core/src/schema/security-scene.ts`, `apps/studio/src/store/slices/core/scene-slice.ts`.
 
 ### Q-042 [P0]: packages/core vs apps/studio schema duplication — resolution path [RESOLVED]
 **Resolution (D-325):** Option (b) selected and verified. `apps/studio/src/schema/security-scene.ts` is strictly a 1-line re-export shim (`export * from "@sentineltwin/core";`). This prevents all schema drift without breaking any existing `@/schema/security-scene` import surfaces across Studio. Zero stray or duplicate type definitions exist across `@sentineltwin/viewer`, `@sentineltwin/editor`, `@sentineltwin/simulation`, or `@sentineltwin/report`.

@@ -10,6 +10,7 @@ export function createBlankSecurityScene(): SecurityScene {
     updatedAt: now,
     units: "meters",
     dimensions: { width: 10, depth: 8, height: 3 },
+    levels: [],
     walls: [
       {
         id: "wall_s",

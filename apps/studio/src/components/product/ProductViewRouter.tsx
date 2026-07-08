@@ -13,8 +13,26 @@ import { SiteDraftReview } from "@/components/site-intake/SiteDraftReview";
 import { AiLayoutDraftView } from "./AiLayoutDraftView";
 import { ReferenceSitesView } from "./ReferenceSitesView";
 import { SettingsView } from "./SettingsView";
+import { MobileEditGate } from "@/components/shared/MobileEditGate";
+import { MOBILE_EDIT_MEDIA_QUERY } from "@/lib/viewport-tiers";
 import type { SiteIntakeSource, SiteIntakeSession } from "@/lib/site-compiler";
 import type { SecurityScene } from "@/schema/security-scene";
+
+/**
+ * ProductViews that create or edit a scene. Below MOBILE_EDIT_BREAKPOINT_PX
+ * these render MobileEditGate instead of the real flow. `studio` is excluded
+ * here because most of its ViewModes (wall/replay/compare/report/analytics)
+ * are viewing surfaces — the "map" ViewMode is gated separately inside
+ * WorkspaceArea.
+ */
+const CREATION_PRODUCT_VIEWS = new Set<ProductView>([
+  "site_intake",
+  "scan_site",
+  "manual_builder",
+  "floor_plan_import",
+  "ai_layout_draft",
+  "site_draft_review",
+]);
 
 /**
  * All the orchestration handlers that page.tsx provides.
@@ -107,6 +125,17 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
   const activeRole = useStudioStore((s) => s.workspaceGovernance.activeRole);
   const currentResult = simulationResult ?? scene.simulation ?? null;
 
+  const compactViewport = useStudioStore((s) => s.compactViewport);
+  const setCompactViewport = useStudioStore((s) => s.setCompactViewport);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia(MOBILE_EDIT_MEDIA_QUERY);
+    const syncCompactViewport = () => setCompactViewport(media.matches);
+    syncCompactViewport();
+    media.addEventListener("change", syncCompactViewport);
+    return () => media.removeEventListener("change", syncCompactViewport);
+  }, [setCompactViewport]);
+
   // First-time user routing: if the user has no workspace and no cameras in the
   // active scene, send them to the Site Intake Hub (the canonical first
   // full-product entry screen per the design pack) instead of an empty dashboard.
@@ -136,6 +165,18 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
     const label = formatClock(currentResult?.computedAt);
     return label ? `Last run ${label}` : null;
   })();
+
+  // Mobile edit gate — creation/import/review flows require a tablet-or-larger
+  // screen. Viewing-only surfaces (product_home, studio's viewing ViewModes,
+  // reference_sites, settings) are unaffected.
+  if (compactViewport && CREATION_PRODUCT_VIEWS.has(productView)) {
+    return (
+      <MobileEditGate
+        actionLabel="Return to home"
+        onAction={() => navigate("product_home")}
+      />
+    );
+  }
 
   // Product Home — render the StudioDashboardHome as the product home
   if (productView === "product_home") {

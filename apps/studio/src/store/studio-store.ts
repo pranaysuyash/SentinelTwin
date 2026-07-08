@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { useMemo } from "react";
+import type { SecurityScene } from "@/schema/security-scene";
 
 // ─── Slice creators ───────────────────────────────────────────────────────────
 import {
@@ -135,6 +137,38 @@ export const useStudioStore = create<StudioStoreState>()((set, get, store) => ({
   ...createTelemetrySlice(set, get),
   ...createDebugTogglesSlice(set, get),
 }));
+
+/**
+ * Returns the canonical SecurityScene filtered according to the current multi-floor
+ * level display mode (Stacked vs Solo) and activeLevelId.
+ * When in "solo" mode with an activeLevelId selected, nodes not belonging to that level
+ * (or without a levelId assigned) are filtered out.
+ */
+export function useFilteredScene(): SecurityScene {
+  const scene = useStudioStore((s) => s.scene);
+  const activeLevelId = useStudioStore((s) => s.activeLevelId);
+  const levelDisplayMode = useStudioStore((s) => s.levelDisplayMode);
+
+  return useMemo(() => {
+    if (levelDisplayMode !== "solo" || activeLevelId === null) return scene;
+    const filterFn = <T extends { levelId?: string }>(items: T[]) =>
+      items.filter((item) => !item.levelId || item.levelId === activeLevelId);
+    return {
+      ...scene,
+      walls: filterFn(scene.walls),
+      doors: filterFn(scene.doors),
+      windows: filterFn(scene.windows),
+      cameras: filterFn(scene.cameras),
+      securityLights: filterFn(scene.securityLights),
+      sensors: filterFn(scene.sensors),
+      obstructions: filterFn(scene.obstructions),
+      criticalZones: filterFn(scene.criticalZones),
+      privacyZones: filterFn(scene.privacyZones),
+      paths: filterFn(scene.paths),
+      comments: filterFn(scene.comments),
+    };
+  }, [scene, activeLevelId, levelDisplayMode]);
+}
 
 // Dev-only debugging handle: lets DevTools / automated QA read and drive the
 // canonical store without going through the UI. Stripped from production.

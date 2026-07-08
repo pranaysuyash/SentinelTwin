@@ -826,6 +826,11 @@ export interface SceneSlice {
   updateGateNode: (id: string, patch: Partial<import("@/schema/security-scene").GateNode>) => void;
   addBollardLine: (bollard: import("@/schema/security-scene").BollardLine) => void;
   updateBollardLine: (id: string, patch: Partial<import("@/schema/security-scene").BollardLine>) => void;
+  // `id` is optional in the caller contract — the implementation generates
+  // a `lvl_` id when omitted (mirrors addNode-style factories elsewhere).
+  addLevel: (level: Omit<import("@/schema/security-scene").SceneLevel, "id"> & { id?: string }) => void;
+  updateLevel: (id: string, patch: Partial<import("@/schema/security-scene").SceneLevel>) => void;
+  deleteLevel: (id: string) => void;
 
   commitSceneChange: (
     updater: (scene: SecurityScene) => SecurityScene,
@@ -1091,9 +1096,13 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
   // ===== Node CRUD =====
 
   addNode: (node) => {
-    const { fixSandboxActive, fixSandboxDraftScene } = get();
+    const { fixSandboxActive, fixSandboxDraftScene, activeLevelId } = get();
+    const nodeWithLevel = {
+      ...node,
+      levelId: node.levelId ?? (activeLevelId || undefined),
+    };
     if (fixSandboxActive && fixSandboxDraftScene) {
-      const patchedDraft = insertNodeInScene(fixSandboxDraftScene, node);
+      const patchedDraft = insertNodeInScene(fixSandboxDraftScene, nodeWithLevel);
       const camerasChanged = compareSceneCollections(fixSandboxDraftScene.cameras, patchedDraft.cameras).added.length +
         compareSceneCollections(fixSandboxDraftScene.cameras, patchedDraft.cameras).updated.length;
       const zonesAffected = compareSceneCollections(fixSandboxDraftScene.criticalZones, patchedDraft.criticalZones).added.length +
@@ -1106,7 +1115,7 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
       persistFixSandboxState(true, get().fixSandboxBaselineScene!, patchedDraft);
       return;
     }
-    get().commitSceneChange((scene: SecurityScene) => insertNodeInScene(scene, node));
+    get().commitSceneChange((scene: SecurityScene) => insertNodeInScene(scene, nodeWithLevel));
   },
 
   updateNode: (id, patch) => {
@@ -1341,6 +1350,60 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
       ...scene,
       bollardLines: (scene.bollardLines ?? []).map((b) => b.id === id ? { ...b, ...patch } : b),
     }));
+  },
+  addLevel: (levelInput) => {
+    let newLevelId = "";
+    get().commitSceneChange((scene: SecurityScene) => {
+      const existingLevels = scene.levels ?? [];
+      const level = {
+        ...levelInput,
+        id: levelInput.id || `lvl_${Math.random().toString(36).slice(2, 9)}`,
+        order: levelInput.order ?? existingLevels.length,
+      };
+      newLevelId = level.id;
+      return {
+        ...scene,
+        levels: [...existingLevels, level],
+      };
+    });
+    if (newLevelId) {
+      get().setActiveLevelId(newLevelId);
+    }
+  },
+  updateLevel: (id, patch) => {
+    get().commitSceneChange((scene: SecurityScene) => ({
+      ...scene,
+      levels: (scene.levels ?? []).map((l) => l.id === id ? { ...l, ...patch } : l),
+    }));
+  },
+  deleteLevel: (id) => {
+    get().commitSceneChange((scene: SecurityScene) => {
+      const keepNode = <T extends { levelId?: string }>(node: T): boolean =>
+        node.levelId !== id;
+      return {
+        ...scene,
+        levels: (scene.levels ?? []).filter((l) => l.id !== id),
+        cameras: scene.cameras.filter(keepNode),
+        securityLights: scene.securityLights.filter(keepNode),
+        obstructions: scene.obstructions.filter(keepNode),
+        walls: scene.walls.filter(keepNode),
+        doors: scene.doors.filter(keepNode),
+        windows: scene.windows.filter(keepNode),
+        criticalZones: scene.criticalZones.filter(keepNode),
+        privacyZones: scene.privacyZones.filter(keepNode),
+        sensors: scene.sensors.filter(keepNode),
+        entryPoints: scene.entryPoints.filter(keepNode),
+        paths: scene.paths.filter(keepNode),
+        comments: scene.comments.filter(keepNode),
+        fenceSegments: scene.fenceSegments?.filter(keepNode),
+        gateNodes: scene.gateNodes?.filter(keepNode),
+        bollardLines: scene.bollardLines?.filter(keepNode),
+      };
+    });
+    if (get().activeLevelId === id) {
+      const remaining = get().scene.levels ?? [];
+      get().setActiveLevelId(remaining[0]?.id ?? null);
+    }
   },
 
   // ===== History / Undo / Redo =====

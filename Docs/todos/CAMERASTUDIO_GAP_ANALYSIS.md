@@ -1,6 +1,6 @@
 # Camera Studio — Build Gap Analysis
 
-**Updated:** 2026-05-25
+**Updated:** 2026-07-08 (Compliance Reporting Suite D-330; Canonical Org Catalog D-329)
 **Source of truth for spec:** `Docs/product/sentineltwin_camerastudio_fullcamerasuite_product_spec.md`
 **Source of truth for current state:** `apps/studio/src/`
 
@@ -266,7 +266,7 @@ Currently unknown if the buttons are functional.
 
 **[GAP-23] No report export**
 Report Lite now exposes Copy, Export Markdown, Export HTML, and Print actions directly in the handoff toolbar.
-**Status:** Resolved in the live shell.
+**Status:** Resolved in the live shell and enhanced with the Compliance Reporting Suite (D-330). Reports now support regulatory compliance templates (GDPR ICO/CNIL/BfDI, PCI DSS Section 9, BIPA/HIPAA) with automated policy-driven redaction (IPs, GPS, patrol routes, vulnerabilities).
 
 **[GAP-24] No keyboard shortcuts active**
 The spec lists keyboard shortcuts (V, C, B, L, P, Z, D, W, M, T, R, N, F, S).

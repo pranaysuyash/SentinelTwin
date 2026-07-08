@@ -22,8 +22,9 @@ import { EntryDoorChip } from "@/components/workspace/overlays/EntryDoorChip";
 import { NorthCompass } from "@/components/workspace/overlays/NorthCompass";
 import { ObstructionWarningCard } from "@/components/workspace/overlays/ObstructionWarningCard";
 import { ViewControls } from "@/components/workspace/overlays/ViewControls";
+import { LevelSwitcher } from "@/components/workspace/overlays/LevelSwitcher";
 import { TOOL_GHOST_COLORS, TOOL_ICONS, TOOL_LABELS } from "@/lib/tool-constants";
-import { useStudioStore } from "@/store/studio-store";
+import { useStudioStore, useFilteredScene } from "@/store/studio-store";
 import {
   SceneFloor,
   SceneWalls,
@@ -272,7 +273,7 @@ function getSelectionAnchor(node: AnyEditableNode): [number, number, number] | n
 }
 
 function SelectionHighlights() {
-  const scene = useStudioStore((s) => s.scene);
+  const scene = useFilteredScene();
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
 
   if (selectedNodeIds.length === 0) return null;
@@ -596,7 +597,7 @@ function CeilingLightMarkers({
 }: {
   onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
-  const scene = useStudioStore((s) => s.scene);
+  const scene = useFilteredScene();
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -663,7 +664,7 @@ function SensorMarkers({
 }: {
   onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
-  const scene = useStudioStore((s) => s.scene);
+  const scene = useFilteredScene();
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -863,7 +864,7 @@ function ObstructionWarning({
   position: [number, number, number];
 }) {
   const layers = useStudioStore((s) => s.layerVisibility);
-  const scene = useStudioStore((s) => s.scene);
+  const scene = useFilteredScene();
   const obsWarningsVisible = useStudioStore((s) => s.overlayFilters.obstructionWarnings);
   if (!layers.labels || !obsWarningsVisible) return null;
 
@@ -900,7 +901,7 @@ function SceneGeometry({
   onHeatmapHover: (cell: CoverageCellResult, event: ThreeEvent<PointerEvent>) => void;
   onHeatmapHoverClear: () => void;
 }) {
-  const scene = useStudioStore((s) => s.scene);
+  const scene = useFilteredScene();
   const result = useStudioStore((s) => s.simulationResult);
   const selected = useStudioStore((s) => s.selectedNodeId);
   const selectNode = useStudioStore((s) => s.selectNode);
@@ -1037,7 +1038,7 @@ function SceneGeometry({
 }
 
 function PathReplayActor() {
-  const scene = useStudioStore((s) => s.scene);
+  const scene = useFilteredScene();
   const activePathId = useStudioStore((s) => s.activePathId);
   const pathReplayPlaying = useStudioStore((s) => s.pathReplay.playing);
   const pathReplayProgress = useStudioStore((s) => s.pathReplay.progress);
@@ -1066,7 +1067,7 @@ function PathReplayActor() {
 function SceneFrameRig() {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls);
-  const scene = useStudioStore((s) => s.scene);
+  const scene = useFilteredScene();
   const canvasMode = useStudioStore((s) => s.canvasMode);
   const canvasViewResetTick = useStudioStore((s) => s.canvasViewResetTick);
   const focusRequest = useStudioStore((s) => s.focusScenePointRequest);
@@ -1147,7 +1148,7 @@ function ToolPlacementFloor({
   const addNode = useStudioStore((s) => s.addNode);
   const selectNode = useStudioStore((s) => s.selectNode);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
-  const scene = useStudioStore((s) => s.scene);
+  const scene = useFilteredScene();
   const criticalZoneTargetType = useStudioStore((s) => s.criticalZoneTargetType);
   const sensorPlacementType = useStudioStore((s) => s.sensorPlacementType);
   const editor = useStudioStore((s) => s.editor);
@@ -1890,7 +1891,7 @@ const HEATMAP_CARD_DWELL_MS = 350;
 
 function HeatmapCellExplainabilityCard() {
   const hover = useStudioStore((s) => s.heatmapHover);
-  const scene = useStudioStore((s) => s.scene);
+  const scene = useFilteredScene();
   const heatmapMode = useStudioStore((s) => s.heatmapMode);
   const editorMode = useStudioStore((s) => s.editor.editorMode);
   // Dwell gate: the card only appears once the pointer rests on a cell.
@@ -2012,7 +2013,7 @@ function HeatmapCellExplainabilityCard() {
 
 export function WorkspaceCanvas() {
   const envMode = useStudioStore((s) => s.environmentMode);
-  const scene = useStudioStore((s) => s.scene);
+  const scene = useFilteredScene();
   const canvasMode = useStudioStore((s) => s.canvasMode);
   const visibleComponents = useStudioStore((s) => s.visibleComponents);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
@@ -2178,6 +2179,7 @@ export function WorkspaceCanvas() {
       {visibleComponents.north_compass ? <NorthCompass /> : null}
       {visibleComponents.viewport_controls ? <ViewControls /> : null}
       {visibleComponents.control_hint_bar ? <ControlHintBar /> : null}
+      {visibleComponents.level_switcher ? <LevelSwitcher /> : null}
       <HeatmapCellExplainabilityCard />
       <EditorStatusBanner />
       <ObjectContextMenu

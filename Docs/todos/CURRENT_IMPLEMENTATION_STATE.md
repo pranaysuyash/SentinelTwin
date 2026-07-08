@@ -1,6 +1,25 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-07-07 (appearance D-322; 2D/2.5D D-323; gizmo + quiet hover D-324; UI exposure dial D-326)
+**Updated:** 2026-07-08 (LevelSwitcher exposure-gating fix + merged-tree validation D-331; compliance reporting D-330; organization catalog D-329; appearance D-322; 2D/2.5D D-323; gizmo + quiet hover D-324; UI exposure dial D-326)
+
+## LevelSwitcher exposure-gating fix + merged-tree validation (2026-07-08, D-331)
+
+- `level_switcher` added as a `WorkspaceComponentId`; the multi-floor picker (D-328) now follows the same showcase/focused/full rule as compass/hint-bar chrome instead of always rendering — capability unchanged (still the only `addLevel` entry point, still on by default in focused/full), only the default-clutter problem is fixed ✅
+- Found and fixed real breakage surfaced by re-running `tsc --noEmit` + `bun test` against the full merged working tree (this session's D-322/323/324/326 work plus the parallel session's D-325/327/328/329/330, already committed at `9fb0b20`): a hand-typed `SecurityScene` test fixture missing the new required `levels` field, a new multi-floor test using a nonexistent `label` camera field and under-specified camera literals (now built via the canonical `createCameraNode()` factory), an `addLevel` type signature that didn't match its own optional-id implementation, and a stale `packages/core/dist` composite build breaking `packages/report` typecheck (rebuilt via the existing `tsc -b --force`, D-286) ✅
+- Verified live in the browser: DEMO/WORK/PRO exposure cycle correctly shows/hides the "All Floors" level chip; full suite 1251/1251 pass across studio + core + report; typecheck clean in all three packages ✅
+
+## Compliance Reporting Suite & Policy-Driven Redaction (2026-07-08, D-330)
+
+- `compliance-templates.ts` in `@sentineltwin/report`: canonical compliance registry with standard generators for GDPR (`gdpr-ico`, `gdpr-cnil`, `gdpr-bfdi`), PCI DSS Section 9 (`pci-dss-sec9`), and BIPA/HIPAA (`bipa-hipaa`). Includes statutory requirements, mandatory redaction policies, and retention limits ✅
+- Policy-driven redaction engine (`applyPolicyRedaction`): enforces redaction rules (`redactCameraIps`, `redactGpsCoordinates`, `redactPatrolRoutes`, `maskVulnerabilities`) automatically during `buildReportData` and `buildCompareReportData` when visibility is not `internal` ✅
+- Studio UI upgrades: `ReportView.tsx` features a Regulatory Compliance Selector, interactive Redaction Policy toggles, and real-time template preview; `ReportLiteTab.tsx` displays active regulatory mandates and redaction badges ✅
+- Verified: 10 automated unit tests in `compliance-templates.test.ts` passing; full monorepo build and test suite clean ✅
+
+## Canonical Organization & Workspace Catalog (2026-07-07, D-329)
+
+- Promoted canonical organization, account, quota, entitlement, and member schemas along with `workspace-catalog.ts` from `apps/studio` into `@sentineltwin/core` ✅
+- Converted `apps/studio/src/schema/organization.ts`, `apps/studio/src/schema/SceneOperation.ts`, and `apps/studio/src/lib/workspace-catalog.ts` into 1-line re-export shims (`export * from "@sentineltwin/core";`) per D-325 canonical schema deduplication ✅
+- Verified: 100% type identity across core and studio; full suite pass ✅
 
 ## UI exposure dial (2026-07-07, D-326)
 

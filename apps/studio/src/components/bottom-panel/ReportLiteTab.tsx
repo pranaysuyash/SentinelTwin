@@ -25,6 +25,7 @@ import {
   getReportStandardTemplates,
   getReportVisibilityProfile,
   type ReportAudience,
+  type ReportRedactionPolicy,
   type ReportStandardTemplateId,
   type ReportVisibility,
 } from "@sentineltwin/report";
@@ -110,6 +111,12 @@ export function ReportLiteTab() {
   const [reportAudience, setReportAudience] = useState<ReportAudience>(() => getDefaultReportAudience(workspaceGovernance.activeRole));
   const [reportVisibility, setReportVisibility] = useState<ReportVisibility>("internal");
   const [reportTemplateId, setReportTemplateId] = useState<ReportStandardTemplateId>(defaultTemplateId);
+  const [redactionPolicy, setRedactionPolicy] = useState<ReportRedactionPolicy>({
+    redactCameraIps: false,
+    redactGpsCoordinates: false,
+    redactPatrolRoutes: false,
+    maskVulnerabilities: false,
+  });
   const [presetNameDraft, setPresetNameDraft] = useState(() => {
     const defaultAudience = getDefaultReportAudience(workspaceGovernance.activeRole);
     return `${getReportAudienceProfile(defaultAudience).label} Evidence`;
@@ -126,8 +133,19 @@ export function ReportLiteTab() {
     [reportCatalogState.customPresets],
   );
   const selectedCatalogPreset = useMemo(
-    () => findReportCatalogPresetById(reportCatalog, reportCatalogState.selectedPresetId),
-    [reportCatalog, reportCatalogState.selectedPresetId],
+    () =>
+      findReportCatalogPresetBySelection(reportCatalog, {
+        audience: reportAudience,
+        visibility: reportVisibility,
+        templateId: reportTemplateId,
+      }) ??
+      findReportCatalogPresetById(reportCatalog, reportCatalogState.selectedPresetId) ??
+      null,
+    [reportAudience, reportCatalog, reportCatalogState.selectedPresetId, reportTemplateId, reportVisibility],
+  );
+  const availablePresets = useMemo(
+    () => reportCatalog.filter((preset) => preset.id !== selectedCatalogPreset?.id),
+    [reportCatalog, selectedCatalogPreset?.id],
   );
   const availableTemplates = useMemo(() => getReportStandardTemplates(), []);
   const singleReport = useMemo(
@@ -138,9 +156,10 @@ export function ReportLiteTab() {
             audience: reportAudience,
             visibility: reportVisibility,
             templateId: reportTemplateId,
+            redactionPolicy,
           })
         : null),
-    [operationalEvidenceEvents, reportAudience, reportTemplateId, reportVisibility, result, scene],
+    [operationalEvidenceEvents, reportAudience, reportTemplateId, reportVisibility, redactionPolicy, result, scene],
   );
   const singleExportReport = useMemo(
     () => (singleReport ? applyReportVisibility(singleReport, reportVisibility) : null),
@@ -305,10 +324,10 @@ export function ReportLiteTab() {
         snapshotA.simulation,
         { ...snapshotB.scene, snapshots: [], scenarios: [] } as never,
         snapshotB.simulation,
-        { audience: reportAudience, visibility: reportVisibility, templateId: reportTemplateId },
+        { audience: reportAudience, visibility: reportVisibility, templateId: reportTemplateId, redactionPolicy },
       );
     },
-    [hasCompareSimulation, reportAudience, reportTemplateId, reportVisibility, snapshotA, snapshotB],
+    [hasCompareSimulation, reportAudience, reportTemplateId, reportVisibility, redactionPolicy, snapshotA, snapshotB],
   );
   const compareExportReport = useMemo(
     () => (compareReport ? applyReportVisibility(compareReport as never as Parameters<typeof applyReportVisibility>[0], reportVisibility) as never as Parameters<typeof exportCompareAsMarkdown>[0] : null),
@@ -719,6 +738,45 @@ export function ReportLiteTab() {
               <option value="privacy_safe">Privacy safe</option>
             </select>
           </label>
+          <div className="flex flex-wrap items-center gap-2 rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
+            <span className="font-semibold text-[#c7d0e4]">Redactions:</span>
+            <label className="inline-flex items-center gap-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!redactionPolicy.redactCameraIps}
+                onChange={(e) => setRedactionPolicy((p) => ({ ...p, redactCameraIps: e.target.checked }))}
+                className="rounded border-[#24283a] bg-[#111521] text-sky-500 focus:ring-0"
+              />
+              <span>Camera IPs</span>
+            </label>
+            <label className="inline-flex items-center gap-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!redactionPolicy.redactGpsCoordinates}
+                onChange={(e) => setRedactionPolicy((p) => ({ ...p, redactGpsCoordinates: e.target.checked }))}
+                className="rounded border-[#24283a] bg-[#111521] text-sky-500 focus:ring-0"
+              />
+              <span>GPS Coordinates</span>
+            </label>
+            <label className="inline-flex items-center gap-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!redactionPolicy.redactPatrolRoutes}
+                onChange={(e) => setRedactionPolicy((p) => ({ ...p, redactPatrolRoutes: e.target.checked }))}
+                className="rounded border-[#24283a] bg-[#111521] text-sky-500 focus:ring-0"
+              />
+              <span>Patrol Routes</span>
+            </label>
+            <label className="inline-flex items-center gap-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!redactionPolicy.maskVulnerabilities}
+                onChange={(e) => setRedactionPolicy((p) => ({ ...p, maskVulnerabilities: e.target.checked }))}
+                className="rounded border-[#24283a] bg-[#111521] text-sky-500 focus:ring-0"
+              />
+              <span>Mask Vulnerabilities</span>
+            </label>
+          </div>
           <div className="rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
             <div className="font-semibold uppercase tracking-[0.14em] text-[#c7d0e4]">Audience Policy</div>
             <div className="mt-0.5 text-[#6f7f9d]">
@@ -845,6 +903,29 @@ export function ReportLiteTab() {
               {reportVisibility === "privacy_safe"
                 ? "Operational evidence, confidence notes, and truth ladder details are fully redacted in Privacy Safe mode."
                 : "Confidence notes are softened and some operational evidence is truncated in Shared mode."}
+            </div>
+          </div>
+        ) : null}
+        {((reportMode === "single" ? singleExportReport : compareExportReport)?.template?.regulatoryMandates?.length ?? 0) > 0 ? (
+          <div className="mb-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-3">
+            <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-indigo-300">Regulatory Mandates Active</div>
+            <div className="grid gap-1.5 text-[10px] text-indigo-200/90">
+              {((reportMode === "single" ? singleExportReport : compareExportReport)?.template?.regulatoryMandates ?? []).map((m) => (
+                <div key={`${m.authority}-${m.articleOrSection}`} className="rounded-lg border border-indigo-500/20 bg-[#101521]/80 px-2.5 py-1.5">
+                  <span className="font-semibold text-indigo-200">[{m.authority} {m.articleOrSection}] {m.keyRequirement}</span> · Retention: {m.retentionLimitDays}d
+                  {m.mandatoryRedactions.length > 0 ? (
+                    <div className="mt-0.5 text-[9px] text-indigo-300/80">Mandatory Redactions: {m.mandatoryRedactions.join(", ")}</div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {((reportMode === "single" ? singleExportReport : compareExportReport)?.redactionsApplied?.length ?? 0) > 0 ? (
+          <div className="mb-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3">
+            <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-rose-300">Policy Redactions Applied</div>
+            <div className="text-[10px] text-rose-200/90">
+              {((reportMode === "single" ? singleExportReport : compareExportReport)?.redactionsApplied ?? []).join(" · ")}
             </div>
           </div>
         ) : null}

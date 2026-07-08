@@ -16,6 +16,7 @@ const dummyScene: SecurityScene = {
   updatedAt: 0,
   units: "meters",
   dimensions: { width: 10, depth: 10, height: 3 },
+  levels: [],
   walls: [],
   doors: [],
   windows: [],

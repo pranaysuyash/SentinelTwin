@@ -12,7 +12,7 @@ import {
   createSensorNode,
 } from "@/lib/node-factory";
 import { TOOL_LABELS } from "@/lib/tool-constants";
-import { useStudioStore } from "@/store/studio-store";
+import { useStudioStore, useFilteredScene } from "@/store/studio-store";
 import { PlanContextMenu } from "./PlanContextMenu";
 
 /**
@@ -31,7 +31,7 @@ import { PlanContextMenu } from "./PlanContextMenu";
  * for inspection, duplication, and counterfactual testing.
  */
 export function PlanView2D() {
-  const scene = useStudioStore((s) => s.scene);
+  const scene = useFilteredScene();
   const result = useStudioStore((s) => s.simulationResult);
   const layerVisibility = useStudioStore((s) => s.layerVisibility);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);

@@ -434,6 +434,31 @@ durable exploration document, as a launchpad for any new component touching crea
 - `Docs/exploration/EXPLORATION_MAP.md` (Thread 99 appended)
 - `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` (Q-019, Q-020, Q-021 added)
 
+## D-328 | 2026-07-07 | Multi-Floor Architecture & Pascal Fork Resolution (Q-041 Resolved)
+
+**Decision:** SentinelTwin implements multi-floor building support by extending its native flat `SecurityScene` schema with a `levels: Level[]` collection and optional `levelId?: string` assignments across all 15 node collections (`cameras`, `walls`, `doors`, `windows`, `obstructions`, `criticalZones`, `privacyZones`, `sensors`, `lights`, `paths`, `comments`, `entryPoints`, `fences`, `gates`, `bollards`). We explicitly reject reactivating the parked `@pascalapp/core` fork or adopting its heavy Site → Building → Level hierarchy and flat-dictionary store. In Studio, multi-floor editing is governed by `activeLevelId` and `activeLevelMode` ("solo" | "stacked") in `layout-slice`, with `useFilteredScene()` providing dynamic store filtering. When an operator deletes a floor via `deleteLevel`, all assigned nodes across all 15 collections are cleanly purged to prevent orphan geometry and maintain store integrity.
+
+**Rationale:**
+- Per long-term first principles and motto_v3 ("if the fork regresses the app, we nit-pick the better stuff"), reactivating the full Pascal Editor fork would have introduced massive architectural churn, breaking SentinelTwin's deterministic raycasting engine, Zod validation schemas, and React Three Fiber rendering pipeline.
+- Extending our flat schema with `levels` and `levelId` achieves full multi-floor capability (floor switching, solo/stacked visualization, per-floor node attribution) while preserving 100% backward compatibility for single-floor scenes (where `levelId` is undefined).
+- Automatic level assignment in `addNode` and comprehensive multi-collection cleanup in `deleteLevel` ensure that operators editing specific floors never create orphan nodes or experience referential integrity failures.
+
+**Alternatives rejected:**
+- Reactivating `@pascalapp/core` and porting SentinelTwin to its flat-dictionary store: rejected because it would regress the simulation engine and violate our typed Zod schema foundation.
+- Designing a separate multi-scene hierarchy where each floor is a distinct `SecurityScene`: rejected per D-002 (single source of truth); multi-floor risk models must compute vertical stairwells, outdoor coverage, and whole-building metrics across floors in a single scene document.
+
+**Updated in this pass:**
+- `packages/core/src/schema/security-scene.ts` (levels collection and levelId assignments)
+- `apps/studio/src/store/slices/core/scene-slice.ts` (addLevel, deleteLevel cleanup, addNode level attribution)
+- `apps/studio/src/store/slices/core/layout-slice.ts` (activeLevelId, activeLevelMode)
+- `apps/studio/src/store/studio-store.ts` (useFilteredScene selector)
+- `apps/studio/src/components/workspace/overlays/LevelSwitcher.tsx` (UI switcher)
+- `packages/core/src/__tests__/multi-floor-schema.test.ts` (verified schema tests)
+- `apps/studio/src/schema/__tests__/multi-floor-store.test.ts` (verified store & cleanup tests)
+- `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` (Q-041 resolved)
+
+---
+
 ## D-327 | 2026-07-07 | Canonical 4-Step Creation Flow Shell (Q-043 Resolved)
 
 **Decision:** The intake and creation lifecycle across Studio (`SiteIntakeHub`, `SiteDraftReview`, and onboarding steps) is standardized around a canonical layout wrapper: `CreationFlowShell.tsx`. This shell enforces a consistent 4-step stepper (1. Source Intake, 2. AI Compilation, 3. Review Draft, 4. Studio Testbed) and a unified header displaying provenance, maturity badges, and warning-gated confidence via `renderConfidence` (Trust Pass T1).
@@ -468,6 +493,9 @@ durable exploration document, as a launchpad for any new component touching crea
 
 **Updated in this pass:**
 - `apps/studio/src/schema/security-scene.ts` (verified re-export shim)
+- `apps/studio/src/schema/organization.ts` (verified re-export shim)
+- `apps/studio/src/schema/SceneOperation.ts` (verified re-export shim)
+- `apps/studio/src/lib/workspace-catalog.ts` (verified re-export shim)
 - `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` (Q-042 resolved)
 
 ---
@@ -481,6 +509,24 @@ durable exploration document, as a launchpad for any new component touching crea
 **Adoption path:** any new chrome must consume `visibleComponents`/`uiExposure` gating rather than rendering unconditionally. Surfaces not yet gated (product home rails, launcher maturity chips) adopt the same dial incrementally — tracked as follow-up, not silently dropped.
 
 **Files:** `lib/ui-exposure.ts` (+ 4 unit tests), `store/slices/core/layout-slice.ts`, `workspace/overlays/ViewControls.tsx`.
+
+---
+
+## D-331 | 2026-07-08 | LevelSwitcher (D-328 multi-floor) gated through the D-326 exposure dial
+
+**Decision:** `LevelSwitcher.tsx` — the multi-floor level picker landed by the parallel D-328 (Q-041) work — was mounting unconditionally as permanent top-left canvas chrome, including for the overwhelming majority of scenes that have zero or one floor. Added `level_switcher` as a new `WorkspaceComponentId`, wired it into `BASE_COMPONENT_VISIBILITY`, the `showcase`/`focused`/`full` exposure presets (hidden in showcase, visible otherwise — same treatment as `north_compass`/`control_hint_bar`), the View Settings component-toggle list, and gated the `WorkspaceCanvas.tsx` mount behind `visibleComponents.level_switcher`.
+
+**Why this couldn't just be deleted or hidden outright:** `LevelSwitcher` is the *only* UI entry point that calls the `addLevel` store action (confirmed via full-codebase search before touching it). Hiding it unconditionally for the zero-level case would have silently removed the only way to create a building's first floor — a real feature regression, not a chrome cleanup. Gating through the existing exposure system (built earlier the same day, D-326) preserves 100% of the capability while fixing the clutter: `focused`/`full` show it by default so the capability stays fully discoverable, and `showcase` hides it along with the other ambient chrome for sales demos, exactly as D-326 already specified for exactly this situation ("any new chrome must consume visibleComponents/uiExposure gating rather than rendering unconditionally").
+
+**How this was found:** discovered during pre-commit due diligence on a large parallel-session diff (D-325 schema dedup, D-327 CreationFlowShell, D-328 multi-floor, D-329 org/catalog model, D-330 compliance reporting, all committed in `9fb0b20` before this session's own work landed) rather than by request — the diff review itself is documented as its own practice going forward for any commit that merges concurrent-agent work.
+
+**Also fixed in the same pass (real, not cosmetic, breakage found via `tsc --noEmit` + `bun test` re-run against the full merged tree):**
+- `apps/studio/src/lib/__tests__/live-evidence.test.ts`: added the now-required `levels: []` field to a hand-typed `SecurityScene` literal (D-328 made `levels` a non-optional field on the inferred TS type via Zod `.default([])`).
+- `apps/studio/src/schema/__tests__/multi-floor-store.test.ts`: removed a `label` field that doesn't exist on `CameraNode` (schema field is `name`), and replaced three hand-rolled, under-specified camera literals with the canonical `createCameraNode()` factory from `@sentineltwin/core` (avoids re-inventing the ~20-field camera contract per test and stays correct as the schema evolves).
+- `apps/studio/src/store/slices/core/scene-slice.ts`: `addLevel`'s declared type required `id`, but the implementation always generates one when omitted (`levelInput.id || \`lvl_${...}\``) — narrowed the type to `Omit<SceneLevel, "id"> & { id?: string }` so the signature is honest about the real contract instead of the test having to fabricate an id the implementation would ignore.
+- `packages/report`: `tsc --noEmit` was failing on stale composite-build references into `packages/core/dist` — resolved by rebuilding via the already-documented `tsc -b --force` (D-286), not a new workaround.
+
+**Files:** `apps/studio/src/store/slices/core/layout-slice.ts`, `apps/studio/src/lib/workspace-layouts.ts`, `apps/studio/src/lib/ui-exposure.ts` (+ 1 new test), `apps/studio/src/components/layout/ViewSettingsModal.tsx`, `apps/studio/src/components/workspace/WorkspaceCanvas.tsx`, `apps/studio/src/lib/__tests__/live-evidence.test.ts`, `apps/studio/src/schema/__tests__/multi-floor-store.test.ts`, `apps/studio/src/store/slices/core/scene-slice.ts`.
 
 ---
 
@@ -612,3 +658,50 @@ durable exploration document, as a launchpad for any new component touching crea
 - `apps/studio/src/components/__tests__/camera-inspector.test.ts`
 - `apps/studio/src/components/__tests__/studio-shell-shortcuts.test.ts`
 - `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md`
+
+---
+
+## D-329 | 2026-07-07 | Canonical Organization, Account, and Workspace Catalog Model
+
+**Decision:** Promoted the canonical organization, account, quota, entitlement, and member schemas along with the workspace catalog model (`workspace-catalog.ts`) from `apps/studio` into `@sentineltwin/core`. Converted `apps/studio/src/schema/organization.ts`, `apps/studio/src/schema/SceneOperation.ts`, and `apps/studio/src/lib/workspace-catalog.ts` into 1-line re-export shims (`export * from "@sentineltwin/core";`).
+
+**Rationale:**
+- Establishes a single source of truth across the monorepo for organization boundaries, quotas, and workspace catalogs without breaking existing frontend import surfaces.
+- Guarantees 100% type and runtime identity across studio tests and components while preparing for server-side control plane sync and backend validation.
+- Aligns with D-325 (Canonical Schema Deduplication) by ensuring that zero duplicate type definitions or Zod schemas exist across the frontend and core libraries.
+
+**Alternatives rejected:**
+- Maintaining duplicate organization/catalog schemas in studio: rejected because it risks schema drift between client-side catalogs and backend control planes.
+- Creating parallel backend-only types: rejected because D-002 and D-325 mandate unified canonical definitions.
+
+**Updated in this pass:**
+- `packages/core/src/schema/organization.ts` (new canonical location)
+- `packages/core/src/lib/workspace-catalog.ts` (new canonical location)
+- `packages/core/src/index.ts` (exports organization and workspace-catalog)
+- `apps/studio/src/schema/organization.ts` (verified re-export shim)
+- `apps/studio/src/schema/SceneOperation.ts` (verified re-export shim)
+- `apps/studio/src/lib/workspace-catalog.ts` (verified re-export shim)
+
+---
+
+## D-330 | 2026-07-08 | Compliance Reporting Suite & Policy-Driven Redaction (Q-020/021/022 Resolved)
+
+**Decision:** Created a canonical compliance reporting suite (`compliance-templates.ts` in `@sentineltwin/report`) with standard templates for GDPR (UK ICO, French CNIL Art. L251-1 CSI, German BfDI BDSG §4), PCI DSS Section 9, and BIPA/HIPAA. Integrated a policy-driven redaction engine (`applyPolicyRedaction`) that enforces redaction rules (`redactCameraIps`, `redactGpsCoordinates`, `redactPatrolRoutes`, `maskVulnerabilities`) across both single and comparison reports when visibility is not set to `internal`. In Studio, upgraded `ReportView.tsx` with a Regulatory Compliance Selector and interactive Redaction Policy toggles.
+
+**Rationale:**
+- Physical security digital twins contain sensitive operational metadata (IP addresses, GPS coordinates, patrol routes, blindspot vulnerabilities) that cannot be safely exported or shared with external contractors, auditors, or regulators without redaction.
+- Hardcoding or manually editing markdown reports creates compliance risk and error-prone redactions. A deterministic redaction engine embedded in `buildReportData` and `buildCompareReportData` ensures that redaction rules are automatically applied based on template mandates and report visibility.
+- Aligns with IEC 62676-4:2025 and privacy regulations by providing pre-validated regulatory mandates and retention limits directly in exported reports.
+
+**Alternatives rejected:**
+- Client-side only UI redaction: rejected because exported JSON/HTML/markdown data would still contain unredacted sensitive metadata. Redaction must happen during report generation in `@sentineltwin/report`.
+- Ad-hoc regex stripping in export functions: rejected because structured report data (e.g. `cameras` array, `issues` ledger, `zoneChanges`) needs field-level sanitization while preserving structural integrity for formatting and comparison.
+
+**Updated in this pass:**
+- `packages/report/src/compliance-templates.ts` (new canonical compliance registry and redaction engine)
+- `packages/report/src/index.ts` (integrated compliance templates, buildReportData/buildCompareReportData redaction hooks, CompareReportData template field)
+- `apps/studio/src/components/view/ReportView.tsx` (Regulatory Compliance Selector, Redaction Policy toggles, template preview)
+- `apps/studio/src/components/bottom-panel/ReportLiteTab.tsx` (Regulatory Mandates Active banner, redaction badges, safe template access)
+- `packages/report/src/__tests__/compliance-templates.test.ts` (verified regression test suite)
+- `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` (Q-020, Q-021, Q-022 resolved)
+

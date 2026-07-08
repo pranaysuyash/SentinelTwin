@@ -23,6 +23,7 @@ export const WORKSPACE_COMPONENT_IDS: WorkspaceComponentId[] = [
   "right_dock",
   "bottom_dock",
   "minimap",
+  "level_switcher",
 ];
 
 export const ANALYSIS_MODULE_IDS: BottomTab[] = [
@@ -269,6 +270,7 @@ const BASE_COMPONENT_VISIBILITY: Record<WorkspaceComponentId, boolean> = {
   right_dock: true,
   bottom_dock: true,
   minimap: true,
+  level_switcher: true,
 };
 
 export const DEFAULT_LAYERS: LayerVisibility = {

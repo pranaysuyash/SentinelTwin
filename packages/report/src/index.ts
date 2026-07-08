@@ -5,6 +5,25 @@ export type {
   RedundancyMatrixCameraRow,
   RedundancyMatrixReport,
 } from "./redundancy-matrix";
+export type {
+  ReportRedactionPolicy,
+  ComplianceTemplateId,
+  RegulatoryMandate,
+  ReportStandardTemplateDefinition,
+} from "./compliance-templates";
+export {
+  STANDARD_TEMPLATE_DEFINITIONS,
+  isComplianceTemplateId,
+  applyPolicyRedaction,
+} from "./compliance-templates";
+import {
+  getReportStandardTemplateProfile as getProfileFromCompliance,
+  getAllStandardTemplates as getAllTemplatesFromCompliance,
+  applyPolicyRedaction,
+  type ReportRedactionPolicy,
+  type ReportStandardTemplateDefinition,
+  type RegulatoryMandate,
+} from "./compliance-templates";
 
 import type { SecurityScene, SimulationResult, DoriQuality, CoverageEntropySummary, CoverageUncertaintySummary, CoveragePostureVariationSummary } from "@sentineltwin/core";
 
@@ -24,7 +43,12 @@ export type ReportStandardTemplateId =
   | "insurer-brief"
   | "privacy-review"
   | "oodpcvs-audit"
-  | "dori-audit";
+  | "dori-audit"
+  | "gdpr-uk-ico"
+  | "gdpr-cnil"
+  | "gdpr-bdsg"
+  | "pci-dss-sec9"
+  | "bipa-hipaa";
 
 export type ReportExportPreset = {
   id: string;
@@ -72,6 +96,7 @@ export type ReportData = {
     focusAreas: string[];
     evidenceAnchors: string[];
     sections: { title: string; detail: string }[];
+    regulatoryMandates?: RegulatoryMandate[];
   };
   summary: Record<string, number>;
   zones: ReportZoneEntry[];
@@ -108,17 +133,22 @@ export type ReportData = {
   findings: unknown[];
   visibility: ReportVisibility;
   _isCompareSide?: boolean;
+  redactionPolicy?: ReportRedactionPolicy;
+  redactionsApplied?: string[];
 };
 
 export type CompareReportData = {
   before: ReportData;
   after: ReportData;
   options: ReportBuildOptions;
+  template?: ReportData["template"];
   deltas: { totalCoveragePctDelta: number; zonesPassedDelta: number };
   zoneChanges: ReportZoneChange[];
+  redactionPolicy?: ReportRedactionPolicy;
+  redactionsApplied?: string[];
 };
 
-type ReportBuildOptions = {
+export type ReportBuildOptions = {
   audience?: ReportAudience;
   templateId?: ReportStandardTemplateId;
   title?: string;
@@ -126,6 +156,7 @@ type ReportBuildOptions = {
   operationalEvidenceEvents?: ReportEvidenceEntry[];
   temporalProfile?: { vulnerabilityWindowCount?: number; safestPeriods?: unknown[]; worstCoverage?: number; [key: string]: unknown };
   adversarialPath?: { exposureScore?: number; detectionProbability?: number; totalDistance?: number; waypoints?: unknown[]; [key: string]: unknown };
+  redactionPolicy?: ReportRedactionPolicy;
 };
 
 type ReportZoneEntry = {
@@ -294,11 +325,11 @@ export function getReportVisibilityProfile(visibility: ReportVisibility) {
 }
 
 export function getReportStandardTemplateProfile(templateId: ReportStandardTemplateId) {
-  return { id: templateId, ...TEMPLATE_META[templateId] };
+  return getProfileFromCompliance(templateId) as ReportStandardTemplateDefinition & { id: ReportStandardTemplateId };
 }
 
 export function getReportStandardTemplates() {
-  return Object.entries(TEMPLATE_META).map(([id, value]) => ({ id: id as ReportStandardTemplateId, ...value }));
+  return getAllTemplatesFromCompliance().map((val) => ({ ...val, id: val.id as ReportStandardTemplateId }));
 }
 
 export function getReportExportPresets(): ReportExportPreset[] {
@@ -492,14 +523,9 @@ const VISIBILITY_META: Record<string, { label: string; summary: string; framing:
   privacy_safe: { label: "Privacy Safe", summary: "Strict redaction profile for external disclosure.", framing: "Maximum privacy preservation and minimal disclosure." },
 };
 
-const TEMPLATE_META: Record<string, { title: string; summary: string }> = {
-  "general-audit": { title: "General Audit", summary: "Default comprehensive security audit narrative." },
-  "installer-proposal": { title: "Installer Proposal", summary: "Install-focused recommendations and billable scope." },
-  "insurer-brief": { title: "Insurer Brief", summary: "Risk and mitigation delta summary for underwriting." },
-  "privacy-review": { title: "Privacy Review", summary: "Privacy-governance framing with controlled evidence." },
-  "oodpcvs-audit": { title: "OODPCVS Audit", summary: "IEC 62676-4:2025 OODPCVS-aligned audit framing." },
-  "dori-audit": { title: "DORI Audit", summary: "Legacy DORI-aligned audit framing." },
-};
+const TEMPLATE_META: Record<string, { title: string; summary: string }> = Object.fromEntries(
+  getAllTemplatesFromCompliance().map((t) => [t.id, { title: t.title, summary: t.summary }])
+);
 
 const SOURCE_LABELS: Record<string, string> = {
   demo: "Reference Scene", manual: "Manual Build", import: "JSON Import",
@@ -605,9 +631,18 @@ export function buildReportData(scene: SecurityScene, simulationResult: Simulati
                   : "Security Audit Evidence Report");
   const policy = getAudiencePolicy(audience);
   const template = (() => {
-    const info = { "oodpcvs-audit": { title: "OODPCVS Audit", standardLabel: "IEC 62676-4:2025", summary: "Full OODPCVS assessment against IEC 62676-4:2025", audienceHint: "Regulatory and compliance audiences", focusAreas: ["coverage", "zones", "oodpcvs"], evidenceAnchors: ["zone-analysis", "camera-analysis"], sections: [{ title: "Overview", detail: "Scene overview and scope" }, { title: "Scope", detail: "Assessment scope" }, { title: "Normative References", detail: "IEC 62676-4:2025" }, { title: "OODPCVS Assessment", detail: "OODPCVS quality levels" }, { title: "Coverage Analysis", detail: "Coverage metrics per camera and zone" }, { title: "Zone Requirements", detail: "Zone-level quality requirements" }, { title: "Conclusions", detail: "Findings and recommendations" }] }, "dori-audit": { title: "DORI Audit", standardLabel: "IEC 62676-4:2014 (DORI)", summary: "DORI assessment for legacy compliance", audienceHint: "Legacy system audits and upgrade planning", focusAreas: ["dori", "coverage", "zones"], evidenceAnchors: ["dori-assessment", "zone-analysis"], sections: [{ title: "Overview", detail: "DORI scene overview" }, { title: "DORI Assessment", detail: "DORI quality levels per camera" }, { title: "Coverage Analysis", detail: "Coverage metrics" }, { title: "Zone Requirements", detail: "Zone-level DORI requirements" }, { title: "Conclusions", detail: "Summary" }] }, "general-audit": { title: "General Audit", standardLabel: "IEC 62676-4:2025", summary: "General security audit report", audienceHint: "General-purpose security review", focusAreas: ["coverage", "zones"], evidenceAnchors: ["coverage-analysis", "zone-analysis"], sections: [{ title: "Overview", detail: "Scene overview" }, { title: "Coverage Analysis", detail: "Coverage metrics" }, { title: "Zone Requirements", detail: "Zone-level requirements" }, { title: "Conclusions", detail: "Findings" }] } };
-    const t = info[templateId as keyof typeof info] ?? info["general-audit"];
-    return { id: templateId, title: t.title, standardLabel: t.standardLabel, summary: t.summary, audienceHint: t.audienceHint, focusAreas: t.focusAreas, evidenceAnchors: t.evidenceAnchors, sections: t.sections };
+    const t = getProfileFromCompliance(templateId);
+    return {
+      id: templateId,
+      title: t.title,
+      standardLabel: t.standardLabel,
+      summary: t.summary,
+      audienceHint: t.audienceHint,
+      focusAreas: t.focusAreas,
+      evidenceAnchors: t.evidenceAnchors,
+      sections: t.sections,
+      regulatoryMandates: t.regulatoryMandates,
+    };
   })();
   const temporalTwin = (() => {
     if (!opt.operationalEvidenceEvents) return undefined;
@@ -628,7 +663,7 @@ export function buildReportData(scene: SecurityScene, simulationResult: Simulati
   const nodeCount = [...(scene?.walls ?? []), ...(scene?.cameras ?? []), ...(scene?.obstructions ?? []), ...(scene?.criticalZones ?? [])].length;
   const visibilityLabel = opt.visibility === "privacy_safe" ? "Privacy Safe" : opt.visibility === "shared" ? "Shared" : "Internal";
   const sa = scene?.assumptions ?? {};
-  return {
+  const res: ReportData = {
     sceneId: scene?.id ?? "scene", siteName: scene?.name ?? "Untitled Scene", title, createdAt: Date.now(), generatedAt: Date.now(),
     simulation: sim, options: opt, dimensions: scene?.dimensions ?? { width: 0, depth: 0, height: 0 },
     audience, audienceLabel: AUDIENCE_META[audience]?.label ?? audience,
@@ -648,6 +683,21 @@ export function buildReportData(scene: SecurityScene, simulationResult: Simulati
     adversarialPath: opt.adversarialPath ? { exposureScore: opt.adversarialPath.exposureScore ?? 0, detectionProbability: opt.adversarialPath.detectionProbability ?? 0, totalDistance: opt.adversarialPath.totalDistance ?? 0, waypoints: opt.adversarialPath.waypoints ?? [] } : undefined,
     findings: [], sceneName: scene?.name ?? "Untitled Scene", visibility: opt.visibility ?? "internal",
   };
+
+  const effectivePolicy: ReportRedactionPolicy = {
+    ...opt.redactionPolicy,
+  };
+  if (template.regulatoryMandates && opt.visibility !== "internal") {
+    for (const mandate of template.regulatoryMandates) {
+      for (const red of mandate.mandatoryRedactions) {
+        if (red === "redactCameraIps") effectivePolicy.redactCameraIps = true;
+        if (red === "redactGpsCoordinates") effectivePolicy.redactGpsCoordinates = true;
+        if (red === "redactPatrolRoutes") effectivePolicy.redactPatrolRoutes = true;
+        if (red === "maskVulnerabilities") effectivePolicy.maskVulnerabilities = true;
+      }
+    }
+  }
+  return applyPolicyRedaction(res, effectivePolicy);
 }
 
 /** @deprecated Use buildCompareReportData instead */
@@ -662,11 +712,25 @@ export function buildCompareReportData(sceneA: SecurityScene, resultA: Simulatio
     const zb = zonesB.find((z) => z.zoneId === za.zoneId);
     return { zoneId: za.zoneId, zoneLabel: za.label ?? za.zoneId, changed: (za.status === "pass") !== (zb?.status === "pass"), beforeQuality: za.actualQuality ?? "none", afterQuality: zb?.actualQuality ?? "none", beforeStatus: za.status ?? "fail", afterStatus: zb?.status ?? "fail", coveringCamerasBefore: za.coveringCameras ?? [], coveringCamerasAfter: zb?.coveringCameras ?? [] };
   });
-  return {
-    before, after, options: options ?? {},
+  const res: CompareReportData = {
+    before, after, options: options ?? {}, template: before.template,
     deltas: { totalCoveragePctDelta: Number(((resultB?.totalCoveragePct ?? 0) - (resultA?.totalCoveragePct ?? 0)).toFixed(1)), zonesPassedDelta: zonesB.filter((z) => z.status === "pass").length - zonesA.filter((z) => z.status === "pass").length },
     zoneChanges,
   };
+  const templateId = options?.templateId ?? "general-audit";
+  const template = getReportStandardTemplateProfile(templateId);
+  const effectivePolicy: ReportRedactionPolicy = { ...options?.redactionPolicy };
+  if (template.regulatoryMandates && options?.visibility !== "internal") {
+    for (const mandate of template.regulatoryMandates) {
+      for (const red of mandate.mandatoryRedactions) {
+        if (red === "redactCameraIps") effectivePolicy.redactCameraIps = true;
+        if (red === "redactGpsCoordinates") effectivePolicy.redactGpsCoordinates = true;
+        if (red === "redactPatrolRoutes") effectivePolicy.redactPatrolRoutes = true;
+        if (red === "maskVulnerabilities") effectivePolicy.maskVulnerabilities = true;
+      }
+    }
+  }
+  return applyPolicyRedaction(res, effectivePolicy);
 }
 
 export function applyReportVisibility<T extends ReportData>(report: T, visibility: ReportVisibility): T {
@@ -732,7 +796,13 @@ export function exportAsMarkdown(report: ReportData): string {
   lines.push("## Issues");
   if ((report.issues ?? []).length > 0) for (const issue of report.issues ?? []) lines.push(`- **[${issue.severity}]** ${issue.description}`);
   lines.push("");
-  if (report.template) lines.push("## Standards Template", `**Template ID:** ${report.template.id ?? "general-audit"}`, `**Standard:** ${report.template.standardLabel ?? "IEC 62676-4:2025"}`, `**Sections:** ${(report.template.sections ?? []).join(", ")}`, "");
+  if (report.template) {
+    lines.push("## Standards Template", `**Template ID:** ${report.template.id ?? "general-audit"}`, `**Standard:** ${report.template.standardLabel ?? "IEC 62676-4:2025"}`, `**Sections:** ${(report.template.sections ?? []).map((s: any) => typeof s === "string" ? s : s.title ?? "").join(", ")}`);
+    if (report.template.regulatoryMandates && report.template.regulatoryMandates.length > 0) {
+      lines.push(`**Regulatory Mandates:** ${report.template.regulatoryMandates.map((m: any) => `[${m.code}] ${m.title}`).join("; ")}`);
+    }
+    lines.push("");
+  }
   lines.push("## Recommendations");
   if ((report.recommendations ?? []).length > 0) for (const r of report.recommendations ?? []) lines.push(`- ${r.description} (${r.costCategory}, ${r.verified ? "verified" : "not verified"})`);
   lines.push("");
@@ -769,6 +839,7 @@ export function exportAsHtml(report: ReportData): string {
   let cr = ""; for (const c of report.cameras ?? []) cr += `<tr><td>${esc(c.id)}</td><td>${c.coveragePct}%</td><td>${esc(c.bestZoneQuality)}</td><td>${c.zonesFailed}</td></tr>`;
   let ih = ""; for (const issue of report.issues ?? []) ih += `<li><strong>[${esc(issue.severity)}]</strong> ${esc(issue.description)}</li>`;
   let eeh = ""; for (const entry of et.recentEntries ?? []) eeh += `<tr><td><a id="${entry.anchorId ?? "evidence-0"}">${esc(entry.title ?? "")}</a></td><td>${esc(entry.description ?? "")}</td><td>${esc(String(entry.confidence ?? "high"))}</td></tr>`;
+  const mandatesHtml = report.template?.regulatoryMandates ? `<ul>${report.template.regulatoryMandates.map((m: any) => `<li><strong>[${esc(m.code)}]</strong> ${esc(m.title)}: ${esc(m.description)}</li>`).join("")}</ul>` : "";
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${esc(report.siteName ?? report.sceneName ?? "Untitled Scene")} — Report</title></head><body>
 <h1>${esc(report.title ?? "Security Audit Report")}</h1><p>Scene: ${esc(report.siteName ?? report.sceneName ?? "Untitled Scene")}</p>
 <h2>Compliance</h2><p><strong>IEC 62676-4:2025</strong></p><p>${s.zonesPassing === s.zonesTotal ? "Meets modeled zone requirements" : "Does not fully meet modeled zone requirements"}</p>
@@ -777,10 +848,10 @@ ${report.commercialContext ? `<h2>Legal and Commercial Framing</h2><p>${esc(repo
 <h2>Audience Policy</h2><p>Disclosure Level: ${report.audiencePolicy?.disclosureLevel ?? "full"}</p><p>Visible Sections: ${(report.audiencePolicy?.visibleSections ?? []).join(", ")}</p><p>Withheld Sections: ${(report.audiencePolicy?.withheldSections ?? []).join(", ")}</p>
 <h2>Visibility &amp; Redaction</h2><p>Profile: ${report.visibility ?? "internal"}</p>
 <h2>Buyer Drill-Through</h2><p>Inspection shortcuts for security auditors and integrators.</p>
-<h2>Standards Template</h2><p>Template: ${report.template?.id ?? "general-audit"}</p><p>Template Depth: ${(report.template?.sections ?? []).length} sections</p>
+<h2>Standards Template</h2><p>Template: ${report.template?.id ?? "general-audit"}</p><p>Template Depth: ${(report.template?.sections ?? []).length} sections</p>${mandatesHtml}
 <h2>Zone Analysis</h2>${zt || "<p>No critical zones defined</p>"}
 <h2>Camera Analysis</h2><table><thead><tr><th>Camera</th><th>Coverage</th><th>Best Zone Quality</th><th>Zones Failed</th></tr></thead><tbody>${cr}</tbody></table>
-${ih ? `<h2>Issues</h2><ul>${ih}</ul>` : ""}
+<h2>Issues</h2><ul>${ih}</ul>
 <h2>Provenance</h2><p>Source: ${esc(report.provenance?.sceneSourceLabel ?? "Unknown")}</p><p>Source history: ${(report.provenance?.sourceNotes ?? []).length} notes</p>
 <h2>Truth Ladder</h2><p>Reviewed Nodes: ${tl.reviewedNodeCount ?? 0}/${tl.nodeCount ?? 0}</p><p>Verified: ${tl.verifiedNodeCount ?? 0}</p>
 <h2>Operational Evidence</h2><p>Scene ID: ${esc(sid)}</p><p>Sensor-related evidence: ${et.sensorEvidenceCount ?? 0}</p><p>Evidence links: ${et.evidenceEntryCount ?? 0} evidence entries</p>

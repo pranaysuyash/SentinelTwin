@@ -48,6 +48,7 @@ function buildBaseHeader(report: Record<string, any>): string[] {
 }
 
 function buildStandardsTemplate(report: Record<string, any>): string[] {
+  const mandates = report.template?.regulatoryMandates ?? [];
   return [
     "## Standards Template",
     `- Template: ${report.template.title}`,
@@ -59,7 +60,13 @@ function buildStandardsTemplate(report: Record<string, any>): string[] {
     ...(report.template.sections.length > 0
       ? [
           "- Template Depth:",
-          ...report.template.sections.map((section) => `  - ${section.title}: ${section.detail}`),
+          ...report.template.sections.map((section: any) => `  - ${section.title}: ${section.detail}`),
+        ]
+      : []),
+    ...(mandates.length > 0
+      ? [
+          "- Regulatory Mandates:",
+          ...mandates.map((m: any) => `  - **[${m.code}]** ${m.title}: ${m.description} (Evidence: ${m.evidenceRequirement})`),
         ]
       : []),
     "",
@@ -74,6 +81,8 @@ function buildVisibilityAndRedaction(report: Record<string, any>): string[] {
         ? "Shared exports keep the audit spine, but redact confidence notes and trim evidence detail."
         : "Privacy-safe exports remove operational evidence, provenance notes, and temporal trace detail.";
 
+  const appliedRedactions: string[] = report.redactionsApplied ?? [];
+
   return [
     "## Visibility and Redaction",
     `- Audience: ${report.audienceLabel}`,
@@ -82,6 +91,12 @@ function buildVisibilityAndRedaction(report: Record<string, any>): string[] {
     `- Visible sections: ${report.audiencePolicy.visibleSections.join(", ")}`,
     `- Withheld sections: ${report.audiencePolicy.withheldSections.length > 0 ? report.audiencePolicy.withheldSections.join(", ") : "none"}`,
     `- Redaction effect: ${redactionEffect}`,
+    ...(appliedRedactions.length > 0
+      ? [
+          "- Applied Compliance Redactions:",
+          ...appliedRedactions.map((r) => `  - ${r}`),
+        ]
+      : []),
     "",
   ];
 }

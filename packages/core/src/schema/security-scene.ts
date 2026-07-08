@@ -197,6 +197,7 @@ export const wallNodeSchema = z.object({
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
   collisionLayer: collisionLayerSchema.optional(),
+  levelId: z.string().optional(),
 });
 
 export const doorAccessControlSchema = z.object({
@@ -223,6 +224,7 @@ export const doorNodeSchema = z.object({
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
   collisionLayer: collisionLayerSchema.optional(),
+  levelId: z.string().optional(),
 });
 
 export type DoorAccessControl = z.infer<typeof doorAccessControlSchema>;
@@ -243,6 +245,7 @@ export const windowNodeSchema = z.object({
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
   collisionLayer: collisionLayerSchema.optional(),
+  levelId: z.string().optional(),
 });
 
 export const sceneUpdateSuggestionSchema = z.object({
@@ -358,6 +361,7 @@ export const cameraNodeSchema = z.object({
     maxSpeedKph: z.number().nonnegative(),
     mountAngle: z.enum(["front_on", "side_on", "angled"]),
   }).optional(),
+  levelId: z.string().optional(),
 });
 
 export const securityLightNodeSchema = z.object({
@@ -388,6 +392,7 @@ export const securityLightNodeSchema = z.object({
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
   collisionLayer: collisionLayerSchema.optional(),
+  levelId: z.string().optional(),
 });
 
 export const obstructionNodeSchema = z.object({
@@ -434,6 +439,7 @@ export const obstructionNodeSchema = z.object({
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
   collisionLayer: collisionLayerSchema.optional(),
+  levelId: z.string().optional(),
 });
 
 export const criticalZoneNodeSchema = z.object({
@@ -462,6 +468,7 @@ export const criticalZoneNodeSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  levelId: z.string().optional(),
 });
 
 export const privacyZoneNodeSchema = z.object({
@@ -475,6 +482,7 @@ export const privacyZoneNodeSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  levelId: z.string().optional(),
 });
 
 export const commentNodeSchema = z.object({
@@ -491,6 +499,7 @@ export const commentNodeSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  levelId: z.string().optional(),
 });
 
 export const sensorNodeSchema = z.object({
@@ -515,6 +524,7 @@ export const sensorNodeSchema = z.object({
   geometryValidity: geometryValiditySchema.default("valid"),
   collisionLayer: collisionLayerSchema.optional(),
   notes: z.string().optional(),
+  levelId: z.string().optional(),
 });
 
 export const entryPointNodeSchema = z.object({
@@ -526,6 +536,7 @@ export const entryPointNodeSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  levelId: z.string().optional(),
 });
 
 export const pathPointSchema = z.object({
@@ -550,6 +561,7 @@ export const scenarioPathSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  levelId: z.string().optional(),
 });
 
 export const simulationAssumptionsSchema = z.object({
@@ -1323,6 +1335,7 @@ export const fenceSegmentSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  levelId: z.string().optional(),
 });
 
 export const gateNodeSchema = z.object({
@@ -1341,6 +1354,7 @@ export const gateNodeSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  levelId: z.string().optional(),
 });
 
 export const bollardLineSchema = z.object({
@@ -1356,6 +1370,7 @@ export const bollardLineSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  levelId: z.string().optional(),
 });
 
 export type FenceSegment = z.infer<typeof fenceSegmentSchema>;
@@ -1487,6 +1502,16 @@ export const temporalSecurityProfileSchema = z.object({
   computedAt: z.number().int().nonnegative(),
 });
 
+export const sceneLevelSchema = z.object({
+  id: z.string().startsWith("lvl_"),
+  name: z.string(),
+  elevation: z.number().default(0), // elevation offset in meters/feet from ground zero
+  height: z.number().positive().optional(), // ceiling height for this level
+  order: z.number().int().optional(), // 0 = ground floor, 1 = floor 2, -1 = basement
+});
+
+export type SceneLevel = z.infer<typeof sceneLevelSchema>;
+
 const securitySceneBaseSchema = z.object({
   id: z.string().startsWith("scene_"),
   name: z.string(),
@@ -1498,6 +1523,7 @@ const securitySceneBaseSchema = z.object({
     depth: z.number().positive(),
     height: z.number().positive(),
   }),
+  levels: z.array(sceneLevelSchema).default([]),
   walls: z.array(wallNodeSchema),
   doors: z.array(doorNodeSchema).default([]),
   windows: z.array(windowNodeSchema).default([]),

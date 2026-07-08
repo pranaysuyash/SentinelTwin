@@ -59,7 +59,8 @@ export type WorkspaceComponentId =
   | "left_dock"
   | "right_dock"
   | "bottom_dock"
-  | "minimap";
+  | "minimap"
+  | "level_switcher";
 export type BottomTab =
   | "outcome"
   | "metrics"
@@ -346,6 +347,10 @@ export interface LayoutSlice {
   compactViewport: boolean;
   /** App-wide chrome posture (D-326): showcase (demo) / focused (default) / full (pro). */
   uiExposure: UiExposureLevel;
+  activeLevelId: string | null;
+  levelDisplayMode: "stacked" | "solo";
+  setActiveLevelId: (levelId: string | null) => void;
+  setLevelDisplayMode: (mode: "stacked" | "solo") => void;
 
   setViewMode: (mode: ViewMode) => void;
   /** Apply an exposure preset over the existing chrome toggles (composer, not a lock). */
@@ -430,6 +435,8 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
     recentIssueChangeKeys: [],
     clientDemoOptions: _initialLayout.clientDemoOptions,
     uiExposure: readPersistedUiExposure() ?? "focused",
+    activeLevelId: null,
+    levelDisplayMode: "stacked",
 
     setUiExposure: (level) => {
       const preset = UI_EXPOSURE_PRESETS[level];
@@ -652,5 +659,9 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
     setViewSettingsOpen: (open) => set({ viewSettingsOpen: open }),
 
     toggleViewSettingsOpen: () => set((state: any) => ({ viewSettingsOpen: !state.viewSettingsOpen })),
+
+    setActiveLevelId: (levelId) => set({ activeLevelId: levelId }),
+
+    setLevelDisplayMode: (mode) => set({ levelDisplayMode: mode }),
   };
 };

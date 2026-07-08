@@ -9,9 +9,12 @@ import { PathReplayView } from "@/components/view/PathReplayView";
 import { CompareView } from "@/components/view/CompareView";
 import { ReportView } from "@/components/view/ReportView";
 import { AnalyticsDashboardView } from "@/components/view/AnalyticsDashboardView";
+import { MobileEditGate } from "@/components/shared/MobileEditGate";
 
 export default function WorkspaceArea() {
   const viewMode = useStudioStore((s) => s.viewMode);
+  const compactViewport = useStudioStore((s) => s.compactViewport);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
 
   return (
     <AnimatePresence mode="popLayout">
@@ -23,7 +26,16 @@ export default function WorkspaceArea() {
         transition={{ duration: 0.2, ease: "easeInOut" }}
         className="absolute inset-0"
       >
-        {viewMode === "map" && <WorkspaceCanvas />}
+        {viewMode === "map" && (
+          compactViewport ? (
+            <MobileEditGate
+              actionLabel="Switch to Camera Wall"
+              onAction={() => setViewMode("wall")}
+            />
+          ) : (
+            <WorkspaceCanvas />
+          )
+        )}
         {viewMode === "wall" && <CameraWallView />}
         {viewMode === "camera_view" && <CameraViewMode />}
         {viewMode === "replay" && <PathReplayView />}

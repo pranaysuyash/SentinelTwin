@@ -49,7 +49,6 @@ export default function StudioShell() {
   const workspacePreset = useStudioStore((s) => s.workspacePreset);
   const focusMode = useStudioStore((s) => s.focusMode);
   const compactViewport = useStudioStore((s) => s.compactViewport);
-  const setCompactViewport = useStudioStore((s) => s.setCompactViewport);
   const visibleComponents = useStudioStore((s) => s.visibleComponents);
   const scene = useStudioStore((s) => s.scene);
   const uiDensity = useStudioStore((s) => s.uiDensity);
@@ -122,15 +121,6 @@ export default function StudioShell() {
     if (new URLSearchParams(window.location.search).get("qa") === "1") {
       (window as unknown as Record<string, unknown>).__sentinelStudioStore = useStudioStore;
     }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const media = window.matchMedia("(max-width: 720px)");
-    const syncCompactViewport = () => setCompactViewport(media.matches);
-    syncCompactViewport();
-    media.addEventListener("change", syncCompactViewport);
-    return () => media.removeEventListener("change", syncCompactViewport);
   }, []);
 
   useEffect(() => {

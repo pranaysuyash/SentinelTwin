@@ -41,4 +41,13 @@ describe("UI exposure presets", () => {
     expect(preset.dockCollapsed.right).toBe(false);
     expect(preset.clientDemoOptions.hideDebugModules).toBe(true);
   });
+
+  test("level switcher follows the same ambient-chrome rule as compass/hints", () => {
+    // LevelSwitcher (multi-floor picker) is permanent top-left chrome even
+    // for the common single-floor scene. It must be quiet in showcase and
+    // available in focused/full, exactly like north_compass/control_hint_bar.
+    expect(UI_EXPOSURE_PRESETS.showcase.visibleComponents.level_switcher).toBe(false);
+    expect(UI_EXPOSURE_PRESETS.focused.visibleComponents.level_switcher).toBe(true);
+    expect(UI_EXPOSURE_PRESETS.full.visibleComponents.level_switcher).toBe(true);
+  });
 });

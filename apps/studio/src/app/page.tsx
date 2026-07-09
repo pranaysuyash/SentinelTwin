@@ -24,13 +24,22 @@ function DemoSceneLoader() {
     const sceneId = params.get("demoScene");
     if (!sceneId) return;
     const studio = useStudioStore.getState();
-    const loaded = studio.loadReferenceScene(sceneId);
-    if (loaded) {
-      studio.setDockCollapsed("bottom", false);
-      useProductViewStore.getState().navigate("studio");
-      // Kick off a simulation so L1/L2 have a baseline to diff against.
-      setTimeout(() => useStudioStore.getState().runSimulation(), 200);
-    }
+    // Match by exact id first, then by a friendly slug (e.g. "small-retail-shop"
+    // maps to "scene_small_retail_shop") so QA URLs stay human-typable.
+    const slugToId = (s: string) => `scene_${s.replace(/-/g, "_")}`;
+    const scene = studio.loadReferenceScene(sceneId)
+      ?? studio.loadReferenceScene(slugToId(sceneId));
+    // Defer to the next tick so ProductViewRouter has mounted and subscribed
+    // to the product-view store before we navigate — otherwise the state
+    // change fires before the subscription is live and the router misses it.
+    queueMicrotask(() => {
+      if (scene) {
+        studio.setScene(scene);
+        studio.setDockCollapsed("bottom", false);
+        useProductViewStore.getState().navigate("studio");
+        setTimeout(() => useStudioStore.getState().runSimulation(), 400);
+      }
+    });
   }, []);
   return null;
 }

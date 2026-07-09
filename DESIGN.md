@@ -68,7 +68,7 @@ Three fonts, three jobs. No overlap, no redundancy.
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 ```
 
-**Type Scale** — canonical, tablet-aware, defined in `design-tokens.ts` as `TYPE_SCALE`:
+**Type Scale** — canonical, tablet-aware, exported from `design-tokens.ts` as `TYPE_SCALE` (typed `Record<TypeTier, TypeTierSpec>`). Consumed by `PathReplayView`, `CameraViewMode`, `CameraWallView`, and any component needing the JS pixel value. Components that just need a CSS class use `TYPE_SCALE[tier].class` which resolves to the CSS var (tablet-aware). Per §0.8: `TYPE_SCALE` is the single source of truth for type sizing — do not hardcode pixel values elsewhere.
 
 | Tier | Size | Usage | First-principles reason |
 |------|------|-------|------------------------|

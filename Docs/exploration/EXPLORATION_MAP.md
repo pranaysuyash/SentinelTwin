@@ -7647,3 +7647,61 @@ pass.
 
 **OQ-3D-04..10 still open.** Phase B (camera-feed post-processing) and Phase C SSAO are deliberately deferred until Phase A is observed in production and the visual scorecard (OQ-3D-10) is in place.
 - WebGPU is attractive but brings cross-browser determinism challenges that must be tested before becoming canonical.
+
+### Thread 155: End-user workflow platform — `Job` as the persona/lens primitive (2026-07-09)
+
+**Status:** Research/architecture finding. Design in progress (brainstorm → spec).
+
+**Problem:** The app shipped live (`https://sentinel-twin-studio.vercel.app`) but every visitor lands on the same single-funnel surface regardless of who they are or what job they came to do. The product thesis names many distinct users (CCTV installers, security agencies, facility managers, insurers, compliance officers, small business owners) with different value staircases and different primary deliverables. "Make it an end-user-focused workflow app where different users get their own use case/workflow" requires a primitive that shapes the surface per user/job — without forking the simulation or creating parallel truth sources.
+
+**What exists (evidence):**
+- Full multi-user *plumbing* already modeled in `@sentineltwin/core`: `Account`, `Organization` (free/pro/enterprise tiers, quotas, entitlements), `WorkspaceMember`, `Workspace`, `Site`, `SceneRecord`, `Draft`, `Report`, `Comment`, `AuditLog`, `WorkspaceInvite`, `OwnershipTransferEvent`, conflict/sync state.
+- Authorization primitive: `UserRole` enum = `admin | operator | reviewer | installer | auditor | privacy_reviewer | insurer` with a `Permission` system (action × subject).
+- `ProductView` store (`apps/studio/src/store/product-view-store.ts`) owns intent-level routing; its header comment explicitly forbids parallel truth sources (motto §11) and documents three nav layers (intent → canvas → analysis).
+- The studio itself (map/camera/wall/replay/compare/report/analytics) is a mature single subsystem, NOT the whole product.
+
+**Key finding — `UserRole` is a mixed-grain enum (not first-principles):**
+Decomposing `UserRole` reveals three axes conflated into one list:
+- **System-administration authority:** `admin`
+- **Professional identity:** `installer`, `auditor`, `insurer`
+- **Workflow-stage responsibility:** `reviewer`, `privacy_reviewer`
+- (`operator` is vague — could be either professional identity or workflow-stage.)
+
+This is authorization-shaped plumbing from an earlier stage, not a clean model. Per motto §21 it is evidence of an earlier decision, not a boundary. Fixing the `UserRole` grain is a flagged, staged follow-up (not silently bundled into the persona-router spec).
+
+**The first-principles primitive — `Job` (data-driven lens), NOT a persona/identity layer:**
+SentinelTwin is ONE simulation with ONE loop (`edit scene → recompute coverage → show impact → explain → recommend`). What differs between users is not *identity* — it is *which facet of the same simulation they are working on right now*. Decompose into three orthogonal axes, each with one owner:
+
+| Axis | Owner (existing) | Answers | Concept |
+|---|---|---|---|
+| Identity | `Account` / `User` (exists) | Who are you? | account + org membership |
+| Authorization | `UserRole` / `Permission` / entitlements (exists) | What are you allowed to do? | gates capability within a workspace |
+| Lens | **NEW: `Job`** (data-driven config) | What job are you doing right now? | shapes entry/default scene/foregrounded tool/primary output/vocabulary |
+
+A `Job` is a config object (motto §0.8 — data layer is product):
+`{ entry surface, default scene, foregrounded capability, primary output/deliverable, vocabulary set, suggested value-staircase rung }`.
+- A user has a **default Job** (sticky preference) and can **switch Jobs freely** mid-session.
+- Capability stays gated by **authorization**, not by Job. An insurer can switch their lens to "installer view" but still can't place cameras without the entitlement. Clean separation.
+- Composes with authorization and workflow-stage without collision.
+- Ships as a small typed catalog first; graduates to a stored/editable catalog later (staging, not deferral — §0.13).
+
+**Why `Job`-as-lens over alternatives considered:**
+- Over "Persona = identity layer": avoids duplicating the "who am I" question and creating a second identity concept alongside Account/User (premature abstraction, §11).
+- Over "Persona = derived from UserRole": avoids conflating job-identity with workspace-authorization (an installer operating as reviewer in a workspace would get a confusing experience).
+- Over "Persona = lens/preset only, no binding": less anchored; `Job` is a first-class lens with composition semantics.
+
+**motto_v3 alignment:**
+- §0.8 (data layer is product): jobs/vocabularies/presets are config-as-data, not a hardcoded enum.
+- §11 (no premature abstraction / canonical ownership): identity stays one place; Job owns only the lens.
+- §12 (reduce operator cognitive load, strengthen source of truth): one simulation, your lens; no parallel representations.
+- §21 (decision-driven refactor): `UserRole` grain cleanup is a flagged consequence, not silently bundled here.
+
+**Code anchors:** `packages/core/src/schema/workspace-backend.ts` (UserRole, Permission, Workspace, WorkspaceMember, Invite, AuditLog); `packages/core/src/schema/organization.ts` (Account, Organization, entitlements, quotas); `apps/studio/src/store/product-view-store.ts` (ProductView intent router + header comment on nav layers); `apps/studio/src/store/slices/core/layout-slice.ts` (ViewMode canvas config).
+
+**Open questions (→ OPEN_QUESTIONS_ADDENDUM.md, to be filed):**
+- OQ-JOB-01: Does a `Job` carry a capability whitelist (suggestive) or only foregrounding (lens)? Recommendation: foregrounding only; authorization stays the gate. Needs confirmation in spec.
+- OQ-JOB-02: V1 job catalog scope — ship all 7 mapped roles or a focused subset (e.g. installer / operator / auditor / insurer)?
+- OQ-JOB-03: Auth dependency — does the router require a real logged-in user, or can an anonymous visitor self-select a job lens (trial)?
+- OQ-JOB-04: `UserRole` grain cleanup — split into `SystemRole` / `Profession` / `WorkflowStage`? Flagged follow-up, separate decision record.
+
+**Decision trace:** D-020 (Evidence Twin framing — relevant because the insurer/compliance job lenses lean on evidence as the deliverable); product thesis "Target Users" + value staircase.

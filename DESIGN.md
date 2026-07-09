@@ -96,10 +96,10 @@ This is the most important structural decision in the design system. Per motto_v
 | Layer | Canonical owner | Owns | Consumers | Rule |
 |-------|----------------|------|-----------|------|
 | **Canvas geometry** | `MAP_COLORS` (`map-colors.ts`) | Deterministic colors tied to simulation primitives: walls, doors, paths, quality levels, zones, obstacles | 11 import sites across ~10 direct consumer files (map-utils.ts re-exports): WorkspaceCanvas, MapLayers, MiniMap, PathMap, CoverageRibbon, CoverageLegend, ViewModeBar, ViewControls, WallCanvasPicker | Geometry-only. Never used for chrome. |
-| **Chrome UI** | `UI_TONES` (`design-tokens.ts`) | Semantic states: success, warning, danger, info, accent, neutral. Status badges, confidence bands, attention signals, deltas. | 74+ locations: DockPanel, CameraWallView, CameraViewMode, PathReplayView, ScanProgressStepper, ScanProgressSidebar, AmbientEditDelta, DemoWalkthroughPanel, and 40+ more | UI-only. Never used for canvas geometry. |
-| **Surfaces** | `UI_SURFACES` (`studio-surface-tokens.ts`) | Background colors, border colors, text colors, hover states. The neutral canvas for chrome to render on. | 50+ locations: PathReplayView, CameraViewMode, CameraWallView, CompareView, and 46+ more | Structural. Never conveys semantic meaning. |
+| **Chrome UI** | `UI_TONES` (`design-tokens.ts`) | Semantic states: success, warning, danger, info, accent, neutral. Status badges, confidence bands, attention signals, deltas. | 10 direct import files (DockPanel, CameraWallView, CameraViewMode, PathReplayView, ScanProgressStepper, ScanProgressSidebar, AmbientEditDelta, DemoWalkthroughPanel, VisibilityTimeline, WallCanvasPicker) with 74+ usage sites across those files | UI-only. Never used for canvas geometry. |
+| **Surfaces** | `UI_SURFACES` (`studio-surface-tokens.ts`) | Background colors, border colors, text colors, hover states. The neutral canvas for chrome to render on. | 4 direct import files (PathReplayView, CameraViewMode, CameraWallView, CompareView) with 50+ usage sites across those files | Structural. Never conveys semantic meaning. |
 
-**The three never overlap.** A component picks based on whether it renders canvas geometry or chrome. If a value appears in two layers, one must be wrong. (This is motto_v3 §0.8 — treat data dependencies as production code.)
+**The three never overlap by semantic role.** A component picks based on whether it renders canvas geometry or chrome. If a semantic value (e.g., "success green") appears in two layers with different hex values, one must be wrong. The one documented exception is `#a78bfa` which appears in both semantic accent (chrome) and camera palette (canvas geometry) — but these serve different semantic roles in different contexts, so it's a boundary rule, not a conflict. (Per motto_v3 §0.8 — treat data dependencies as production code.)
 
 ### Surface Palette
 
@@ -161,7 +161,7 @@ Per `camera-colors.ts` — a base palette of 11 distinct colors, with modular in
 #60a5fa, #a78bfa, #34d399, #f59e0b, #fb7185, #22d3ee, #f97316, #c084fc, #84cc16, #e879f9, #2dd4bf
 ```
 
-The palette is **unbounded in practice** — `getCameraColor(index)` uses modulo indexing, and `getCameraColorForId(id)` hashes the ID to produce a color for any camera count. The 11 listed colors are the base set; additional cameras cycle through or hash to new values.
+The palette **cycles through 11 base colors** — `getCameraColor(index)` uses `index % 11` modulo indexing, and `getCameraColorForId(id)` hashes the ID to index into the same 11-element array. With more than 11 cameras, colors repeat. The 11 listed colors are the complete set.
 
 These are **canvas geometry**, not chrome. They belong to `MAP_COLORS`'s conceptual scope, not `UI_TONES`.
 
@@ -275,7 +275,7 @@ Defined in `:root` for use in HTML preview and global styles. The TS projections
 
 Per motto_v3 §0.12 (Decision Record Requirement). Every design choice is recorded with context, alternatives, rationale, and what would cause it to be revisited.
 
-| Date | Decision | Context | Alternatives considered | Rationale | What would cause revisit |
+| Date | Decision | Context | Alternatives considered | Rationale | What would cause revisit | Owner |
 |------|----------|---------|------------------------|-----------|-------------------------|
 | 2026-07-09 | Industrial Precision aesthetic | First design system for SentinelTwin. Product is a security simulation studio, not a dashboard or marketing site. | Luxury/Refined (too decorative), Brutalist/Raw (too raw for professional tool), Editorial (wrong product type) | D1: operator workflow demands functional UI. D2: best app, not safest. The 3D canvas IS the visual spectacle. | If the product shifts toward consumer-facing or marketing-first. | Pranay |
 | 2026-07-09 | Three-layer token boundary | Existing codebase already has MAP_COLORS, UI_TONES, UI_SURFACES with clear separation. 11 import sites of MAP_COLORS, 74+ of UI_TONES, 50+ of UI_SURFACES. | Single unified token file (simpler but conflates truth sources), per-component tokens (drifts immediately) | D3: source-of-truth clarity per §11. D8: data layer is product. The boundary prevents the ~30-file drift that Visual Pass V1 fixed. | If a new token category emerges that doesn't fit the three layers. | Pranay |

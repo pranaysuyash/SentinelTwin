@@ -18,6 +18,7 @@ import { DockPanel } from "@/components/dock/DockPanel";
 import { ContextBottomPanel } from "@/components/panels/ContextBottomPanel";
 import { ContextRightPanel } from "@/components/panels/ContextRightPanel";
 import { ViewSettingsModal } from "@/components/layout/ViewSettingsModal";
+import { IfcImportModal } from "@/components/workspace/modals/IfcImportModal";
 import { AutosaveRecoveryBanner } from "@/components/shared/AutosaveRecoveryBanner";
 import { LeftPanel } from "@/components/left-panel/LeftPanel";
 import PathReplayClock from "./PathReplayClock";
@@ -230,6 +231,7 @@ export default function StudioShell() {
       ) : null}
 
       <ViewSettingsModal />
+      <IfcImportModal />
       <PathReplayClock />
 
       {canvasOnlyLayout ? (

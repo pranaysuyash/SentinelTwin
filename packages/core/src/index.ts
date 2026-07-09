@@ -14,6 +14,7 @@ export * from "./lib/scene-source";
 export * from "./lib/target-quality-requirements";
 export * from "./lib/node-factory";
 export * from "./lib/workspace-catalog";
+export * from "./lib/ifc-structural-parser";
 
 // Backend schemas
 export * from "./schema/workspace-backend";

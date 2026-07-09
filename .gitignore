@@ -87,3 +87,6 @@ apps/studio/public/models/**/*.tflite
 
 # Local agent/skill caches (not source)
 .codexx/
+
+# Visual brainstorming companion (superpowers)
+.superpowers/

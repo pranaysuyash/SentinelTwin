@@ -151,6 +151,18 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
     }
   }, [productView, savedProjects, scene.cameras.length, navigate]);
 
+  // Tracks whether SceneBuilderWizard's onBuild already fired for the
+  // manual-builder branch below. Declared unconditionally (Rules of Hooks —
+  // this component never unmounts between ProductView switches, so a hook
+  // declared inside an `if (productView === ...)` branch changes the hook
+  // count whenever the view changes and crashes React). Reset on every
+  // (re-)entry into manual_builder so a second visit in the same session
+  // gets a fresh flag instead of one stuck `true` from a prior build.
+  const buildCompletedRef = useRef(false);
+  useEffect(() => {
+    if (productView === "manual_builder") buildCompletedRef.current = false;
+  }, [productView]);
+
   const formatClock = (ts: number | null | undefined) => {
     if (!ts) return null;
     return new Intl.DateTimeFormat("en-US", {
@@ -323,7 +335,6 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
 
   // Manual Builder — full product view
   if (productView === "manual_builder") {
-    const buildCompletedRef = useRef(false);
     return (
       <div className="h-full w-full overflow-hidden" style={{ background: "var(--bg)" }}>
         <SceneBuilderWizard

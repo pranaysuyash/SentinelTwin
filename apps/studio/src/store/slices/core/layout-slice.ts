@@ -344,6 +344,7 @@ export interface LayoutSlice {
   showDebugOverlays: boolean;
   clientDemoOptions: { hideDebugModules: boolean; simplifiedLabels: boolean; criticalIssuesOnly: boolean; lockLayout: boolean };
   viewSettingsOpen: boolean;
+  ifcImportModalOpen: boolean;
   compactViewport: boolean;
   /** App-wide chrome posture (D-326): showcase (demo) / focused (default) / full (pro). */
   uiExposure: UiExposureLevel;
@@ -368,8 +369,10 @@ export interface LayoutSlice {
   enterFocusMode: () => void;
   restorePreviousLayout: () => void;
   setBottomTab: (tab: BottomTab) => void;
-  toggleLayer: (layer: LayerId) => void;
-  setLayerVisibility: (layer: LayerId, visible: boolean) => void;
+  dismissTabAttention: (tab: BottomTab) => void;
+  dismissRecentIssueChangeKey: (changeKey: string) => void;
+  setLayerVisibility: (layers: Partial<LayerVisibility>) => void;
+  toggleLayer: (layer: keyof LayerVisibility) => void;
   setShowDebugOverlays: (enabled: boolean) => void;
   setVisibleComponent: (component: WorkspaceComponentId, visible: boolean) => void;
   toggleVisibleComponent: (component: WorkspaceComponentId) => void;
@@ -389,6 +392,8 @@ export interface LayoutSlice {
   setCompactViewport: (compact: boolean) => void;
   setViewSettingsOpen: (open: boolean) => void;
   toggleViewSettingsOpen: () => void;
+  setIfcImportModalOpen: (open: boolean) => void;
+  toggleIfcImportModalOpen: () => void;
 }
 
 // ── Slice creator ──
@@ -428,6 +433,7 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
       adversaryShadow: true,
     },
     viewSettingsOpen: false,
+    ifcImportModalOpen: false,
     compactViewport: false,
     visibleComponents: _initialLayout.visibleComponents,
     enabledAnalysisModules: _initialLayout.enabledAnalysisModules,
@@ -588,8 +594,18 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
     toggleLayer: (layer) =>
       set((s: any) => ({ layerVisibility: { ...s.layerVisibility, [layer]: !s.layerVisibility[layer] } })),
 
-    setLayerVisibility: (layer, visible) =>
-      set((s: any) => ({ layerVisibility: { ...s.layerVisibility, [layer]: visible } })),
+    setLayerVisibility: (layers) =>
+      set((s: any) => ({ layerVisibility: { ...s.layerVisibility, ...layers } })),
+
+    dismissTabAttention: (tab) =>
+      set((state: any) => ({
+        pendingTabAttention: state.pendingTabAttention.filter((t: BottomTab) => t !== tab),
+      })),
+
+    dismissRecentIssueChangeKey: (changeKey) =>
+      set((state: any) => ({
+        recentIssueChangeKeys: state.recentIssueChangeKeys.filter((k: string) => k !== changeKey),
+      })),
 
     setShowDebugOverlays: (enabled) => set({ showDebugOverlays: enabled }),
 
@@ -659,6 +675,10 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
     setViewSettingsOpen: (open) => set({ viewSettingsOpen: open }),
 
     toggleViewSettingsOpen: () => set((state: any) => ({ viewSettingsOpen: !state.viewSettingsOpen })),
+
+    setIfcImportModalOpen: (open) => set({ ifcImportModalOpen: open }),
+
+    toggleIfcImportModalOpen: () => set((state: any) => ({ ifcImportModalOpen: !state.ifcImportModalOpen })),
 
     setActiveLevelId: (levelId) => set({ activeLevelId: levelId }),
 

@@ -230,20 +230,20 @@ export function useAiCommand() {
 
       if (rootCommand === "/privacy") {
         if (commandArg === "on") {
-          store.setLayerVisibility("privacy_zones", true);
+          store.setLayerVisibility({ privacy_zones: true });
           setStatusSafe({ state: "success", message: "Privacy zones enabled" });
           autoDismiss();
           return;
         }
         if (commandArg === "off") {
-          store.setLayerVisibility("privacy_zones", false);
+          store.setLayerVisibility({ privacy_zones: false });
           setStatusSafe({ state: "success", message: "Privacy zones hidden" });
           autoDismiss();
           return;
         }
         if (commandArg === "toggle") {
           const next = !store.layerVisibility.privacy_zones;
-          store.setLayerVisibility("privacy_zones", next);
+          store.setLayerVisibility({ privacy_zones: next });
           setStatusSafe({ state: "success", message: `Privacy zones ${next ? "enabled" : "hidden"}` });
           autoDismiss();
           return;
@@ -977,7 +977,7 @@ function applyOfflineAction(action: OfflineCommandAction) {
       store.setBottomTab(action.tab);
       break;
     case "set_layer_visibility":
-      store.setLayerVisibility(action.layer, action.visible);
+      store.setLayerVisibility({ [action.layer]: action.visible });
       break;
     case "run_simulation":
       store.runSimulation();

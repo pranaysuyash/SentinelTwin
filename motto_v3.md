@@ -506,19 +506,19 @@ A passing extraction does not prove production readiness.
 
 ### 0.16 Instruction Surface Freshness Rule
 
-When the instruction stack changes (for example: `/Users/pranay/AGENTS.md`, `/Users/pranay/Projects/AGENTS.md`, `agent-start`, or this `motto` document), rerun startup context generation before starting implementation.
+When the instruction stack changes (for example: `$HOME/AGENTS.md`, `$HOME/Projects/AGENTS.md`, `agent-start`, or this `motto` document), rerun startup context generation before starting implementation.
 
 Do this at repo level after those edits:
 
 ```bash
-/Users/pranay/Projects/agent-start --project <repo>
+$HOME/Projects/agent-start --project <repo>
 ```
 
 Treat regenerated files as the authoritative in-session instruction surfaces:
 
-- `$PROJECT/Docs/context/agent-start/STEP1_ENV.sh`
-- `$PROJECT/Docs/context/agent-start/SESSION_CONTEXT.md`
-- `$PROJECT/Docs/context/agent-start/AGENT_KICKOFF_PROMPT.txt`
+- `$PROJECT/docs/context/agent-start/STEP1_ENV.sh`
+- `$PROJECT/docs/context/agent-start/SESSION_CONTEXT.md`
+- `$PROJECT/docs/context/agent-start/AGENT_KICKOFF_PROMPT.txt`
 
 If these files conflict with the live instruction stack or actual file state, prioritize live stack + current files and re-run startup generation.
 
@@ -529,12 +529,12 @@ Never continue implementation from stale generated instruction surfaces in paral
 ## 1. Core Context Requirements
 
 - **Instruction loop is mandatory**:
-  - Start from `/Users/pranay/AGENTS.md`, then `/Users/pranay/Projects/AGENTS.md`, then repo-local `AGENTS.md` or `CLAUDE.md`, then project context pack files.
-  - If `agent-start` was skipped, failed, or context seems partial/stale, immediately fall back to this motto and re-enter the instruction stack from `/Users/pranay/AGENTS.md` again.
+  - Start from `$HOME/AGENTS.md`, then `$HOME/Projects/AGENTS.md`, then repo-local `AGENTS.md` or `CLAUDE.md`, then project context pack files.
+  - If `agent-start` was skipped, failed, or context seems partial/stale, immediately fall back to this motto and re-enter the instruction stack from `$HOME/AGENTS.md` again.
   - Do not proceed with implementation until this loop is completed and the canonical instruction/context files are loaded.
 - Inspect the codebase, architecture, docs, workflows, tests, configs, data contracts, generated files, and current implementation state before planning or coding.
 - Follow all project guidelines, workflows, conventions, and instruction files.
-- Review all agent/instruction/config files starting from `/Users/pranay/`, including Claude, Qwen, Codex, Copilot, AGENTS files, motto files, session context files, and all related instruction/workflow files.
+- Review all agent/instruction/config files starting from `$HOME/`, including Claude, Qwen, Codex, Copilot, AGENTS files, motto files, session context files, and all related instruction/workflow files.
 - Discover and review all referenced skills repositories, skills paths, shared playbooks, reusable utilities, capability libraries, architectural guidance, and linked implementation docs mentioned anywhere in the system.
 - Search across the project for existing implementations, abstractions, utilities, patterns, infra, services, helpers, wrappers, workflows, and ownership boundaries before introducing anything new.
 - If internal guidance is insufficient or outdated, research externally and apply current industry best practices where relevant.
@@ -547,7 +547,7 @@ Never continue implementation from stale generated instruction surfaces in paral
 - If docs/instruction layers conflict, verify behavior against the live implementation and runtime state before acting.
 - Use this precedence when conflict appears:
   1) live code paths and runtime behavior,
-  2) currently loaded instruction stack from `/Users/pranay/AGENTS.md` downward,
+  2) currently loaded instruction stack from `$HOME/AGENTS.md` downward,
   3) local and project docs.
 - Keep docs synchronized: if drift is found, update the stale layer in the same task if practical, or record a follow-up with owner and closure criteria.
 - For stale docs, prefer **dated append-only addendums** over rewriting history:
@@ -555,7 +555,7 @@ Never continue implementation from stale generated instruction surfaces in paral
   - append a short dated update like `## Addendum (YYYY-MM-DD)` with corrected guidance,
   - explicitly link to what changed and why old guidance is no longer current,
   - never discard potentially useful exploratory/design decisions unless explicitly approved for deletion.
-- Apply circular re-entry when context is uncertain: restart at `/Users/pranay/AGENTS.md`, then `/Users/pranay/Projects/AGENTS.md`, then repo-local `AGENTS.md` / `CLAUDE.md`, then project context pack, then this motto.
+- Apply circular re-entry when context is uncertain: restart at `$HOME/AGENTS.md`, then `$HOME/Projects/AGENTS.md`, then repo-local `AGENTS.md` / `CLAUDE.md`, then project context pack, then this motto.
 
 ---
 
@@ -618,7 +618,7 @@ git status --short
 git branch --show-current
 git branch -vv
 git log --oneline --decorate --graph --all -35
-git log --oneline origin/master..master
+git log --oneline origin/main..HEAD
 git log --oneline master..origin/master
 git diff --stat
 git diff --cached --stat
@@ -858,13 +858,13 @@ For screenshots/images:
 
 - inspect visually or describe what they show
 - decide whether they are design references, bug evidence, QA proof, or temporary artifacts
-- if useful, move to an intentional path such as `Docs/review/assets/`
+- if useful, move to an intentional path such as `docs/review/assets/`
 - if not useful, propose deletion or gitignore, but do not delete without approval
 
 For `.clawpatch/` or similar tool output:
 
 - inspect reports before ignoring
-- copy useful markdown/review findings into `Docs/review/`
+- copy useful markdown/review findings into `docs/review/`
 - ignore raw run/cache JSON only after preserving useful summaries
 
 For package files:

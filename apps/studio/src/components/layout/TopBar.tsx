@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  Building2,
   CheckCircle2,
   ChevronDown,
   Clapperboard,
@@ -110,6 +111,7 @@ export function TopBar() {
   const setAllZoneTargetTypes = useStudioStore((s) => s.setAllZoneTargetTypes);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const toggleViewSettingsOpen = useStudioStore((s) => s.toggleViewSettingsOpen);
+  const setIfcImportModalOpen = useStudioStore((s) => s.setIfcImportModalOpen);
   const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
   const scene = useStudioStore((s) => s.scene);
   const zoneCount = scene.criticalZones.length;
@@ -346,6 +348,17 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                     <div>
                       <div className="font-medium">Scene File</div>
                       <div className="text-[10px] text-[#6b7280]">.json exported site twin</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] text-[#c7d0e4] hover:bg-[#161b26] hover:text-white"
+                    onClick={() => { setImportOpen(false); setIfcImportModalOpen(true); }}
+                  >
+                    <Building2 className="h-3.5 w-3.5 text-cyan-400 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium">IFC / STEP BIM Model</div>
+                      <div className="text-[10px] text-[#6b7280]">CAD structural geometry & storeys</div>
                     </div>
                   </button>
                 </div>

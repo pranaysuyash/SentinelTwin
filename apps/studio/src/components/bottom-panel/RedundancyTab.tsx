@@ -70,7 +70,7 @@ export function RedundancyTab() {
     <div className="flex h-full flex-col overflow-hidden">
 
       {/* ── Stats strip ─────────────────────────────────────────────────── */}
-      <div className="`{flex flex-shrink-0 items-center gap-3 border-b ${UI_SURFACES.borderPanel} bg-[#090c12] px-3 py-1}`">
+      <div className={`{flex flex-shrink-0 items-center gap-3 border-b ${UI_SURFACES.borderPanel} bg-[#090c12] px-3 py-1}`}>
         <TruthBadge label="simulated" />
 
         {/* Redundancy score ring */}
@@ -84,8 +84,8 @@ export function RedundancyTab() {
             </span>
           </div>
           <div>
-            <div className="text-[10px] font-semibold text-[#c7d0e4] leading-tight">Redundancy</div>
-            <div className="text-[8px] text-[#4a5568]">% zones with 2+ cameras</div>
+            <div className={`text-[10px] font-semibold ${UI_SURFACES.textBody} leading-tight`}>Redundancy</div>
+            <div className={`text-[8px] ${UI_SURFACES.textMuted}`}>% zones with 2+ cameras</div>
           </div>
         </div>
 
@@ -97,7 +97,7 @@ export function RedundancyTab() {
           { label: "Redundant",  value: redundantZones.length,  color: redundantZones.length > 0 ? "text-green-400"   : "text-[#3a4158]" },
           { label: "Uncovered",  value: uncoveredZones.length,  color: uncoveredZones.length > 0 ? "text-red-400"     : "text-[#3a4158]" },
           { label: "Cameras",    value: cameras.filter((c) => c.status === "on").length, color: "text-blue-300" },
-          { label: "Zones",      value: criticalZones.length,   color: "text-[#c7d0e4]" },
+          { label: "Zones",      value: criticalZones.length,   color: `${UI_SURFACES.textBody}` },
         ] as const).map(({ label, value, color }) => (
           <div key={label} className="flex items-baseline gap-1">
             <span className={`font-mono text-[11px] font-bold ${color}`}>{value}</span>
@@ -113,12 +113,12 @@ export function RedundancyTab() {
                 className="h-2.5 w-2.5 flex-shrink-0 rounded-sm"
                 style={{ backgroundColor: QUALITY_COLOR[q] }}
               />
-              <span className="text-[7px] text-[#4a5568] capitalize">{QUALITY_ABBR[q]}</span>
+              <span className={`text-[7px] ${UI_SURFACES.textMuted} capitalize`}>{QUALITY_ABBR[q]}</span>
             </div>
           ))}
           <div className="flex items-center gap-1">
             <span className="h-2.5 w-2.5 flex-shrink-0 rounded-sm bg-[#1f2536]" />
-            <span className="text-[7px] text-[#4a5568]">None</span>
+            <span className={`text-[7px] ${UI_SURFACES.textMuted}`}>None</span>
           </div>
         </div>
       </div>
@@ -140,7 +140,7 @@ export function RedundancyTab() {
               {/* Column headers: zone names */}
               <thead className="sticky top-0 z-10 bg-[#090c12]">
                 <tr>
-                  <th className="`{min-w-[130px] border-b border-r ${UI_SURFACES.borderPanel} px-2.5 py-1.5 text-left text-[8px] font-medium uppercase tracking-wider text-[#3a4158]}`">
+                  <th className={`{min-w-[130px] border-b border-r ${UI_SURFACES.borderPanel} px-2.5 py-1.5 text-left text-[8px] font-medium uppercase tracking-wider text-[#3a4158]}`}>
                     Camera
                   </th>
                   {criticalZones.map((zone) => {
@@ -151,7 +151,7 @@ export function RedundancyTab() {
                     return (
                       <th
                         key={zone.id}
-                        className="`{min-w-[52px] max-w-[80px] border-b border-r ${UI_SURFACES.borderPanel} px-1 py-1}`"
+                        className={`{min-w-[52px] max-w-[80px] border-b border-r ${UI_SURFACES.borderPanel} px-1 py-1}`}
                       >
                         <div className="flex flex-col items-center gap-0.5">
                           <span
@@ -178,10 +178,10 @@ export function RedundancyTab() {
                       </th>
                     );
                   })}
-                  <th className="`{min-w-[44px] border-b border-r ${UI_SURFACES.borderPanel} px-1.5 py-1 text-center text-[8px] font-medium uppercase tracking-wider text-[#3a4158]}`">
+                  <th className={`{min-w-[44px] border-b border-r ${UI_SURFACES.borderPanel} px-1.5 py-1 text-center text-[8px] font-medium uppercase tracking-wider text-[#3a4158]}`}>
                     Solo
                   </th>
-                  <th className="`{min-w-[48px] border-b ${UI_SURFACES.borderPanel} px-1.5 py-1 text-center text-[8px] font-medium uppercase tracking-wider text-[#3a4158]}`">
+                  <th className={`{min-w-[48px] border-b ${UI_SURFACES.borderPanel} px-1.5 py-1 text-center text-[8px] font-medium uppercase tracking-wider text-[#3a4158]}`}>
                     Cover
                   </th>
                 </tr>
@@ -215,7 +215,7 @@ export function RedundancyTab() {
                             className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${isOffline ? "bg-red-500" : "bg-green-400"}`}
                           />
                           <span
-                            className={`max-w-[100px] truncate text-[9px] font-medium ${isOffline ? "line-through text-[#4a5568]" : "text-[#c7d0e4]"}`}
+                            className={`max-w-[100px] truncate text-[9px] font-medium ${isOffline ? `line-through ${UI_SURFACES.textMuted}` : `${UI_SURFACES.textBody}`}`}
                           >
                             {camera.name}
                           </span>
@@ -304,8 +304,8 @@ export function RedundancyTab() {
 
         {/* ── SPOF sidebar ────────────────────────────────────────────── */}
         {showSpofSidebar && (
-          <div className="`{flex w-[144px] flex-shrink-0 flex-col overflow-hidden border-l ${UI_SURFACES.borderPanel}}`">
-            <div className="`{flex-shrink-0 border-b ${UI_SURFACES.borderPanel} px-2.5 py-1}`">
+          <div className={`{flex w-[144px] flex-shrink-0 flex-col overflow-hidden border-l ${UI_SURFACES.borderPanel}}`}>
+            <div className={`{flex-shrink-0 border-b ${UI_SURFACES.borderPanel} px-2.5 py-1}`}>
               <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-red-400">
                 Vulnerable Zones
               </span>
@@ -336,7 +336,7 @@ export function RedundancyTab() {
                     className="rounded-lg border border-red-900/30 bg-red-900/10 p-1.5"
                   >
                     <div className="text-[9px] font-medium text-red-300 truncate">{zone.label}</div>
-                    <div className="mt-0.5 text-[7px] text-[#4a5568] truncate">
+                    <div className={`mt-0.5 text-[7px] ${UI_SURFACES.textMuted} truncate`}>
                       Only: <span className="text-[#8090a8]">{soleName}</span>
                     </div>
                     {zr && (
@@ -359,7 +359,7 @@ export function RedundancyTab() {
 
               {/* Redundant zones (positive signal) */}
               {redundantZones.length > 0 && (
-                <div className="`{border-t ${UI_SURFACES.borderPanel} pt-1.5}`">
+                <div className={`{border-t ${UI_SURFACES.borderPanel} pt-1.5}`}>
                   <div className="mb-1 text-[7px] font-semibold uppercase tracking-wider text-green-500">
                     Protected ({redundantZones.length})
                   </div>

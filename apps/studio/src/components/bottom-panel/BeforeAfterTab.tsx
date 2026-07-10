@@ -181,7 +181,7 @@ function BeforeAfterTabContent() {
       <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-8">
         <GitCompare className="w-8 h-8 text-[#1e2130]" />
         <div>
-          <div className="text-[11px] text-[#4a5568] font-medium">No comparison available</div>
+          <div className={`text-[11px] ${UI_SURFACES.textMuted} font-medium`}>No comparison available</div>
           <div className="text-[9px] text-[#3a4158] mt-1">
             Save at least 2 snapshots to compare before/after states.
           </div>
@@ -193,9 +193,9 @@ function BeforeAfterTabContent() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header strip */}
-      <div className="`{flex items-center gap-3 px-3 py-1 border-b ${UI_SURFACES.borderPanel} flex-shrink-0}`">
+      <div className={`{flex items-center gap-3 px-3 py-1 border-b ${UI_SURFACES.borderPanel} flex-shrink-0}`}>
         <TruthBadge label="simulated" />
-        <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
+        <span className={`text-[8px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted}`}>
           Key Metrics Comparison
         </span>
         <div className="flex gap-2 ml-auto">
@@ -210,13 +210,13 @@ function BeforeAfterTabContent() {
         </div>
       </div>
 
-      <div className="`{grid grid-cols-2 gap-2 border-b ${UI_SURFACES.borderPanel} bg-[#0a0d14] px-3 py-2}`">
+      <div className={`{grid grid-cols-2 gap-2 border-b ${UI_SURFACES.borderPanel} bg-[#0a0d14] px-3 py-2}`}>
         <label className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[#556076]">
           <span className="min-w-[48px] text-[#9aa6bf]">Before</span>
           <select
             value={validBeforeId ?? ""}
             onChange={(event) => setBeforeSnapshotId(event.target.value)}
-            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+            className={`min-w-0 flex-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
           >
             <option value="" disabled>
               Select snapshot
@@ -233,7 +233,7 @@ function BeforeAfterTabContent() {
           <select
             value={validAfterId ?? ""}
             onChange={(event) => setAfterSnapshotId(event.target.value)}
-            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+            className={`min-w-0 flex-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
           >
             <option value="" disabled>
               Select snapshot
@@ -246,7 +246,7 @@ function BeforeAfterTabContent() {
           </select>
         </label>
       </div>
-      <div className="`{flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[9px] text-[#6b7894]}`">
+      <div className={`{flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[9px] text-[#6b7894]}`}>
         <span>
           Seeded by Scene Intelligence or the compare picker. Copy the link to share this exact before/after pair.
         </span>
@@ -264,14 +264,14 @@ function BeforeAfterTabContent() {
             type="button"
             onClick={handleCopyCompareLink}
             disabled={!before || !after}
-            className="inline-flex items-center gap-1 rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#8090a8] transition-colors hover:border-[#32384d] hover:text-white disabled:opacity-40"
+            className={`inline-flex items-center gap-1 rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-medium text-[#8090a8] transition-colors hover:border-[#32384d] hover:text-white disabled:opacity-40`}
           >
             <Copy className="h-3 w-3" />
             Copy compare link
           </button>
         </div>
       </div>
-      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[9px] text-[#74809a]}`">
+      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[9px] text-[#74809a]}`}>
         {compareSelectionProvenanceNote ? (
           <span>Compare provenance: {compareSelectionProvenanceNote}</span>
         ) : (
@@ -280,13 +280,13 @@ function BeforeAfterTabContent() {
       </div>
 
       {!before || !after ? (
-        <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-2 text-[9px] text-[#6b7894]}`">
+        <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-2 text-[9px] text-[#6b7894]}`}>
           Select both snapshots to populate the before/after comparison. Scene Intelligence can seed this panel with a checkpoint pair now.
         </div>
       ) : null}
 
       {/* Metric donuts row */}
-      <div className="`{flex items-start justify-around px-4 py-2 border-b ${UI_SURFACES.borderPanel} flex-shrink-0}`">
+      <div className={`{flex items-start justify-around px-4 py-2 border-b ${UI_SURFACES.borderPanel} flex-shrink-0}`}>
         <MetricColumn
           label="Total Coverage"
           beforeVal={bCov}
@@ -325,16 +325,16 @@ function BeforeAfterTabContent() {
         />
       </div>
       {outcomeDelta ? (
-        <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[9px] text-[#8ea0bf]}`">
+        <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[9px] text-[#8ea0bf]}`}>
           Outcome Delta: Blindspot {Math.round((bSim?.blindspotPct ?? 0))}% {"->"} {Math.round((aSim?.blindspotPct ?? 0))}% ·
           Critical Zones {outcomeDelta.criticalZonesPassingBefore}/{outcomeDelta.criticalZonesTotal} {"->"} {outcomeDelta.criticalZonesPassingAfter}/{outcomeDelta.criticalZonesTotal}
         </div>
       ) : null}
 
       {/* Visual diff summary */}
-      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-2}`">
+      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-2}`}>
         <div className="mb-2 flex items-center gap-2">
-          <div className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
+          <div className={`text-[8px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted}`}>
             Visual Diff
           </div>
           <button
@@ -349,7 +349,7 @@ function BeforeAfterTabContent() {
               setViewMode("compare");
             }}
             disabled={!before || !after}
-            className="ml-auto rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[8px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white"
+            className={`ml-auto rounded border border-[#273246] ${UI_SURFACES.card} px-2 py-1 text-[8px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white`}
           >
             Open Compare View
           </button>
@@ -360,8 +360,8 @@ function BeforeAfterTabContent() {
               { label: before?.label ?? "Before", src: visuals.beforeImageDataUrl, accent: "Before" },
               { label: after?.label ?? "After", src: visuals.afterImageDataUrl, accent: "After" },
             ].map((entry) => (
-              <div key={entry.accent} className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b0f17] p-2}`">
-                <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#4a5568]">{entry.accent}: {entry.label}</div>
+              <div key={entry.accent} className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} p-2}`}>
+                <div className={`mb-1 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted}`}>{entry.accent}: {entry.label}</div>
                 <img
                   src={entry.src}
                   alt={`${entry.accent} comparison evidence`}
@@ -371,7 +371,7 @@ function BeforeAfterTabContent() {
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-[#263048] bg-[#0b0f17] px-3 py-2 text-[9px] text-[#6b7894]">
+          <div className={`rounded-lg border border-dashed border-[#263048] ${UI_SURFACES.panel} px-3 py-2 text-[9px] text-[#6b7894]`}>
             Capture visual evidence in Compare View to show side-by-side scene thumbnails here. The metric diff is always available, and the visual diff reuses the same compare evidence pipeline.
           </div>
         )}
@@ -433,7 +433,7 @@ function BeforeAfterTabContent() {
             <span className={`${(aSim?.issues.length ?? 0) < (bSim?.issues.length ?? 0) ? "text-green-400" : "text-[#8090a8]"}`}>
               {aSim?.issues.length ?? 0}
               {bSim && aSim && aSim.issues.length !== bSim.issues.length &&
-                <span className="ml-1 text-[7px] text-[#4a5568]">
+                <span className={`ml-1 text-[7px] ${UI_SURFACES.textMuted}`}>
                   ({aSim.issues.length < bSim.issues.length ? "↓" : "↑"}{Math.abs(aSim.issues.length - bSim.issues.length)})
                 </span>
               }

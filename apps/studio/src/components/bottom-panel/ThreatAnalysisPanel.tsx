@@ -20,13 +20,15 @@ import { TruthBadge } from "@/components/shared/TruthBadge";
 import { ExposureBar } from "@/components/shared/ExposureBar";
 import { StatCard } from "@/components/shared/StatCard";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+
 
 function ExposureBreakdown({ exposure }: { exposure: Record<string, number> }) {
   const keys = ["identification", "recognition", "observation", "detection"] as const;
   const maxExposure = Math.max(...keys.map((k) => exposure[k] ?? 0), 1);
 
   return (
-    <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
       <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Evidence Quality Along Route</div>
       <div className="space-y-2">
         {keys.map((key) => (
@@ -98,7 +100,7 @@ export function ThreatAnalysisPanel() {
           <TruthBadge label="simulated" />
           <ShieldAlert className="h-4 w-4 shrink-0 text-rose-400" />
           <div className="min-w-0">
-            <span className="block text-[11px] font-semibold text-[#c7d0e4]">Route Exposure Review</span>
+            <span className={`block text-[11px] font-semibold ${UI_SURFACES.textBody}`}>Route Exposure Review</span>
             <span className="block text-[8px] uppercase tracking-[0.16em] text-[#556076]">
               Recomputes the current site twin and refreshes authorized route visibility
             </span>
@@ -107,7 +109,7 @@ export function ThreatAnalysisPanel() {
         <button type="button"
           onClick={runSimulation}
           disabled={simulationRunning}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-3 py-1.5 text-[10px] font-medium text-rose-300 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+          className={`inline-flex items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-3 py-1.5 text-[10px] font-medium text-rose-300 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60`}
         >
           {simulationRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
           {simulationRunning ? "Reviewing..." : "Run Route Review"}
@@ -183,7 +185,7 @@ export function ThreatAnalysisPanel() {
           <ExposureBreakdown exposure={failurePath.detectionQualityExposure} />
 
           <div className="grid grid-cols-2 gap-1.5">
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
               <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
                 <EyeOff className="h-3 w-3 text-amber-400" />
                 Uncovered Route Sections
@@ -196,7 +198,7 @@ export function ThreatAnalysisPanel() {
               />
             </div>
 
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
               <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
                 <EyeOff className="h-3 w-3 text-rose-400" />
                 Cameras Missing This Route
@@ -209,7 +211,7 @@ export function ThreatAnalysisPanel() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+          <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
             <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
               <Target className="h-3 w-3 text-red-400" />
               Critical Zones Reachable
@@ -231,18 +233,18 @@ export function ThreatAnalysisPanel() {
           </div>
 
           {failurePath.failureReason && (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
               <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Coverage Finding</div>
               <p className="text-[10px] leading-relaxed text-amber-300/80">{failurePath.failureReason}</p>
             </div>
           )}
 
-          <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+          <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
             <div className="mb-1.5 flex items-center justify-between">
               <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Route Visibility Ribbon</span>
               <span className="text-[8px] text-[#4d566b]">{failurePath.waypoints.length} waypoints</span>
             </div>
-            <div className="flex h-3 overflow-hidden rounded-full border border-[#202536] bg-[#111521]">
+            <div className={`flex h-3 overflow-hidden rounded-full border border-[#202536] ${UI_SURFACES.card}`}>
               {failurePath.waypoints.map((wp) => (
                 <div
                   key={`${wp.timeS}-${wp.position[0]}-${wp.position[1]}`}

@@ -18,7 +18,7 @@ function MetricCard({ label, children, className = "" }: {
 }) {
   return (
     <div className={`flex flex-col items-center justify-between px-3 py-2.5 border-r ${UI_SURFACES.borderPanel} min-w-0 ${className}`}>
-      <div className="text-[9px] text-[#4a5568] font-medium tracking-wide uppercase mb-2 text-center w-full">
+      <div className={`text-[9px] ${UI_SURFACES.textMuted} font-medium tracking-wide uppercase mb-2 text-center w-full`}>
         {label}
       </div>
       {children}
@@ -36,7 +36,7 @@ function SignalRow({ label, value, detail, status }: {
     <div className="flex items-center gap-2 rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
       <span className="min-w-[100px] text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">{label}</span>
-      <span className="ml-auto text-[10px] font-semibold text-[#d2d9e8]">{value}</span>
+      <span className={`ml-auto text-[10px] font-semibold ${UI_SURFACES.textBody2}`}>{value}</span>
       <span className="hidden text-[8px] text-[#5a6a88] sm:inline">{detail}</span>
     </div>
   );
@@ -47,7 +47,7 @@ const CONFIDENCE_LEVEL_STYLE: Record<string, { bg: string; text: string; border:
   high:     { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30", label: "HIGH" },
   medium:   { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/30", label: "MEDIUM" },
   low:      { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30", label: "LOW" },
-  none:     { bg: "bg-[#111521]", text: "text-[#4d5870]", border: "border-[#1f2536]", label: "NONE" },
+  none:     { bg: `${UI_SURFACES.card}`, text: "text-[#4d5870]", border: `${UI_SURFACES.borderSubtle}`, label: "NONE" },
 };
 
 function ConfidenceCard({ confidence, zones }: { confidence: ConfidenceBand; zones: { status: string }[] }) {
@@ -55,10 +55,10 @@ function ConfidenceCard({ confidence, zones }: { confidence: ConfidenceBand; zon
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const summary = formatConfidenceSummary(confidence, zones as any);
   return (
-    <div className="rounded-xl border border-[#1a2030] bg-[#0b0f17] px-3 py-2.5">
+    <div className={`rounded-xl border border-[#1a2030] ${UI_SURFACES.panel} px-3 py-2.5`}>
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Simulation Confidence</span>
+          <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>Simulation Confidence</span>
           <TruthBadge label="simulated" />
         </div>
         <span className={`rounded-md border px-2 py-0.5 text-[8px] font-bold tracking-wider ${style.bg} ${style.text} ${style.border}`}>
@@ -70,7 +70,7 @@ function ConfidenceCard({ confidence, zones }: { confidence: ConfidenceBand; zon
         <div className="flex flex-wrap gap-1">
           <span className="text-[8px] uppercase tracking-wider text-[#3d4d63]">Sensitive to:</span>
           {confidence.sensitiveTo.map((s) => (
-            <span key={s} className="rounded-md border border-[#1f2536] bg-[#0a0d15] px-1.5 py-0.5 text-[8px] text-[#8094b8]">{s}</span>
+            <span key={s} className={`rounded-md border ${UI_SURFACES.borderSubtle} bg-[#0a0d15] px-1.5 py-0.5 text-[8px] text-[#8094b8]`}>{s}</span>
           ))}
         </div>
       )}
@@ -124,7 +124,7 @@ function PostureScoreCard() {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-[8px] uppercase tracking-[0.14em] text-[#4a5568] mb-1">Security Posture (300–850)</div>
+        <div className={`text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted} mb-1`}>Security Posture (300–850)</div>
         <div className="h-1.5 w-full rounded-full bg-[#1a2030] overflow-hidden">
           <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: style.color }} />
         </div>
@@ -132,8 +132,8 @@ function PostureScoreCard() {
       <div className="flex gap-2 shrink-0">
         {Object.entries(posture.factorScores).map(([key, val]) => (
           <div key={key} className="text-center min-w-[40px]">
-            <div className="text-[11px] font-semibold text-[#c7d0e4]">{val as number}</div>
-            <div className="text-[7px] uppercase tracking-wider text-[#4a5568]">{POSTURE_FACTOR_LABELS[key] ?? key}</div>
+            <div className={`text-[11px] font-semibold ${UI_SURFACES.textBody}`}>{val as number}</div>
+            <div className={`text-[7px] uppercase tracking-wider ${UI_SURFACES.textMuted}`}>{POSTURE_FACTOR_LABELS[key] ?? key}</div>
           </div>
         ))}
       </div>
@@ -274,9 +274,9 @@ export function MetricsTab() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-3 py-2 text-[9px] text-[#8090a8] shrink-0}`">
+      <div className={`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-3 py-2 text-[9px] text-[#8090a8] shrink-0}`}>
         <div className="flex items-center gap-2">
-          <span className="font-semibold uppercase tracking-[0.14em] text-[#c7d0e4]">Truth:</span>
+          <span className={`font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textBody}`}>Truth:</span>
           <TruthBadge label="simulated" />
         </div>
         <div className="max-w-[32rem] truncate text-right" title={truthLabelDetail("simulated")}>{truthLabelDetail("simulated")}</div>
@@ -288,7 +288,7 @@ export function MetricsTab() {
       </div>
 
       {/* ── Main metric cards: 6-column grid ── */}
-      <div className="`{grid shrink-0 gap-2 border-b ${UI_SURFACES.borderPanel} py-2}`" style={{gridTemplateColumns: "repeat(6, minmax(0, 1fr))"}}>
+      <div className={`{grid shrink-0 gap-2 border-b ${UI_SURFACES.borderPanel} py-2}`} style={{gridTemplateColumns: "repeat(6, minmax(0, 1fr))"}}>
 
         {/* 1: Overall Coverage */}
         <MetricCard label="Overall Coverage (Detection)">
@@ -311,7 +311,7 @@ export function MetricsTab() {
         <MetricCard label="Critical Zones">
           <div className="text-center">
             <div className="text-[28px] font-bold text-white leading-none">
-              {zonesPass}<span className="text-[16px] text-[#4a5568]">/{zonesTotal}</span>
+              {zonesPass}<span className={`text-[16px] ${UI_SURFACES.textMuted}`}>/{zonesTotal}</span>
             </div>
             <div className="text-[9px] text-[#68738a] mt-0.5">Zones Passing</div>
             {result.criticalZoneResults.map((z) => (
@@ -337,7 +337,7 @@ export function MetricsTab() {
               </>
             )}
             {offlineCams === 0 && (
-              <div className="text-[9px] text-[#4a5568] mt-1">0 Offline</div>
+              <div className={`text-[9px] ${UI_SURFACES.textMuted} mt-1`}>0 Offline</div>
             )}
           </div>
         </MetricCard>
@@ -359,7 +359,7 @@ export function MetricsTab() {
                   {selectedCriticalZone.requiredQuality.toUpperCase()}
                 </span>
                 {selectedTargetRequirement ? (
-                  <span className="text-[#4a5568]"> · default {selectedTargetRequirement.defaultRequiredQuality} for {selectedCriticalZone.targetType.replace(/_/g, " ")}</span>
+                  <span className={`${UI_SURFACES.textMuted}`}> · default {selectedTargetRequirement.defaultRequiredQuality} for {selectedCriticalZone.targetType.replace(/_/g, " ")}</span>
                 ) : null}
               </div>
               {selectedTargetRequirement ? (
@@ -384,14 +384,14 @@ export function MetricsTab() {
             </div>
             <div className="text-[9px] text-[#68738a] mt-1">{blockageLabel}</div>
             {fragilityPct !== null ? (
-              <div className="`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-1.5}`">
-                <div className="text-[8px] uppercase tracking-[0.14em] text-[#4a5568]">Fragility</div>
+              <div className={`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-1.5}`}>
+                <div className={`text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted}`}>Fragility</div>
                 <div className="text-[13px] font-semibold leading-none" style={{ color: fragilityColor }}>
                   {fragilityPct}% <span className="text-[9px] font-normal" style={{ color: fragilityColor }}>
                     {fragilityPct <= 30 ? "ROBUST" : fragilityPct <= 60 ? "MODERATE" : "FRAGILE"}
                   </span>
                 </div>
-                <div className="mt-0.5 text-[8px] text-[#4a5568]">
+                <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textMuted}`}>
                   {fragilitySummary!.fragileCellCount} fragile · {fragilitySummary!.robustCellCount} robust
                 </div>
               </div>

@@ -96,7 +96,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
       <div className="mb-2 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
         {icon}
         {title}
@@ -122,7 +122,7 @@ function PillButton({
       className={`rounded-md border px-2 py-1 text-[9px] transition-colors ${
         active
           ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-          : "${UI_SURFACES.borderPanel} bg-[#0f141f] text-[#8090a8] hover:border-[#2a3245] hover:text-white"
+          : `${UI_SURFACES.borderPanel} bg-[#0f141f] text-[#8090a8] hover:border-[#2a3245] hover:text-white`
       }`}
     >
       {children}
@@ -1259,7 +1259,7 @@ export function DebugTab() {
             onChange={handleArchiveFileChange}
           />
           {pendingArchive ? (
-            <div className="`{mt-2 rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`">
+            <div className={`{mt-2 rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Archive Merge Preflight</div>
@@ -1273,7 +1273,7 @@ export function DebugTab() {
               </div>
               {pendingArchiveComparison?.readiness ? (
                 <>
-                  <div className="`{mt-2 rounded-md border ${UI_SURFACES.borderPanel} bg-[#0b0f17] px-3 py-2 text-[10px] text-[#dbe2f0]}`">
+                  <div className={`{mt-2 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2 text-[10px] text-[#dbe2f0]}`}>
                     {pendingArchiveComparison.readiness.recommendation}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1367,19 +1367,19 @@ export function DebugTab() {
               Append-only journal batches keep the browser evidence trail as records instead of a single rewritten array.
             </div>
             <div className="grid grid-cols-4 gap-1.5">
-              <div className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5}`">
+              <div className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5}`}>
                 <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Batches</div>
                 <div className="mt-0.5 text-[13px] font-semibold text-[#edf2ff]">{journalEntries.length}</div>
               </div>
-              <div className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5}`">
+              <div className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5}`}>
                 <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Append</div>
                 <div className="mt-0.5 text-[13px] font-semibold text-[#edf2ff]">{journalAppendCount}</div>
               </div>
-              <div className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5}`">
+              <div className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5}`}>
                 <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Merge</div>
                 <div className="mt-0.5 text-[13px] font-semibold text-[#edf2ff]">{journalMergeCount}</div>
               </div>
-              <div className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5}`">
+              <div className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5}`}>
                 <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Replace</div>
                 <div className="mt-0.5 text-[13px] font-semibold text-[#edf2ff]">{journalReplaceCount}</div>
               </div>
@@ -1387,7 +1387,7 @@ export function DebugTab() {
             <div className="space-y-1.5">
               {journalEntries.length > 0 ? (
                 [...journalEntries].slice(-4).reverse().map((entry) => (
-                  <div key={entry.id} className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`">
+                  <div key={entry.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-[11px] font-semibold text-[#edf2ff]">{entry.reason}</div>
                       <Badge variant={entry.kind === "append" ? "green" : entry.kind === "merge" ? "blue" : "amber"}>{entry.kind}</Badge>
@@ -1400,7 +1400,7 @@ export function DebugTab() {
                   </div>
                 ))
               ) : (
-                <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                   No journal entries yet.
                 </div>
               )}
@@ -1412,23 +1412,23 @@ export function DebugTab() {
           <div className="space-y-1.5 text-[9px]">
             <div className="flex items-center justify-between rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
               <span className="text-[#8b96ab]">Last run</span>
-              <span className="font-mono text-[#d2d9e8]">{lastRunMs ? `${lastRunMs} ms` : "—"}</span>
+              <span className={`font-mono ${UI_SURFACES.textBody2}`}>{lastRunMs ? `${lastRunMs} ms` : "—"}</span>
             </div>
             <div className="flex items-center justify-between rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
               <span className="text-[#8b96ab]">Scene nodes</span>
-              <span className="font-mono text-[#d2d9e8]">{summary.nodeCount}</span>
+              <span className={`font-mono ${UI_SURFACES.textBody2}`}>{summary.nodeCount}</span>
             </div>
             <div className="flex items-center justify-between rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
               <span className="text-[#8b96ab]">Edges</span>
-              <span className="font-mono text-[#d2d9e8]">{summary.edgeCount}</span>
+              <span className={`font-mono ${UI_SURFACES.textBody2}`}>{summary.edgeCount}</span>
             </div>
             <div className="flex items-center justify-between rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
               <span className="text-[#8b96ab]">Coverage links</span>
-              <span className="font-mono text-[#d2d9e8]">{summary.coverageLinkCount}</span>
+              <span className={`font-mono ${UI_SURFACES.textBody2}`}>{summary.coverageLinkCount}</span>
             </div>
             <div className="flex items-center justify-between rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
               <span className="text-[#8b96ab]">Failed zones</span>
-              <span className="font-mono text-[#d2d9e8]">{summary.failedZoneCount}</span>
+              <span className={`font-mono ${UI_SURFACES.textBody2}`}>{summary.failedZoneCount}</span>
             </div>
           </div>
         </Section>
@@ -1439,34 +1439,34 @@ export function DebugTab() {
           <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
             <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
               <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Scene source</div>
-              <div className="mt-0.5 text-[9px] font-semibold text-[#d2d9e8]">{summary.sceneSourceLabel}</div>
+              <div className={`mt-0.5 text-[9px] font-semibold ${UI_SURFACES.textBody2}`}>{summary.sceneSourceLabel}</div>
             </div>
             <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
               <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Cameras</div>
-              <div className="mt-0.5 text-[9px] font-semibold text-[#d2d9e8]">{summary.cameraCount}</div>
+              <div className={`mt-0.5 text-[9px] font-semibold ${UI_SURFACES.textBody2}`}>{summary.cameraCount}</div>
             </div>
             <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
               <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Zones</div>
-              <div className="mt-0.5 text-[9px] font-semibold text-[#d2d9e8]">{summary.zoneCount}</div>
+              <div className={`mt-0.5 text-[9px] font-semibold ${UI_SURFACES.textBody2}`}>{summary.zoneCount}</div>
             </div>
             <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
               <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Sources</div>
-              <div className="mt-0.5 text-[9px] font-semibold text-[#d2d9e8]">{summary.sourceCount}</div>
+              <div className={`mt-0.5 text-[9px] font-semibold ${UI_SURFACES.textBody2}`}>{summary.sourceCount}</div>
             </div>
             <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
               <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Revision depth</div>
-              <div className="mt-0.5 text-[9px] font-semibold text-[#d2d9e8]">{summary.revisionDepth}</div>
+              <div className={`mt-0.5 text-[9px] font-semibold ${UI_SURFACES.textBody2}`}>{summary.revisionDepth}</div>
             </div>
             <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
               <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Snapshots</div>
-              <div className="mt-0.5 text-[9px] font-semibold text-[#d2d9e8]">{summary.snapshotCount}</div>
+              <div className={`mt-0.5 text-[9px] font-semibold ${UI_SURFACES.textBody2}`}>{summary.snapshotCount}</div>
             </div>
           </div>
           <div className="mt-2 space-y-1.5">
             <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Source Breakdown</div>
             <div className="flex flex-wrap gap-1.5">
               {sourceEntries.length > 0 ? sourceEntries.map(([source, count]) => (
-                <span key={source} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1 text-[9px] text-[#d2d9e8]">
+                <span key={source} className={`rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1 text-[9px] ${UI_SURFACES.textBody2}`}>
                   {source}: <span className="font-mono text-[#8b96ab]">{count}</span>
                 </span>
               )) : (
@@ -1486,7 +1486,7 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={clearAllCameraFailures}
-                  className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                  className={`rounded-md border border-[#1e2538] ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} hover:border-[#2a3245] hover:text-white`}
                 >
                   Clear All
                 </button>
@@ -1494,7 +1494,7 @@ export function DebugTab() {
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {cameraFailures.length > 0 ? cameraFailures.slice(0, 5).map((cameraId) => (
-                <span key={cameraId} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1 text-[9px] text-[#d2d9e8]">
+                <span key={cameraId} className={`rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1 text-[9px] ${UI_SURFACES.textBody2}`}>
                   {cameraId}
                 </span>
               )) : (
@@ -1512,7 +1512,7 @@ export function DebugTab() {
                 Debug overlays show coverage, timing, and source-state context so you can understand why a scene changed after recompute.
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
-                Toggle <span className="text-[#d2d9e8]">Debug Overlays</span>, export a support bundle, or lower <span className="text-[#d2d9e8]">Overlay Density</span> if the shell is too noisy for a live review.
+                Toggle <span className={`${UI_SURFACES.textBody2}`}>Debug Overlays</span>, export a support bundle, or lower <span className={`${UI_SURFACES.textBody2}`}>Overlay Density</span> if the shell is too noisy for a live review.
               </div>
             </div>
           </Section>
@@ -1526,17 +1526,17 @@ export function DebugTab() {
                 <div className="grid grid-cols-3 gap-1.5">
                   <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                     <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Quality</div>
-                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                       {getTrustQualityLabel(heatmapHover.cell.quality, scene.assumptions.doriStandard)}
                     </div>
                   </div>
                   <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                     <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">PPM</div>
-                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{heatmapHover.cell.ppm.toFixed(1)}</div>
+                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{heatmapHover.cell.ppm.toFixed(1)}</div>
                   </div>
                   <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                     <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Covering cams</div>
-                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{heatmapHover.cell.coveringCameras.length}</div>
+                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{heatmapHover.cell.coveringCameras.length}</div>
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -1570,14 +1570,14 @@ export function DebugTab() {
                       ) : null}
                     </div>
                   )) : (
-                    <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                    <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                       No per-camera evaluation details found for this hovered cell.
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+              <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                 Hover a heatmap cell in Map View to inspect per-camera trust factors here.
               </div>
             )}
@@ -1587,35 +1587,35 @@ export function DebugTab() {
             <div className="grid grid-cols-2 gap-1.5 text-[9px]">
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Simulation</div>
-                <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                   {runtime.simulationRunning ? "Running" : runtime.simulationDirty ? "Dirty" : "Up to date"}
                 </div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Last Run</div>
-                <div className="mt-0.5 font-semibold text-[#d2d9e8]">{lastRunMs ? `${lastRunMs} ms` : "—"}</div>
+                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{lastRunMs ? `${lastRunMs} ms` : "—"}</div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">AI Policy</div>
-                <div className="mt-0.5 font-semibold text-[#d2d9e8]">{runtime.aiPolicyLabel}</div>
+                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{runtime.aiPolicyLabel}</div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">AI Provider</div>
-                <div className="mt-0.5 font-semibold text-[#d2d9e8]">{runtime.aiProviderLabel}</div>
+                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{runtime.aiProviderLabel}</div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Provider Status</div>
-                <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                   {providerSummary.cloudAvailable ? "Cloud key available" : "Local fallback"}
                 </div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Workspace</div>
-                <div className="mt-0.5 font-semibold text-[#d2d9e8]">{workspaceGovernance.sceneStatus.replace(/_/g, " ")}</div>
+                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{workspaceGovernance.sceneStatus.replace(/_/g, " ")}</div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Incidents</div>
-                <div className="mt-0.5 font-semibold text-[#d2d9e8]">{runtime.incidentCount}</div>
+                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{runtime.incidentCount}</div>
               </div>
             </div>
             <div className="mt-2 space-y-1.5 text-[9px] text-[#8b96ab]">
@@ -1662,17 +1662,17 @@ export function DebugTab() {
               <div className="grid grid-cols-3 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest incident</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.incidents.latestIncident?.title ?? "None"}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportBundle.incidents.latestIncident?.title ?? "None"}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest performance trace</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                     {supportBundle.incidents.latestPerformanceTrace?.title ?? "None"}
                   </div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">AI telemetry trend</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.incidents.aiTelemetry.trendLabel}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportBundle.incidents.aiTelemetry.trendLabel}</div>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
@@ -1683,11 +1683,11 @@ export function DebugTab() {
               <div className="grid grid-cols-2 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">External logs</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.incidents.externalLogCount}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportBundle.incidents.externalLogCount}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest external log</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.incidents.latestExternalLog?.title ?? "None"}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportBundle.incidents.latestExternalLog?.title ?? "None"}</div>
                 </div>
               </div>
             </div>
@@ -1701,15 +1701,15 @@ export function DebugTab() {
               <div className="grid grid-cols-3 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archived records</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.sensorIngestArchive.historyCount}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportBundle.sensorIngestArchive.historyCount}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest scene</div>
-                  <div className="mt-0.5 truncate font-semibold text-[#d2d9e8]">{supportBundle.sensorIngestArchive.latestSubmission?.sceneName ?? "No archive yet"}</div>
+                  <div className={`mt-0.5 truncate font-semibold ${UI_SURFACES.textBody2}`}>{supportBundle.sensorIngestArchive.latestSubmission?.sceneName ?? "No archive yet"}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Loading</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{sensorIngestHistoryLoading ? "Yes" : "No"}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{sensorIngestHistoryLoading ? "Yes" : "No"}</div>
                 </div>
               </div>
               {sensorIngestHistoryError ? (
@@ -1731,7 +1731,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                     No sensor ingest archive yet. Paste metadata or pull an external feed in the sensor panel to create the first record.
                   </div>
                 )}
@@ -1747,15 +1747,15 @@ export function DebugTab() {
               <div className="grid grid-cols-3 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archived records</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.cameraLiveConnectionArchive.historyCount}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportBundle.cameraLiveConnectionArchive.historyCount}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest scene</div>
-                  <div className="mt-0.5 truncate font-semibold text-[#d2d9e8]">{supportBundle.cameraLiveConnectionArchive.latestSubmission?.sceneName ?? "No archive yet"}</div>
+                  <div className={`mt-0.5 truncate font-semibold ${UI_SURFACES.textBody2}`}>{supportBundle.cameraLiveConnectionArchive.latestSubmission?.sceneName ?? "No archive yet"}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Loading</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{cameraLiveConnectionHistoryLoading ? "Yes" : "No"}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{cameraLiveConnectionHistoryLoading ? "Yes" : "No"}</div>
                 </div>
               </div>
               {cameraLiveConnectionHistoryError ? (
@@ -1778,7 +1778,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                     No camera live connection archive yet. Bind or disconnect a camera in the inspector to create the first record.
                   </div>
                 )}
@@ -1803,15 +1803,15 @@ export function DebugTab() {
               <div className="grid grid-cols-3 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active leases</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{cameraLiveSessionHealth?.totals.active ?? supportBundle.cameraLiveSessionRegistry.activeSessionCount}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{cameraLiveSessionHealth?.totals.active ?? supportBundle.cameraLiveSessionRegistry.activeSessionCount}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Expiring soon</div>
-                  <div className="mt-0.5 truncate font-semibold text-[#d2d9e8]">{cameraLiveSessionHealth?.totals.expiringSoon ?? 0}</div>
+                  <div className={`mt-0.5 truncate font-semibold ${UI_SURFACES.textBody2}`}>{cameraLiveSessionHealth?.totals.expiringSoon ?? 0}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest lease</div>
-                  <div className="mt-0.5 truncate font-semibold text-[#d2d9e8]">{supportBundle.cameraLiveSessionRegistry.latestSession?.cameraName ?? "No active lease"}</div>
+                  <div className={`mt-0.5 truncate font-semibold ${UI_SURFACES.textBody2}`}>{supportBundle.cameraLiveSessionRegistry.latestSession?.cameraName ?? "No active lease"}</div>
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -1841,7 +1841,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                     No active live session lease yet. Bind or refresh a camera in the inspector to create the first lease.
                   </div>
                 )}
@@ -1862,7 +1862,7 @@ export function DebugTab() {
                 onChange={(event) => setExternalLogDraft(event.target.value)}
                 rows={5}
                 placeholder="Paste external log lines here..."
-                className="w-full rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#d2d9e8] outline-none placeholder:text-[#556076] focus:border-sky-400/40"
+                className={`w-full rounded-md border border-[#1a2030] ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textBody2} outline-none placeholder:text-[#556076] focus:border-sky-400/40`}
               />
               <div className="flex flex-wrap gap-1.5">
                 <button
@@ -1875,7 +1875,7 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={clearExternalLogEntries}
-                  className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                  className={`rounded-md border border-[#1e2538] ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} hover:border-[#2a3245] hover:text-white`}
                 >
                   Clear External Logs
                 </button>
@@ -1926,7 +1926,7 @@ export function DebugTab() {
   {"sensorId":"sensor_1","kind":"triggered","details":"Door motion detected"},
   {"sensorLabel":"Front Door","kind":"heartbeat"}
 ]`}
-                className="w-full rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#d2d9e8] outline-none placeholder:text-[#556076] focus:border-cyan-400/40"
+                className={`w-full rounded-md border border-[#1a2030] ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textBody2} outline-none placeholder:text-[#556076] focus:border-cyan-400/40`}
               />
               <div className="flex flex-wrap gap-1.5">
                 <button
@@ -1943,7 +1943,7 @@ export function DebugTab() {
                     setSensorMetadataError(null);
                     setSensorMetadataStatus(null);
                   }}
-                  className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                  className={`rounded-md border border-[#1e2538] ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} hover:border-[#2a3245] hover:text-white`}
                 >
                   Clear Draft
                 </button>
@@ -1967,15 +1967,15 @@ export function DebugTab() {
               <div className="grid grid-cols-3 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Alert status</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.alerts.statusLabel}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportBundle.alerts.statusLabel}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">High priority</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.alerts.highPriorityCount}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportBundle.alerts.highPriorityCount}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest alert</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.alerts.latestAlert?.title ?? "None"}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportBundle.alerts.latestAlert?.title ?? "None"}</div>
                 </div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
@@ -1998,7 +1998,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                     No alert candidates yet.
                   </div>
                 )}
@@ -2022,7 +2022,7 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={() => setSupportIngestReport(null)}
-                  className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                  className={`rounded-md border border-[#1e2538] ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} hover:border-[#2a3245] hover:text-white`}
                 >
                   Clear Ingest Result
                 </button>
@@ -2040,29 +2040,29 @@ export function DebugTab() {
                   <div className="grid grid-cols-3 gap-1.5">
                     <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Ingest status</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportIngestReport.routing.statusLabel}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportIngestReport.routing.statusLabel}</div>
                     </div>
                     <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Alert candidates</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportIngestReport.routing.alertCount}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportIngestReport.routing.alertCount}</div>
                     </div>
                     <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest routed</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportIngestReport.routing.latestAlert?.title ?? "None"}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportIngestReport.routing.latestAlert?.title ?? "None"}</div>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-1.5">
                     <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Ingest source</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportIngestReport.source}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportIngestReport.source}</div>
                     </div>
                     <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Received at</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportIngestReport.receivedAt}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportIngestReport.receivedAt}</div>
                     </div>
                     <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Telemetry events</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportIngestReport.counts.telemetryEvents}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportIngestReport.counts.telemetryEvents}</div>
                     </div>
                   </div>
                 </div>
@@ -2074,7 +2074,7 @@ export function DebugTab() {
                   <button
                     type="button"
                     onClick={() => void refreshSupportIngestArchive()}
-                    className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                    className={`rounded-md border border-[#1e2538] ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} hover:border-[#2a3245] hover:text-white`}
                   >
                     {remoteSupportIngestHistoryLoading ? "Refreshing..." : "Refresh Archive"}
                   </button>
@@ -2089,7 +2089,7 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={clearSupportIngestHistory}
-                  className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                  className={`rounded-md border border-[#1e2538] ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} hover:border-[#2a3245] hover:text-white`}
                 >
                   Clear Ingest History
                 </button>
@@ -2112,7 +2112,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                     No support ingest history yet. Send a bundle to ingest to keep the routed handoff visible over time.
                   </div>
                 )}
@@ -2131,7 +2131,7 @@ export function DebugTab() {
                 value={supportDeliveryEndpointDraft}
                 onChange={(event) => setSupportDeliveryEndpointDraft(event.target.value)}
                 placeholder="https://example.com/support-webhook"
-                className="w-full rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#d2d9e8] outline-none placeholder:text-[#556076] focus:border-sky-400/40"
+                className={`w-full rounded-md border border-[#1a2030] ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textBody2} outline-none placeholder:text-[#556076] focus:border-sky-400/40`}
               />
               <div className="flex flex-wrap gap-1.5">
                 <button
@@ -2144,14 +2144,14 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={() => setSupportDeliveryReport(null)}
-                  className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                  className={`rounded-md border border-[#1e2538] ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} hover:border-[#2a3245] hover:text-white`}
                 >
                   Clear Delivery Result
                 </button>
                 <button
                   type="button"
                   onClick={() => void refreshSupportDeliveryArchive()}
-                  className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                  className={`rounded-md border border-[#1e2538] ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} hover:border-[#2a3245] hover:text-white`}
                 >
                   {remoteSupportDeliveryHistoryLoading ? "Refreshing..." : "Refresh Delivery Archive"}
                 </button>
@@ -2169,19 +2169,19 @@ export function DebugTab() {
                   <div className="grid grid-cols-4 gap-1.5">
                     <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Delivery status</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportDeliveryReport.archiveStatus}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportDeliveryReport.archiveStatus}</div>
                     </div>
                     <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Delivered</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportDeliveryReport.deliveredCount}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportDeliveryReport.deliveredCount}</div>
                     </div>
                     <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Queued</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportDeliveryReport.queuedCount}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportDeliveryReport.queuedCount}</div>
                     </div>
                     <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Failed</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportDeliveryReport.failedCount}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{supportDeliveryReport.failedCount}</div>
                     </div>
                   </div>
                 </div>
@@ -2207,7 +2207,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                     No support delivery archive yet. Dispatch a routed support payload to create the fan-out history.
                   </div>
                 )}
@@ -2262,25 +2262,25 @@ export function DebugTab() {
             <div className="grid grid-cols-2 gap-1.5">
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active provider</div>
-                <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerGovernance.activeProviderLabel}</div>
+                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerGovernance.activeProviderLabel}</div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active model</div>
-                <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerGovernance.activeModel}</div>
+                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerGovernance.activeModel}</div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Local-only policy</div>
-                <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerGovernance.localOnlyMode ? "Enabled" : "Disabled"}</div>
+                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerGovernance.localOnlyMode ? "Enabled" : "Disabled"}</div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Cloud availability</div>
-                <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerGovernance.cloudAvailable ? "Available" : "Unavailable"}</div>
+                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerGovernance.cloudAvailable ? "Available" : "Unavailable"}</div>
               </div>
             </div>
             <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-[#556076] uppercase tracking-[0.18em]">Fallback order</span>
-                <span className="font-semibold text-[#d2d9e8]">{providerGovernance.fallbackOrder.map((entry) => entry.name).join(" → ")}</span>
+                <span className={`font-semibold ${UI_SURFACES.textBody2}`}>{providerGovernance.fallbackOrder.map((entry) => entry.name).join(" → ")}</span>
               </div>
               <div className="mt-1 text-[#8b96ab]">
                 Cloud-backed parsing and fix proposals follow this order when policy allows. Local-only mode keeps the same order visible but blocks cloud calls.
@@ -2316,14 +2316,14 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={() => recordAiProviderGovernanceSnapshot("manual", "Captured from Debug panel.")}
-                  className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-emerald-500/30 hover:text-emerald-200}`"
+                  className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-emerald-500/30 hover:text-emerald-200}`}
                 >
                   Capture snapshot
                 </button>
                 <button
                   type="button"
                   onClick={clearAiProviderGovernanceHistory}
-                  className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-rose-500/30 hover:text-rose-200}`"
+                  className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-rose-500/30 hover:text-rose-200}`}
                 >
                   Clear history
                 </button>
@@ -2331,15 +2331,15 @@ export function DebugTab() {
               <div className="grid grid-cols-3 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Snapshots</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{aiProviderGovernanceHistory.length}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{aiProviderGovernanceHistory.length}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest source</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{aiProviderGovernanceHistory[0]?.source ?? "none"}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{aiProviderGovernanceHistory[0]?.source ?? "none"}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest observed</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                     {aiProviderGovernanceHistory[0]
                       ? new Date(aiProviderGovernanceHistory[0].observedAt).toLocaleString([], {
                           month: "short",
@@ -2385,7 +2385,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                     No provider governance snapshots yet. Capture one to start the control-plane trail.
                   </div>
                 )}
@@ -2401,19 +2401,19 @@ export function DebugTab() {
               <div className="grid grid-cols-4 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Overall</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerHealth.overallStatus}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerHealth.overallStatus}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Healthy</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerHealth.healthyProviders}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerHealth.healthyProviders}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Partial</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerHealth.partialProviders}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerHealth.partialProviders}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Blocked</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerHealth.blockedProviders}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerHealth.blockedProviders}</div>
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -2445,19 +2445,19 @@ export function DebugTab() {
               <div className="grid grid-cols-2 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active cost</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerTelemetry.activeCostLabel}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerTelemetry.activeCostLabel}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active latency</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerTelemetry.activeLatencyLabel}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerTelemetry.activeLatencyLabel}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Budget status</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerTelemetry.overallStatus}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerTelemetry.overallStatus}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Policy note</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerTelemetry.stagePolicies.find((stage) => stage.stage === "draft")?.note ?? "—"}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerTelemetry.stagePolicies.find((stage) => stage.stage === "draft")?.note ?? "—"}</div>
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -2493,7 +2493,7 @@ export function DebugTab() {
                     inputMode="numeric"
                     value={aiTelemetryPolicy.recentWindowSize}
                     onChange={(event) => setAiTelemetryPolicy({ recentWindowSize: parseTelemetryPolicyInteger(event.target.value, aiTelemetryPolicy.recentWindowSize, 1) })}
-                    className="mt-1 w-full rounded border border-[#2a3245] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60"
+                    className={`mt-1 w-full rounded border border-[#2a3245] ${UI_SURFACES.panel} px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60`}
                   />
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
@@ -2505,7 +2505,7 @@ export function DebugTab() {
                     inputMode="numeric"
                     value={aiTelemetryPolicy.baselineWindowSize}
                     onChange={(event) => setAiTelemetryPolicy({ baselineWindowSize: parseTelemetryPolicyInteger(event.target.value, aiTelemetryPolicy.baselineWindowSize, 1) })}
-                    className="mt-1 w-full rounded border border-[#2a3245] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60"
+                    className={`mt-1 w-full rounded border border-[#2a3245] ${UI_SURFACES.panel} px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60`}
                   />
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
@@ -2517,7 +2517,7 @@ export function DebugTab() {
                     inputMode="numeric"
                     value={aiTelemetryPolicy.durationDeltaThresholdMs}
                     onChange={(event) => setAiTelemetryPolicy({ durationDeltaThresholdMs: parseTelemetryPolicyInteger(event.target.value, aiTelemetryPolicy.durationDeltaThresholdMs, 0) })}
-                    className="mt-1 w-full rounded border border-[#2a3245] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60"
+                    className={`mt-1 w-full rounded border border-[#2a3245] ${UI_SURFACES.panel} px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60`}
                   />
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
@@ -2529,7 +2529,7 @@ export function DebugTab() {
                     inputMode="numeric"
                     value={aiTelemetryPolicy.tokenDeltaThreshold}
                     onChange={(event) => setAiTelemetryPolicy({ tokenDeltaThreshold: parseTelemetryPolicyInteger(event.target.value, aiTelemetryPolicy.tokenDeltaThreshold, 0) })}
-                    className="mt-1 w-full rounded border border-[#2a3245] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60"
+                    className={`mt-1 w-full rounded border border-[#2a3245] ${UI_SURFACES.panel} px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60`}
                   />
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5 col-span-2">
@@ -2541,7 +2541,7 @@ export function DebugTab() {
                     <button
                       type="button"
                       onClick={resetAiTelemetryPolicy}
-                      className="rounded-md border border-[#2a3245] bg-[#0b0f17] px-2 py-1 text-[9px] font-semibold text-[#d2d9e8] transition-colors hover:border-cyan-500/50 hover:text-white"
+                      className={`rounded-md border border-[#2a3245] ${UI_SURFACES.panel} px-2 py-1 text-[9px] font-semibold ${UI_SURFACES.textBody2} transition-colors hover:border-cyan-500/50 hover:text-white`}
                     >
                       Reset telemetry policy
                     </button>
@@ -2554,7 +2554,7 @@ export function DebugTab() {
                     inputMode="decimal"
                     value={aiTelemetryPolicy.successRateDeltaThreshold}
                     onChange={(event) => setAiTelemetryPolicy({ successRateDeltaThreshold: parseTelemetryPolicyFloat(event.target.value, aiTelemetryPolicy.successRateDeltaThreshold, 0, 1) })}
-                    className="mt-1 w-full rounded border border-[#2a3245] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60"
+                    className={`mt-1 w-full rounded border border-[#2a3245] ${UI_SURFACES.panel} px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60`}
                   />
                 </div>
               </div>
@@ -2572,33 +2572,33 @@ export function DebugTab() {
               <div className="grid grid-cols-4 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Events</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{aiActionTelemetrySummary.totalEvents}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{aiActionTelemetrySummary.totalEvents}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest stage</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{aiActionTelemetry[0]?.stage ?? "—"}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{aiActionTelemetry[0]?.stage ?? "—"}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Trend</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                     {aiActionTelemetrySummary.trendLabel}
                   </div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Policy</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{aiActionTelemetrySummary.policyLabel}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{aiActionTelemetrySummary.policyLabel}</div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Policy window</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                     {aiActionTelemetrySummary.policy.recentWindowSize} recent · {aiActionTelemetrySummary.policy.baselineWindowSize} baseline
                   </div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Policy thresholds</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                     {aiActionTelemetrySummary.policy.durationDeltaThresholdMs} ms · {aiActionTelemetrySummary.policy.tokenDeltaThreshold} tokens · {formatMultiplier(aiActionTelemetrySummary.policy.successRateDeltaThreshold)}
                   </div>
                 </div>
@@ -2606,7 +2606,7 @@ export function DebugTab() {
               <div className="grid grid-cols-2 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Recent avg</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                     {aiActionTelemetrySummary.recentWindow
                       ? `${aiActionTelemetrySummary.recentWindow.averageDurationMs} ms · ~${aiActionTelemetrySummary.recentWindow.averageTokens} tokens`
                       : "—"}
@@ -2614,7 +2614,7 @@ export function DebugTab() {
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Long-horizon avg</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                     {aiActionTelemetrySummary.longHorizonWindow
                       ? `${aiActionTelemetrySummary.longHorizonWindow.averageDurationMs} ms · ~${aiActionTelemetrySummary.longHorizonWindow.averageTokens} tokens`
                       : "—"}
@@ -2651,7 +2651,7 @@ export function DebugTab() {
                     <div className="mt-1 text-[9px] text-[#8b96ab]">{entry.note ?? "Measured at the AI action surface."}</div>
                   </div>
                 )) : (
-                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                     No measured AI actions yet.
                   </div>
                 )}
@@ -2668,14 +2668,14 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={() => recordPromptRegistrySnapshot("manual", "Captured from Debug panel.")}
-                  className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-emerald-500/30 hover:text-emerald-200}`"
+                  className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-emerald-500/30 hover:text-emerald-200}`}
                 >
                   Capture snapshot
                 </button>
                 <button
                   type="button"
                   onClick={clearPromptRegistryHistory}
-                  className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-rose-500/30 hover:text-rose-200}`"
+                  className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-rose-500/30 hover:text-rose-200}`}
                 >
                   Clear history
                 </button>
@@ -2683,15 +2683,15 @@ export function DebugTab() {
               <div className="grid grid-cols-3 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Prompt count</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{promptRegistrySummary.total}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{promptRegistrySummary.total}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest version</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{promptRegistrySummary.latestVersion}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{promptRegistrySummary.latestVersion}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Registry digest</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                     {promptRegistrySummary.registryDigest.slice(0, 18)}…
                   </div>
                 </div>
@@ -2699,13 +2699,13 @@ export function DebugTab() {
               <div className="grid grid-cols-2 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Stage map</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                     {Object.entries(promptRegistrySummary.stages).map(([stage, count]) => `${stage}:${count}`).join(" · ")}
                   </div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Last observed</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                     {latestModelEvalRun?.promptRegistry
                       ? new Date(latestModelEvalRun.promptRegistry.observedAt).toLocaleString([], {
                           month: "short",
@@ -2753,15 +2753,15 @@ export function DebugTab() {
               <div className="grid grid-cols-3 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Snapshots</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{promptRegistryHistory.length}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{promptRegistryHistory.length}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest source</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{promptRegistryHistory[0]?.source ?? "none"}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{promptRegistryHistory[0]?.source ?? "none"}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest observed</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>
                     {promptRegistryHistory[0]
                       ? new Date(promptRegistryHistory[0].observedAt).toLocaleString([], {
                           month: "short",
@@ -2806,7 +2806,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                     No registry snapshots yet. Capture one to start the governance trail.
                   </div>
                 )}
@@ -2825,19 +2825,19 @@ export function DebugTab() {
               <div className="grid grid-cols-2 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active provider</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerGovernance.activeProviderLabel}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerGovernance.activeProviderLabel}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Cloud availability</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerGovernance.cloudAvailable ? "Available" : "Unavailable"}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerGovernance.cloudAvailable ? "Available" : "Unavailable"}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Local-only</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerGovernance.localOnlyMode ? "Enabled" : "Disabled"}</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerGovernance.localOnlyMode ? "Enabled" : "Disabled"}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Fallback order</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{providerGovernance.fallbackOrder.length} providers</div>
+                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{providerGovernance.fallbackOrder.length} providers</div>
                 </div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
@@ -2909,11 +2909,11 @@ export function DebugTab() {
                           <Badge variant="gray">{fixture.kind}</Badge>
                           <Badge variant="gray">{fixture.durationMs} ms</Badge>
                         </div>
-                        <div className="mt-1 rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#b3bfd6]">
+                        <div className={`mt-1 rounded-md border border-[#1a2030] ${UI_SURFACES.panel} px-2 py-1 text-[9px] text-[#b3bfd6]`}>
                           <div className="text-[#556076]">Prompt</div>
                           <div>{fixture.prompt}</div>
                         </div>
-                        <div className="mt-1 rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#b3bfd6]">
+                        <div className={`mt-1 rounded-md border border-[#1a2030] ${UI_SURFACES.panel} px-2 py-1 text-[9px] text-[#b3bfd6]`}>
                           <div className="text-[#556076]">Output preview</div>
                           <div className="whitespace-pre-wrap">{fixture.outputPreview}</div>
                         </div>
@@ -2940,7 +2940,7 @@ export function DebugTab() {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                   Run the suite to compare structured outputs against the current provider/model choice.
                 </div>
               )}
@@ -2975,21 +2975,21 @@ export function DebugTab() {
                     <Badge variant={modelEvalComparison.deltaFailed > 0 ? "red" : "green"}>{modelEvalComparison.trendLabel}</Badge>
                   </div>
                   <div className="mt-1 grid grid-cols-4 gap-1.5">
-                    <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1">
+                    <div className={`rounded-md border border-[#1a2030] ${UI_SURFACES.panel} px-2 py-1`}>
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Pass delta</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{modelEvalComparison.deltaPassed >= 0 ? `+${modelEvalComparison.deltaPassed}` : modelEvalComparison.deltaPassed}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{modelEvalComparison.deltaPassed >= 0 ? `+${modelEvalComparison.deltaPassed}` : modelEvalComparison.deltaPassed}</div>
                     </div>
-                    <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1">
+                    <div className={`rounded-md border border-[#1a2030] ${UI_SURFACES.panel} px-2 py-1`}>
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Fail delta</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{modelEvalComparison.deltaFailed >= 0 ? `+${modelEvalComparison.deltaFailed}` : modelEvalComparison.deltaFailed}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{modelEvalComparison.deltaFailed >= 0 ? `+${modelEvalComparison.deltaFailed}` : modelEvalComparison.deltaFailed}</div>
                     </div>
-                    <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1">
+                    <div className={`rounded-md border border-[#1a2030] ${UI_SURFACES.panel} px-2 py-1`}>
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Skip delta</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{modelEvalComparison.deltaSkipped >= 0 ? `+${modelEvalComparison.deltaSkipped}` : modelEvalComparison.deltaSkipped}</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{modelEvalComparison.deltaSkipped >= 0 ? `+${modelEvalComparison.deltaSkipped}` : modelEvalComparison.deltaSkipped}</div>
                     </div>
-                    <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1">
+                    <div className={`rounded-md border border-[#1a2030] ${UI_SURFACES.panel} px-2 py-1`}>
                       <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Duration delta</div>
-                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{modelEvalComparison.deltaTotalDurationMs >= 0 ? `+${modelEvalComparison.deltaTotalDurationMs}` : modelEvalComparison.deltaTotalDurationMs} ms</div>
+                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{modelEvalComparison.deltaTotalDurationMs >= 0 ? `+${modelEvalComparison.deltaTotalDurationMs}` : modelEvalComparison.deltaTotalDurationMs} ms</div>
                     </div>
                   </div>
                 </div>
@@ -3038,7 +3038,7 @@ export function DebugTab() {
                     </div>
                   );
                 }) : (
-                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                     No historical model eval runs yet. Run the suite to start the comparison log.
                   </div>
                 )}
@@ -3091,7 +3091,7 @@ export function DebugTab() {
                   </div>
                 </div>
               )) : (
-                <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                   No runtime trace entries yet. Trigger import, scan, AI, save, render, or publish actions to populate this view.
                 </div>
               )}
@@ -3108,7 +3108,7 @@ export function DebugTab() {
               <button
                 type="button"
                 onClick={clearRuntimeIncidents}
-                className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                className={`rounded-md border border-[#1e2538] ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} hover:border-[#2a3245] hover:text-white`}
               >
                 Clear Incidents
               </button>
@@ -3139,7 +3139,7 @@ export function DebugTab() {
                   </div>
                 </div>
               )) : (
-                <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                   No incidents yet. Open the command bar, trigger a validation error, or run a simulation to populate the log.
                 </div>
               )}
@@ -3162,7 +3162,7 @@ export function DebugTab() {
                   </div>
                 </div>
               )) : (
-                <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
                   No performance traces yet. Run a simulation, save a snapshot, or finish a scan import to record one.
                 </div>
               )}

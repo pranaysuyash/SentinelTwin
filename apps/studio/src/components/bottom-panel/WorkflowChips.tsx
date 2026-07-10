@@ -6,9 +6,11 @@ import { useStudioStore } from "@/store/studio-store";
 import type { BottomTab } from "@/store/studio-store";
 
 import { OPERATOR_WORKFLOWS, type OperatorWorkflow } from "./workflows";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+
 
 const TONE_CLASSES: Record<NonNullable<OperatorWorkflow["tone"]>, string> = {
-  slate: "border-[#273246] bg-[#111521] text-[#8ea5cc] hover:border-[#3b4a69]",
+  slate: `border-[#273246] ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} hover:border-[#3b4a69]`,
   green: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:border-emerald-400/60",
   blue: "border-blue-500/30 bg-blue-500/10 text-blue-200 hover:border-blue-400/60",
   amber: "border-amber-500/30 bg-amber-500/10 text-amber-200 hover:border-amber-400/60",
@@ -63,7 +65,7 @@ export function WorkflowChips({ activeTab }: { activeTab: BottomTab }) {
         <button
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
-          className="rounded-md border border-[#273246] bg-[#0e1320] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#8ea5cc] transition-colors hover:border-[#3b4a69]"
+          className={`rounded-md border border-[#273246] bg-[#0e1320] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${UI_SURFACES.textMuted3} transition-colors hover:border-[#3b4a69]`}
         >
           {expanded ? "Hide" : `+${hiddenCount} more`}
         </button>
@@ -71,7 +73,7 @@ export function WorkflowChips({ activeTab }: { activeTab: BottomTab }) {
         <button
           type="button"
           onClick={() => setExpanded(false)}
-          className="rounded-md border border-[#273246] bg-[#0e1320] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#8ea5cc] transition-colors hover:border-[#3b4a69]"
+          className={`rounded-md border border-[#273246] bg-[#0e1320] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${UI_SURFACES.textMuted3} transition-colors hover:border-[#3b4a69]`}
         >
           Hide
         </button>

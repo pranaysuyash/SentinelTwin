@@ -113,7 +113,7 @@ function SimPlanCard({ plan, isActive, onPreview, onApply, onRevert }: SimPlanCa
           "rounded-xl border p-3 transition-colors",
           isActive
             ? "border-emerald-500/40 bg-emerald-500/5"
-            : "border-[#1f2536] bg-[#0b0f17]",
+            : `${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}`,
         )}
       >
         {/* Header row */}
@@ -203,7 +203,7 @@ function SimPlanCard({ plan, isActive, onPreview, onApply, onRevert }: SimPlanCa
               <button
                 type="button"
                 onClick={onRevert}
-                className="inline-flex items-center justify-center gap-1 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[10px] text-[#8094b8] transition-colors hover:text-white"
+                className={`inline-flex items-center justify-center gap-1 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 py-1.5 text-[10px] text-[#8094b8] transition-colors hover:text-white`}
               >
                 <RotateCcw className="size-3" />
                 Revert
@@ -213,7 +213,7 @@ function SimPlanCard({ plan, isActive, onPreview, onApply, onRevert }: SimPlanCa
             <button
               type="button"
               onClick={onPreview}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[10px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10"
+              className={`inline-flex w-full items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 py-1.5 text-[10px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10`}
             >
               <Zap className="size-3" />
               Preview Fix
@@ -241,14 +241,14 @@ function AiCandidateCard({ candidate, onApply }: AiCandidateCardProps) {
         initial={reduceMotion ? false : { opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
-        className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-3"
+        className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-3`}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2">
             <span
               className={cn(
                 "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border text-[9px] font-bold",
-                COST_COLORS[candidate.costCategory] ?? "text-[#647089] border-[#24283a]",
+                COST_COLORS[candidate.costCategory] ?? `text-[#647089] ${UI_SURFACES.borderThin}`,
               )}
             >
               {candidate.rank}
@@ -258,7 +258,7 @@ function AiCandidateCard({ candidate, onApply }: AiCandidateCardProps) {
           <span
             className={cn(
               "shrink-0 rounded-md border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wider",
-              COST_COLORS[candidate.costCategory] ?? "text-[#647089] border-[#24283a]",
+              COST_COLORS[candidate.costCategory] ?? `text-[#647089] ${UI_SURFACES.borderThin}`,
             )}
           >
             {candidate.costCategory}
@@ -302,7 +302,7 @@ function AiCandidateCard({ candidate, onApply }: AiCandidateCardProps) {
         <button
           type="button"
           onClick={() => onApply(candidate.operations)}
-          className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[10px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10"
+          className={`mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 py-1.5 text-[10px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10`}
         >
           <Sparkles className="size-3" />
           Apply This Fix
@@ -420,7 +420,7 @@ export function CounterfactualPanel() {
       {/* Mode toggle + truth badge */}
       <div className="mb-2 flex items-center gap-2">
         <TruthBadge label="simulated" />
-        <div className="`{ml-auto flex items-center rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0d15] p-0.5}`">
+        <div className={`{ml-auto flex items-center rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0d15] p-0.5}`}>
           <button
             type="button"
             onClick={() => setMode("sim")}
@@ -463,7 +463,7 @@ export function CounterfactualPanel() {
               ? "Constraints: budget $500, no new wiring, privacy…"
               : "Describe constraints (e.g., Camera 1 cannot move)"
           }
-          className="min-w-0 flex-1 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[10px] text-white placeholder-[#4d566b] outline-none transition-colors focus:border-[#3a4158]"
+          className={`min-w-0 flex-1 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 py-1.5 text-[10px] text-white placeholder-[#4d566b] outline-none transition-colors focus:border-[#3a4158]`}
         />
         <button
           type="button"
@@ -493,7 +493,7 @@ export function CounterfactualPanel() {
               if (activeCounterfactualPlanId) revertCounterfactualPreview();
               setAiCandidates([]);
             }}
-            className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] hover:text-white"
+            className={`flex size-7 shrink-0 items-center justify-center rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[#5d6880] hover:text-white`}
           >
             <X className="size-3" />
           </button>
@@ -561,7 +561,7 @@ export function CounterfactualPanel() {
                 <button
                   type="button"
                   onClick={() => setShowBatchCompare((v) => !v)}
-                  className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#9da8c0] transition-colors hover:border-[#3a4158] hover:text-white"
+                  className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-medium text-[#9da8c0] transition-colors hover:border-[#3a4158] hover:text-white`}
                 >
                   {showBatchCompare ? "Card View" : "Batch Compare"}
                 </button>
@@ -573,9 +573,9 @@ export function CounterfactualPanel() {
               </p>
             )}
             {showBatchCompare && aiCandidates.length > 0 ? (
-              <div className="overflow-x-auto rounded-xl border border-[#1f2536] bg-[#0b0f17]">
+              <div className={`overflow-x-auto rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}`}>
                 <table className="min-w-full text-[10px]">
-                  <thead className="border-b border-[#1f2536] bg-[#111521] text-[#7a859d]">
+                  <thead className={`border-b ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} text-[#7a859d]`}>
                     <tr>
                       <th className="px-2 py-1.5 text-left">#</th>
                       <th className="px-2 py-1.5 text-left">Candidate</th>

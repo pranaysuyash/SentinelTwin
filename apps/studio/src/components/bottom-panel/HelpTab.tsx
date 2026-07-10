@@ -3,6 +3,8 @@
 import { TOOL_SHORTCUTS, VIEW_MODE_KEYS } from "@/lib/studio-constants";
 import { resetFirstRunGuideDismissal } from "@/components/layout/FirstRunGuide";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+
 
 const WORKFLOW_STEPS = [
   "Start from a blank site, floor plan, guided photo marking, imported site twin, or layout draft.",
@@ -232,7 +234,7 @@ export function HelpTab() {
                     {group.items.map(({ keys, action }) => (
                       <div key={`${group.title}-${keys}`} className="flex items-center justify-between gap-2">
                         <span className="text-[10px] text-[#9fb0ce]">{action}</span>
-                        <kbd className="rounded border border-[#2a3248] bg-[#11182a] px-1.5 py-0.5 font-mono text-[10px] text-[#c7d0e4]">
+                        <kbd className={`rounded border border-[#2a3248] bg-[#11182a] px-1.5 py-0.5 font-mono text-[10px] ${UI_SURFACES.textBody}`}>
                           {keys}
                         </kbd>
                       </div>

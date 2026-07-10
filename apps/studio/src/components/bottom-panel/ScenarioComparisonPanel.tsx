@@ -6,6 +6,8 @@ import { useState } from "react";
 import { TruthBadge } from "@/components/shared/TruthBadge";
 import { cn } from "@/lib/cn";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+
 
 const SCENARIO_ICON: Record<string, React.ReactNode> = {
   normal_day: <Sun className="size-3 text-yellow-400" />,
@@ -18,7 +20,7 @@ const SENSITIVITY_COLOR: Record<string, string> = {
   high: "text-orange-400 bg-orange-500/10 border-orange-500/20",
   medium: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20",
   low: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-  none: "text-[#4d5870] bg-[#111521] border-[#1f2536]",
+  none: `text-[#4d5870] ${UI_SURFACES.card} ${UI_SURFACES.borderSubtle}`,
 };
 
 function DeltaChip({ value, suffix = "%" }: { value: number; suffix?: string }) {
@@ -82,7 +84,7 @@ export function ScenarioComparisonPanel() {
       <div>
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">
+            <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>
               Scenario Comparison
             </span>
             <TruthBadge label="simulated" />
@@ -91,7 +93,7 @@ export function ScenarioComparisonPanel() {
             type="button"
             onClick={handleRunScenarios}
             disabled={scenarioRunning}
-            className="inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] text-[#8094b8] transition-colors hover:border-[#3a4158] hover:text-white disabled:opacity-50"
+            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] text-[#8094b8] transition-colors hover:border-[#3a4158] hover:text-white disabled:opacity-50`}
           >
             {scenarioRunning ? <Loader2 className="size-3 animate-spin" /> : <Zap className="size-3" />}
             {scenarioBatchResults ? "Re-run" : "Run Scenarios"}
@@ -114,7 +116,7 @@ export function ScenarioComparisonPanel() {
         {scenarioBatchResults && !scenarioRunning && (
           <div className="space-y-1.5">
             {/* Baseline row */}
-            <div className="rounded-xl border border-[#24283a] bg-[#0a0d15] px-3 py-2">
+            <div className={`rounded-xl border ${UI_SURFACES.borderThin} bg-[#0a0d15] px-3 py-2`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sun className="size-3 text-yellow-300" />
@@ -138,7 +140,7 @@ export function ScenarioComparisonPanel() {
                   key={sr.scenarioId}
                   className={cn(
                     "rounded-xl border px-3 py-2 transition-colors",
-                    isWorst ? "border-red-500/30 bg-red-950/10" : "border-[#1f2536] bg-[#0b0f17]",
+                    isWorst ? "border-red-500/30 bg-red-950/10" : `${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}`,
                   )}
                 >
                   <button
@@ -198,7 +200,7 @@ export function ScenarioComparisonPanel() {
       <div>
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">
+            <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>
               Assumption Sensitivity
             </span>
             <TruthBadge label="simulated" />
@@ -207,7 +209,7 @@ export function ScenarioComparisonPanel() {
             type="button"
             onClick={handleRunSensitivity}
             disabled={sensitivityRunning}
-            className="inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] text-[#8094b8] transition-colors hover:border-[#3a4158] hover:text-white disabled:opacity-50"
+            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] text-[#8094b8] transition-colors hover:border-[#3a4158] hover:text-white disabled:opacity-50`}
           >
             {sensitivityRunning ? <Loader2 className="size-3 animate-spin" /> : <Zap className="size-3" />}
             {assumptionSensitivityResults ? "Re-run" : "Run Analysis"}
@@ -238,7 +240,7 @@ export function ScenarioComparisonPanel() {
               .map((s) => (
                 <div
                   key={s.assumptionName}
-                  className="flex items-start justify-between gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2"
+                  className={`flex items-start justify-between gap-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2`}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">

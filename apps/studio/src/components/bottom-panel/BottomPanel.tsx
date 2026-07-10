@@ -456,7 +456,7 @@ export function BottomPanel() {
                         </button>
                       );
                     }),
-                    <div key={`sep-${group.label}`} className="`{my-0.5 border-t ${UI_SURFACES.borderPanel}}`" />,
+                    <div key={`sep-${group.label}`} className={`{my-0.5 border-t ${UI_SURFACES.borderPanel}}`} />,
                   ];
                 })}
               </div>

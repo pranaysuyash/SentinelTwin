@@ -9,6 +9,8 @@ import { cn } from "@/lib/cn";
 import { parseSensorLiveFeed } from "@/lib/sensor-live-ingest";
 import type { SensorNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+
 
 const SENSOR_TYPE_LABELS: Record<SensorNode["sensorType"], string> = {
   motion: "Motion",
@@ -289,7 +291,7 @@ export function SensorsTab() {
                       "rounded-lg border px-2 py-1.5 text-left text-[10px] transition-colors",
                       active
                         ? "border-cyan-500/30 bg-cyan-500/12 text-cyan-200"
-                        : "border-[#1f2536] bg-[#0f1320] text-[#95a0b7] hover:border-[#273246] hover:text-[#d2d9e8]",
+                        : `${UI_SURFACES.borderSubtle} bg-[#0f1320] text-[#95a0b7] hover:border-[#273246] hover:${UI_SURFACES.textBody2}`,
                     )}
                   >
                     <div className="font-semibold">{SENSOR_TYPE_LABELS[sensorType]}</div>
@@ -305,7 +307,7 @@ export function SensorsTab() {
                 "flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border text-[10px] font-medium transition-colors",
                 activeTool === "sensor"
                   ? "border-cyan-500/30 bg-cyan-500/12 text-cyan-200"
-                  : "border-[#24304a] bg-[#111521] text-[#c7d0e4] hover:border-[#3b4a69] hover:bg-[#172235]",
+                  : `border-[#24304a] ${UI_SURFACES.card} ${UI_SURFACES.textBody} hover:border-[#3b4a69] hover:bg-[#172235]`,
               )}
             >
               <LocateFixed className="h-3 w-3" />
@@ -323,11 +325,11 @@ export function SensorsTab() {
                   {SENSOR_TYPE_LABELS[selectedSensor.sensorType]} · {SENSOR_COVERAGE_LABELS[selectedSensor.coverageMode]}
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[9px] text-[#8ea0bf]">
-                  <div className="rounded-md bg-[#0b0f17] px-2 py-1.5">
+                  <div className={`rounded-md ${UI_SURFACES.panel} px-2 py-1.5`}>
                     <div className="uppercase tracking-[0.14em] text-[#546078]">State</div>
                     <div className="mt-0.5 font-medium text-[#d8def0]">{selectedSensor.state}</div>
                   </div>
-                  <div className="rounded-md bg-[#0b0f17] px-2 py-1.5">
+                  <div className={`rounded-md ${UI_SURFACES.panel} px-2 py-1.5`}>
                     <div className="uppercase tracking-[0.14em] text-[#546078]">Live feed</div>
                     <div className="mt-0.5 font-medium text-[#d8def0]">{sensorEvents.length} events</div>
                   </div>
@@ -359,7 +361,7 @@ export function SensorsTab() {
                     details: `${selectedSensor.label} sent a heartbeat.`,
                     resultingState: selectedSensor.state,
                   })}
-                  className="rounded-lg border border-[#24304a] bg-[#111521] px-2 py-2 text-[10px] font-medium text-[#d2d9e8] transition-colors hover:border-[#32506a] hover:bg-[#172235]"
+                  className={`rounded-lg border border-[#24304a] ${UI_SURFACES.card} px-2 py-2 text-[10px] font-medium ${UI_SURFACES.textBody2} transition-colors hover:border-[#32506a] hover:bg-[#172235]`}
                 >
                   Heartbeat
                 </button>
@@ -408,19 +410,19 @@ export function SensorsTab() {
 
         <SectionCard title="Live Event Feed" truthLabel="simulated">
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-            <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2">
+            <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2`}>
               <div className="text-[9px] uppercase tracking-[0.14em] text-[#546078]">Triggers</div>
               <div className="mt-1 text-[18px] font-semibold text-cyan-200">{eventCounts.triggered}</div>
             </div>
-            <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2">
+            <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2`}>
               <div className="text-[9px] uppercase tracking-[0.14em] text-[#546078]">Heartbeats</div>
               <div className="mt-1 text-[18px] font-semibold text-blue-200">{eventCounts.heartbeat}</div>
             </div>
-            <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2">
+            <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2`}>
               <div className="text-[9px] uppercase tracking-[0.14em] text-[#546078]">Faults</div>
               <div className="mt-1 text-[18px] font-semibold text-red-300">{eventCounts.faulted}</div>
             </div>
-            <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2">
+            <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2`}>
               <div className="text-[9px] uppercase tracking-[0.14em] text-[#546078]">Restores</div>
               <div className="mt-1 text-[18px] font-semibold text-emerald-300">{eventCounts.restored}</div>
             </div>
@@ -443,7 +445,7 @@ export function SensorsTab() {
                         ? "border-emerald-900/35"
                         : event.kind === "triggered"
                           ? "border-cyan-900/35"
-                          : "border-[#1f2536]",
+                          : `${UI_SURFACES.borderSubtle}`,
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -457,19 +459,19 @@ export function SensorsTab() {
                       <div className="text-[8px] uppercase tracking-[0.14em] text-[#546078]">
                         {new Date(event.timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
                       </div>
-                      <div className="text-[9px] font-medium text-[#d2d9e8]">{event.resultingState ?? "—"}</div>
+                      <div className={`text-[9px] font-medium ${UI_SURFACES.textBody2}`}>{event.resultingState ?? "—"}</div>
                     </div>
                   </div>
                   <div className="mt-1 grid grid-cols-3 gap-1.5 text-[9px] text-[#90a0bf]">
-                    <div className="rounded-md bg-[#0b0f17] px-1.5 py-1">
+                    <div className={`rounded-md ${UI_SURFACES.panel} px-1.5 py-1`}>
                       <div className="text-[8px] uppercase tracking-[0.14em] text-[#546078]">Nearest Cam</div>
                       <div className="mt-0.5 truncate font-mono">{event.nearestCameraName ?? "None"}</div>
                     </div>
-                    <div className="rounded-md bg-[#0b0f17] px-1.5 py-1">
+                    <div className={`rounded-md ${UI_SURFACES.panel} px-1.5 py-1`}>
                       <div className="text-[8px] uppercase tracking-[0.14em] text-[#546078]">Distance</div>
                       <div className="mt-0.5 font-mono">{formatDistance(event.nearestDistanceM)}</div>
                     </div>
-                    <div className="rounded-md bg-[#0b0f17] px-1.5 py-1">
+                    <div className={`rounded-md ${UI_SURFACES.panel} px-1.5 py-1`}>
                       <div className="text-[8px] uppercase tracking-[0.14em] text-[#546078]">Signal</div>
                       <div className="mt-0.5 truncate">{event.details}</div>
                     </div>
@@ -485,7 +487,7 @@ export function SensorsTab() {
               <button
                 type="button"
                 onClick={clearSensorEvents}
-                className="rounded-md border border-[#24304a] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] transition-colors hover:border-[#32506a] hover:text-white"
+                className={`rounded-md border border-[#24304a] px-2 py-1 text-[9px] font-medium ${UI_SURFACES.textBody2} transition-colors hover:border-[#32506a] hover:text-white`}
               >
                 Clear current scene feed
               </button>
@@ -510,7 +512,7 @@ export function SensorsTab() {
   {"sensorId":"sensor_1","kind":"triggered","details":"Motion detected"},
   {"sensorLabel":"Front Door","kind":"heartbeat"}
 ]`}
-              className="w-full rounded-lg border border-[#24304a] bg-[#111521] px-3 py-2 text-[10px] leading-relaxed text-[#d2d9e8] outline-none placeholder:text-[#556076] focus:border-cyan-400/40"
+              className={`w-full rounded-lg border border-[#24304a] ${UI_SURFACES.card} px-3 py-2 text-[10px] leading-relaxed ${UI_SURFACES.textBody2} outline-none placeholder:text-[#556076] focus:border-cyan-400/40`}
             />
             <div className="grid gap-2 md:grid-cols-[auto_1fr]">
               <button
@@ -552,7 +554,7 @@ export function SensorsTab() {
                   setExternalFeedStatus(null);
                 }}
                 placeholder="https://example.com/live-sensor-feed"
-                className="w-full rounded-lg border border-[#24304a] bg-[#111521] px-3 py-2 text-[10px] text-[#d2d9e8] outline-none placeholder:text-[#556076] focus:border-cyan-400/40"
+                className={`w-full rounded-lg border border-[#24304a] ${UI_SURFACES.card} px-3 py-2 text-[10px] ${UI_SURFACES.textBody2} outline-none placeholder:text-[#556076] focus:border-cyan-400/40`}
               />
               <input
                 type="text"
@@ -563,7 +565,7 @@ export function SensorsTab() {
                   setExternalFeedStatus(null);
                 }}
                 placeholder="Optional feed label, like ONVIF relay"
-                className="w-full rounded-lg border border-[#24304a] bg-[#111521] px-3 py-2 text-[10px] text-[#d2d9e8] outline-none placeholder:text-[#556076] focus:border-cyan-400/40"
+                className={`w-full rounded-lg border border-[#24304a] ${UI_SURFACES.card} px-3 py-2 text-[10px] ${UI_SURFACES.textBody2} outline-none placeholder:text-[#556076] focus:border-cyan-400/40`}
               />
             </div>
             <div className="grid gap-2 md:grid-cols-[auto_1fr]">
@@ -598,7 +600,7 @@ export function SensorsTab() {
             {sensorIngestHistory.length > 0 ? (
               <div className="space-y-1.5">
                 {sensorIngestHistory.map((entry, index) => (
-                  <div key={`${entry.receivedAt}:${index}`} className="rounded-lg border border-[#1f2536] bg-[#0c1119] px-2.5 py-2">
+                  <div key={`${entry.receivedAt}:${index}`} className={`rounded-lg border ${UI_SURFACES.borderSubtle} bg-[#0c1119] px-2.5 py-2`}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="font-medium text-[#d7ddef]">{entry.sceneName ?? "Scene ingest"}</div>
                       <div className="text-[9px] text-[#7684a2]">{entry.sourceCount} record{entry.sourceCount === 1 ? "" : "s"}</div>
@@ -614,7 +616,7 @@ export function SensorsTab() {
                 ))}
               </div>
             ) : (
-              <div className="rounded-lg border border-dashed border-[#1f2536] bg-[#0c1119] px-2.5 py-2 text-[#7684a2]">
+              <div className={`rounded-lg border border-dashed ${UI_SURFACES.borderSubtle} bg-[#0c1119] px-2.5 py-2 text-[#7684a2]`}>
                 No sensor ingest archive yet.
               </div>
             )}
@@ -622,15 +624,15 @@ export function SensorsTab() {
         </SectionCard>
 
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2">
+          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2`}>
             <div className="text-[9px] uppercase tracking-[0.14em] text-[#546078]">Total</div>
             <div className="mt-1 text-[18px] font-semibold text-white">{scene.sensors.length}</div>
           </div>
-          <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2">
+          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2`}>
             <div className="text-[9px] uppercase tracking-[0.14em] text-[#546078]">Active</div>
             <div className="mt-1 text-[18px] font-semibold text-emerald-300">{activeCount}</div>
           </div>
-          <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2">
+          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2`}>
             <div className="text-[9px] uppercase tracking-[0.14em] text-[#546078]">Inactive / Faulted</div>
             <div className="mt-1 text-[18px] font-semibold text-red-300">{faultedCount + inactiveCount}</div>
           </div>
@@ -639,7 +641,7 @@ export function SensorsTab() {
         <SectionCard title="Sensor Types" truthLabel="simulated">
           <div className="space-y-1.5">
             {(Object.keys(SENSOR_TYPE_LABELS) as SensorNode["sensorType"][]).map((sensorType) => (
-              <div key={sensorType} className="flex items-center justify-between gap-2 rounded-lg border border-[#1f2536] bg-[#0f1320] px-2 py-1.5">
+              <div key={sensorType} className={`flex items-center justify-between gap-2 rounded-lg border ${UI_SURFACES.borderSubtle} bg-[#0f1320] px-2 py-1.5`}>
                 <div className="min-w-0">
                   <div className="truncate text-[10px] font-medium text-[#d8def0]">{SENSOR_TYPE_LABELS[sensorType]}</div>
                   <div className="text-[8px] uppercase tracking-[0.14em] text-[#5d6781]">Scene inventory</div>
@@ -679,7 +681,7 @@ export function SensorsTab() {
                       "w-full rounded-lg border px-2.5 py-2 text-left transition-colors",
                       isSelected
                         ? "border-cyan-500/30 bg-cyan-500/10"
-                        : "border-[#1f2536] bg-[#0f1320] hover:border-[#273246] hover:bg-[#131929]",
+                        : `${UI_SURFACES.borderSubtle} bg-[#0f1320] hover:border-[#273246] hover:bg-[#131929]`,
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -692,15 +694,15 @@ export function SensorsTab() {
                       <Badge variant={state.tone}>{state.label}</Badge>
                     </div>
                     <div className="mt-2 grid grid-cols-3 gap-1.5 text-[9px] text-[#90a0bf]">
-                      <div className="rounded-md bg-[#0b0f17] px-1.5 py-1">
+                      <div className={`rounded-md ${UI_SURFACES.panel} px-1.5 py-1`}>
                         <div className="text-[8px] uppercase tracking-[0.14em] text-[#546078]">X/Z</div>
                         <div className="mt-0.5 font-mono">{sensor.position[0].toFixed(1)} / {sensor.position[2].toFixed(1)}</div>
                       </div>
-                      <div className="rounded-md bg-[#0b0f17] px-1.5 py-1">
+                      <div className={`rounded-md ${UI_SURFACES.panel} px-1.5 py-1`}>
                         <div className="text-[8px] uppercase tracking-[0.14em] text-[#546078]">Nearest Cam</div>
                         <div className="mt-0.5 truncate font-mono">{nearestCamera ?? "None"}</div>
                       </div>
-                      <div className="rounded-md bg-[#0b0f17] px-1.5 py-1">
+                      <div className={`rounded-md ${UI_SURFACES.panel} px-1.5 py-1`}>
                         <div className="text-[8px] uppercase tracking-[0.14em] text-[#546078]">Distance</div>
                         <div className="mt-0.5 font-mono">{formatDistance(nearestDistance)}</div>
                       </div>
@@ -713,7 +715,7 @@ export function SensorsTab() {
         </SectionCard>
 
         {result ? (
-          <div className="rounded-lg border border-[#1f2536] bg-[#0f1320] px-3 py-2 text-[10px] leading-relaxed text-[#8d98b0]">
+          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} bg-[#0f1320] px-3 py-2 text-[10px] leading-relaxed text-[#8d98b0]`}>
             Sensor live events now feed the operational evidence trail, and the external feed bridge can pull live JSON/NDJSON through the same ingest path before real ONVIF integration lands.
           </div>
         ) : null}

@@ -81,21 +81,21 @@ export function ScenarioPathPanel() {
   const activeTimeOfDay = activePath?.timeOfDay ?? "day";
 
   return (
-    <div className="`{flex h-[208px] flex-shrink-0 flex-col border-t ${UI_SURFACES.borderPanel} bg-[#0d1017]}`">
-      <div className="`{flex h-8 items-center justify-between border-b ${UI_SURFACES.borderPanel} px-3}`">
+    <div className={`{flex h-[208px] flex-shrink-0 flex-col border-t ${UI_SURFACES.borderPanel} bg-[#0d1017]}`}>
+      <div className={`{flex h-8 items-center justify-between border-b ${UI_SURFACES.borderPanel} px-3}`}>
         <div className="flex items-center gap-2">
           <TruthBadge label="simulated" />
           <div>
-            <div className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4a5568]">Scenario / Path</div>
+            <div className={`text-[9px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textMuted}`}>Scenario / Path</div>
             <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Route analysis surface</div>
           </div>
         </div>
-        <MapPin className="h-3 w-3 text-[#4a5568]" />
+        <MapPin className={`h-3 w-3 ${UI_SURFACES.textMuted}`} />
       </div>
 
       <div className="flex min-h-0 flex-1 gap-2 px-2.5 py-2.5">
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+          <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
             {!activePath ? (
               <div className="rounded-lg border border-dashed border-[#26324a] bg-[#0a0d14] px-2.5 py-2 text-[9px] text-[#72809a]">
                 No path selected. Use the map picker to choose a route, then replay or edit it here.
@@ -116,23 +116,23 @@ export function ScenarioPathPanel() {
                       {activePath.labelDetail ?? `${activeActor} · ${activeIntent}`}
                     </div>
                   </div>
-                  <div className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-right">
+                  <div className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-right`}>
                     <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Actor</div>
-                    <div className="text-[9px] font-medium text-[#c7d0e4]">{activeActor}</div>
+                    <div className={`text-[9px] font-medium ${UI_SURFACES.textBody}`}>{activeActor}</div>
                   </div>
                 </div>
 
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
+                  <span className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1 text-[9px] text-[#9ea8bf]`}>
                     {activeIntent}
                   </span>
-                  <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
+                  <span className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1 text-[9px] text-[#9ea8bf]`}>
                     {activeActor}
                   </span>
-                  <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
+                  <span className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1 text-[9px] text-[#9ea8bf]`}>
                     {activePath.speedMps.toFixed(1)} m/s
                   </span>
-                  <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
+                  <span className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1 text-[9px] text-[#9ea8bf]`}>
                     {activeTimeOfDay}
                   </span>
                 </div>
@@ -155,22 +155,22 @@ export function ScenarioPathPanel() {
                   />
                 </div>
 
-                <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0a0d14] px-2.5 py-2">
+                <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0a0d14] px-2.5 py-2`}>
                   <div className="mb-1.5 text-[8px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Route Summary</div>
                   <div className="flex items-center gap-2 text-[9px]">
                     <span className="rounded-md border border-emerald-500/20 bg-emerald-500/8 px-1.5 py-0.5 text-emerald-200">
                       {pathStartLabel}
                     </span>
-                    <span className="text-[#4a5568]">- Path -</span>
+                    <span className={`${UI_SURFACES.textMuted}`}>- Path -</span>
                     <span className="rounded-md border border-sky-500/20 bg-sky-500/8 px-1.5 py-0.5 text-sky-200">
                       {pathEndLabel}
                     </span>
                   </div>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
+                    <span className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1 text-[9px] text-[#9ea8bf]`}>
                       {activePath.points.length} waypoints
                     </span>
-                    <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
+                    <span className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1 text-[9px] text-[#9ea8bf]`}>
                       {bestCamera === "unavailable" ? "no dominant camera" : `best: ${bestCamera}`}
                     </span>
                   </div>
@@ -196,7 +196,7 @@ export function ScenarioPathPanel() {
                 type="button"
                 disabled={!activePath}
                 onClick={startPathEditing}
-                className="h-7 rounded-lg border border-[#24283a] bg-[#111521] px-2 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className={`h-7 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 Edit Path
               </button>
@@ -244,7 +244,7 @@ export function ScenarioPathPanel() {
 
           {!activePath && noSimulationYet ? (
             <RunSimulationPrompt
-              className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-3"
+              className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-3 py-3`}
               message="Run the shared simulation to populate route visibility details."
             />
           ) : null}
@@ -266,7 +266,7 @@ function Metric({
   tone?: string;
 }) {
   return (
-    <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-1.5">
+    <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1.5`}>
       <div className="uppercase tracking-[0.16em] text-[#556076]">{label}</div>
       <div className={`mt-0.5 font-mono ${tone}`}>{value}</div>
     </div>
@@ -283,7 +283,7 @@ function Stat({
   tone?: string;
 }) {
   return (
-    <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
       <div className={`text-[13px] font-semibold ${tone}`}>{value}</div>
       <div className="mt-0.5 text-[8px] uppercase tracking-[0.18em] text-[#556076]">{label}</div>
     </div>
@@ -316,7 +316,7 @@ function RouteCameraHealthStrip() {
   const degradedCount = routeCameras.filter((c) => c.cam.status !== "on").length;
 
   return (
-    <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0a0d14] px-2.5 py-2">
+    <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0a0d14] px-2.5 py-2`}>
       <div className="mb-1.5 flex items-center justify-between">
         <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
           Route Camera Health
@@ -333,7 +333,7 @@ function RouteCameraHealthStrip() {
           return (
             <div
               key={cam.id}
-              className={`flex items-center gap-1.5 rounded-md border border-[#24283a] ${st.bg} px-1.5 py-1`}
+              className={`flex items-center gap-1.5 rounded-md border ${UI_SURFACES.borderThin} ${st.bg} px-1.5 py-1`}
               title={`${cam.name}: ${st.label} · ${cam.clarity} clarity · ${visibleS.toFixed(1)}s visible · best ${maxQuality}`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${cam.status === "on" ? "bg-emerald-400" : cam.status === "off" ? "bg-zinc-500" : "bg-amber-400"}`} />

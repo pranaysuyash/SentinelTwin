@@ -26,7 +26,7 @@ export function RedundancyMatrixPanel() {
           type="button"
           onClick={runSimulation}
           disabled={simulationRunning}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-3 py-2 text-[10px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+          className={`inline-flex items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-3 py-2 text-[10px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60`}
         >
           {simulationRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
           {simulationRunning ? "Running..." : "Run Simulation"}
@@ -42,7 +42,7 @@ export function RedundancyMatrixPanel() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2">
         <ShieldAlert className="h-5 w-5 text-[#3a4158]" />
-        <div className="text-[10px] text-[#4a5568]">
+        <div className={`text-[10px] ${UI_SURFACES.textMuted}`}>
           {cameras.length === 0 ? "No cameras in scene" : "No critical zones defined"}
         </div>
       </div>
@@ -92,24 +92,24 @@ export function RedundancyMatrixPanel() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Summary bar */}
-      <div className="`{flex items-center gap-3 border-b ${UI_SURFACES.borderPanel} bg-[#0d1017] px-3 py-2}`">
+      <div className={`{flex items-center gap-3 border-b ${UI_SURFACES.borderPanel} bg-[#0d1017] px-3 py-2}`}>
         <TruthBadge label="simulated" />
-        <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">
+        <span className={`text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted}`}>
           Redundancy Matrix
         </span>
         <span className="text-[9px] text-[#6a748b]">
           {cameras.length} cameras × {zones.length} zones
         </span>
-        <span className="ml-auto text-[9px] text-[#4a5568]">
+        <span className={`ml-auto text-[9px] ${UI_SURFACES.textMuted}`}>
           {matrix.filter((c) => c.soleCoverageZones.length === 0).length} redundant
         </span>
       </div>
 
       {focusedCamera ? (
-        <div className="`{border-b ${UI_SURFACES.borderPanel} bg-[#0b0f17] px-3 py-2}`">
+        <div className={`{border-b ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
           <div className="flex items-start gap-3">
             <div className="min-w-0">
-              <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">
+              <div className={`text-[8px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textAccent}`}>
                 Selected Camera Impact
               </div>
               <div className="mt-1 text-[11px] font-semibold text-[#e2e8f7]">
@@ -121,7 +121,7 @@ export function RedundancyMatrixPanel() {
               </div>
             </div>
             <div className="ml-auto text-right">
-              <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Single-point zones</div>
+              <div className={`text-[8px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>Single-point zones</div>
               <div className="mt-0.5 text-[18px] font-bold text-red-300">{focusedCamera.soleCoverageZones.length}</div>
             </div>
           </div>
@@ -174,7 +174,7 @@ export function RedundancyMatrixPanel() {
                     onClick={() => selectNode(cam.cameraId)}
                     className={cn(
                       "truncate text-[11px] font-semibold hover:text-blue-400",
-                      cam.isOffline ? "text-[#7a869e] line-through" : "text-[#c7d0e4]",
+                      cam.isOffline ? "text-[#7a869e] line-through" : `${UI_SURFACES.textBody}`,
                     )}
                   >
                     {cam.cameraName}
@@ -198,7 +198,7 @@ export function RedundancyMatrixPanel() {
                       return (
                         <span
                           key={zone.id}
-                          className="rounded bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#3a4158] line-through"
+                          className={`rounded ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] text-[#3a4158] line-through`}
                         >
                           {zone.label}
                         </span>
@@ -224,7 +224,7 @@ export function RedundancyMatrixPanel() {
                 </div>
 
                 {/* Stats */}
-                <div className="mt-2 flex items-center gap-3 text-[8px] text-[#4a5568]">
+                <div className={`mt-2 flex items-center gap-3 text-[8px] ${UI_SURFACES.textMuted}`}>
                   <span>
                     Coverage: <span className="text-[#8090a8]">{cam.coveragePct.toFixed(1)}%</span>
                   </span>
@@ -242,7 +242,7 @@ export function RedundancyMatrixPanel() {
       </div>
 
       {/* Legend */}
-      <div className="`{flex items-center gap-3 border-t ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[8px] text-[#3a4158]}`">
+      <div className={`{flex items-center gap-3 border-t ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[8px] text-[#3a4158]}`}>
         <span className="flex items-center gap-1">
           <span className="h-2 w-2 rounded bg-green-900/40" /> Redundant
         </span>
@@ -250,7 +250,7 @@ export function RedundancyMatrixPanel() {
           <span className="h-2 w-2 rounded bg-red-900/50" /> Single point of failure
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded bg-[#111521]" /> Not covered
+          <span className={`h-2 w-2 rounded ${UI_SURFACES.card}`} /> Not covered
         </span>
       </div>
     </div>

@@ -98,7 +98,7 @@ export function CoverageBudgetTab() {
 
       {/* ── Stats strip ───────────────────────────────────────────────── */}
       {budget && (
-        <div className="`{flex flex-shrink-0 items-center gap-3 border-b ${UI_SURFACES.borderPanel} bg-[#090c12] px-3 py-1}`">
+        <div className={`{flex flex-shrink-0 items-center gap-3 border-b ${UI_SURFACES.borderPanel} bg-[#090c12] px-3 py-1}`}>
 
           <TruthBadge label="simulated" />
 
@@ -113,8 +113,8 @@ export function CoverageBudgetTab() {
               </span>
             </div>
             <div>
-              <div className="text-[10px] font-semibold text-[#c7d0e4] leading-tight">{fmt(budget.totalCost)}</div>
-              <div className="text-[8px] text-[#4a5568]">Estimated Total</div>
+              <div className={`text-[10px] font-semibold ${UI_SURFACES.textBody} leading-tight`}>{fmt(budget.totalCost)}</div>
+              <div className={`text-[8px] ${UI_SURFACES.textMuted}`}>Estimated Total</div>
             </div>
           </div>
 
@@ -125,7 +125,7 @@ export function CoverageBudgetTab() {
             { label: "Hardware", value: fmt(budget.hardwareCost), color: "text-blue-300" },
             { label: "Install",  value: fmt(budget.installationCost), color: "text-amber-300" },
             { label: "Cabling",  value: fmt(budget.cablingCost), color: "text-purple-300" },
-            { label: "Hours",    value: fmtHours(budget.estimatedHours), color: "text-[#c7d0e4]" },
+            { label: "Hours",    value: fmtHours(budget.estimatedHours), color: `${UI_SURFACES.textBody}` },
           ] as const).map(({ label, value, color }) => (
             <div key={label} className="flex items-baseline gap-1">
               <span className={`font-mono text-[11px] font-bold ${color}`}>{value}</span>
@@ -137,7 +137,7 @@ export function CoverageBudgetTab() {
           <button
             type="button"
             onClick={exportSummary}
-            className="ml-auto rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[9px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white"
+            className={`ml-auto rounded border border-[#273246] ${UI_SURFACES.card} px-2 py-1 text-[9px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white`}
           >
             Export Summary
           </button>
@@ -189,7 +189,7 @@ export function CoverageBudgetTab() {
                   </div>
                   <table className="w-full border-collapse text-[9px]">
                     <thead>
-                      <tr className="`{border-b ${UI_SURFACES.borderPanel}}`">
+                      <tr className={`{border-b ${UI_SURFACES.borderPanel}}`}>
                         <th className="px-2 py-1 text-left text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Camera</th>
                         <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Hardware</th>
                         <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Install</th>
@@ -201,11 +201,11 @@ export function CoverageBudgetTab() {
                     <tbody>
                       {budget.breakdownByCamera.map((c) => (
                         <tr key={c.cameraId} className="border-b border-[#181b26] transition-colors hover:bg-[#0d0f17]">
-                          <td className="px-2 py-1 text-left text-[#c7d0e4]">{c.name}</td>
+                          <td className={`px-2 py-1 text-left ${UI_SURFACES.textBody}`}>{c.name}</td>
                           <td className="px-2 py-1 text-right font-mono text-[#8090a8]">{fmt(c.cost)}</td>
                           <td className="px-2 py-1 text-right font-mono text-[#8090a8]">{fmt(c.installation)}</td>
                           <td className="px-2 py-1 text-right font-mono text-[#8090a8]">{fmt(c.cabling)}</td>
-                          <td className="px-2 py-1 text-right font-mono font-semibold text-[#c7d0e4]">{fmt(c.total)}</td>
+                          <td className={`px-2 py-1 text-right font-mono font-semibold ${UI_SURFACES.textBody}`}>{fmt(c.total)}</td>
                           <td className="px-2 py-1 text-right font-mono text-[#68738a]">{c.laborHours.toFixed(1)}</td>
                         </tr>
                       ))}
@@ -222,7 +222,7 @@ export function CoverageBudgetTab() {
                   </div>
                   <table className="w-full border-collapse text-[9px]">
                     <thead>
-                      <tr className="`{border-b ${UI_SURFACES.borderPanel}}`">
+                      <tr className={`{border-b ${UI_SURFACES.borderPanel}}`}>
                         <th className="px-2 py-1 text-left text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Light</th>
                         <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Hardware</th>
                         <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Install</th>
@@ -233,10 +233,10 @@ export function CoverageBudgetTab() {
                     <tbody>
                       {budget.breakdownByLight.map((l) => (
                         <tr key={l.lightId} className="border-b border-[#181b26] transition-colors hover:bg-[#0d0f17]">
-                          <td className="px-2 py-1 text-left text-[#c7d0e4]">{l.name}</td>
+                          <td className={`px-2 py-1 text-left ${UI_SURFACES.textBody}`}>{l.name}</td>
                           <td className="px-2 py-1 text-right font-mono text-[#8090a8]">{fmt(l.cost)}</td>
                           <td className="px-2 py-1 text-right font-mono text-[#8090a8]">{fmt(l.installation)}</td>
-                          <td className="px-2 py-1 text-right font-mono font-semibold text-[#c7d0e4]">{fmt(l.total)}</td>
+                          <td className={`px-2 py-1 text-right font-mono font-semibold ${UI_SURFACES.textBody}`}>{fmt(l.total)}</td>
                           <td className="px-2 py-1 text-right font-mono text-[#68738a]">{l.laborHours.toFixed(1)}</td>
                         </tr>
                       ))}
@@ -259,7 +259,7 @@ export function CoverageBudgetTab() {
                       >
                         <div className="flex flex-col">
                           <span className="text-[9px] font-medium text-amber-200">{o.label}</span>
-                          <span className="text-[8px] text-[#4a5568]">{o.description}</span>
+                          <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>{o.description}</span>
                         </div>
                         <span className="flex-shrink-0 font-mono text-[10px] font-semibold text-amber-300">
                           {fmt(o.cost)}
@@ -275,14 +275,14 @@ export function CoverageBudgetTab() {
                 <button
                   type="button"
                   onClick={runBudget}
-                  className="rounded border border-[#273246] bg-[#111521] px-2.5 py-1 text-[9px] font-semibold text-[#d7deed] transition-colors hover:border-green-400/30 hover:text-white"
+                  className={`rounded border border-[#273246] ${UI_SURFACES.card} px-2.5 py-1 text-[9px] font-semibold text-[#d7deed] transition-colors hover:border-green-400/30 hover:text-white`}
                 >
                   Re-run Budget
                 </button>
                 <button
                   type="button"
                   onClick={exportSummary}
-                  className="rounded border border-[#273246] bg-[#111521] px-2.5 py-1 text-[9px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white"
+                  className={`rounded border border-[#273246] ${UI_SURFACES.card} px-2.5 py-1 text-[9px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white`}
                 >
                   Copy Summary
                 </button>
@@ -290,17 +290,17 @@ export function CoverageBudgetTab() {
             </div>
 
             {/* ── Sidebar: constants reference ────────────────────────────── */}
-            <div className="`{w-[144px] flex-shrink-0 border-l ${UI_SURFACES.borderPanel} p-2}`">
+            <div className={`{w-[144px] flex-shrink-0 border-l ${UI_SURFACES.borderPanel} p-2}`}>
               <div className="mb-1 text-[7px] font-semibold uppercase tracking-wider text-[#3a4158]">
                 Rates
               </div>
               <div className="space-y-0.5">
                 <div className="flex justify-between text-[8px]">
-                  <span className="text-[#4a5568]">Cable / m</span>
+                  <span className={`${UI_SURFACES.textMuted}`}>Cable / m</span>
                   <span className="font-mono text-[#68738a]">{fmt(CABLE_COST_PER_METER)}</span>
                 </div>
                 <div className="flex justify-between text-[8px]">
-                  <span className="text-[#4a5568]">Labor / hr</span>
+                  <span className={`${UI_SURFACES.textMuted}`}>Labor / hr</span>
                   <span className="font-mono text-[#68738a]">{fmt(LABOR_RATE_PER_HOUR)}</span>
                 </div>
               </div>
@@ -317,7 +317,7 @@ export function CoverageBudgetTab() {
                     : 45;
                   return (
                     <div key={type} className="flex justify-between text-[8px]">
-                      <span className="text-[#4a5568] capitalize">{type}</span>
+                      <span className={`${UI_SURFACES.textMuted} capitalize`}>{type}</span>
                       <span className="font-mono text-[#68738a]">{fmt(rate)}</span>
                     </div>
                   );

@@ -38,6 +38,8 @@ import {
 } from "@/lib/simulation-metrics";
 // Visual Pass V1 — canonical semantic tones (no raw Tailwind color utilities).
 import { toneForDelta, UI_TONES } from "@/lib/design-tokens";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+
 
 const DISPLAY_MS = 6000;
 

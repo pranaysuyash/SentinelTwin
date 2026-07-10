@@ -13,6 +13,8 @@ import { computeCoverageUncertainty } from "@sentineltwin/simulation";
 import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useStudioStore } from "@/store/studio-store";
 import type { DoriQuality } from "@/schema/security-scene";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+
 
 function Section({
   title,
@@ -26,7 +28,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
       <div className="mb-2 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
         {icon}
         {title}
@@ -41,7 +43,7 @@ function CandidateLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-2 rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
       <span className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">{label}</span>
-      <span className="text-[9px] font-mono text-[#d2d9e8]">{value}</span>
+      <span className={`text-[9px] font-mono ${UI_SURFACES.textBody2}`}>{value}</span>
     </div>
   );
 }
@@ -280,7 +282,7 @@ export function NovelAlgorithmsTab() {
             <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">Best placement</div>
-                <div className="mt-0.5 text-[10px] text-[#d2d9e8]">
+                <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textBody2}`}>
                   {bestCandidate ? `${bestCandidate.mountType} at ${bestCandidate.position[0].toFixed(1)}, ${bestCandidate.position[2].toFixed(1)}` : "No ranked candidate"}
                 </div>
               </div>
@@ -311,7 +313,7 @@ export function NovelAlgorithmsTab() {
             <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">Largest blind region</div>
-                <div className="mt-0.5 text-[10px] text-[#d2d9e8]">
+                <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textBody2}`}>
                   {largestBlindRegion ? `${largestBlindRegion.severity} · ${largestBlindRegion.areaSqM.toFixed(1)} m²` : "No blind regions"}
                 </div>
               </div>
@@ -352,7 +354,7 @@ export function NovelAlgorithmsTab() {
             <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">Path replay</div>
-                <div className="mt-0.5 text-[10px] text-[#d2d9e8]">
+                <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textBody2}`}>
                   {activePath ? activePath.label : "No active path"}
                 </div>
               </div>
@@ -380,7 +382,7 @@ export function NovelAlgorithmsTab() {
             <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">Temporal profile</div>
-                <div className="mt-0.5 text-[10px] text-[#d2d9e8]">
+                <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textBody2}`}>
                   {temporalProfile ? `${anomalies.length} anomaly windows` : "No temporal profile yet"}
                 </div>
               </div>
@@ -456,7 +458,7 @@ export function NovelAlgorithmsTab() {
                         <span className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">K={set.k}</span>
                         <Badge variant={set.exposureScore < 3 ? "green" : "gray"}>{set.exposureScore.toFixed(1)}</Badge>
                       </div>
-                      <div className="mt-1 text-[9px] text-[#d2d9e8]">
+                      <div className={`mt-1 text-[9px] ${UI_SURFACES.textBody2}`}>
                         {set.cameraNames.join(", ")}
                       </div>
                       <div className="mt-0.5 text-[8px] text-[#5b667c]">{set.waypointCount} waypoints</div>
@@ -502,7 +504,7 @@ export function NovelAlgorithmsTab() {
                       <span className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">Rank {index + 1}</span>
                       <Badge variant={index === 0 ? "green" : "gray"}>{candidate.score.toFixed(1)}</Badge>
                     </div>
-                    <div className="mt-1 text-[9px] text-[#d2d9e8]">
+                    <div className={`mt-1 text-[9px] ${UI_SURFACES.textBody2}`}>
                       {candidate.mountType} at {candidate.position[0].toFixed(1)}, {candidate.position[2].toFixed(1)}
                     </div>
                   </div>
@@ -538,7 +540,7 @@ export function NovelAlgorithmsTab() {
                       <span className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">{window.severity}</span>
                       <Badge variant={window.severity === "high" ? "red" : window.severity === "medium" ? "amber" : "gray"}>{window.anomalyType}</Badge>
                     </div>
-                    <div className="mt-1 text-[9px] text-[#d2d9e8]">
+                    <div className={`mt-1 text-[9px] ${UI_SURFACES.textBody2}`}>
                       {window.startHour.toString().padStart(2, "0")}:{window.startMinute.toString().padStart(2, "0")} to {window.endHour.toString().padStart(2, "0")}:{window.endMinute.toString().padStart(2, "0")}
                     </div>
                     <div className="mt-0.5 text-[9px] text-[#8b96ab]">{window.description}</div>
@@ -571,7 +573,7 @@ export function NovelAlgorithmsTab() {
                   className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                     uncertaintySamples === count
                       ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                      : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                      : `border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:${UI_SURFACES.textBody2}`
                   }`}
                 >
                   <div className="uppercase tracking-[0.08em]">{count} runs</div>
@@ -591,7 +593,7 @@ export function NovelAlgorithmsTab() {
                       {(zone.passRate * 100).toFixed(0)}%
                     </Badge>
                   </div>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#111521]">
+                  <div className={`mt-1 h-1.5 overflow-hidden rounded-full ${UI_SURFACES.card}`}>
                     <div
                       className="h-full rounded-full bg-violet-400"
                       style={{ width: `${Math.max(4, zone.passRate * 100)}%` }}
@@ -633,10 +635,10 @@ export function NovelAlgorithmsTab() {
                     </Badge>
                   </div>
                   <div className="mt-1 grid grid-cols-2 gap-1.5 text-[9px] text-[#8b96ab] lg:grid-cols-4">
-                    <div>Zones: <span className="text-[#d2d9e8]">{profile.zonesPassing}/{profile.zonesTotal}</span></div>
-                    <div>Recognition: <span className="text-[#d2d9e8]">{profile.recognitionAreaPct.toFixed(1)}%</span></div>
-                    <div>Identification: <span className="text-[#d2d9e8]">{profile.identificationAreaPct.toFixed(1)}%</span></div>
-                    <div>Average: <span className="text-[#d2d9e8]">{profile.averageWalkableQuality.toFixed(2)}</span></div>
+                    <div>Zones: <span className={`${UI_SURFACES.textBody2}`}>{profile.zonesPassing}/{profile.zonesTotal}</span></div>
+                    <div>Recognition: <span className={`${UI_SURFACES.textBody2}`}>{profile.recognitionAreaPct.toFixed(1)}%</span></div>
+                    <div>Identification: <span className={`${UI_SURFACES.textBody2}`}>{profile.identificationAreaPct.toFixed(1)}%</span></div>
+                    <div>Average: <span className={`${UI_SURFACES.textBody2}`}>{profile.averageWalkableQuality.toFixed(2)}</span></div>
                   </div>
                   <div className="mt-1 text-[9px] text-[#8b96ab]">
                     {profile.worstZoneLabel
@@ -686,7 +688,7 @@ export function NovelAlgorithmsTab() {
                   className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                     threshold === level
                       ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
-                      : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                      : `border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:${UI_SURFACES.textBody2}`
                   }`}
                 >
                   <div className="uppercase tracking-[0.08em]">{level}</div>
@@ -701,7 +703,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   exposureBudgetS === 1
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                    : `border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">1s budget</div>
@@ -713,7 +715,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   exposureBudgetS === 2
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                    : `border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">2s budget</div>
@@ -725,7 +727,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   exposureBudgetS === 3
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                    : `border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">3s budget</div>
@@ -744,7 +746,7 @@ export function NovelAlgorithmsTab() {
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <div className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">Selected path</div>
-                  <div className="mt-0.5 text-[10px] text-[#d2d9e8]">{activePath?.label ?? "—"}</div>
+                  <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textBody2}`}>{activePath?.label ?? "—"}</div>
                 </div>
                 <Badge variant={timeBudget.budgetMet ? "green" : "amber"}>
                   {timeBudget.budgetMet ? "Budget met" : "Budget missed"}
@@ -753,25 +755,25 @@ export function NovelAlgorithmsTab() {
               <div className="mt-2 space-y-1.5">
                 {visibleBands.length > 0 ? (
                   visibleBands.slice(0, 3).map((segment, i) => (
-                    <div key={`${segment.startDistanceM}-${segment.endDistanceM}`} className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5">
+                    <div key={`${segment.startDistanceM}-${segment.endDistanceM}`} className={`rounded-md border border-[#1a2030] ${UI_SURFACES.panel} px-2 py-1.5`}>
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">
                           Visible segment {i + 1}
                         </span>
-                        <span className="font-mono text-[9px] text-[#d2d9e8]">
+                        <span className={`font-mono text-[9px] ${UI_SURFACES.textBody2}`}>
                           {segment.startDistanceM.toFixed(1)}m → {segment.endDistanceM.toFixed(1)}m
                         </span>
                       </div>
                       <div className="mt-1 grid grid-cols-2 gap-1.5 text-[9px] text-[#8b96ab]">
-                        <div>Quality: <span className="text-[#d2d9e8]">{segment.quality}</span></div>
-                        <div>Duration: <span className="text-[#d2d9e8]">{formatSeconds(segment.durationS)}</span></div>
-                        <div>Min speed: <span className="text-[#d2d9e8]">{segment.minSpeedMps != null ? `${segment.minSpeedMps.toFixed(1)} m/s` : "—"}</span></div>
-                        <div>Status: <span className="text-[#d2d9e8]">{segment.meetsBudget ? "Meets budget" : "Too slow"}</span></div>
+                        <div>Quality: <span className={`${UI_SURFACES.textBody2}`}>{segment.quality}</span></div>
+                        <div>Duration: <span className={`${UI_SURFACES.textBody2}`}>{formatSeconds(segment.durationS)}</span></div>
+                        <div>Min speed: <span className={`${UI_SURFACES.textBody2}`}>{segment.minSpeedMps != null ? `${segment.minSpeedMps.toFixed(1)} m/s` : "—"}</span></div>
+                        <div>Status: <span className={`${UI_SURFACES.textBody2}`}>{segment.meetsBudget ? "Meets budget" : "Too slow"}</span></div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5 text-[9px] text-[#59637a]">
+                  <div className={`rounded-md border border-[#1a2030] ${UI_SURFACES.panel} px-2 py-1.5 text-[9px] text-[#59637a]`}>
                     No segments at or above the selected threshold were detected on the active path.
                   </div>
                 )}
@@ -804,7 +806,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   uncertaintySamples === 8
                     ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                    : `border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">8 runs</div>
@@ -816,7 +818,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   uncertaintySamples === 12
                     ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                    : `border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">12 runs</div>
@@ -828,7 +830,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   uncertaintySamples === 16
                     ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                    : `border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">16 runs</div>
@@ -840,7 +842,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   uncertaintySamples === 24
                     ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                    : `border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">24 runs</div>
@@ -857,7 +859,7 @@ export function NovelAlgorithmsTab() {
                       {(zone.passRate * 100).toFixed(0)}%
                     </Badge>
                   </div>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#111521]">
+                  <div className={`mt-1 h-1.5 overflow-hidden rounded-full ${UI_SURFACES.card}`}>
                     <div
                       className="h-full rounded-full bg-violet-400"
                       style={{ width: `${Math.max(4, zone.passRate * 100)}%` }}
@@ -885,7 +887,7 @@ export function NovelAlgorithmsTab() {
                   <div className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">{entry.zoneLabel}</div>
                   <div className="mt-1 space-y-0.5">
                     {entry.obstructions.slice(0, 3).map((obstruction) => (
-                      <div key={obstruction.obstructionId} className="flex items-center justify-between gap-2 text-[9px] text-[#d2d9e8]">
+                      <div key={obstruction.obstructionId} className={`flex items-center justify-between gap-2 text-[9px] ${UI_SURFACES.textBody2}`}>
                         <span>{obstruction.label}</span>
                         <span className="font-mono text-[#8b96ab]">{Math.round(obstruction.blameFraction * 100)}%</span>
                       </div>
@@ -922,7 +924,7 @@ export function NovelAlgorithmsTab() {
                     <span className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">{region.classification}</span>
                     <Badge variant={region.severity === "critical" ? "red" : region.severity === "high" ? "amber" : "gray"}>{region.severity}</Badge>
                   </div>
-                  <div className="mt-1 text-[9px] text-[#d2d9e8]">{region.description}</div>
+                  <div className={`mt-1 text-[9px] ${UI_SURFACES.textBody2}`}>{region.description}</div>
                 </div>
               ))}
             </div>
@@ -949,7 +951,7 @@ export function NovelAlgorithmsTab() {
             </div>
             <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-2 text-[9px] text-[#8b96ab]">
               <div className="uppercase tracking-[0.08em] text-[#8b96ab]">Signature</div>
-              <div className="mt-1 text-[#d2d9e8]">{blindSpotFingerprint.signature}</div>
+              <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{blindSpotFingerprint.signature}</div>
             </div>
           </div>
         ) : (

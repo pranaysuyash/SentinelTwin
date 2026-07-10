@@ -31,7 +31,7 @@ function SeverityIcon({ severity }: { severity: SecurityIssue["severity"] }) {
   if (severity === "critical") return <ShieldAlert className={`${cls} text-red-400`} />;
   if (severity === "high")     return <AlertTriangle className={`${cls} text-amber-400`} />;
   if (severity === "medium")   return <AlertCircle className={`${cls} text-blue-400`} />;
-  return <Info className={`${cls} text-[#4a5568]`} />;
+  return <Info className={`${cls} ${UI_SURFACES.textMuted}`} />;
 }
 
 function BlindRegionBadge({ region }: { region: BlindRegionResult }) {
@@ -50,7 +50,7 @@ function BlindRegionIcon({ severity }: { severity: BlindRegionResult["severity"]
   if (severity === "critical") return <EyeOff className={`${cls} text-red-400`} />;
   if (severity === "high")     return <EyeOff className={`${cls} text-amber-400`} />;
   if (severity === "medium")   return <Eye className={`${cls} text-blue-400`} />;
-  return <Eye className={`${cls} text-[#4a5568]`} />;
+  return <Eye className={`${cls} ${UI_SURFACES.textMuted}`} />;
 }
 
 export function IssuesTab() {
@@ -138,7 +138,7 @@ export function IssuesTab() {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-2">
         <div className="text-[11px] text-green-400 font-semibold">No issues found</div>
-        <div className="text-[9px] text-[#4a5568]">All coverage requirements are met</div>
+        <div className={`text-[9px] ${UI_SURFACES.textMuted}`}>All coverage requirements are met</div>
       </div>
     );
   }
@@ -150,7 +150,7 @@ export function IssuesTab() {
           <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#556076]">Issues</span>
           <TruthBadge label="simulated" />
         </div>
-        <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b1018] px-2.5 py-2 text-[10px] text-[#b9c7df]}`">
+        <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b1018] px-2.5 py-2 text-[10px] text-[#b9c7df]}`}>
           Outcome status: {outcome.summary.status.replace(/_/g, " ")}
           {outcome.summary.primaryRisk ? ` · Primary risk: ${outcome.summary.primaryRisk}` : ""}
         </div>
@@ -161,7 +161,7 @@ export function IssuesTab() {
             key={`${issue.category}-${issue.description}`}
             className={
               "flex gap-2.5 p-2.5 bg-[#0d0f17] border rounded-lg hover:border-[#2a3045] transition-colors group " +
-              (isRecentlyChanged ? "border-amber-500/40 shadow-[0_0_0_1px_rgba(251,191,36,0.15)]" : "${UI_SURFACES.borderPanel}")
+              (isRecentlyChanged ? "border-amber-500/40 shadow-[0_0_0_1px_rgba(251,191,36,0.15)]" : `${UI_SURFACES.borderPanel}`)
             }
           >
             <SeverityIcon severity={issue.severity} />
@@ -181,7 +181,7 @@ export function IssuesTab() {
               <div className="text-[9px] text-[#68738a] capitalize">{issue.category.replace(/_/g, " ")}</div>
               {issue.affectedZones.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1">
-                  <span className="text-[8px] text-[#4a5568]">Zones:</span>
+                  <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Zones:</span>
                   {issue.affectedZones.map((z) => (
                     <span key={z} className="text-[8px] text-[#8090a8] bg-[#1a1d26] px-1 rounded">{z}</span>
                   ))}
@@ -189,7 +189,7 @@ export function IssuesTab() {
               )}
               {issue.affectedCameras.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1">
-                  <span className="text-[8px] text-[#4a5568]">Cameras:</span>
+                  <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Cameras:</span>
                   {issue.affectedCameras.map((c) => (
                     <button type="button"
                       key={c}
@@ -213,22 +213,22 @@ export function IssuesTab() {
               <Badge variant="blue">{privacyIssues.length} issues</Badge>
             </div>
             <div className="grid grid-cols-3 gap-1.5 mb-2">
-              <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5 text-[9px]}`">
-                <div className="text-[#4a5568] uppercase tracking-[0.12em]">Zones</div>
-                <div className="text-[#c7d0e4]">{privacyIssueZones.length}</div>
+              <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5 text-[9px]}`}>
+                <div className={`${UI_SURFACES.textMuted} uppercase tracking-[0.12em]`}>Zones</div>
+                <div className={`${UI_SURFACES.textBody}`}>{privacyIssueZones.length}</div>
               </div>
-              <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5 text-[9px]}`">
-                <div className="text-[#4a5568] uppercase tracking-[0.12em]">Cameras</div>
-                <div className="text-[#c7d0e4]">{privacyIssueCameras.length}</div>
+              <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5 text-[9px]}`}>
+                <div className={`${UI_SURFACES.textMuted} uppercase tracking-[0.12em]`}>Cameras</div>
+                <div className={`${UI_SURFACES.textBody}`}>{privacyIssueCameras.length}</div>
               </div>
-              <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5 text-[9px]}`">
-                <div className="text-[#4a5568] uppercase tracking-[0.12em]">Restricted Cells</div>
-                <div className="text-[#c7d0e4]">{result.coverageCells.filter((cell) => cell.privacyRestricted).length}</div>
+              <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5 text-[9px]}`}>
+                <div className={`${UI_SURFACES.textMuted} uppercase tracking-[0.12em]`}>Restricted Cells</div>
+                <div className={`${UI_SURFACES.textBody}`}>{result.coverageCells.filter((cell) => cell.privacyRestricted).length}</div>
               </div>
             </div>
             <div className="space-y-1.5">
               {privacyIssues.map((issue, index) => (
-                <div key={`privacy-${index}`} className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0d0f17] p-2.5}`">
+                <div key={`privacy-${index}`} className={`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0d0f17] p-2.5}`}>
                   <div className="flex items-start gap-2">
                     <ShieldAlert className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-rose-400" />
                     <div className="min-w-0 flex-1">
@@ -287,7 +287,7 @@ export function IssuesTab() {
                       ? "bg-red-950/20 border-red-800/30 hover:border-red-600/40"
                       : region.severity === "high"
                       ? "bg-amber-950/20 border-amber-800/30 hover:border-amber-600/40"
-                      : "bg-[#0d0f17] ${UI_SURFACES.borderPanel} hover:border-[#2a3045]"
+                      : `bg-[#0d0f17] ${UI_SURFACES.borderPanel} hover:border-[#2a3045]`
                   }`}
                 >
                   <BlindRegionIcon severity={region.severity} />
@@ -302,12 +302,12 @@ export function IssuesTab() {
                       <span className="text-[9px] text-[#68738a] capitalize">
                         {region.classification.replace(/_/g, " ")}
                       </span>
-                      <span className="text-[9px] text-[#4a5568]">{region.areaSqM.toFixed(1)} m²</span>
-                      <span className="text-[9px] text-[#4a5568]">{region.cells.length} cells</span>
+                      <span className={`text-[9px] ${UI_SURFACES.textMuted}`}>{region.areaSqM.toFixed(1)} m²</span>
+                      <span className={`text-[9px] ${UI_SURFACES.textMuted}`}>{region.cells.length} cells</span>
                     </div>
                     {region.affectedZoneIds.length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
-                        <span className="text-[8px] text-[#4a5568]">Zones:</span>
+                        <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Zones:</span>
                         {region.affectedZoneIds.map((id) => (
                           <span key={id} className="text-[8px] text-amber-400 bg-[#1a1d26] px-1 rounded">{id}</span>
                         ))}
@@ -376,13 +376,13 @@ export function IssuesTab() {
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] text-[#8090a8]">{rec.description}</span>
                     {rec.type ? (
-                      <div className="mt-1 text-[8px] uppercase tracking-[0.12em] text-[#4a5568]">
+                      <div className={`mt-1 text-[8px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted}`}>
                         Cause: {rec.type.replace(/_/g, " ")}
                       </div>
                     ) : null}
                     {rec.affectedNodeId ? (
                       <div className="mt-0.5 text-[8px] text-[#68738a]">
-                        Evidence: affects <span className="text-[#c7d0e4]">{rec.affectedNodeId}</span>
+                        Evidence: affects <span className={`${UI_SURFACES.textBody}`}>{rec.affectedNodeId}</span>
                       </div>
                     ) : null}
                     {canFix && (

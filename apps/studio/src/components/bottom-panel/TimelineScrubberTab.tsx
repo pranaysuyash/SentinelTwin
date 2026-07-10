@@ -40,7 +40,7 @@ export function TimelineScrubberTab() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} p-3}`">
+      <div className={`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} p-3}`}>
         <div className="flex items-center gap-2">
           <TruthBadge label="simulated" />
           <History className="h-4 w-4 text-emerald-500" />
@@ -53,7 +53,7 @@ export function TimelineScrubberTab() {
       </div>
 
       <div className="flex-1 p-4 flex flex-col gap-4 overflow-y-auto">
-        <div className="bg-[#111521] border border-[#24283a] rounded-lg p-4 relative">
+        <div className={`${UI_SURFACES.card} border ${UI_SURFACES.borderThin} rounded-lg p-4 relative`}>
           <div className="mb-4 flex justify-between text-[10px] text-[#6a748b]">
             <span>Start</span>
             <span>Now</span>
@@ -68,7 +68,7 @@ export function TimelineScrubberTab() {
             className="w-full accent-emerald-500 bg-[#1e2130] rounded-full appearance-none h-1.5 cursor-pointer"
           />
 
-          <div className="`{mt-4 pt-4 border-t ${UI_SURFACES.borderPanel} grid grid-cols-2 gap-4}`">
+          <div className={`{mt-4 pt-4 border-t ${UI_SURFACES.borderPanel} grid grid-cols-2 gap-4}`}>
             <div>
               <div className="text-[9px] uppercase tracking-wider text-[#6a748b] mb-1">Scrubbed Event</div>
               <div className="text-[12px] font-medium text-white">{currentEvent?.title || "Unknown Event"}</div>
@@ -79,7 +79,7 @@ export function TimelineScrubberTab() {
             </div>
             <div>
               <div className="text-[9px] uppercase tracking-wider text-[#6a748b] mb-1">Details</div>
-              <div className="text-[11px] text-[#c7d0e4]">{currentEvent?.details || "No details"}</div>
+              <div className={`text-[11px] ${UI_SURFACES.textBody}`}>{currentEvent?.details || "No details"}</div>
               <div className="text-[10px] text-[#5d6880] mt-1">Affected Nodes: {currentEvent?.affectedNodeIds.length || 0}</div>
             </div>
           </div>

@@ -11,6 +11,7 @@ import type { DockSide, WorkspacePreset } from "@/store/studio-store";
 // re-opening — operators would "lose" a dock and not know how to recover it.
 // The rail keeps an always-visible expand button + the attention indicator.
 import { UI_TONES } from "@/lib/design-tokens";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 import { ResizeHandle } from "./ResizeHandle";
 
 export function DockPanel({
@@ -56,7 +57,7 @@ export function DockPanel({
     return (
       <aside
         className={cn(
-          "group relative flex flex-shrink-0 items-center justify-center border-[#1e2130] bg-[#0c0f16] transition-colors hover:bg-[#111521]",
+          `group relative flex flex-shrink-0 items-center justify-center border-[#1e2130] ${UI_SURFACES.panel} transition-colors ${UI_SURFACES.hoverBg}`,
           isBottom ? "flex-row border-t" : "flex-col border-r",
           side === "right" && "border-l border-r-0",
           className,
@@ -69,7 +70,7 @@ export function DockPanel({
           onClick={onToggle}
           onFocus={onFocus}
           className={cn(
-            "flex h-full w-full items-center justify-center text-[#7f8aa3] transition-colors hover:text-white",
+            `flex h-full w-full items-center justify-center ${UI_SURFACES.textMuted3} transition-colors hover:text-white`,
             attention && `${attentionTone.text} font-bold`,
           )}
           title={
@@ -100,7 +101,7 @@ export function DockPanel({
   return (
     <aside
       className={cn(
-        "relative flex flex-shrink-0 overflow-hidden border-[#1e2130] bg-[#0c0f16]",
+        `relative flex flex-shrink-0 overflow-hidden border-[#1e2130] ${UI_SURFACES.panel}`,
         isBottom ? "flex-col border-t" : "flex-col",
         className,
       )}
@@ -114,7 +115,7 @@ export function DockPanel({
         type="button"
         onClick={onToggle}
         className={cn(
-          "absolute z-30 inline-flex h-6 w-6 items-center justify-center rounded-md border border-[#24283a] bg-[#111521] text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white",
+          `absolute z-30 inline-flex h-6 w-6 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors hover:border-[#32384d] hover:text-white`,
           isBottom ? "right-2 top-2" : side === "left" ? "right-2 top-2" : "left-2 top-2",
         )}
         title={`Collapse ${title}`}

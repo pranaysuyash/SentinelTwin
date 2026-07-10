@@ -14,6 +14,7 @@ import { BulkCameraEditor } from "@/components/panels/BulkCameraEditor";
 import { ExplainBadge } from "@/components/shared/ExplainBadge";
 import { cn } from "@/lib/cn";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 function SectionToggle({
   title,
@@ -27,18 +28,18 @@ function SectionToggle({
   onToggle: () => void;
 }) {
   return (
-    <div className="flex w-full items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-1 transition-colors hover:border-[#31405a]">
+    <div className={`flex w-full items-center gap-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-1 transition-colors hover:border-[#31405a]`}>
       <button
         type="button"
         onClick={onToggle}
         className="flex min-w-0 flex-1 items-center gap-2 text-left"
       >
-        <div className="flex h-5 w-5 items-center justify-center rounded-md border border-[#24283a] bg-[#111521] text-[#7f8aa3]">
+        <div className={`flex h-5 w-5 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3}`}>
           {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[10px] font-semibold text-[#d7deed]">{title}</div>
-          <div className="truncate text-[10px] uppercase tracking-[0.14em] text-[#64738f]">{summary}</div>
+          <div className={`truncate text-[10px] font-semibold ${UI_SURFACES.textBody}`}>{title}</div>
+          <div className={`truncate text-[10px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted2}`}>{summary}</div>
         </div>
       </button>
       <ExplainBadge text="Expand to inspect and edit this section. Collapsing preserves context while reducing panel noise." />
@@ -71,25 +72,25 @@ export function ContextRightPanel() {
   const assumptionsSummary = `${scene.assumptions.doriStandard === "oodpcvs_2025" ? "Latest image standard (IEC 62676-4:2025)" : "Legacy image standard (DORI 2014)"} · ${scene.assumptions.timeOfDay} · ${scene.assumptions.interiorLightLevel} light`;
 
   return (
-    <div className="relative z-[120] flex h-full min-w-0 min-h-0 flex-col overflow-visible bg-[#0c0f16]">
-      <div className="flex items-center gap-2 border-b border-[#1e2130] bg-[#0b0f17] px-2.5 py-1">
+    <div className={`relative z-[120] flex h-full min-w-0 min-h-0 flex-col overflow-visible ${UI_SURFACES.panel}`}>
+      <div className={`flex items-center gap-2 border-b border-[#1e2130] ${UI_SURFACES.panel} px-2.5 py-1`}>
         <div className="flex h-5 w-5 items-center justify-center rounded-md border border-blue-500/20 bg-blue-500/12">
           <MonitorSmartphone className="h-3 w-3 text-blue-400" />
         </div>
         <div className="min-w-0">
           <div className="truncate text-[11px] font-semibold text-white">Context Inspector</div>
-          <div className="truncate text-[10px] uppercase tracking-[0.14em] text-[#64738f]">
+          <div className={`truncate text-[10px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted2}`}>
             {workspacePreset.replace(/_/g, " ")} · {viewMode.replace(/_/g, " ")}
           </div>
         </div>
-        <div className="ml-auto inline-flex min-w-0 max-w-[42%] items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[10px] text-[#9fb1d1]">
+        <div className={`ml-auto inline-flex min-w-0 max-w-[42%] items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-0.5 text-[10px] ${UI_SURFACES.textMuted4}`}>
           <MapPinned className="h-2.5 w-2.5" />
-          <span className={cn("truncate", selectedNodeId ? "text-[#c7d0e4]" : "text-[#6c768f]")}>
+          <span className={cn("truncate", selectedNodeId ? `${UI_SURFACES.textBody}` : `${UI_SURFACES.textMuted}`)}>
             {selectedNodeId ?? "Scene overview"}
           </span>
         </div>
       </div>
-      <div className="flex min-w-0 items-center gap-1 overflow-x-auto border-b border-[#1e2130] px-2 py-1">
+      <div className={`flex min-w-0 items-center gap-1 overflow-x-auto border-b border-[#1e2130] px-2 py-1`}>
         {([
           ["inspector", "Inspector"],
           ["security_status", "Security Status"],
@@ -105,7 +106,7 @@ export function ContextRightPanel() {
             type="button"
             onClick={() => setRightPanelMode(mode)}
             title={label}
-            className={cn("flex-shrink-0 whitespace-nowrap rounded px-2 py-1 text-[10px]", rightPanelMode === mode ? "bg-[#1a2233] text-white" : "text-[#92a5c8] hover:bg-[#141a28] hover:text-white")}
+            className={cn("flex-shrink-0 whitespace-nowrap rounded px-2 py-1 text-[10px]", rightPanelMode === mode ? "bg-[#1a2233] text-white" : `${UI_SURFACES.textMuted3} ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`)}
           >
             {label}
           </button>
@@ -134,7 +135,7 @@ export function ContextRightPanel() {
                   <InspectorPanel showHeader={false} />
                 </div>
               ) : (
-                <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#8192b0]">
+                <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] ${UI_SURFACES.textMuted3}`}>
                   Object properties hidden. Expand when you need detailed editing controls.
                 </div>
               )}
@@ -152,7 +153,7 @@ export function ContextRightPanel() {
                   <AssumptionsPanel />
                 </div>
               ) : (
-                <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#8192b0]">
+                <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] ${UI_SURFACES.textMuted3}`}>
                   Assumptions stay tucked away until you need to tune the model.
                 </div>
               )}
@@ -170,7 +171,7 @@ export function ContextRightPanel() {
                   <ScenarioPathPanel />
                 </div>
               ) : (
-                <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#8192b0]">
+                <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] ${UI_SURFACES.textMuted3}`}>
                   Path controls are hidden. Expand them for replay and scenario editing.
                 </div>
               )}

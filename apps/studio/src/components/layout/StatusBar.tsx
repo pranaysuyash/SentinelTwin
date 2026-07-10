@@ -2,6 +2,7 @@
 
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 // P1-2026-07-10: StatusBar quick-run now delegates to the canonical
 // simulation runner (runStudioSimulation) instead of calling simulateStudio()
@@ -161,7 +162,7 @@ export function StatusBar() {
     : `Workflow: ${formatWorkflowLabel(activeWorkflowId)} ${workflowStepNumber}/${workflowTotalSteps}`;
 
   return (
-    <footer className="flex h-6 flex-shrink-0 select-none items-center gap-4 border-t border-[#1e2130] bg-[#0b0c10] px-3">
+    <footer className={`flex h-6 flex-shrink-0 select-none items-center gap-4 border-t border-[#1e2130] ${UI_SURFACES.panel} px-3`}>
       {/* Unsaved / stale indicator */}
       {simulationDirty ? (
         <span className="text-[10px] text-amber-400/80 flex items-center gap-1">
@@ -170,8 +171,8 @@ export function StatusBar() {
         </span>
       ) : null}
 
-      <div className="flex min-w-0 items-center gap-3 text-[10px] text-[#3a4158]">
-        <span className="max-w-[22rem] truncate text-[#c7d0e4]" title={scene.name}>
+      <div className={`flex min-w-0 items-center gap-3 text-[10px] ${UI_SURFACES.textMuted}`}>
+        <span className={`max-w-[22rem] truncate ${UI_SURFACES.textBody}`} title={scene.name}>
           Scene: {scene.name}
         </span>
         <span className="rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-200">Truth: Live</span>
@@ -179,7 +180,7 @@ export function StatusBar() {
         <span className="whitespace-nowrap" title={workflowStepLabel ?? undefined}>
           {workflowText}
         </span>
-        <span className="max-w-[18rem] truncate text-[#8fa2c3]" title={selectionText}>
+        <span className={`max-w-[18rem] truncate ${UI_SURFACES.textMuted3}`} title={selectionText}>
           {selectionText}
         </span>
       </div>
@@ -187,7 +188,7 @@ export function StatusBar() {
       <div className="flex-1" />
 
       {/* Engine status with dot */}
-      <div className="flex items-center gap-3 text-[10px] text-[#3a4158]">
+      <div className={`flex items-center gap-3 text-[10px] ${UI_SURFACES.textMuted}`}>
         <span className="whitespace-nowrap" title={coverageText}>
           {coverageText}
         </span>
@@ -204,8 +205,6 @@ export function StatusBar() {
       <button type="button"
         onClick={() => {
           if (!running) {
-            // Delegate to the canonical simulation runner instead of calling
-            // simulateStudio() directly (P1 fix — review §7).
             const { runSimulation } = useStudioStore.getState();
             runSimulation();
           }
@@ -214,7 +213,7 @@ export function StatusBar() {
         className={`text-[10px] transition-colors ${
           neverRun || simulationDirty
             ? "text-amber-500/70 hover:text-amber-400 cursor-pointer"
-            : "text-[#3a4158] cursor-default"
+            : `${UI_SURFACES.textMuted} cursor-default`
         } ${running ? "opacity-50" : ""}`}
         title={
           running
@@ -232,21 +231,21 @@ export function StatusBar() {
       {/* Auto recompute toggle */}
       <button type="button"
         onClick={toggleAuto}
-        className="flex items-center gap-1.5 text-[10px] text-[#4a5568] transition-colors hover:text-white"
+        className={`flex items-center gap-1.5 text-[10px] ${UI_SURFACES.textMuted} transition-colors hover:text-white`}
       >
         Auto:
-        <span className={autoRC ? "text-green-400" : "text-[#4a5568]"}>{autoRC ? "On" : "Off"}</span>
-        <span className={`h-1.5 w-1.5 rounded-full ${autoRC ? "bg-green-400" : "bg-[#4a5568]"}`} />
+        <span className={autoRC ? "text-green-400" : `${UI_SURFACES.textMuted}`}>{autoRC ? "On" : "Off"}</span>
+        <span className={`h-1.5 w-1.5 rounded-full ${autoRC ? "bg-green-400" : `${UI_SURFACES.textMuted}`}`} />
       </button>
 
       {/* Mode indicator */}
-      <span className="flex items-center gap-1.5 text-[10px] text-[#3a4158]">
+      <span className={`flex items-center gap-1.5 text-[10px] ${UI_SURFACES.textMuted}`}>
         <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
         Local
       </span>
 
-      <span className="text-[10px] text-[#3a4158]">Scale: 1 m/unit</span>
-      <span className="text-[10px] text-[#3a4158]">Grid: 0.25 m</span>
+      <span className={`text-[10px] ${UI_SURFACES.textMuted}`}>Scale: 1 m/unit</span>
+      <span className={`text-[10px] ${UI_SURFACES.textMuted}`}>Grid: 0.25 m</span>
     </footer>
   );
 }

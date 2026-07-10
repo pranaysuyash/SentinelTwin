@@ -12,6 +12,7 @@ import { truthLabelDetail } from "@/lib/truth-labels";
 import { QUALITY_COLOR } from "@/lib/quality-display";
 import { getTargetRequirementInfo } from "@/lib/target-quality-requirements";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+import { UI_TONES } from "@/lib/design-tokens";
 
 function MetricCard({ label, children, className = "" }: {
   label: string; children: React.ReactNode; className?: string;
@@ -47,7 +48,7 @@ const CONFIDENCE_LEVEL_STYLE: Record<string, { bg: string; text: string; border:
   high:     { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30", label: "HIGH" },
   medium:   { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/30", label: "MEDIUM" },
   low:      { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30", label: "LOW" },
-  none:     { bg: `${UI_SURFACES.card}`, text: "${UI_SURFACES.textDimMid}", border: `${UI_SURFACES.borderSubtle}`, label: "NONE" },
+  none:     { bg: `${UI_SURFACES.card}`, text: `${UI_SURFACES.textDimMid}`, border: `${UI_SURFACES.borderSubtle}`, label: "NONE" },
 };
 
 function ConfidenceCard({ confidence, zones }: { confidence: ConfidenceBand; zones: { status: string }[] }) {
@@ -332,8 +333,8 @@ export function MetricsTab() {
             <div className="text-[9px] text-green-400 mt-0.5">Active</div>
             {offlineCams > 0 && (
               <>
-                <div className="text-[18px] font-bold text-[#ef4444] mt-1 leading-none">{offlineCams}</div>
-                <div className="text-[9px] text-[#ef4444] mt-0.5">Offline</div>
+                <div className={`text-[18px] font-bold ${UI_TONES.danger.textBright} mt-1 leading-none`}>{offlineCams}</div>
+                <div className={`text-[9px] ${UI_TONES.danger.textBright} mt-0.5`}>Offline</div>
               </>
             )}
             {offlineCams === 0 && (
@@ -403,14 +404,14 @@ export function MetricsTab() {
         <MetricCard label="Walkable Area Quality">
           <div className="flex w-full items-center justify-center gap-3">
             <div className="text-center">
-              <div className="text-[22px] font-bold text-[#22c55e] leading-none">
+              <div className={`text-[22px] font-bold ${UI_TONES.success.textBright} leading-none`}>
                 {Math.round(result.recognitionAreaPct)}%
               </div>
               <div className={`text-[8px] ${UI_SURFACES.textSoftMid} mt-1`}>Recognition</div>
             </div>
             <div className={`h-8 w-px ${UI_SURFACES.bgPanel}`} />
             <div className="text-center">
-              <div className="text-[22px] font-bold text-[#3b82f6] leading-none">
+              <div className={`text-[22px] font-bold ${UI_TONES.info.textBright} leading-none`}>
                 {Math.round(result.identificationAreaPct)}%
               </div>
               <div className={`text-[8px] ${UI_SURFACES.textSoftMid} mt-1`}>Identification</div>

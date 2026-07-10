@@ -48,6 +48,7 @@ import { QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 
 import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-outcome-selectors";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+import { UI_TONES } from "@/lib/design-tokens";
 
 type ProjectSort = "recent" | "name" | "coverage";
 type ProjectSourceFilter = "All" | SecurityScene["source"];
@@ -1323,7 +1324,7 @@ export function StudioDashboardHome({
                       <span>62.5-125 Observation</span>
                       <span className="h-2.5 w-2.5 rounded-sm bg-[#f59e0b]" />
                       <span>25-62.5 Detection</span>
-                      <span className="h-2.5 w-2.5 rounded-sm bg-[#ef4444]" />
+                      <span className={`h-2.5 w-2.5 rounded-sm ${UI_TONES.danger.dot}`} />
                       <span>&lt;25 No Coverage</span>
                     </div>
                     {topObstructionIssue ? (

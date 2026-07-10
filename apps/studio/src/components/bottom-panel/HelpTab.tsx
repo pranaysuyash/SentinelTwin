@@ -163,20 +163,20 @@ export function HelpTab() {
     <div className="h-full overflow-y-auto p-3 text-[12px] text-[#c9d5eb]">
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div className="space-y-3">
-          <div className="rounded-xl border border-[#222b3f] bg-[#0d1220] p-3">
+          <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep2} p-3`}>
             <div className="flex items-center justify-between gap-2">
               <div className="text-[12px] font-semibold text-white">Workflow Map</div>
               <button
                 type="button"
                 onClick={() => setShowFirstRunGuide(true)}
                 data-testid="help-show-first-run-guide"
-                className="rounded border border-[#2d3750] px-2 py-1 text-[10px] text-[#cfe0ff] hover:bg-[#161f31]"
+                className={`rounded border border-[#2d3750] px-2 py-1 text-[10px] text-[#cfe0ff] ${UI_SURFACES.hoverBgDark}`}
                 title="Clear the dismissed flag so the next session shows the first-run guide"
               >
                 Show First-Run Guide Again
               </button>
             </div>
-            <ol className="mt-2 space-y-1 text-[11px] text-[#9fb0ce]">
+            <ol className={`mt-2 space-y-1 text-[11px] ${UI_SURFACES.textMuted4}`}>
               {WORKFLOW_STEPS.map((step, index) => (
                 <li key={step}>
                   {index + 1}. {step}
@@ -185,21 +185,21 @@ export function HelpTab() {
             </ol>
           </div>
 
-          <div className="rounded-xl border border-[#222b3f] bg-[#0d1220] p-3">
+          <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep2} p-3`}>
             <div className="text-[12px] font-semibold text-white">For Security Teams</div>
             <div className="mt-2 grid gap-2">
               {SECURITY_TEAM_GUIDES.map((guide) => (
                 <div key={guide.title} className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
                   <div className="text-[11px] font-semibold text-[#d7e4ff]">{guide.title}</div>
-                  <div className="mt-0.5 text-[10px] leading-relaxed text-[#9fb0ce]">{guide.detail}</div>
+                  <div className={`mt-0.5 text-[10px] leading-relaxed ${UI_SURFACES.textMuted4}`}>{guide.detail}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#222b3f] bg-[#0d1220] p-3">
+          <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep2} p-3`}>
             <div className="text-[12px] font-semibold text-white">Glossary</div>
-            <div className="mt-2 space-y-1 text-[11px] text-[#9fb0ce]">
+            <div className={`mt-2 space-y-1 text-[11px] ${UI_SURFACES.textMuted4}`}>
               {DOMAIN_TERMS.map((entry) => (
                 <div key={entry.term} className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
                   <div><span className="text-[#d7e4ff]">{entry.term}:</span> {entry.meaning}</div>
@@ -209,9 +209,9 @@ export function HelpTab() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#222b3f] bg-[#0d1220] p-3">
+          <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep2} p-3`}>
             <div className="text-[12px] font-semibold text-white">Recovery Guidance</div>
-            <ul className="mt-2 space-y-1 text-[11px] text-[#9fb0ce]">
+            <ul className={`mt-2 space-y-1 text-[11px] ${UI_SURFACES.textMuted4}`}>
               <li>• Import error: validate the site twin file and re-import.</li>
               <li>• Low night score: add light coverage or enable IR-capable camera.</li>
               <li>• Single-point failure: reorient or add a backup camera for the critical zone.</li>
@@ -221,7 +221,7 @@ export function HelpTab() {
         </div>
 
         <div className="space-y-3">
-          <div className="rounded-xl border border-[#222b3f] bg-[#0d1220] p-3">
+          <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep2} p-3`}>
             <div className="text-[12px] font-semibold text-white">Keyboard Shortcuts</div>
             <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#6f809f]">
               {toolShortcutSummary()}
@@ -233,8 +233,8 @@ export function HelpTab() {
                   <div className="mt-2 space-y-1">
                     {group.items.map(({ keys, action }) => (
                       <div key={`${group.title}-${keys}`} className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] text-[#9fb0ce]">{action}</span>
-                        <kbd className={`rounded border border-[#2a3248] bg-[#11182a] px-1.5 py-0.5 font-mono text-[10px] ${UI_SURFACES.textBody}`}>
+                        <span className={`text-[10px] ${UI_SURFACES.textMuted4}`}>{action}</span>
+                        <kbd className={`rounded border border-[#2a3248] ${UI_SURFACES.cardAlt} px-1.5 py-0.5 font-mono text-[10px] ${UI_SURFACES.textBody}`}>
                           {keys}
                         </kbd>
                       </div>
@@ -245,9 +245,9 @@ export function HelpTab() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#222b3f] bg-[#0d1220] p-3">
+          <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep2} p-3`}>
             <div className="text-[12px] font-semibold text-white">Mode Map</div>
-            <div className="mt-2 text-[11px] text-[#9fb0ce]">
+            <div className={`mt-2 text-[11px] ${UI_SURFACES.textMuted4}`}>
               Use the numbered modes to move between map analysis, camera inspection, wall review, path replay, compare, and report handoff without losing your current scene.
             </div>
             <div className="mt-2 rounded-lg border border-white/5 bg-white/[0.02] p-2 text-[10px] uppercase tracking-[0.16em] text-[#6f809f]">

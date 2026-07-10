@@ -29,16 +29,16 @@ function ExposureBreakdown({ exposure }: { exposure: Record<string, number> }) {
 
   return (
     <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
-      <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Evidence Quality Along Route</div>
+      <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Evidence Quality Along Route</div>
       <div className="space-y-2">
         {keys.map((key) => (
           <div key={key}>
             <div className="mb-0.5 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: QUALITY_COLOR[key] }} />
-                <span className="text-[9px] uppercase tracking-[0.05em] text-[#8b96ab]">{key}</span>
+                <span className={`text-[9px] uppercase tracking-[0.05em] ${UI_SURFACES.textSoftBright}`}>{key}</span>
               </div>
-              <span className="text-[9px] font-mono text-[#5b667c]">{(exposure[key] ?? 0).toFixed(1)}s</span>
+              <span className={`text-[9px] font-mono ${UI_SURFACES.textDimMid}`}>{(exposure[key] ?? 0).toFixed(1)}s</span>
             </div>
             <ExposureBar color={QUALITY_COLOR[key]} valuePct={((exposure[key] ?? 0) / maxExposure) * 100} />
           </div>
@@ -66,7 +66,7 @@ function DetailList({
   return (
     <div className="space-y-1">
       {items.map((item) => (
-        <div key={item} className="flex items-center gap-1.5 text-[10px] text-[#9da8c0]">
+        <div key={item} className={`flex items-center gap-1.5 text-[10px] ${UI_SURFACES.textSoftMuted}`}>
           <span className="flex-shrink-0">{icon}</span>
           <span>{item}</span>
         </div>
@@ -101,7 +101,7 @@ export function ThreatAnalysisPanel() {
           <ShieldAlert className="h-4 w-4 shrink-0 text-rose-400" />
           <div className="min-w-0">
             <span className={`block text-[11px] font-semibold ${UI_SURFACES.textBody}`}>Route Exposure Review</span>
-            <span className="block text-[8px] uppercase tracking-[0.16em] text-[#556076]">
+            <span className={`block text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>
               Recomputes the current site twin and refreshes authorized route visibility
             </span>
           </div>
@@ -118,12 +118,12 @@ export function ThreatAnalysisPanel() {
 
       {!failurePath ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3">
-          <Target className="h-8 w-8 text-[#3a4158]" />
+          <Target className={`h-8 w-8 ${UI_SURFACES.textDim}`} />
           <p className="max-w-[240px] text-center text-[10px] leading-relaxed text-[#4d566b]">
             Run the simulation to review route exposure, uncovered sections, and reachable critical zones.
           </p>
           {!result && (
-            <p className="text-center text-[9px] text-[#3a4158]">
+            <p className={`text-center text-[9px] ${UI_SURFACES.textDim}`}>
               No route review yet. Use the button above or &quot;Run Review&quot; in the status bar.
             </p>
           )}
@@ -186,7 +186,7 @@ export function ThreatAnalysisPanel() {
 
           <div className="grid grid-cols-2 gap-1.5">
             <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
-              <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
+              <div className={`mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
                 <EyeOff className="h-3 w-3 text-amber-400" />
                 Uncovered Route Sections
               </div>
@@ -199,7 +199,7 @@ export function ThreatAnalysisPanel() {
             </div>
 
             <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
-              <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
+              <div className={`mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
                 <EyeOff className="h-3 w-3 text-rose-400" />
                 Cameras Missing This Route
               </div>
@@ -212,7 +212,7 @@ export function ThreatAnalysisPanel() {
           </div>
 
           <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
-            <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
+            <div className={`mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
               <Target className="h-3 w-3 text-red-400" />
               Critical Zones Reachable
             </div>
@@ -234,14 +234,14 @@ export function ThreatAnalysisPanel() {
 
           {failurePath.failureReason && (
             <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
-              <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Coverage Finding</div>
+              <div className={`mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Coverage Finding</div>
               <p className="text-[10px] leading-relaxed text-amber-300/80">{failurePath.failureReason}</p>
             </div>
           )}
 
           <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
             <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Route Visibility Ribbon</span>
+              <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Route Visibility Ribbon</span>
               <span className="text-[8px] text-[#4d566b]">{failurePath.waypoints.length} waypoints</span>
             </div>
             <div className={`flex h-3 overflow-hidden rounded-full border border-[#202536] ${UI_SURFACES.card}`}>
@@ -257,7 +257,7 @@ export function ThreatAnalysisPanel() {
                 />
               ))}
             </div>
-            <div className="mt-1 flex items-center justify-between text-[8px] uppercase tracking-[0.16em] text-[#556076]">
+            <div className={`mt-1 flex items-center justify-between text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>
               <span>Entry</span>
               <span>Target</span>
             </div>

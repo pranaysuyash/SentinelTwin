@@ -29,10 +29,10 @@ export function CameraStatusSummaryPanel() {
       <div className={`{flex flex-1 min-w-0 flex-col overflow-hidden border-r ${UI_SURFACES.borderPanel}}`}>
         <div className={`{flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-1.5}`}>
           <TruthBadge label="simulated" />
-          <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5a6478]">
+          <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted7}`}>
             Camera Status Summary
           </span>
-          <span className="ml-auto text-[9px] text-[#3a4158]">
+          <span className={`ml-auto text-[9px] ${UI_SURFACES.textDim}`}>
             {activeCams} active · {offlineCams} offline
           </span>
         </div>
@@ -49,7 +49,7 @@ export function CameraStatusSummaryPanel() {
                 {["Tag", "Status", "Quality", "Coverage", "FOV", "Mount"].map((h) => (
                   <th
                     key={h}
-                    className={`{py-1 px-2 text-left text-[8px] font-semibold uppercase tracking-wider text-[#3a4158] border-b ${UI_SURFACES.borderPanel}}`}
+                    className={`{py-1 px-2 text-left text-[8px] font-semibold uppercase tracking-wider ${UI_SURFACES.textDim} border-b ${UI_SURFACES.borderPanel}}`}
                   >
                     {h}
                   </th>
@@ -71,10 +71,10 @@ export function CameraStatusSummaryPanel() {
                     key={cam.id}
                     onClick={() => selectNode(cam.id)}
                     className={cn(
-                      "cursor-pointer border-b border-[#181b26] transition-colors",
+                      "cursor-pointer border-b ${UI_SURFACES.borderFaintAlt} transition-colors",
                       isSelected
                         ? "bg-blue-500/8"
-                        : "hover:bg-[#0e1219]",
+                        : "${UI_SURFACES.hoverBgMuted}",
                     )}
                   >
                     <td className="py-1.5 px-2">
@@ -109,14 +109,14 @@ export function CameraStatusSummaryPanel() {
                       </span>
                     </td>
                     <td className={`py-1.5 px-2 ${UI_SURFACES.textBody}`}>{coverage}</td>
-                    <td className="py-1.5 px-2 text-[#8090a8]">{cam.fovHorizontalDeg}°</td>
-                    <td className="py-1.5 px-2 text-[#8090a8] capitalize">{cam.mountType}</td>
+                    <td className={`py-1.5 px-2 ${UI_SURFACES.textMuted5}`}>{cam.fovHorizontalDeg}°</td>
+                    <td className={`py-1.5 px-2 ${UI_SURFACES.textMuted5} capitalize`}>{cam.mountType}</td>
                   </tr>
                 );
               })}
               {scene.cameras.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-[10px] text-[#3a4158]">
+                  <td colSpan={6} className={`py-6 text-center text-[10px] ${UI_SURFACES.textDim}`}>
                     No cameras in scene
                   </td>
                 </tr>
@@ -129,7 +129,7 @@ export function CameraStatusSummaryPanel() {
 
       {/* Right: Coverage Summary */}
       <div className="flex w-[220px] flex-shrink-0 flex-col gap-2 p-2.5 overflow-y-auto">
-        <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5a6478]">
+        <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted7}`}>
           Coverage of Total Floorspace
         </div>
 
@@ -188,7 +188,7 @@ export function CameraStatusSummaryPanel() {
             ))}
           </>
         ) : (
-          <div className="flex flex-1 items-center justify-center text-[10px] text-[#3a4158]">
+          <div className={`flex flex-1 items-center justify-center text-[10px] ${UI_SURFACES.textDim}`}>
             Run simulation to see metrics
           </div>
         )}

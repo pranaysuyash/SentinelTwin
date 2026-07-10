@@ -98,7 +98,7 @@ export function CoverageBudgetTab() {
 
       {/* ── Stats strip ───────────────────────────────────────────────── */}
       {budget && (
-        <div className={`{flex flex-shrink-0 items-center gap-3 border-b ${UI_SURFACES.borderPanel} bg-[#090c12] px-3 py-1}`}>
+        <div className={`{flex flex-shrink-0 items-center gap-3 border-b ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeepAlt} px-3 py-1}`}>
 
           <TruthBadge label="simulated" />
 
@@ -118,7 +118,7 @@ export function CoverageBudgetTab() {
             </div>
           </div>
 
-          <div className="h-5 w-px bg-[#1e2130]" />
+          <div className={`h-5 w-px ${UI_SURFACES.bgPanel}`} />
 
           {/* Stat chips */}
           {([
@@ -129,7 +129,7 @@ export function CoverageBudgetTab() {
           ] as const).map(({ label, value, color }) => (
             <div key={label} className="flex items-baseline gap-1">
               <span className={`font-mono text-[11px] font-bold ${color}`}>{value}</span>
-              <span className="text-[8px] uppercase tracking-wide text-[#3a4158]">{label}</span>
+              <span className={`text-[8px] uppercase tracking-wide ${UI_SURFACES.textDim}`}>{label}</span>
             </div>
           ))}
 
@@ -137,7 +137,7 @@ export function CoverageBudgetTab() {
           <button
             type="button"
             onClick={exportSummary}
-            className={`ml-auto rounded border border-[#273246] ${UI_SURFACES.card} px-2 py-1 text-[9px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white`}
+            className={`ml-auto rounded border ${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-semibold ${UI_SURFACES.textNear} transition-colors hover:border-sky-400/30 hover:text-white`}
           >
             Export Summary
           </button>
@@ -150,7 +150,7 @@ export function CoverageBudgetTab() {
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4">
             {!hasSceneData ? (
               <div className="text-center">
-                <div className="text-[11px] text-[#3a4158]">
+                <div className={`text-[11px] ${UI_SURFACES.textDim}`}>
                   Add cameras or lights to the scene, then run the budget.
                 </div>
               </div>
@@ -161,7 +161,7 @@ export function CoverageBudgetTab() {
               />
             ) : (
               <div className="text-center">
-                <div className="mb-2 text-[10px] text-[#3a4158]">
+                <div className={`mb-2 text-[10px] ${UI_SURFACES.textDim}`}>
                   Scene has {scene.cameras.length} camera{scene.cameras.length === 1 ? "" : "s"}
                   {scene.securityLights.length > 0
                     ? ` and ${scene.securityLights.length} light${scene.securityLights.length === 1 ? "" : "s"}`
@@ -184,29 +184,29 @@ export function CoverageBudgetTab() {
               {/* ── Camera breakdown table ───────────────────────────────── */}
               {budget.breakdownByCamera.length > 0 && (
                 <div className="mb-3">
-                  <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-[#8090a8]">
+                  <div className={`mb-1 text-[9px] font-semibold uppercase tracking-wider ${UI_SURFACES.textMuted5}`}>
                     Camera Costs
                   </div>
                   <table className="w-full border-collapse text-[9px]">
                     <thead>
                       <tr className={`{border-b ${UI_SURFACES.borderPanel}}`}>
-                        <th className="px-2 py-1 text-left text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Camera</th>
-                        <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Hardware</th>
-                        <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Install</th>
-                        <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Cabling</th>
-                        <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Total</th>
-                        <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Hours</th>
+                        <th className={`px-2 py-1 text-left text-[8px] font-medium uppercase tracking-wider ${UI_SURFACES.textDim}`}>Camera</th>
+                        <th className={`px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider ${UI_SURFACES.textDim}`}>Hardware</th>
+                        <th className={`px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider ${UI_SURFACES.textDim}`}>Install</th>
+                        <th className={`px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider ${UI_SURFACES.textDim}`}>Cabling</th>
+                        <th className={`px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider ${UI_SURFACES.textDim}`}>Total</th>
+                        <th className={`px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider ${UI_SURFACES.textDim}`}>Hours</th>
                       </tr>
                     </thead>
                     <tbody>
                       {budget.breakdownByCamera.map((c) => (
-                        <tr key={c.cameraId} className="border-b border-[#181b26] transition-colors hover:bg-[#0d0f17]">
+                        <tr key={c.cameraId} className={`border-b ${UI_SURFACES.borderFaintAlt} transition-colors ${UI_SURFACES.hoverBgSubtle}`}>
                           <td className={`px-2 py-1 text-left ${UI_SURFACES.textBody}`}>{c.name}</td>
-                          <td className="px-2 py-1 text-right font-mono text-[#8090a8]">{fmt(c.cost)}</td>
-                          <td className="px-2 py-1 text-right font-mono text-[#8090a8]">{fmt(c.installation)}</td>
-                          <td className="px-2 py-1 text-right font-mono text-[#8090a8]">{fmt(c.cabling)}</td>
+                          <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textMuted5}`}>{fmt(c.cost)}</td>
+                          <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textMuted5}`}>{fmt(c.installation)}</td>
+                          <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textMuted5}`}>{fmt(c.cabling)}</td>
                           <td className={`px-2 py-1 text-right font-mono font-semibold ${UI_SURFACES.textBody}`}>{fmt(c.total)}</td>
-                          <td className="px-2 py-1 text-right font-mono text-[#68738a]">{c.laborHours.toFixed(1)}</td>
+                          <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textSoft}`}>{c.laborHours.toFixed(1)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -217,27 +217,27 @@ export function CoverageBudgetTab() {
               {/* ── Light breakdown table ────────────────────────────────── */}
               {budget.breakdownByLight.length > 0 && (
                 <div className="mb-3">
-                  <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-[#8090a8]">
+                  <div className={`mb-1 text-[9px] font-semibold uppercase tracking-wider ${UI_SURFACES.textMuted5}`}>
                     Light Costs
                   </div>
                   <table className="w-full border-collapse text-[9px]">
                     <thead>
                       <tr className={`{border-b ${UI_SURFACES.borderPanel}}`}>
-                        <th className="px-2 py-1 text-left text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Light</th>
-                        <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Hardware</th>
-                        <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Install</th>
-                        <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Total</th>
-                        <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Hours</th>
+                        <th className={`px-2 py-1 text-left text-[8px] font-medium uppercase tracking-wider ${UI_SURFACES.textDim}`}>Light</th>
+                        <th className={`px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider ${UI_SURFACES.textDim}`}>Hardware</th>
+                        <th className={`px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider ${UI_SURFACES.textDim}`}>Install</th>
+                        <th className={`px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider ${UI_SURFACES.textDim}`}>Total</th>
+                        <th className={`px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider ${UI_SURFACES.textDim}`}>Hours</th>
                       </tr>
                     </thead>
                     <tbody>
                       {budget.breakdownByLight.map((l) => (
-                        <tr key={l.lightId} className="border-b border-[#181b26] transition-colors hover:bg-[#0d0f17]">
+                        <tr key={l.lightId} className={`border-b ${UI_SURFACES.borderFaintAlt} transition-colors ${UI_SURFACES.hoverBgSubtle}`}>
                           <td className={`px-2 py-1 text-left ${UI_SURFACES.textBody}`}>{l.name}</td>
-                          <td className="px-2 py-1 text-right font-mono text-[#8090a8]">{fmt(l.cost)}</td>
-                          <td className="px-2 py-1 text-right font-mono text-[#8090a8]">{fmt(l.installation)}</td>
+                          <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textMuted5}`}>{fmt(l.cost)}</td>
+                          <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textMuted5}`}>{fmt(l.installation)}</td>
                           <td className={`px-2 py-1 text-right font-mono font-semibold ${UI_SURFACES.textBody}`}>{fmt(l.total)}</td>
-                          <td className="px-2 py-1 text-right font-mono text-[#68738a]">{l.laborHours.toFixed(1)}</td>
+                          <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textSoft}`}>{l.laborHours.toFixed(1)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -248,7 +248,7 @@ export function CoverageBudgetTab() {
               {/* ── Optional costs ────────────────────────────────────────── */}
               {budget.optionalCosts.length > 0 && (
                 <div className="mb-3">
-                  <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-[#8090a8]">
+                  <div className={`mb-1 text-[9px] font-semibold uppercase tracking-wider ${UI_SURFACES.textMuted5}`}>
                     Optional Costs
                   </div>
                   <div className="space-y-1">
@@ -275,14 +275,14 @@ export function CoverageBudgetTab() {
                 <button
                   type="button"
                   onClick={runBudget}
-                  className={`rounded border border-[#273246] ${UI_SURFACES.card} px-2.5 py-1 text-[9px] font-semibold text-[#d7deed] transition-colors hover:border-green-400/30 hover:text-white`}
+                  className={`rounded border ${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} px-2.5 py-1 text-[9px] font-semibold ${UI_SURFACES.textNear} transition-colors hover:border-green-400/30 hover:text-white`}
                 >
                   Re-run Budget
                 </button>
                 <button
                   type="button"
                   onClick={exportSummary}
-                  className={`rounded border border-[#273246] ${UI_SURFACES.card} px-2.5 py-1 text-[9px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white`}
+                  className={`rounded border ${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} px-2.5 py-1 text-[9px] font-semibold ${UI_SURFACES.textNear} transition-colors hover:border-sky-400/30 hover:text-white`}
                 >
                   Copy Summary
                 </button>
@@ -291,21 +291,21 @@ export function CoverageBudgetTab() {
 
             {/* ── Sidebar: constants reference ────────────────────────────── */}
             <div className={`{w-[144px] flex-shrink-0 border-l ${UI_SURFACES.borderPanel} p-2}`}>
-              <div className="mb-1 text-[7px] font-semibold uppercase tracking-wider text-[#3a4158]">
+              <div className={`mb-1 text-[7px] font-semibold uppercase tracking-wider ${UI_SURFACES.textDim}`}>
                 Rates
               </div>
               <div className="space-y-0.5">
                 <div className="flex justify-between text-[8px]">
                   <span className={`${UI_SURFACES.textMuted}`}>Cable / m</span>
-                  <span className="font-mono text-[#68738a]">{fmt(CABLE_COST_PER_METER)}</span>
+                  <span className={`font-mono ${UI_SURFACES.textSoft}`}>{fmt(CABLE_COST_PER_METER)}</span>
                 </div>
                 <div className="flex justify-between text-[8px]">
                   <span className={`${UI_SURFACES.textMuted}`}>Labor / hr</span>
-                  <span className="font-mono text-[#68738a]">{fmt(LABOR_RATE_PER_HOUR)}</span>
+                  <span className={`font-mono ${UI_SURFACES.textSoft}`}>{fmt(LABOR_RATE_PER_HOUR)}</span>
                 </div>
               </div>
 
-              <div className="mb-1 mt-2 text-[7px] font-semibold uppercase tracking-wider text-[#3a4158]">
+              <div className={`mb-1 mt-2 text-[7px] font-semibold uppercase tracking-wider ${UI_SURFACES.textDim}`}>
                 Mount
               </div>
               <div className="space-y-0.5">
@@ -318,7 +318,7 @@ export function CoverageBudgetTab() {
                   return (
                     <div key={type} className="flex justify-between text-[8px]">
                       <span className={`${UI_SURFACES.textMuted} capitalize`}>{type}</span>
-                      <span className="font-mono text-[#68738a]">{fmt(rate)}</span>
+                      <span className={`font-mono ${UI_SURFACES.textSoft}`}>{fmt(rate)}</span>
                     </div>
                   );
                 })}

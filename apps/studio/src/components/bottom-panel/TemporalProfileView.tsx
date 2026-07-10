@@ -84,7 +84,7 @@ function CoverageTimelineBar({ snapshots }: { snapshots: HourlySecuritySnapshot[
         {hourlyBuckets.map((bucket) => (
           <div
             key={bucket.hour}
-            className="text-[6px] font-mono text-[#3a4158]"
+            className={`text-[6px] font-mono ${UI_SURFACES.textDim}`}
             style={{ width: `${(bucket.slots.length / snapshots.length) * 100}%` }}
           >
             {bucket.hour % 6 === 0 ? `${bucket.hour}:00` : ""}
@@ -136,7 +136,7 @@ function VulnerabilityCard({ window, label }: { window: VulnerabilityWindow; lab
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <Clock className={`w-2.5 h-2.5 ${UI_SURFACES.textMuted}`} />
-              <span className="text-[9px] font-mono text-[#68738a]">
+              <span className={`text-[9px] font-mono ${UI_SURFACES.textSoft}`}>
                 {hourToTime(window.startHour, window.startMinute)} → {hourToTime(window.endHour, window.endMinute)}
               </span>
               <button type="button"
@@ -163,7 +163,7 @@ function VulnerabilityCard({ window, label }: { window: VulnerabilityWindow; lab
               <span className={`text-[8px] ${UI_SURFACES.textMuted} uppercase tracking-wide`}>Reasons</span>
               <ul className="mt-0.5 space-y-0.5">
                 {window.reasons.map((reason, i) => (
-                  <li key={i} className="text-[9px] text-[#8090a8] flex items-start gap-1">
+                  <li key={i} className={`text-[9px] ${UI_SURFACES.textMuted5} flex items-start gap-1`}>
                     <span className="text-red-400 mt-0.5">•</span>
                     {reason}
                   </li>
@@ -208,7 +208,7 @@ function AnomalyCard({ anomaly }: { anomaly: TemporalAnomalyWindow }) {
         </div>
         <span className={`rounded px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide ${c.text} border ${c.border}`}>{anomaly.severity}</span>
       </div>
-      <div className="mt-1.5 text-[9px] leading-relaxed text-[#9aa6bf]">{anomaly.description}</div>
+      <div className={`mt-1.5 text-[9px] leading-relaxed ${UI_SURFACES.textSoftMuted}`}>{anomaly.description}</div>
       <div className="mt-1.5 flex flex-wrap gap-1">
         {anomaly.affectedZones.slice(0, 3).map((zone) => (
           <span key={zone} className={`rounded ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] text-[#b7c1d8]`}>
@@ -276,14 +276,14 @@ function ForecastStrip({
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <span className={`text-[11px] font-bold ${style.text}`}>{style.label}</span>
-          <span className="text-[9px] font-mono text-[#68738a]">
+          <span className={`text-[9px] font-mono ${UI_SURFACES.textSoft}`}>
             {Math.round(currentCoverage)}% coverage at {hourToTime(currentHour, currentMinute)}
             {currentSnap?.crowdAgentCount != null && currentSnap.crowdAgentCount > 0 && (
               <> · {currentSnap.crowdAgentCount} people on site</>
             )}
           </span>
         </div>
-        <div className="text-[9px] text-[#8090a8] mt-0.5">
+        <div className={`text-[9px] ${UI_SURFACES.textMuted5} mt-0.5`}>
           {activeWindow ? (
             <span className="text-red-300">
               Vulnerability window active. Duration: {(() => {
@@ -441,7 +441,7 @@ export function TemporalProfileView() {
             className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] transition-colors ${
               showScheduleEditor
                 ? `bg-[#1e2235] border ${UI_SURFACES.borderDark} ${UI_SURFACES.textBody}`
-                : "bg-[#1a1d26] hover:bg-[#1e2235] text-[#8090a8]"
+                : "${UI_SURFACES.chip} ${UI_SURFACES.hoverBgDark} ${UI_SURFACES.textMuted5}"
             }`}
           >
             <Settings className="w-3 h-3" />
@@ -450,7 +450,7 @@ export function TemporalProfileView() {
           <button type="button"
             onClick={handleCompute}
             disabled={loading}
-            className="flex items-center gap-1 px-2 py-1 rounded bg-[#1a1d26] hover:bg-[#1e2235] text-[9px] text-[#8090a8] transition-colors disabled:opacity-50"
+            className={`flex items-center gap-1 px-2 py-1 rounded ${UI_SURFACES.chip} ${UI_SURFACES.hoverBgDark} text-[9px] ${UI_SURFACES.textMuted5} transition-colors disabled:opacity-50`}
           >
             <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
             {loading ? "Computing..." : temporalProfile ? "Recompute" : "Compute 24h Profile"}
@@ -462,18 +462,18 @@ export function TemporalProfileView() {
       {showScheduleEditor && (
         <div className={`{border-b ${UI_SURFACES.borderPanel} overflow-y-auto max-h-[280px] flex-shrink-0}`}>
           <div className="px-2 pt-1.5 pb-0.5">
-            <span className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Site Schedule Configuration</span>
+            <span className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Site Schedule Configuration</span>
           </div>
           <ScheduleEditor />
         </div>
       )}
 
       {!temporalProfile ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[11px] text-[#3a4158]">
-          <Clock className="w-8 h-8 text-[#2a3246]" />
+        <div className={`flex-1 flex flex-col items-center justify-center gap-3 text-[11px] ${UI_SURFACES.textDim}`}>
+          <Clock className={`w-8 h-8 ${UI_SURFACES.textMuted}`} />
           <div className="text-center">
             <p className={`${UI_SURFACES.textMuted} font-medium`}>No temporal profile computed</p>
-            <p className="text-[9px] text-[#3a4158] mt-1">
+            <p className={`text-[9px] ${UI_SURFACES.textDim} mt-1`}>
               Analyze security posture across 24 hours — vulnerability windows, safest periods, and coverage changes.
             </p>
           </div>
@@ -491,14 +491,14 @@ export function TemporalProfileView() {
               }`}>
                 {snapshot ? `${snapshot.coveragePct}%` : "—"}
               </div>
-              <div className="text-[8px] text-[#3a4158] mt-0.5">4-hour trough average</div>
+              <div className={`text-[8px] ${UI_SURFACES.textDim} mt-0.5`}>4-hour trough average</div>
             </div>
             <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-2.5 py-2}`}>
               <div className={`text-[8px] ${UI_SURFACES.textMuted} uppercase tracking-wide`}>Vulnerability Windows</div>
               <div className="text-[18px] font-bold font-mono mt-0.5 text-orange-400">
                 {temporalProfile.peakVulnerabilityWindows.length}
               </div>
-              <div className="text-[8px] text-[#3a4158] mt-0.5">
+              <div className={`text-[8px] ${UI_SURFACES.textDim} mt-0.5`}>
                 {temporalProfile.peakVulnerabilityWindows.filter(w => w.severity === "high").length} high severity
               </div>
             </div>
@@ -507,7 +507,7 @@ export function TemporalProfileView() {
               <div className="text-[18px] font-bold font-mono mt-0.5 text-green-400">
                 {temporalProfile.safestPeriods.length}
               </div>
-              <div className="text-[8px] text-[#3a4158] mt-0.5">periods with full coverage</div>
+              <div className={`text-[8px] ${UI_SURFACES.textDim} mt-0.5`}>periods with full coverage</div>
             </div>
           </div>
 
@@ -522,12 +522,12 @@ export function TemporalProfileView() {
           </div>
 
           {/* ── Current time indicator ── */}
-          <div className={`{flex items-center gap-2 px-3 py-1.5 border-b ${UI_SURFACES.borderPanel} bg-[#090c12]}`}>
+          <div className={`{flex items-center gap-2 px-3 py-1.5 border-b ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeepAlt}}`}>
             <span className={`text-[8px] ${UI_SURFACES.textMuted} uppercase tracking-wider`}>Current</span>
             <span className="text-[10px] font-bold font-mono text-white">
               {hourToTime(temporalScrubHour, temporalScrubMinute)}
             </span>
-            <span className="text-[8px] text-[#68738a]">
+            <span className={`text-[8px] ${UI_SURFACES.textSoft}`}>
               {environmentMode === "night" ? "Night" : environmentMode === "dusk" ? "Dusk" : "Day"} mode
             </span>
             <div className="flex items-center gap-1 ml-1">
@@ -541,7 +541,7 @@ export function TemporalProfileView() {
           <div className={`{px-3 py-1.5 border-b ${UI_SURFACES.borderPanel}}`}>
             <div className="flex items-center justify-between mb-1">
               <span className={`text-[8px] ${UI_SURFACES.textMuted} uppercase tracking-wider`}>State Timeline</span>
-              <span className="text-[7px] text-[#3a4158]">Hover for state details</span>
+              <span className={`text-[7px] ${UI_SURFACES.textDim}`}>Hover for state details</span>
             </div>
             <StateTransitionMap snapshots={temporalProfile.hourlySnapshots} />
           </div>
@@ -550,7 +550,7 @@ export function TemporalProfileView() {
           <div className={`{px-3 py-1.5 border-b ${UI_SURFACES.borderPanel}}`}>
             <div className="flex items-center justify-between mb-1">
               <span className={`text-[8px] ${UI_SURFACES.textMuted} uppercase tracking-wider`}>Coverage Over 24 Hours</span>
-              <span className="text-[7px] text-[#3a4158]">Click to scrub</span>
+              <span className={`text-[7px] ${UI_SURFACES.textDim}`}>Click to scrub</span>
             </div>
             <CoverageTimelineBar snapshots={temporalProfile.hourlySnapshots} />
           </div>
@@ -656,8 +656,8 @@ export function TemporalProfileView() {
                   const stable = variance < 100;
                   return (
                     <div key={zoneLabel} className="flex items-center gap-2">
-                      <span className="text-[8px] text-[#8090a8] w-24 truncate">{zoneLabel}</span>
-                      <div className="flex-1 h-1 rounded-full bg-[#1a1d26]">
+                      <span className={`text-[8px] ${UI_SURFACES.textMuted5} w-24 truncate`}>{zoneLabel}</span>
+                      <div className={`flex-1 h-1 rounded-full ${UI_SURFACES.chip}`}>
                         <div
                           className="h-full rounded-full transition-all"
                           style={{

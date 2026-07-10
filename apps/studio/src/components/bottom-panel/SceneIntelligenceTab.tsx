@@ -47,10 +47,10 @@ type GraphPoint = { x: number; y: number };
 
 function StatCard({ label, value, detail }: { label: string; value: string | number; detail?: string }) {
   return (
-    <div className="rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2 shadow-[0_0_0_1px_rgba(0,0,0,0.2)]">
-      <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">{label}</div>
-      <div className="mt-1 text-[18px] font-semibold leading-none text-[#e5ecfb]">{value}</div>
-      {detail ? <div className="mt-1 text-[9px] text-[#74809a]">{detail}</div> : null}
+    <div className={`rounded-lg border ${UI_SURFACES.borderFaintAlt2} ${UI_SURFACES.bgDeepAlt} px-3 py-2 shadow-[0_0_0_1px_rgba(0,0,0,0.2)]`}>
+      <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>{label}</div>
+      <div className={`mt-1 text-[18px] font-semibold leading-none ${UI_SURFACES.textBright}`}>{value}</div>
+      {detail ? <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftDim}`}>{detail}</div> : null}
     </div>
   );
 }
@@ -797,16 +797,16 @@ export function SceneIntelligenceTab() {
             Provenance spine
           </Badge>
           <Badge variant="gray">{graph.summary.sceneSourceLabel}</Badge>
-          <span className="text-[10px] text-[#68738a]">Updated {updatedLabel}</span>
+          <span className={`text-[10px] ${UI_SURFACES.textSoft}`}>Updated {updatedLabel}</span>
         </div>
       </div>
       <div className="mt-2 flex flex-wrap items-baseline gap-2">
-        <div className="text-[15px] font-semibold text-[#edf2ff]">{scene.name}</div>
+        <div className={`text-[15px] font-semibold ${UI_SURFACES.textBright}`}>{scene.name}</div>
         <div className="text-[10px] text-[#73809b]">{sceneSubtitle}</div>
       </div>
       <div className="mt-2 flex items-center gap-2">
-        <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Truth Ladder</div>
-        <div className="text-[9px] text-[#6f7f9d]">Review status, source traces, and geometry validity across the current scene.</div>
+        <div className={`text-[9px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted5}`}>Truth Ladder</div>
+        <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>Review status, source traces, and geometry validity across the current scene.</div>
       </div>
       <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-6">
         {[
@@ -820,11 +820,11 @@ export function SceneIntelligenceTab() {
           <StatCard key={item.label} label={item.label} value={item.value} detail={item.detail} />
         ))}
       </div>
-      <div className="mt-3 rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
+      <div className={`mt-3 rounded-lg border ${UI_SURFACES.borderFaintAlt2} ${UI_SURFACES.bgDeepAlt} px-3 py-2`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Temporal operational twin</div>
-            <div className="mt-1 text-[11px] text-[#aeb8cd]">What did we know, and when? Compare the current scene against the latest reconstructable checkpoint.</div>
+            <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Temporal operational twin</div>
+            <div className={`mt-1 text-[11px] ${UI_SURFACES.textNearAlt}`}>What did we know, and when? Compare the current scene against the latest reconstructable checkpoint.</div>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant="gray">{temporalTwin.totalEvents} scene events</Badge>
@@ -882,9 +882,9 @@ export function SceneIntelligenceTab() {
           <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Latest reconstructable checkpoint</div>
-                <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{temporalTwin.latestCheckpoint.title}</div>
-                <div className="mt-1 text-[10px] text-[#74809a]">{temporalTwin.latestCheckpoint.summary.detail}</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Latest reconstructable checkpoint</div>
+                <div className={`mt-1 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{temporalTwin.latestCheckpoint.title}</div>
+                <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{temporalTwin.latestCheckpoint.summary.detail}</div>
               </div>
               <Badge variant={temporalTwin.latestCheckpoint.hasSnapshot ? "green" : "gray"}>
                 {temporalTwin.latestCheckpoint.hasSnapshot ? "point-in-time" : "derived"}
@@ -896,9 +896,9 @@ export function SceneIntelligenceTab() {
           <div className={`{mt-2 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Latest published checkpoint</div>
-                <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{temporalTwin.latestPublishedCheckpoint.title}</div>
-                <div className="mt-1 text-[10px] text-[#74809a]">{temporalTwin.latestPublishedCheckpoint.summary.detail}</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Latest published checkpoint</div>
+                <div className={`mt-1 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{temporalTwin.latestPublishedCheckpoint.title}</div>
+                <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{temporalTwin.latestPublishedCheckpoint.summary.detail}</div>
               </div>
               <Badge variant={temporalTwin.latestPublishedCheckpoint.hasSnapshot ? "green" : "gray"}>
                 {temporalTwin.latestPublishedCheckpoint.hasSnapshot ? "published snapshot" : "published lineage"}
@@ -924,11 +924,11 @@ export function SceneIntelligenceTab() {
               </button>
             </div>
             {publishedComparison ? (
-              <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
+              <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Published comparison</div>
-                    <div className="mt-1 text-[10px] text-[#74809a]">
+                    <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Published comparison</div>
+                    <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                       Compare the current selection against the latest published checkpoint without leaving the temporal twin.
                     </div>
                   </div>
@@ -938,19 +938,19 @@ export function SceneIntelligenceTab() {
                 </div>
                 <div className="mt-2 grid gap-2 md:grid-cols-3">
                   <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-                    <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Current anchor</div>
-                    <div className="mt-1 text-[11px] font-semibold text-[#edf2fb]">{publishedComparison.left.event.title}</div>
-                    <div className="mt-1 text-[10px] text-[#74809a]">{publishedComparison.leftSceneSummary?.detail ?? "No current summary available."}</div>
+                    <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>Current anchor</div>
+                    <div className={`mt-1 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{publishedComparison.left.event.title}</div>
+                    <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{publishedComparison.leftSceneSummary?.detail ?? "No current summary available."}</div>
                   </div>
                   <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-                    <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Published checkpoint</div>
-                    <div className="mt-1 text-[11px] font-semibold text-[#edf2fb]">{publishedComparison.right.event.title}</div>
-                    <div className="mt-1 text-[10px] text-[#74809a]">{publishedComparison.rightSceneSummary?.detail ?? "No published summary available."}</div>
+                    <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>Published checkpoint</div>
+                    <div className={`mt-1 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{publishedComparison.right.event.title}</div>
+                    <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{publishedComparison.rightSceneSummary?.detail ?? "No published summary available."}</div>
                   </div>
                   <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-                    <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Common ancestor</div>
-                    <div className="mt-1 text-[11px] font-semibold text-[#edf2fb]">{publishedComparison.commonAncestor?.event.title ?? "No shared ancestor"}</div>
-                    <div className="mt-1 text-[10px] text-[#74809a]">{publishedComparison.ancestorSummary?.detail ?? "The published branch diverged before a reconstructable checkpoint."}</div>
+                    <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>Common ancestor</div>
+                    <div className={`mt-1 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{publishedComparison.commonAncestor?.event.title ?? "No shared ancestor"}</div>
+                    <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{publishedComparison.ancestorSummary?.detail ?? "The published branch diverged before a reconstructable checkpoint."}</div>
                   </div>
                 </div>
                 <div className="mt-2 grid gap-2 md:grid-cols-3 xl:grid-cols-6">
@@ -963,8 +963,8 @@ export function SceneIntelligenceTab() {
                     { label: "Sensors", value: publishedComparison.delta.sensors },
                   ].map((item) => (
                     <div key={item.label} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-                      <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{item.label}</div>
-                      <div className="mt-1 text-[14px] font-semibold text-[#edf2fb]">{item.value >= 0 ? `+${item.value}` : item.value}</div>
+                      <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>{item.label}</div>
+                      <div className={`mt-1 text-[14px] font-semibold ${UI_SURFACES.textBright}`}>{item.value >= 0 ? `+${item.value}` : item.value}</div>
                     </div>
                   ))}
                 </div>
@@ -973,7 +973,7 @@ export function SceneIntelligenceTab() {
                     <Badge variant={publishedComparisonReadiness.status === "diverged" ? "amber" : publishedComparisonReadiness.status === "same" ? "gray" : "green"}>
                       {publishedComparisonReadiness.status.replace(/_/g, " ")}
                     </Badge>
-                    <span className="text-[10px] text-[#8aa1c4]">{publishedComparisonReadiness.recommendation}</span>
+                    <span className={`text-[10px] ${UI_SURFACES.textMuted3}`}>{publishedComparisonReadiness.recommendation}</span>
                   </div>
                 ) : null}
               </div>
@@ -985,8 +985,8 @@ export function SceneIntelligenceTab() {
       <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Operational evidence archives</div>
-            <div className="mt-1 text-[11px] text-[#74809a]">Recovered archive handoffs with a latest event can reopen the same checkpoint from Scene Intelligence.</div>
+            <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Operational evidence archives</div>
+            <div className={`mt-1 text-[11px] ${UI_SURFACES.textSoftDim}`}>Recovered archive handoffs with a latest event can reopen the same checkpoint from Scene Intelligence.</div>
           </div>
           <Badge variant="gray">{operationalEvidenceArchiveHistory.length} archives</Badge>
         </div>
@@ -998,11 +998,11 @@ export function SceneIntelligenceTab() {
                 ? resolveOperationalEvidenceSceneAtTimeWithContext(record.archive.operationalEvidenceEvents, latestEvent.timestamp, record.archive.scene)
                 : null;
               return (
-                <div key={`${record.historyId}-${record.storedAt}`} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
+                <div key={`${record.historyId}-${record.storedAt}`} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <div className="text-[11px] font-semibold text-[#edf2ff]">{record.archive.scene.name}</div>
-                      <div className="mt-1 text-[10px] text-[#74809a]">
+                      <div className={`text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{record.archive.scene.name}</div>
+                      <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                         {record.restoreBranch} · exported {formatLedgerTime(record.storedAt)} · {record.archive.operationalEvidenceEvents.length} events
                       </div>
                     </div>
@@ -1019,11 +1019,11 @@ export function SceneIntelligenceTab() {
                       {latestEvent?.id ? <Badge variant="green">checkpoint</Badge> : <Badge variant="gray">archive</Badge>}
                     </div>
                   </div>
-                  <div className="mt-1 text-[10px] text-[#74809a]">
+                  <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     {latestEvent ? latestEvent.details : "No reconstructable checkpoint event is attached to this archive yet."}
                   </div>
                   {archiveProvenance ? (
-                    <div className="mt-1 text-[10px] text-[#74809a]">
+                    <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                       {describeCheckpointProvenance({
                         sourceEventTitle: archiveProvenance.sourceEvent?.title ?? latestEvent?.title ?? "Unknown checkpoint",
                         isExactSnapshot: archiveProvenance.isExactSnapshot,
@@ -1066,7 +1066,7 @@ export function SceneIntelligenceTab() {
               );
             })
           ) : (
-            <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+            <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
               No operational evidence archives have been exported or restored yet.
             </div>
           )}
@@ -1074,11 +1074,11 @@ export function SceneIntelligenceTab() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2">
-        <div className="rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
+        <div className={`rounded-lg border ${UI_SURFACES.borderFaintAlt2} ${UI_SURFACES.bgDeepAlt} px-3 py-2`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Graph map</div>
-              <div className="mt-1 text-[11px] text-[#aeb8cd]">
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Graph map</div>
+              <div className={`mt-1 text-[11px] ${UI_SURFACES.textNearAlt}`}>
                 Click any node or relation to inspect where it came from and how the simulation verified it.
               </div>
             </div>
@@ -1086,7 +1086,7 @@ export function SceneIntelligenceTab() {
               {["scene", "source", "entity", "assumption", "simulation", "snapshot"].map((kind) => {
                 const tone = kindTone(kind);
                 return (
-                  <Badge key={kind} variant="gray" className={`${UI_SURFACES.panel} text-[#dbe2f0]`}>
+                  <Badge key={kind} variant="gray" className={`${UI_SURFACES.panel} ${UI_SURFACES.textBody2}`}>
                     <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: tone.stroke }} />
                     {tone.label}
                   </Badge>
@@ -1181,11 +1181,11 @@ export function SceneIntelligenceTab() {
           <StatCard label="Failures" value={graph.summary.failedZoneCount} detail={simulationResult ? "zones below target" : "awaiting simulation"} />
         </div>
 
-        <div className="mt-2 rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
+        <div className={`mt-2 rounded-lg border ${UI_SURFACES.borderFaintAlt2} ${UI_SURFACES.bgDeepAlt} px-3 py-2`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Temporal replay</div>
-              <div className="mt-1 text-[11px] text-[#aeb8cd]">Scrub the operational evidence trail and preview the scene at any reconstructable checkpoint.</div>
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Temporal replay</div>
+              <div className={`mt-1 text-[11px] ${UI_SURFACES.textNearAlt}`}>Scrub the operational evidence trail and preview the scene at any reconstructable checkpoint.</div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={selectedEvidenceEvent ? "blue" : "gray"}>
@@ -1197,8 +1197,8 @@ export function SceneIntelligenceTab() {
 
           <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
             <div className="flex items-center justify-between gap-2">
-              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Checkpoint scrubber</div>
-              <div className="text-[9px] text-[#74809a]">
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Checkpoint scrubber</div>
+              <div className={`text-[9px] ${UI_SURFACES.textSoftDim}`}>
                 {selectedEvidenceEvent ? formatLedgerTime(selectedEvidenceEvent.timestamp) : "No checkpoint"}
               </div>
             </div>
@@ -1212,9 +1212,9 @@ export function SceneIntelligenceTab() {
               disabled={evidenceTimeline.length === 0}
               className="mt-2 w-full accent-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
             />
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[9px] text-[#74809a]">
+            <div className={`mt-2 flex flex-wrap items-center gap-2 text-[9px] ${UI_SURFACES.textSoftDim}`}>
               <span>Start</span>
-              <div className="h-1 flex-1 rounded-full bg-[#1e2130]">
+              <div className={`h-1 flex-1 rounded-full ${UI_SURFACES.bgPanel}`}>
                 <div className="h-1 rounded-full bg-sky-400" style={{ width: `${selectedTimelineProgress * 100}%` }} />
               </div>
               <span>Latest</span>
@@ -1225,7 +1225,7 @@ export function SceneIntelligenceTab() {
             <div className="mt-3 grid gap-2 xl:grid-cols-[1.15fr_0.85fr]">
               <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-[11px] font-semibold text-[#edf2fb]">{selectedEvidenceEvent.title}</div>
+                  <div className={`text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{selectedEvidenceEvent.title}</div>
                   <Badge variant="gray">{formatLedgerTime(selectedEvidenceEvent.timestamp)}</Badge>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1.5">
@@ -1235,15 +1235,15 @@ export function SceneIntelligenceTab() {
                   {selectedEvidenceEvent.branchLabel ? <Badge variant="gray">{selectedEvidenceEvent.branchLabel}</Badge> : null}
                   {selectedEvidenceEvent.affectedNodeIds.length > 0 ? <Badge variant="gray">{selectedEvidenceEvent.affectedNodeIds.length} nodes</Badge> : null}
                 </div>
-                <div className="mt-2 text-[10px] text-[#74809a]">{selectedEvidenceEvent.details}</div>
+                <div className={`mt-2 text-[10px] ${UI_SURFACES.textSoftDim}`}>{selectedEvidenceEvent.details}</div>
                 <div className="mt-2 grid gap-2 md:grid-cols-3">
                   {[
                     { label: "Before", value: selectedEvidenceEvent.beforeSummary ?? "—" },
                     { label: "After", value: selectedEvidenceEvent.afterSummary ?? selectedEvidenceEvent.details },
                     { label: "Branch", value: selectedEvidenceEvent.branchLabel ?? selectedEvidenceEvent.lifecycleStage ?? "manual" },
                   ].map((item) => (
-                    <div key={item.label} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                      <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{item.label}</div>
+                    <div key={item.label} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                      <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>{item.label}</div>
                       <div className="mt-1 text-[10px] leading-relaxed text-[#cfd7e7]">{item.value}</div>
                     </div>
                   ))}
@@ -1274,12 +1274,12 @@ export function SceneIntelligenceTab() {
               </div>
 
               <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Point-in-time reconstruction</div>
-                <div className="mt-1 text-[10px] text-[#74809a]">Compare the reconstructed scene against the current working scene without mutating the current state.</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Point-in-time reconstruction</div>
+                <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>Compare the reconstructed scene against the current working scene without mutating the current state.</div>
                 {selectedEvidenceReconstruction ? (
                   <>
-                    <div className="mt-2 text-[11px] font-semibold text-[#edf2fb]">{selectedEvidenceReconstructionSummary?.label ?? "Reconstructed scene"}</div>
-                    <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSummary?.detail ?? "A reconstructed scene snapshot is available for this checkpoint."}</div>
+                    <div className={`mt-2 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{selectedEvidenceReconstructionSummary?.label ?? "Reconstructed scene"}</div>
+                    <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{selectedEvidenceReconstructionSummary?.detail ?? "A reconstructed scene snapshot is available for this checkpoint."}</div>
                     {selectedEvidenceReconstruction ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <Badge variant={selectedEvidenceReconstruction.isExactSnapshot ? "green" : "amber"}>
@@ -1291,7 +1291,7 @@ export function SceneIntelligenceTab() {
                       </div>
                     ) : null}
                     {selectedEvidenceReconstructionSourceNote ? (
-                      <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSourceNote}</div>
+                      <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{selectedEvidenceReconstructionSourceNote}</div>
                     ) : null}
                     {selectedEvidenceTimelineEntry ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1303,22 +1303,22 @@ export function SceneIntelligenceTab() {
                     ) : null}
                     <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                       {selectedEvidenceReconstructionCounts.map((item) => (
-                        <div key={item.label} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                          <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{item.label}</div>
-                          <div className="mt-1 text-[14px] font-semibold text-[#edf2fb]">{item.current} → {item.value}</div>
+                        <div key={item.label} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                          <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>{item.label}</div>
+                          <div className={`mt-1 text-[14px] font-semibold ${UI_SURFACES.textBright}`}>{item.current} → {item.value}</div>
                         </div>
                       ))}
                     </div>
-                    <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                      <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Compare handoff provenance</div>
-                      <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSourceNote ?? "The compare handoff will reuse the selected checkpoint provenance."}</div>
+                    <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                      <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Compare handoff provenance</div>
+                      <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{selectedEvidenceReconstructionSourceNote ?? "The compare handoff will reuse the selected checkpoint provenance."}</div>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => void shareCompareDeepLink("beforeafter")}
                         disabled={snapshots.length < 2}
-                        className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:text-[#74809a]"
+                        className={`rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:${UI_SURFACES.textSoftDim}`}
                       >
                         <Share2 className="mr-1.5 inline h-3 w-3" />
                         Share compare link
@@ -1334,7 +1334,7 @@ export function SceneIntelligenceTab() {
                         type="button"
                         onClick={() => pivotToCompareOrReport("beforeafter")}
                         disabled={snapshots.length < 2}
-                        className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:text-[#74809a]"
+                        className={`rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:${UI_SURFACES.textSoftDim}`}
                       >
                         Open Before/After
                       </button>
@@ -1342,7 +1342,7 @@ export function SceneIntelligenceTab() {
                         type="button"
                         onClick={() => pivotToCompareOrReport("report")}
                         disabled={snapshots.length < 2}
-                        className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium text-emerald-100 hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:text-[#74809a]"
+                        className={`rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium text-emerald-100 hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:${UI_SURFACES.textSoftDim}`}
                       >
                         Open Report Compare
                       </button>
@@ -1350,14 +1350,14 @@ export function SceneIntelligenceTab() {
                         type="button"
                         onClick={() => void copyCompareDeepLink("beforeafter")}
                         disabled={snapshots.length < 2}
-                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:border-white/10 disabled:text-[#74809a]"
+                        className={`rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:border-white/10 disabled:${UI_SURFACES.textSoftDim}`}
                       >
                         Copy compare link
                       </button>
                     </div>
                   </>
                 ) : (
-                  <div className={`mt-3 rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                  <div className={`mt-3 rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     This checkpoint does not reconstruct a complete scene snapshot yet.
                   </div>
                 )}
@@ -1367,14 +1367,14 @@ export function SceneIntelligenceTab() {
         </div>
 
         <div className="mt-2 grid gap-2 xl:grid-cols-2">
-          <div className="rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
+          <div className={`rounded-lg border ${UI_SURFACES.borderFaintAlt2} ${UI_SURFACES.bgDeepAlt} px-3 py-2`}>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Selected node</div>
-                <div className="mt-1 text-[11px] text-[#aeb8cd]">Trace the current node back to its source and forward into the simulation.</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Selected node</div>
+                <div className={`mt-1 text-[11px] ${UI_SURFACES.textNearAlt}`}>Trace the current node back to its source and forward into the simulation.</div>
               </div>
               {selectedNodeTone ? (
-                <Badge variant="gray" className={`${UI_SURFACES.panel} text-[#dbe2f0]`}>
+                <Badge variant="gray" className={`${UI_SURFACES.panel} ${UI_SURFACES.textBody2}`}>
                   {selectedNodeTone.label}
                 </Badge>
               ) : null}
@@ -1383,8 +1383,8 @@ export function SceneIntelligenceTab() {
             {selectedNode ? (
               <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
                 <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-                  <div className="text-sm font-semibold text-[#edf2ff]">{selectedNode.label}</div>
-                  {selectedNode.subtitle ? <div className="mt-1 text-[10px] text-[#74809a]">{selectedNode.subtitle}</div> : null}
+                  <div className={`text-sm font-semibold ${UI_SURFACES.textBright}`}>{selectedNode.label}</div>
+                  {selectedNode.subtitle ? <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{selectedNode.subtitle}</div> : null}
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     <Badge variant="blue">{selectedNode.kind}</Badge>
                     <Badge variant={selectedNode.source ? SOURCE_STYLES[selectedNode.source]?.variant ?? "gray" : "gray"}>
@@ -1395,7 +1395,7 @@ export function SceneIntelligenceTab() {
                 </div>
 
                 <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Trace</div>
+                  <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Trace</div>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <StatCard label="Incoming" value={incomingEdges.length} detail="Relations that point here" />
                     <StatCard label="Outgoing" value={outgoingEdges.length} detail="Relations this node creates" />
@@ -1430,23 +1430,23 @@ export function SceneIntelligenceTab() {
                 </div>
 
                 <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Version history</div>
+                  <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Version history</div>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <StatCard label="Evidence events" value={selectedNode.historyCount ?? 0} detail="Node-affecting evidence records" />
                     <StatCard label="Latest change" value={selectedNode.latestEvidenceKind ?? "—"} detail={selectedNode.latestEvidenceAt ? formatLedgerTime(selectedNode.latestEvidenceAt) : "No change recorded"} />
                   </div>
-                  <div className="mt-2 text-[10px] text-[#74809a]">
+                  <div className={`mt-2 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     {selectedNode.latestEvidenceSummary ?? "This graph node does not yet have node-specific evidence attached."}
                   </div>
                 </div>
                 <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Node evidence trail</div>
+                    <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Node evidence trail</div>
                     <Badge variant={selectedNodeEvidenceTrail.length > 0 ? "blue" : "gray"}>
                       {selectedNodeEvidenceTrail.length > 0 ? `${selectedNodeEvidenceTrail.length} recent` : "No direct trail"}
                     </Badge>
                   </div>
-                  <div className="mt-1 text-[10px] text-[#74809a]">
+                  <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     {selectedNode.kind === "scene"
                       ? "Scene-scoped events that define the current branch."
                       : selectedNode.kind === "entity"
@@ -1456,9 +1456,9 @@ export function SceneIntelligenceTab() {
                   <div className="mt-2 space-y-2">
                     {selectedNodeEvidenceTrail.length > 0 ? (
                       selectedNodeEvidenceTrail.map((event) => (
-                        <div key={event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
+                        <div key={event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="text-[11px] font-semibold text-[#edf2fb]">{event.title}</div>
+                            <div className={`text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{event.title}</div>
                             <Badge variant="gray">{formatLedgerTime(event.timestamp)}</Badge>
                           </div>
                           <div className="mt-1 flex flex-wrap gap-1.5">
@@ -1469,12 +1469,12 @@ export function SceneIntelligenceTab() {
                             {event.id === comparisonRightEventId ? <Badge variant="blue">right selection</Badge> : null}
                             {event.affectedNodeIds.length > 0 ? <Badge variant="gray">{event.affectedNodeIds.length} nodes</Badge> : null}
                           </div>
-                          <div className="mt-1 text-[10px] text-[#74809a]">{event.details}</div>
-                          <div className="mt-1 text-[9px] text-[#8aa1c4]">
-                            {event.beforeSummary ? <span className="font-medium text-[#c9d5e9]">Before:</span> : null} {event.beforeSummary ?? "—"}
+                          <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{event.details}</div>
+                          <div className={`mt-1 text-[9px] ${UI_SURFACES.textMuted3}`}>
+                            {event.beforeSummary ? <span className={`font-medium ${UI_SURFACES.textNearBright}`}>Before:</span> : null} {event.beforeSummary ?? "—"}
                           </div>
-                          <div className="mt-0.5 text-[9px] text-[#8aa1c4]">
-                            {event.afterSummary ? <span className="font-medium text-[#c9d5e9]">After:</span> : null} {event.afterSummary ?? event.details}
+                          <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textMuted3}`}>
+                            {event.afterSummary ? <span className={`font-medium ${UI_SURFACES.textNearBright}`}>After:</span> : null} {event.afterSummary ?? event.details}
                           </div>
                           <div className="mt-2 flex flex-wrap gap-2">
                             <button
@@ -1516,7 +1516,7 @@ export function SceneIntelligenceTab() {
                         </div>
                       ))
                     ) : (
-                      <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                      <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                         {selectedNode.kind === "scene"
                           ? "No scene-level evidence trail yet."
                           : selectedNode.kind === "entity"
@@ -1529,8 +1529,8 @@ export function SceneIntelligenceTab() {
                     <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Active comparison</div>
-                          <div className="mt-1 text-[10px] text-[#74809a]">
+                          <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Active comparison</div>
+                          <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                             This node-local comparison drives the branch comparison panel below.
                           </div>
                         </div>
@@ -1553,19 +1553,19 @@ export function SceneIntelligenceTab() {
                         </div>
                       </div>
                       <div className="mt-2 grid gap-2 md:grid-cols-2">
-                        <div className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                          <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Left branch</div>
-                          <div className="mt-1 text-[11px] font-semibold text-[#edf2fb]">{selectedNodeComparison.leftEvent?.title ?? "No left selection"}</div>
-                          <div className="mt-1 text-[10px] text-[#74809a]">
+                        <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                          <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>Left branch</div>
+                          <div className={`mt-1 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{selectedNodeComparison.leftEvent?.title ?? "No left selection"}</div>
+                          <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                             {selectedNodeComparison.leftEvent
                               ? `${selectedNodeComparison.leftEvent.branchLabel ?? selectedNodeComparison.leftEvent.lifecycleStage ?? "manual"} · ${formatLedgerTime(selectedNodeComparison.leftEvent.timestamp)}`
                               : "Pick a trail event with Set as left branch."}
                           </div>
                         </div>
-                        <div className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                          <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Right branch</div>
-                          <div className="mt-1 text-[11px] font-semibold text-[#edf2fb]">{selectedNodeComparison.rightEvent?.title ?? "No right selection"}</div>
-                          <div className="mt-1 text-[10px] text-[#74809a]">
+                        <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                          <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>Right branch</div>
+                          <div className={`mt-1 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{selectedNodeComparison.rightEvent?.title ?? "No right selection"}</div>
+                          <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                             {selectedNodeComparison.rightEvent
                               ? `${selectedNodeComparison.rightEvent.branchLabel ?? selectedNodeComparison.rightEvent.lifecycleStage ?? "manual"} · ${formatLedgerTime(selectedNodeComparison.rightEvent.timestamp)}`
                               : "Pick a trail event with Set as right branch."}
@@ -1575,7 +1575,7 @@ export function SceneIntelligenceTab() {
                       {selectedNodeComparison.branchComparison ? (
                         <div className="mt-2 flex flex-wrap gap-2">
                           <Badge variant="gray">{selectedNodeComparison.mergeReadiness?.status ?? "comparison"}</Badge>
-                          {selectedNodeComparison.mergeReadiness?.recommendation ? <span className="text-[10px] text-[#8aa1c4]">{selectedNodeComparison.mergeReadiness.recommendation}</span> : null}
+                          {selectedNodeComparison.mergeReadiness?.recommendation ? <span className={`text-[10px] ${UI_SURFACES.textMuted3}`}>{selectedNodeComparison.mergeReadiness.recommendation}</span> : null}
                         </div>
                       ) : null}
                     </div>
@@ -1583,7 +1583,7 @@ export function SceneIntelligenceTab() {
                 </div>
               </div>
             ) : (
-              <div className={`mt-3 rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-4 text-[10px] text-[#74809a]`}>
+              <div className={`mt-3 rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-4 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                 No node selected. Click the scene root or any entity to inspect its provenance.
               </div>
             )}
@@ -1606,24 +1606,24 @@ export function SceneIntelligenceTab() {
                             "rounded-md border px-3 py-2 text-left transition-colors",
                             isSelected
                               ? "border-sky-400/30 bg-sky-500/10"
-                              : `${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} hover:border-[#2b3750] hover:bg-[#0e1420]`,
+                              : `${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgMuted}`,
                           )}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#aeb8cd]">
+                            <div className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textNearAlt}`}>
                               {relationLabel(edge.kind)}
                             </div>
                             {edge.status ? <Badge variant={edge.status === "pass" ? "green" : edge.status === "partial" ? "amber" : "gray"}>{edge.status}</Badge> : null}
                           </div>
-                          <div className="mt-1 text-[11px] text-[#e5ecfb]">
+                          <div className={`mt-1 text-[11px] ${UI_SURFACES.textBright}`}>
                             {fromNode?.label ?? edge.from} → {toNode?.label ?? edge.to}
                           </div>
-                          {edge.label ? <div className="mt-1 text-[10px] text-[#74809a]">{edge.label}</div> : null}
+                          {edge.label ? <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{edge.label}</div> : null}
                         </button>
                       );
                     })
                 ) : (
-                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     This node currently has no explicit relationship edges.
                   </div>
                 )}
@@ -1631,11 +1631,11 @@ export function SceneIntelligenceTab() {
             ) : null}
           </div>
 
-          <div className="rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
+          <div className={`rounded-lg border ${UI_SURFACES.borderFaintAlt2} ${UI_SURFACES.bgDeepAlt} px-3 py-2`}>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Selected relation</div>
-                <div className="mt-1 text-[11px] text-[#aeb8cd]">Inspect the selected edge and jump to either side of the trace.</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Selected relation</div>
+                <div className={`mt-1 text-[11px] ${UI_SURFACES.textNearAlt}`}>Inspect the selected edge and jump to either side of the trace.</div>
               </div>
               <Badge variant={selectedEdge ? "blue" : "gray"} dot>
                 {selectedEdge ? relationLabel(selectedEdge.kind) : "No relation selected"}
@@ -1644,8 +1644,8 @@ export function SceneIntelligenceTab() {
 
             {selectedEdge ? (
               <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-                <div className="text-sm font-semibold text-[#edf2ff]">{selectedEdge.label ?? relationLabel(selectedEdge.kind)}</div>
-                <div className="mt-1 text-[10px] text-[#74809a]">
+                <div className={`text-sm font-semibold ${UI_SURFACES.textBright}`}>{selectedEdge.label ?? relationLabel(selectedEdge.kind)}</div>
+                <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   {selectedEdgeSource?.label ?? selectedEdge.from} → {selectedEdgeTarget?.label ?? selectedEdge.to}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1670,14 +1670,14 @@ export function SceneIntelligenceTab() {
                 </div>
               </div>
             ) : (
-              <div className={`mt-3 rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-4 text-[10px] text-[#74809a]`}>
+              <div className={`mt-3 rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-4 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                 Click a line in the graph or a relation in the trace list to inspect the link.
               </div>
             )}
 
-            <div className="mt-3 rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
-              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Scene spine</div>
-              <div className="mt-1 text-[11px] text-[#aeb8cd]">Scene, assumptions, snapshots, and simulation stay tied to one canonical graph.</div>
+            <div className={`mt-3 rounded-lg border ${UI_SURFACES.borderFaintAlt2} ${UI_SURFACES.bgDeepAlt} px-3 py-2`}>
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Scene spine</div>
+              <div className={`mt-1 text-[11px] ${UI_SURFACES.textNearAlt}`}>Scene, assumptions, snapshots, and simulation stay tied to one canonical graph.</div>
               <div className="mt-3 grid gap-2 md:grid-cols-4">
                 {[
                   { title: "Scene", body: graph.summary.sceneSourceLabel, hint: scene.name },
@@ -1686,9 +1686,9 @@ export function SceneIntelligenceTab() {
                   { title: "Simulation", body: simulationResult ? `${simulationResult.totalCoveragePct.toFixed(1)}%` : "Pending", hint: simulationResult ? "Latest coverage result" : "Run to populate links" },
                 ].map((item) => (
                   <div key={item.title} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-                    <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{item.title}</div>
-                    <div className="mt-1 text-[13px] font-semibold text-[#e5ecfb]">{item.body}</div>
-                    <div className="mt-1 text-[9px] text-[#74809a]">{item.hint}</div>
+                    <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>{item.title}</div>
+                    <div className={`mt-1 text-[13px] font-semibold ${UI_SURFACES.textBright}`}>{item.body}</div>
+                    <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftDim}`}>{item.hint}</div>
                   </div>
                 ))}
               </div>
@@ -1706,8 +1706,8 @@ export function SceneIntelligenceTab() {
         </div>
 
         <div className="mt-2 grid gap-2 xl:grid-cols-2">
-          <div className="rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
-            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Source lineage</div>
+          <div className={`rounded-lg border ${UI_SURFACES.borderFaintAlt2} ${UI_SURFACES.bgDeepAlt} px-3 py-2`}>
+            <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Source lineage</div>
             <div className="mt-2 grid gap-2 md:grid-cols-3 xl:grid-cols-6">
               {sourceRows.length > 0 ? (
                 sourceRows.map(([source, count]) => {
@@ -1715,39 +1715,39 @@ export function SceneIntelligenceTab() {
                   return (
                     <div key={source} className={cn(`rounded-md border ${UI_SURFACES.borderPanel} px-3 py-2`, style.className)}>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#dbe2f0]">{style.label}</span>
+                        <span className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${UI_SURFACES.textBody2}`}>{style.label}</span>
                         <Badge variant={style.variant}>{count}</Badge>
                       </div>
-                      <div className="mt-1 text-[9px] text-[#74809a]">Objects attributed to this source</div>
+                      <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftDim}`}>Objects attributed to this source</div>
                     </div>
                   );
                 })
               ) : (
-                <div className={`col-span-full rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                <div className={`col-span-full rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No source lineage yet.
                 </div>
               )}
             </div>
           </div>
 
-          <div className="rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
-            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Scene entities</div>
+          <div className={`rounded-lg border ${UI_SURFACES.borderFaintAlt2} ${UI_SURFACES.bgDeepAlt} px-3 py-2`}>
+            <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Scene entities</div>
             <div className="mt-2 grid gap-2 sm:grid-cols-3 xl:grid-cols-5">
               {entityRows.map((item) => (
                 <div key={item.label} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-                  <div className="text-[10px] uppercase tracking-[0.12em] text-[#74809a]">{item.label}</div>
-                  <div className="mt-1 text-[18px] font-semibold text-[#edf2ff]">{item.value}</div>
+                  <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>{item.label}</div>
+                  <div className={`mt-1 text-[18px] font-semibold ${UI_SURFACES.textBright}`}>{item.value}</div>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="mt-2 rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
+        <div className={`mt-2 rounded-lg border ${UI_SURFACES.borderFaintAlt2} ${UI_SURFACES.bgDeepAlt} px-3 py-2`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Evidence ledger</div>
-              <div className="mt-1 text-[11px] text-[#aeb8cd]">Recent snapshots, scene change-log entries, and operational memory events show how the twin evolved over time.</div>
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Evidence ledger</div>
+              <div className={`mt-1 text-[11px] ${UI_SURFACES.textNearAlt}`}>Recent snapshots, scene change-log entries, and operational memory events show how the twin evolved over time.</div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="gray">{recentSnapshots.length + recentChangeEntries.length + recentEvidenceEvents.length} visible entries</Badge>
@@ -1758,8 +1758,8 @@ export function SceneIntelligenceTab() {
           <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Sensor live evidence</div>
-                <div className="mt-1 text-[10px] text-[#74809a]">Sensor triggers, heartbeats, faults, and restores are recorded alongside scene provenance.</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Sensor live evidence</div>
+                <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>Sensor triggers, heartbeats, faults, and restores are recorded alongside scene provenance.</div>
               </div>
               <Badge variant={sensorEvents.length > 0 ? "blue" : "gray"}>{sensorEvents.length} events</Badge>
             </div>
@@ -1772,12 +1772,12 @@ export function SceneIntelligenceTab() {
             <div className="mt-3 space-y-1.5">
               {recentSensorEvents.length > 0 ? (
                 recentSensorEvents.map((event) => (
-                  <div key={event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
+                  <div key={event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-[11px] font-semibold text-[#edf2ff]">{event.sensorLabel}</div>
+                      <div className={`text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{event.sensorLabel}</div>
                       <Badge variant={event.kind === "faulted" ? "red" : event.kind === "restored" ? "green" : event.kind === "triggered" ? "blue" : "gray"}>{event.kind}</Badge>
                     </div>
-                    <div className="mt-1 text-[9px] text-[#74809a]">
+                    <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftDim}`}>
                       {event.details} {event.nearestCameraName ? `Nearest camera: ${event.nearestCameraName}.` : "No nearby camera recorded."}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1.5">
@@ -1788,7 +1788,7 @@ export function SceneIntelligenceTab() {
                   </div>
                 ))
               ) : (
-                <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No sensor evidence yet. Use the Sensors panel or paste live metadata to create the first event.
                 </div>
               )}
@@ -1798,8 +1798,8 @@ export function SceneIntelligenceTab() {
           <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Camera metadata evidence</div>
-                <div className="mt-1 text-[10px] text-[#74809a]">Camera metadata ingest events keep the live-camera health state visible in the same evidence trail.</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Camera metadata evidence</div>
+                <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>Camera metadata ingest events keep the live-camera health state visible in the same evidence trail.</div>
               </div>
               <Badge variant={cameraMetadataEvents.length > 0 ? "green" : "gray"}>{cameraMetadataEvents.length} events</Badge>
             </div>
@@ -1810,12 +1810,12 @@ export function SceneIntelligenceTab() {
             <div className="mt-3 space-y-1.5">
               {recentCameraMetadataEvents.length > 0 ? (
                 recentCameraMetadataEvents.map((event) => (
-                  <div key={event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
+                  <div key={event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-[11px] font-semibold text-[#edf2ff]">{event.cameraName}</div>
+                      <div className={`text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{event.cameraName}</div>
                       <Badge variant={event.ingestMode === "external" ? "green" : "blue"}>{event.ingestMode}</Badge>
                     </div>
-                    <div className="mt-1 text-[9px] text-[#74809a]">
+                    <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftDim}`}>
                       {event.summary}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1.5">
@@ -1827,7 +1827,7 @@ export function SceneIntelligenceTab() {
                   </div>
                 ))
               ) : (
-                <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No camera metadata evidence yet. Use the camera inspector to archive metadata and surface it here.
                 </div>
               )}
@@ -1837,8 +1837,8 @@ export function SceneIntelligenceTab() {
           <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Live camera binding evidence</div>
-                <div className="mt-1 text-[10px] text-[#74809a]">Live feed bindings, refreshes, relay URLs, and disconnects are written into the same evidence trail as the camera metadata events.</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Live camera binding evidence</div>
+                <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>Live feed bindings, refreshes, relay URLs, and disconnects are written into the same evidence trail as the camera metadata events.</div>
               </div>
               <Badge variant={cameraLiveConnectionEvents.length > 0 ? "blue" : "gray"}>{cameraLiveConnectionEvents.length} events</Badge>
             </div>
@@ -1849,14 +1849,14 @@ export function SceneIntelligenceTab() {
             <div className="mt-3 space-y-1.5">
               {recentCameraLiveConnectionEvents.length > 0 ? (
                 recentCameraLiveConnectionEvents.map((event) => (
-                  <div key={event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
+                  <div key={event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-[11px] font-semibold text-[#edf2ff]">{event.cameraName}</div>
+                      <div className={`text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{event.cameraName}</div>
                       <Badge variant={event.liveConnectionStatus === "connected" ? "green" : event.liveConnectionStatus === "connecting" ? "blue" : event.liveConnectionStatus === "error" ? "red" : "gray"}>
                         {event.liveConnectionStatus ?? "disconnected"}
                       </Badge>
                     </div>
-                    <div className="mt-1 text-[9px] text-[#74809a]">
+                    <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftDim}`}>
                       {event.summary}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1.5">
@@ -1867,7 +1867,7 @@ export function SceneIntelligenceTab() {
                   </div>
                 ))
               ) : (
-                <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No live camera binding evidence yet. Use the camera inspector to bind a live feed and surface it here.
                 </div>
               )}
@@ -1877,8 +1877,8 @@ export function SceneIntelligenceTab() {
           <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Search evidence</div>
-                <div className="mt-1 text-[10px] text-[#74809a]">Filter the ledger by event type, scene name, node id, note text, or use `branch:` / `after:` / `before:` to jump through time.</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Search evidence</div>
+                <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>Filter the ledger by event type, scene name, node id, note text, or use `branch:` / `after:` / `before:` to jump through time.</div>
               </div>
               <Badge variant={evidenceQuery.trim() ? "blue" : "gray"}>
                 {evidenceQuery.trim() ? `${filteredOperationalEvidenceEvents.length} matches` : `${operationalEvidenceEvents.length} total`}
@@ -1890,7 +1890,7 @@ export function SceneIntelligenceTab() {
                   value={evidenceQuery}
                   onChange={(event) => setEvidenceQuery(event.target.value)}
                   placeholder="Search evidence, checkpoints, notes, branch:published, after:2026-05-29"
-                  className={`{min-w-0 flex-1 rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2 text-[11px] text-[#edf2ff] outline-none placeholder:text-[#74809a] focus:border-sky-400/40}`}
+                  className={`{min-w-0 flex-1 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2 text-[11px] ${UI_SURFACES.textBright} outline-none placeholder:${UI_SURFACES.textSoftDim} focus:border-sky-400/40}`}
                 />
                     <button
                       type="button"
@@ -1906,8 +1906,8 @@ export function SceneIntelligenceTab() {
               </button>
             </div>
             <div className="mt-3 grid gap-2 md:grid-cols-2">
-              <div className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Lifecycle stage</div>
+              <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Lifecycle stage</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -1916,7 +1916,7 @@ export function SceneIntelligenceTab() {
                       "rounded-full border px-2.5 py-1 text-[10px] font-medium",
                       evidenceStageFilter === "all"
                         ? "border-sky-400/40 bg-sky-500/15 text-sky-100"
-                        : "border-white/10 bg-white/[0.03] text-[#9bb0cf] hover:bg-white/[0.06]",
+                        : "border-white/10 bg-white/[0.03] ${UI_SURFACES.textMuted4} hover:bg-white/[0.06]",
                     ].join(" ")}
                   >
                     All stages
@@ -1932,7 +1932,7 @@ export function SceneIntelligenceTab() {
                           "rounded-full border px-2.5 py-1 text-[10px] font-medium capitalize",
                           evidenceStageFilter === stage
                             ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
-                            : "border-white/10 bg-white/[0.03] text-[#9bb0cf] hover:bg-white/[0.06]",
+                            : "border-white/10 bg-white/[0.03] ${UI_SURFACES.textMuted4} hover:bg-white/[0.06]",
                         ].join(" ")}
                       >
                         {stage} · {count}
@@ -1942,8 +1942,8 @@ export function SceneIntelligenceTab() {
                 </div>
               </div>
 
-              <div className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Branch filter</div>
+              <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Branch filter</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -1952,7 +1952,7 @@ export function SceneIntelligenceTab() {
                       "rounded-full border px-2.5 py-1 text-[10px] font-medium",
                       evidenceBranchFilter === "all"
                         ? "border-sky-400/40 bg-sky-500/15 text-sky-100"
-                        : "border-white/10 bg-white/[0.03] text-[#9bb0cf] hover:bg-white/[0.06]",
+                        : "border-white/10 bg-white/[0.03] ${UI_SURFACES.textMuted4} hover:bg-white/[0.06]",
                     ].join(" ")}
                   >
                     All branches
@@ -1967,25 +1967,25 @@ export function SceneIntelligenceTab() {
                           "rounded-full border px-2.5 py-1 text-[10px] font-medium capitalize",
                           evidenceBranchFilter === branch
                             ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
-                            : "border-white/10 bg-white/[0.03] text-[#9bb0cf] hover:bg-white/[0.06]",
+                            : "border-white/10 bg-white/[0.03] ${UI_SURFACES.textMuted4} hover:bg-white/[0.06]",
                         ].join(" ")}
                       >
                         {branch} · {count}
                       </button>
                     ))
                   ) : (
-                    <div className="text-[10px] text-[#74809a]">No branch metadata yet.</div>
+                    <div className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>No branch metadata yet.</div>
                   )}
                 </div>
                 </div>
               </div>
             </div>
 
-            <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
+            <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Branch heads</div>
-                  <div className="mt-1 text-[10px] text-[#74809a]">Latest visible checkpoint for each lifecycle branch.</div>
+                  <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Branch heads</div>
+                  <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>Latest visible checkpoint for each lifecycle branch.</div>
                 </div>
                 <Badge variant="gray">{filteredOperationalEvidenceEvents.length} filtered events</Badge>
               </div>
@@ -1993,11 +1993,11 @@ export function SceneIntelligenceTab() {
                 {evidenceBranchHeads.map(({ stage, event }) => (
                   <div key={stage} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{stage}</div>
+                      <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>{stage}</div>
                       <Badge variant={event ? "blue" : "gray"}>{event ? "head" : "empty"}</Badge>
                     </div>
-                    <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{event?.title ?? "No event yet"}</div>
-                    <div className="mt-1 text-[9px] text-[#74809a]">{event ? event.branchLabel ?? stage : "No branch metadata visible for this stage."}</div>
+                    <div className={`mt-1 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{event?.title ?? "No event yet"}</div>
+                    <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftDim}`}>{event ? event.branchLabel ?? stage : "No branch metadata visible for this stage."}</div>
                     {event ? (
                       <button
                         type="button"
@@ -2015,8 +2015,8 @@ export function SceneIntelligenceTab() {
             <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Branch lineage</div>
-                  <div className="mt-1 text-[10px] text-[#74809a]">Trace a selected branch head back through its parent checkpoints.</div>
+                  <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Branch lineage</div>
+                  <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>Trace a selected branch head back through its parent checkpoints.</div>
                 </div>
                 <Badge variant={selectedEvidenceLineage.length > 0 ? "blue" : "gray"}>
                   {selectedEvidenceLineage.length > 0 ? `${selectedEvidenceLineage.length} steps` : "No lineage selected"}
@@ -2024,9 +2024,9 @@ export function SceneIntelligenceTab() {
               </div>
               <div className="mt-2">
                 {selectedEvidenceEvent ? (
-                  <div className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
+                  <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-[11px] font-semibold text-[#edf2ff]">{selectedEvidenceEvent.title}</div>
+                      <div className={`text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{selectedEvidenceEvent.title}</div>
                       <Badge variant="gray">{formatLedgerTime(selectedEvidenceEvent.timestamp)}</Badge>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1.5">
@@ -2056,25 +2056,25 @@ export function SceneIntelligenceTab() {
                         selectedEvidenceLineage.map((step) => (
                           <div key={step.event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#74809a]">
+                              <div className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textSoftDim}`}>
                                 Step {step.depth + 1}
                               </div>
                               <Badge variant={step.event.sceneSnapshot ? "green" : "gray"}>
                                 {step.event.sceneSnapshot ? "point-in-time" : "derived"}
                               </Badge>
                             </div>
-                            <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{step.event.title}</div>
+                            <div className={`mt-1 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{step.event.title}</div>
                             <div className="mt-1 flex flex-wrap gap-1.5">
                               <Badge variant="gray">{step.event.kind.replace(/_/g, " ")}</Badge>
                               <Badge variant="gray">{step.event.branchLabel ?? step.event.lifecycleStage ?? "manual"}</Badge>
                               {step.event.affectedNodeIds.length > 0 ? <Badge variant="gray">{step.event.affectedNodeIds.length} nodes</Badge> : null}
                             </div>
-                            <div className="mt-1 text-[9px] text-[#8aa1c4]">{step.event.beforeSummary ? `Before: ${step.event.beforeSummary}` : "No before summary available."}</div>
-                            <div className="mt-0.5 text-[9px] text-[#8aa1c4]">{step.event.afterSummary ? `After: ${step.event.afterSummary}` : step.event.details}</div>
+                            <div className={`mt-1 text-[9px] ${UI_SURFACES.textMuted3}`}>{step.event.beforeSummary ? `Before: ${step.event.beforeSummary}` : "No before summary available."}</div>
+                            <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textMuted3}`}>{step.event.afterSummary ? `After: ${step.event.afterSummary}` : step.event.details}</div>
                           </div>
                         ))
                       ) : (
-                        <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                        <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                           Select a branch head to preview its parent chain and point-in-time reconstruction.
                         </div>
                       )}
@@ -2083,13 +2083,13 @@ export function SceneIntelligenceTab() {
                       <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div>
-                            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Point-in-time reconstruction</div>
-                            <div className="mt-1 text-[10px] text-[#74809a]">Reconstruct the scene state at this checkpoint without committing it yet.</div>
+                            <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Point-in-time reconstruction</div>
+                            <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>Reconstruct the scene state at this checkpoint without committing it yet.</div>
                           </div>
                           <Badge variant="green">Preview only</Badge>
                         </div>
-                        <div className="mt-2 text-[11px] font-semibold text-[#edf2ff]">{selectedEvidenceReconstructionSummary?.label ?? "Reconstructed scene"}</div>
-                        <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSummary?.detail ?? "A reconstructed scene snapshot is available for this event."}</div>
+                        <div className={`mt-2 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{selectedEvidenceReconstructionSummary?.label ?? "Reconstructed scene"}</div>
+                        <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{selectedEvidenceReconstructionSummary?.detail ?? "A reconstructed scene snapshot is available for this event."}</div>
                         {selectedEvidenceReconstruction ? (
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             <Badge variant={selectedEvidenceReconstruction.isExactSnapshot ? "green" : "amber"}>
@@ -2101,13 +2101,13 @@ export function SceneIntelligenceTab() {
                           </div>
                         ) : null}
                         {selectedEvidenceReconstructionSourceNote ? (
-                          <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSourceNote}</div>
+                          <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{selectedEvidenceReconstructionSourceNote}</div>
                         ) : null}
                         <div className="mt-2 grid gap-2 sm:grid-cols-3 xl:grid-cols-4">
                           {selectedEvidenceReconstructionCounts.map((item) => (
-                            <div key={item.label} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                              <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{item.label}</div>
-                              <div className="mt-1 text-[14px] font-semibold text-[#edf2ff]">{item.current} → {item.value}</div>
+                            <div key={item.label} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                              <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>{item.label}</div>
+                              <div className={`mt-1 text-[14px] font-semibold ${UI_SURFACES.textBright}`}>{item.current} → {item.value}</div>
                             </div>
                           ))}
                         </div>
@@ -2115,7 +2115,7 @@ export function SceneIntelligenceTab() {
                     ) : null}
                   </div>
                 ) : (
-                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No branch lineage selected.
                   </div>
                 )}
@@ -2125,8 +2125,8 @@ export function SceneIntelligenceTab() {
             <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Branch comparison</div>
-                  <div className="mt-1 text-[10px] text-[#74809a]">Compare two branch heads to preview their common ancestor and divergence before any merge or publish action.</div>
+                  <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Branch comparison</div>
+                  <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>Compare two branch heads to preview their common ancestor and divergence before any merge or publish action.</div>
                 </div>
                 <Badge variant={branchComparison ? "blue" : "gray"}>
                   {branchComparison ? "Comparison ready" : "Select two branch heads"}
@@ -2134,10 +2134,10 @@ export function SceneIntelligenceTab() {
               </div>
             {branchComparison ? (
                 <div className="mt-2 grid gap-2 xl:grid-cols-3">
-                  <div className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Left branch</div>
-                    <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{branchComparison.left.event.title}</div>
-                    <div className="mt-1 text-[10px] text-[#74809a]">{branchComparison.leftSceneSummary?.detail ?? "No scene summary available."}</div>
+                  <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                    <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Left branch</div>
+                    <div className={`mt-1 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{branchComparison.left.event.title}</div>
+                    <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{branchComparison.leftSceneSummary?.detail ?? "No scene summary available."}</div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <Badge variant="gray">{branchComparison.left.event.branchLabel ?? branchComparison.left.event.lifecycleStage ?? "manual"}</Badge>
                       {branchComparison.left.event.sceneSnapshot ? <Badge variant="green">Snapshot</Badge> : <Badge variant="gray">Derived</Badge>}
@@ -2166,19 +2166,19 @@ export function SceneIntelligenceTab() {
                       </button>
                     </div>
                   </div>
-                  <div className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Common ancestor</div>
-                    <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{branchComparison.commonAncestor?.event.title ?? "No shared ancestor"}</div>
-                    <div className="mt-1 text-[10px] text-[#74809a]">{branchComparison.ancestorSummary?.detail ?? "The branches diverged before a reconstructable checkpoint."}</div>
+                  <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                    <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Common ancestor</div>
+                    <div className={`mt-1 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{branchComparison.commonAncestor?.event.title ?? "No shared ancestor"}</div>
+                    <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{branchComparison.ancestorSummary?.detail ?? "The branches diverged before a reconstructable checkpoint."}</div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {branchComparison.commonAncestor ? <Badge variant="blue">Lineage depth {branchComparison.commonAncestor.depth + 1}</Badge> : <Badge variant="gray">No common head</Badge>}
                       {branchComparison.ancestorScene ? <Badge variant="green">Point-in-time scene</Badge> : <Badge variant="gray">No ancestor snapshot</Badge>}
                     </div>
                   </div>
-                  <div className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Right branch</div>
-                    <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{branchComparison.right.event.title}</div>
-                    <div className="mt-1 text-[10px] text-[#74809a]">{branchComparison.rightSceneSummary?.detail ?? "No scene summary available."}</div>
+                  <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                    <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Right branch</div>
+                    <div className={`mt-1 text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{branchComparison.right.event.title}</div>
+                    <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{branchComparison.rightSceneSummary?.detail ?? "No scene summary available."}</div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <Badge variant="gray">{branchComparison.right.event.branchLabel ?? branchComparison.right.event.lifecycleStage ?? "manual"}</Badge>
                       {branchComparison.right.event.sceneSnapshot ? <Badge variant="green">Snapshot</Badge> : <Badge variant="gray">Derived</Badge>}
@@ -2209,22 +2209,22 @@ export function SceneIntelligenceTab() {
                   </div>
                 </div>
               ) : (
-                <div className={`mt-2 rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
-                  Use <span className="font-medium text-[#c9d5e9]">Set as left branch</span> and <span className="font-medium text-[#c9d5e9]">Set as right branch</span> on two lineage checkpoints to preview divergence.
+                <div className={`mt-2 rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                  Use <span className={`font-medium ${UI_SURFACES.textNearBright}`}>Set as left branch</span> and <span className={`font-medium ${UI_SURFACES.textNearBright}`}>Set as right branch</span> on two lineage checkpoints to preview divergence.
                 </div>
               )}
               {mergeReadiness ? (
-                <div className={`{mt-2 rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
+                <div className={`{mt-2 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Merge readiness</div>
-                      <div className="mt-1 text-[10px] text-[#74809a]">A branch-policy preview for the selected heads before any future merge semantics land.</div>
+                      <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Merge readiness</div>
+                      <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>A branch-policy preview for the selected heads before any future merge semantics land.</div>
                     </div>
                     <Badge variant={mergeReadiness.status === "diverged" ? "amber" : mergeReadiness.status === "unrelated" ? "gray" : "green"}>
                       {mergeReadiness.status.replace(/_/g, " ")}
                     </Badge>
                   </div>
-                  <div className="mt-2 text-[11px] text-[#e5ecfb]">{mergeReadiness.recommendation}</div>
+                  <div className={`mt-2 text-[11px] ${UI_SURFACES.textBright}`}>{mergeReadiness.recommendation}</div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {mergeReadiness.leftDistance != null ? <Badge variant="gray">Left distance {mergeReadiness.leftDistance}</Badge> : null}
                     {mergeReadiness.rightDistance != null ? <Badge variant="gray">Right distance {mergeReadiness.rightDistance}</Badge> : null}
@@ -2243,8 +2243,8 @@ export function SceneIntelligenceTab() {
                     { label: "Sensors", value: branchComparison.delta.sensors },
                   ].map((item) => (
                     <div key={item.label} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-                      <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{item.label}</div>
-                      <div className="mt-1 text-[14px] font-semibold text-[#edf2ff]">{item.value >= 0 ? `+${item.value}` : item.value}</div>
+                      <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>{item.label}</div>
+                      <div className={`mt-1 text-[14px] font-semibold ${UI_SURFACES.textBright}`}>{item.value >= 0 ? `+${item.value}` : item.value}</div>
                     </div>
                   ))}
                 </div>
@@ -2254,16 +2254,16 @@ export function SceneIntelligenceTab() {
           <div className={`{mt-3 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Event kinds</div>
-                <div className="mt-1 text-[10px] text-[#74809a]">Event types currently visible after search and ledger filters.</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Event kinds</div>
+                <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>Event types currently visible after search and ledger filters.</div>
               </div>
               <Badge variant="blue">{filteredOperationalEvidenceEvents.length} visible events</Badge>
             </div>
             <div className="mt-3 grid gap-2 md:grid-cols-3 xl:grid-cols-7">
               {(Object.entries(evidenceLifecycleSummary.counts) as Array<[keyof typeof evidenceLifecycleSummary.counts, number]>).map(([stage, count]) => (
-                <div key={stage} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                  <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{stage}</div>
-                  <div className="mt-1 text-[14px] font-semibold text-[#edf2ff]">{count}</div>
+                <div key={stage} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                  <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>{stage}</div>
+                  <div className={`mt-1 text-[14px] font-semibold ${UI_SURFACES.textBright}`}>{count}</div>
                 </div>
               ))}
             </div>
@@ -2275,20 +2275,20 @@ export function SceneIntelligenceTab() {
                   </Badge>
                 ))
               ) : (
-                <div className="text-[10px] text-[#74809a]">No event kinds yet.</div>
+                <div className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>No event kinds yet.</div>
               )}
             </div>
           </div>
 
           <div className="mt-3 grid gap-2 xl:grid-cols-4">
             <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Operational memory</div>
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Operational memory</div>
               <div className="mt-2 space-y-2">
                 {recentEvidenceEvents.length > 0 ? (
                   recentEvidenceEvents.map((event) => (
-                    <div key={event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
+                    <div key={event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-[11px] font-semibold text-[#edf2ff]">{event.title}</div>
+                        <div className={`text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{event.title}</div>
                         <Badge variant="gray">{formatLedgerTime(event.timestamp)}</Badge>
                       </div>
                       <div className="mt-1 flex flex-wrap gap-1.5">
@@ -2298,15 +2298,15 @@ export function SceneIntelligenceTab() {
                         {event.affectedNodeIds.length > 0 ? <Badge variant="gray">{event.affectedNodeIds.length} nodes</Badge> : null}
                         {event.branchLabel ? <Badge variant="gray">{event.branchLabel}</Badge> : null}
                       </div>
-                      <div className="mt-1 text-[10px] text-[#74809a]">{event.details}</div>
+                      <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{event.details}</div>
                       {event.beforeSummary ? (
-                        <div className="mt-1 text-[9px] text-[#8aa1c4]">
-                          <span className="font-medium text-[#c9d5e9]">Before:</span> {event.beforeSummary}
+                        <div className={`mt-1 text-[9px] ${UI_SURFACES.textMuted3}`}>
+                          <span className={`font-medium ${UI_SURFACES.textNearBright}`}>Before:</span> {event.beforeSummary}
                         </div>
                       ) : null}
                       {event.afterSummary ? (
-                        <div className="mt-0.5 text-[9px] text-[#8aa1c4]">
-                          <span className="font-medium text-[#c9d5e9]">After:</span> {event.afterSummary}
+                        <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textMuted3}`}>
+                          <span className={`font-medium ${UI_SURFACES.textNearBright}`}>After:</span> {event.afterSummary}
                         </div>
                       ) : null}
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -2368,7 +2368,7 @@ export function SceneIntelligenceTab() {
                     </div>
                   ))
                 ) : (
-                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     {evidenceQuery.trim() ? "No matching operational evidence." : "No operational evidence yet."}
                   </div>
                 )}
@@ -2376,13 +2376,13 @@ export function SceneIntelligenceTab() {
             </div>
 
             <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Point-in-time checkpoints</div>
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Point-in-time checkpoints</div>
               <div className="mt-2 space-y-2">
                 {checkpointEvents.length > 0 ? (
                   checkpointEvents.map((event) => (
-                    <div key={event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
+                    <div key={event.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-[11px] font-semibold text-[#edf2ff]">{event.title}</div>
+                        <div className={`text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{event.title}</div>
                         <Badge variant="gray">{formatLedgerTime(event.timestamp)}</Badge>
                       </div>
                       <div className="mt-1 flex flex-wrap gap-1.5">
@@ -2391,13 +2391,13 @@ export function SceneIntelligenceTab() {
                         {event.affectedNodeIds.length > 0 ? <Badge variant="gray">{event.affectedNodeIds.length} nodes</Badge> : null}
                         {event.branchLabel ? <Badge variant="gray">{event.branchLabel}</Badge> : null}
                       </div>
-                      <div className="mt-1 text-[10px] text-[#74809a]">{checkpointCardProvenance(event).detail}</div>
+                      <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>{checkpointCardProvenance(event).detail}</div>
                       {event.beforeSummary ? (
-                        <div className="mt-1 text-[9px] text-[#8aa1c4]">
-                          <span className="font-medium text-[#c9d5e9]">Before:</span> {event.beforeSummary}
+                        <div className={`mt-1 text-[9px] ${UI_SURFACES.textMuted3}`}>
+                          <span className={`font-medium ${UI_SURFACES.textNearBright}`}>Before:</span> {event.beforeSummary}
                         </div>
                       ) : null}
-                      <div className="mt-0.5 text-[10px] text-[#74809a]">{event.afterSummary ?? event.details}</div>
+                      <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textSoftDim}`}>{event.afterSummary ?? event.details}</div>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button
                           type="button"
@@ -2417,7 +2417,7 @@ export function SceneIntelligenceTab() {
                     </div>
                   ))
                 ) : (
-                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     {evidenceQuery.trim() ? "No reconstructable checkpoints match your search." : "No reconstructable checkpoints yet."}
                   </div>
                 )}
@@ -2425,22 +2425,22 @@ export function SceneIntelligenceTab() {
             </div>
 
             <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Recent snapshots</div>
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Recent snapshots</div>
               <div className="mt-2 space-y-2">
                 {recentSnapshots.length > 0 ? (
                   recentSnapshots.map((snapshot) => {
                     const coverage = snapshot.simulation?.totalCoveragePct;
                     const issues = snapshot.simulation?.issues.length;
                     return (
-                      <div key={snapshot.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
+                      <div key={snapshot.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="text-[11px] font-semibold text-[#edf2ff]">{snapshot.label}</div>
+                          <div className={`text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{snapshot.label}</div>
                           <Badge variant="gray">{formatLedgerTime(snapshot.createdAt)}</Badge>
                         </div>
-                    <div className="mt-1 text-[10px] text-[#74809a]">
+                    <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                       {coverage != null ? `${coverage.toFixed(1)}% coverage` : "Coverage pending"} · {issues != null ? `${issues} issues` : "No simulation"}
                     </div>
-                    <div className="mt-1 text-[9px] text-[#8aa1c4]">
+                    <div className={`mt-1 text-[9px] ${UI_SURFACES.textMuted3}`}>
                       {snapshot.notes ?? "Saved scene evidence snapshot."}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -2456,7 +2456,7 @@ export function SceneIntelligenceTab() {
                 );
               })
                 ) : (
-                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No snapshots saved yet.
                   </div>
                 )}
@@ -2464,16 +2464,16 @@ export function SceneIntelligenceTab() {
             </div>
 
             <div className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
-              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Change log</div>
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Change log</div>
               <div className="mt-2 space-y-2">
                 {recentChangeEntries.length > 0 ? (
                   recentChangeEntries.map((entry, index) => (
-                    <div key={`${entry}-${index}`} className={`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`}>
-                      <div className="text-[10px] text-[#dbe2f0]">{entry}</div>
+                    <div key={`${entry}-${index}`} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                      <div className={`text-[10px] ${UI_SURFACES.textBody2}`}>{entry}</div>
                     </div>
                   ))
                 ) : (
-                  <div className={`rounded-md border border-dashed border-[#243048] ${UI_SURFACES.panel} px-3 py-3 text-[10px] text-[#74809a]`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No change log entries yet.
                   </div>
                 )}
@@ -2483,9 +2483,9 @@ export function SceneIntelligenceTab() {
         </div>
 
         {provenanceNotes.length > 0 ? (
-          <div className="mt-2 rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
-            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Provenance notes</div>
-            <ul className="mt-2 space-y-1 text-[10px] text-[#8aa1c4]">
+          <div className={`mt-2 rounded-lg border ${UI_SURFACES.borderFaintAlt2} ${UI_SURFACES.bgDeepAlt} px-3 py-2`}>
+            <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Provenance notes</div>
+            <ul className={`mt-2 space-y-1 text-[10px] ${UI_SURFACES.textMuted3}`}>
               {provenanceNotes.map((note) => (
                 <li key={note}>• {note}</li>
               ))}

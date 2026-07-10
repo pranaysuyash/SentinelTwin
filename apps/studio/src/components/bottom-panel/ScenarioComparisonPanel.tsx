@@ -20,7 +20,7 @@ const SENSITIVITY_COLOR: Record<string, string> = {
   high: "text-orange-400 bg-orange-500/10 border-orange-500/20",
   medium: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20",
   low: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-  none: `text-[#4d5870] ${UI_SURFACES.card} ${UI_SURFACES.borderSubtle}`,
+  none: `${UI_SURFACES.textDimMid} ${UI_SURFACES.card} ${UI_SURFACES.borderSubtle}`,
 };
 
 function DeltaChip({ value, suffix = "%" }: { value: number; suffix?: string }) {
@@ -71,7 +71,7 @@ export function ScenarioComparisonPanel() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 px-4">
         <Zap className="h-8 w-8 text-amber-400/30" />
-        <p className="text-center text-[10px] leading-relaxed text-[#5b667c]">
+        <p className={`text-center text-[10px] leading-relaxed ${UI_SURFACES.textDimMid}`}>
           Run a simulation first to enable scenario comparison and assumption sensitivity analysis.
         </p>
       </div>
@@ -93,7 +93,7 @@ export function ScenarioComparisonPanel() {
             type="button"
             onClick={handleRunScenarios}
             disabled={scenarioRunning}
-            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] text-[#8094b8] transition-colors hover:border-[#3a4158] hover:text-white disabled:opacity-50`}
+            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftBright} transition-colors hover:border-[#3a4158] hover:text-white disabled:opacity-50`}
           >
             {scenarioRunning ? <Loader2 className="size-3 animate-spin" /> : <Zap className="size-3" />}
             {scenarioBatchResults ? "Re-run" : "Run Scenarios"}
@@ -101,7 +101,7 @@ export function ScenarioComparisonPanel() {
         </div>
 
         {!scenarioBatchResults && !scenarioRunning && (
-          <p className="text-[9px] text-[#3d4d63]">
+          <p className={`text-[9px] ${UI_SURFACES.textDim}`}>
             Compares Day, Night, and Night-No-Lights against the baseline. Identifies which scenario causes the worst coverage degradation.
           </p>
         )}
@@ -116,14 +116,14 @@ export function ScenarioComparisonPanel() {
         {scenarioBatchResults && !scenarioRunning && (
           <div className="space-y-1.5">
             {/* Baseline row */}
-            <div className={`rounded-xl border ${UI_SURFACES.borderThin} bg-[#0a0d15] px-3 py-2`}>
+            <div className={`rounded-xl border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-3 py-2`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sun className="size-3 text-yellow-300" />
-                  <span className="text-[10px] font-medium text-[#c7cfdf]">Baseline (current)</span>
+                  <span className={`text-[10px] font-medium ${UI_SURFACES.textBody}`}>Baseline (current)</span>
                 </div>
                 <div className="flex items-center gap-3 text-[9px] text-[#7a859d]">
-                  <span className="font-mono text-[#c7cfdf]">{baseline.totalCoveragePct.toFixed(1)}%</span>
+                  <span className={`font-mono ${UI_SURFACES.textBody}`}>{baseline.totalCoveragePct.toFixed(1)}%</span>
                   <span>{baseline.criticalZoneResults.filter(z => z.status === "pass").length}/{baseline.criticalZoneResults.length} zones</span>
                 </div>
               </div>
@@ -149,8 +149,8 @@ export function ScenarioComparisonPanel() {
                     onClick={() => setExpandedScenario(isExpanded ? null : sr.scenarioId)}
                   >
                     <div className="flex items-center gap-2">
-                      {SCENARIO_ICON[sr.scenarioId] ?? <Moon className="size-3 text-[#4d5870]" />}
-                      <span className="text-[10px] font-medium text-[#c7cfdf]">{sr.label}</span>
+                      {SCENARIO_ICON[sr.scenarioId] ?? <Moon className={`size-3 ${UI_SURFACES.textDimMid}`} />}
+                      <span className={`text-[10px] font-medium ${UI_SURFACES.textBody}`}>{sr.label}</span>
                       {isWorst && (
                         <span className="flex items-center gap-0.5 rounded-md border border-red-500/20 bg-red-500/10 px-1 py-0.5 text-[8px] text-red-400">
                           <AlertTriangle className="size-2" />
@@ -160,26 +160,26 @@ export function ScenarioComparisonPanel() {
                     </div>
                     <div className="flex items-center gap-3">
                       <DeltaChip value={coverageDelta} />
-                      {isExpanded ? <ChevronUp className="size-3 text-[#4d5870]" /> : <ChevronDown className="size-3 text-[#4d5870]" />}
+                      {isExpanded ? <ChevronUp className={`size-3 ${UI_SURFACES.textDimMid}`} /> : <ChevronDown className={`size-3 ${UI_SURFACES.textDimMid}`} />}
                     </div>
                   </button>
 
                   {isExpanded && (
-                    <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg border border-[#1a2030] bg-[#07090f]/60 px-2 py-2">
+                    <div className={`mt-2 grid grid-cols-2 gap-2 rounded-lg border ${UI_SURFACES.borderFaint} ${UI_SURFACES.page}/60 px-2 py-2`}>
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-[8px] uppercase tracking-wider text-[#4d5870]">Coverage</span>
-                        <span className="font-mono text-[10px] text-[#c7cfdf]">{sr.totalCoveragePct.toFixed(1)}%</span>
+                        <span className={`text-[8px] uppercase tracking-wider ${UI_SURFACES.textDimMid}`}>Coverage</span>
+                        <span className={`font-mono text-[10px] ${UI_SURFACES.textBody}`}>{sr.totalCoveragePct.toFixed(1)}%</span>
                         <DeltaChip value={coverageDelta} />
                       </div>
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-[8px] uppercase tracking-wider text-[#4d5870]">Zones passing</span>
-                        <span className="font-mono text-[10px] text-[#c7cfdf]">{sr.zonePassCount}/{sr.zoneTotalCount}</span>
+                        <span className={`text-[8px] uppercase tracking-wider ${UI_SURFACES.textDimMid}`}>Zones passing</span>
+                        <span className={`font-mono text-[10px] ${UI_SURFACES.textBody}`}>{sr.zonePassCount}/{sr.zoneTotalCount}</span>
                         <DeltaChip value={zonesDelta} suffix="" />
                       </div>
                       {sr.adversarialExposureScore !== undefined && (
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-[8px] uppercase tracking-wider text-[#4d5870]">Adversarial exposure</span>
-                          <span className="font-mono text-[10px] text-[#c7cfdf]">{sr.adversarialExposureScore.toFixed(2)}</span>
+                          <span className={`text-[8px] uppercase tracking-wider ${UI_SURFACES.textDimMid}`}>Adversarial exposure</span>
+                          <span className={`font-mono text-[10px] ${UI_SURFACES.textBody}`}>{sr.adversarialExposureScore.toFixed(2)}</span>
                         </div>
                       )}
                       {sr.delta?.description && (
@@ -209,7 +209,7 @@ export function ScenarioComparisonPanel() {
             type="button"
             onClick={handleRunSensitivity}
             disabled={sensitivityRunning}
-            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] text-[#8094b8] transition-colors hover:border-[#3a4158] hover:text-white disabled:opacity-50`}
+            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftBright} transition-colors hover:border-[#3a4158] hover:text-white disabled:opacity-50`}
           >
             {sensitivityRunning ? <Loader2 className="size-3 animate-spin" /> : <Zap className="size-3" />}
             {assumptionSensitivityResults ? "Re-run" : "Run Analysis"}
@@ -217,7 +217,7 @@ export function ScenarioComparisonPanel() {
         </div>
 
         {!assumptionSensitivityResults && !sensitivityRunning && (
-          <p className="text-[9px] text-[#3d4d63]">
+          <p className={`text-[9px] ${UI_SURFACES.textDim}`}>
             Tests which assumptions most affect results — person height, night penalty, lighting, glare. Identifies the single biggest source of simulation uncertainty.
           </p>
         )}
@@ -244,7 +244,7 @@ export function ScenarioComparisonPanel() {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-medium text-[#c7cfdf]">{s.assumptionName}</span>
+                      <span className={`text-[9px] font-medium ${UI_SURFACES.textBody}`}>{s.assumptionName}</span>
                       <span
                         className={cn(
                           "rounded-md border px-1.5 py-0.5 text-[7px] font-semibold uppercase tracking-wider",
@@ -256,7 +256,7 @@ export function ScenarioComparisonPanel() {
                     </div>
                     <p className="mt-0.5 text-[8px] leading-relaxed text-[#5b6880]">{s.description}</p>
                     {s.affectedZones.length > 0 && (
-                      <p className="mt-0.5 text-[8px] text-[#4d5870]">
+                      <p className={`mt-0.5 text-[8px] ${UI_SURFACES.textDimMid}`}>
                         Affects: {s.affectedZones.slice(0, 3).join(", ")}
                         {s.affectedZones.length > 3 && ` +${s.affectedZones.length - 3} more`}
                       </p>

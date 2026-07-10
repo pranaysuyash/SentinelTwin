@@ -19,7 +19,7 @@ export function RedundancyMatrixPanel() {
   if (!result) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-        <div className="text-[11px] text-[#3a4158]">
+        <div className={`text-[11px] ${UI_SURFACES.textDim}`}>
           Run the shared simulation to compute redundancy analysis from the current scene.
         </div>
         <button
@@ -41,7 +41,7 @@ export function RedundancyMatrixPanel() {
   if (cameras.length === 0 || zones.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2">
-        <ShieldAlert className="h-5 w-5 text-[#3a4158]" />
+        <ShieldAlert className={`h-5 w-5 ${UI_SURFACES.textDim}`} />
         <div className={`text-[10px] ${UI_SURFACES.textMuted}`}>
           {cameras.length === 0 ? "No cameras in scene" : "No critical zones defined"}
         </div>
@@ -92,12 +92,12 @@ export function RedundancyMatrixPanel() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Summary bar */}
-      <div className={`{flex items-center gap-3 border-b ${UI_SURFACES.borderPanel} bg-[#0d1017] px-3 py-2}`}>
+      <div className={`{flex items-center gap-3 border-b ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeep} px-3 py-2}`}>
         <TruthBadge label="simulated" />
         <span className={`text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted}`}>
           Redundancy Matrix
         </span>
-        <span className="text-[9px] text-[#6a748b]">
+        <span className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>
           {cameras.length} cameras × {zones.length} zones
         </span>
         <span className={`ml-auto text-[9px] ${UI_SURFACES.textMuted}`}>
@@ -116,7 +116,7 @@ export function RedundancyMatrixPanel() {
                 {scene.cameras.find((camera) => camera.id === focusedCamera.cameraId)?.name ?? focusedCamera.cameraName}
                 {focusedCamera.isOffline ? <span className="ml-2 rounded bg-red-900/30 px-1.5 py-0.5 text-[8px] font-semibold text-red-300">OFFLINE</span> : null}
               </div>
-              <div className="mt-0.5 text-[9px] text-[#6a748b]">
+              <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textSoftMid}`}>
                 If this camera fails, these zones lose their only backup.
               </div>
             </div>
@@ -185,7 +185,7 @@ export function RedundancyMatrixPanel() {
                 </div>
                 <div className="mb-2 flex items-center gap-1.5">
                   <span className={cn("h-1.5 w-1.5 rounded-full", cam.isOffline ? "bg-red-500" : "bg-green-400")} />
-                  <span className="text-[8px] text-[#6a748b]">{cam.isOffline ? "Offline" : "Online"}</span>
+                  <span className={`text-[8px] ${UI_SURFACES.textSoftMid}`}>{cam.isOffline ? "Offline" : "Online"}</span>
                 </div>
 
                 {/* Zone chips */}
@@ -198,7 +198,7 @@ export function RedundancyMatrixPanel() {
                       return (
                         <span
                           key={zone.id}
-                          className={`rounded ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] text-[#3a4158] line-through`}
+                          className={`rounded ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] ${UI_SURFACES.textDim} line-through`}
                         >
                           {zone.label}
                         </span>
@@ -226,10 +226,10 @@ export function RedundancyMatrixPanel() {
                 {/* Stats */}
                 <div className={`mt-2 flex items-center gap-3 text-[8px] ${UI_SURFACES.textMuted}`}>
                   <span>
-                    Coverage: <span className="text-[#8090a8]">{cam.coveragePct.toFixed(1)}%</span>
+                    Coverage: <span className={`${UI_SURFACES.textMuted5}`}>{cam.coveragePct.toFixed(1)}%</span>
                   </span>
                   <span>
-                    Zones: <span className="text-[#8090a8]">{cam.coveredZones.length}</span>
+                    Zones: <span className={`${UI_SURFACES.textMuted5}`}>{cam.coveredZones.length}</span>
                   </span>
                   <span>
                     Single-point: <span className="text-red-400">{cam.soleCoverageZones.length}</span>
@@ -242,7 +242,7 @@ export function RedundancyMatrixPanel() {
       </div>
 
       {/* Legend */}
-      <div className={`{flex items-center gap-3 border-t ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[8px] text-[#3a4158]}`}>
+      <div className={`{flex items-center gap-3 border-t ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[8px] ${UI_SURFACES.textDim}}`}>
         <span className="flex items-center gap-1">
           <span className="h-2 w-2 rounded bg-green-900/40" /> Redundant
         </span>

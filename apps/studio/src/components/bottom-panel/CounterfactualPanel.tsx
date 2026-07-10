@@ -72,11 +72,11 @@ function DeltaBadge({
 
   return (
     <div className="flex items-center gap-1 text-[9px]">
-      <span className="text-[#647089]">{label}</span>
+      <span className={`${UI_SURFACES.textSoft}`}>{label}</span>
       <span
         className={cn(
           "font-mono font-medium",
-          isGood ? "text-emerald-400" : isBad ? "text-red-400" : "text-[#9da8c0]",
+          isGood ? "text-emerald-400" : isBad ? "text-red-400" : "${UI_SURFACES.textSoftMuted}",
         )}
       >
         {value > 0 ? "+" : ""}
@@ -127,7 +127,7 @@ function SimPlanCard({ plan, isActive, onPreview, onApply, onRevert }: SimPlanCa
             >
               <Cpu className="size-2.5" />
             </span>
-            <p className="text-[11px] leading-snug text-[#d7deed] min-w-0">{plan.label}</p>
+            <p className={`text-[11px] leading-snug ${UI_SURFACES.textNear} min-w-0`}>{plan.label}</p>
           </div>
           <span
             className={cn(
@@ -140,12 +140,12 @@ function SimPlanCard({ plan, isActive, onPreview, onApply, onRevert }: SimPlanCa
         </div>
 
         {/* Coverage delta summary */}
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-[#1a2030] bg-[#07090f]/60 px-2 py-1.5">
+        <div className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 rounded-lg border ${UI_SURFACES.borderFaint} ${UI_SURFACES.page}/60 px-2 py-1.5`}>
           <DeltaBadge value={Number(improvementPct.toFixed(1))} label="Coverage" positive="up" />
           {plan.simulatedCoveragePct !== undefined && (
             <div className="flex items-center gap-1 text-[9px]">
-              <span className="text-[#647089]">→ total</span>
-              <span className="font-mono font-medium text-[#9da8c0]">
+              <span className={`${UI_SURFACES.textSoft}`}>→ total</span>
+              <span className={`font-mono font-medium ${UI_SURFACES.textSoftMuted}`}>
                 {Math.round(plan.simulatedCoveragePct)}%
               </span>
             </div>
@@ -164,14 +164,14 @@ function SimPlanCard({ plan, isActive, onPreview, onApply, onRevert }: SimPlanCa
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="mt-1.5 flex w-full items-center gap-1 text-[9px] text-[#4d5870] hover:text-[#8094b8] transition-colors"
+            className={`mt-1.5 flex w-full items-center gap-1 text-[9px] ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverTextSoft} transition-colors`}
           >
             {expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
             {expanded ? "Hide" : "Show"} zone breakdown
           </button>
         )}
         {expanded && plan.zoneDeltas && plan.zoneDeltas.length > 0 && (
-          <div className="mt-1.5 space-y-0.5 rounded-lg border border-[#1a2030] bg-[#07090f]/50 px-2 py-1.5">
+          <div className={`mt-1.5 space-y-0.5 rounded-lg border ${UI_SURFACES.borderFaint} ${UI_SURFACES.page}/50 px-2 py-1.5`}>
             {plan.zoneDeltas.map((z) => (
               <div key={z.zoneId} className="flex items-center justify-between gap-2 text-[9px]">
                 <span className="truncate text-[#7b89a5]">{z.zoneId}</span>
@@ -203,7 +203,7 @@ function SimPlanCard({ plan, isActive, onPreview, onApply, onRevert }: SimPlanCa
               <button
                 type="button"
                 onClick={onRevert}
-                className={`inline-flex items-center justify-center gap-1 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 py-1.5 text-[10px] text-[#8094b8] transition-colors hover:text-white`}
+                className={`inline-flex items-center justify-center gap-1 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 py-1.5 text-[10px] ${UI_SURFACES.textSoftBright} transition-colors hover:text-white`}
               >
                 <RotateCcw className="size-3" />
                 Revert
@@ -248,17 +248,17 @@ function AiCandidateCard({ candidate, onApply }: AiCandidateCardProps) {
             <span
               className={cn(
                 "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border text-[9px] font-bold",
-                COST_COLORS[candidate.costCategory] ?? `text-[#647089] ${UI_SURFACES.borderThin}`,
+                COST_COLORS[candidate.costCategory] ?? `${UI_SURFACES.textSoft} ${UI_SURFACES.borderThin}`,
               )}
             >
               {candidate.rank}
             </span>
-            <p className="text-[11px] leading-snug text-[#d7deed]">{candidate.description}</p>
+            <p className={`text-[11px] leading-snug ${UI_SURFACES.textNear}`}>{candidate.description}</p>
           </div>
           <span
             className={cn(
               "shrink-0 rounded-md border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wider",
-              COST_COLORS[candidate.costCategory] ?? `text-[#647089] ${UI_SURFACES.borderThin}`,
+              COST_COLORS[candidate.costCategory] ?? `${UI_SURFACES.textSoft} ${UI_SURFACES.borderThin}`,
             )}
           >
             {candidate.costCategory}
@@ -266,7 +266,7 @@ function AiCandidateCard({ candidate, onApply }: AiCandidateCardProps) {
         </div>
 
         {candidate.verifiedDelta && (
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-[#1a2030] bg-[#07090f]/60 px-2 py-1.5">
+          <div className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 rounded-lg border ${UI_SURFACES.borderFaint} ${UI_SURFACES.page}/60 px-2 py-1.5`}>
             <DeltaBadge
               value={candidate.verifiedDelta.totalCoveragePctDelta}
               label="Coverage"
@@ -367,7 +367,7 @@ export function CounterfactualPanel() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 px-4">
         <Lightbulb className="h-8 w-8 text-amber-400/40" />
-        <p className="text-center text-[10px] leading-relaxed text-[#5b667c]">
+        <p className={`text-center text-[10px] leading-relaxed ${UI_SURFACES.textDimMid}`}>
           Run a simulation first to enable fix scanning.
         </p>
       </div>
@@ -420,15 +420,15 @@ export function CounterfactualPanel() {
       {/* Mode toggle + truth badge */}
       <div className="mb-2 flex items-center gap-2">
         <TruthBadge label="simulated" />
-        <div className={`{ml-auto flex items-center rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0d15] p-0.5}`}>
+        <div className={`{ml-auto flex items-center rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeepAlt} p-0.5}`}>
           <button
             type="button"
             onClick={() => setMode("sim")}
             className={cn(
               "flex items-center gap-1 rounded-md px-2.5 py-1 text-[9px] font-medium transition-colors",
               mode === "sim"
-                ? "bg-[#151c2f] text-emerald-300"
-                : "text-[#5d6880] hover:text-[#9da8c0]",
+                ? "${UI_SURFACES.chip} text-emerald-300"
+                : "${UI_SURFACES.textMuted7} ${UI_SURFACES.hoverTextSoft}",
             )}
           >
             <Cpu className="size-3" />
@@ -441,8 +441,8 @@ export function CounterfactualPanel() {
               className={cn(
                 "flex items-center gap-1 rounded-md px-2.5 py-1 text-[9px] font-medium transition-colors",
                 mode === "ai"
-                  ? "bg-[#151c2f] text-purple-300"
-                  : "text-[#5d6880] hover:text-[#9da8c0]",
+                  ? "${UI_SURFACES.chip} text-purple-300"
+                  : "${UI_SURFACES.textMuted7} ${UI_SURFACES.hoverTextSoft}",
               )}
             >
               <Sparkles className="size-3" />
@@ -493,7 +493,7 @@ export function CounterfactualPanel() {
               if (activeCounterfactualPlanId) revertCounterfactualPreview();
               setAiCandidates([]);
             }}
-            className={`flex size-7 shrink-0 items-center justify-center rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[#5d6880] hover:text-white`}
+            className={`flex size-7 shrink-0 items-center justify-center rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted7} hover:text-white`}
           >
             <X className="size-3" />
           </button>
@@ -502,7 +502,7 @@ export function CounterfactualPanel() {
 
       {/* Constraint hint (sim mode only) */}
       {mode === "sim" && counterfactualPlans.length === 0 && !scanning && (
-        <p className="mt-1.5 text-[9px] leading-relaxed text-[#3d4d63]">
+        <p className={`mt-1.5 text-[9px] leading-relaxed ${UI_SURFACES.textDim}`}>
           Scans all cameras and obstructions, runs a simulation per candidate, and ranks by coverage gain. No API key required.
         </p>
       )}
@@ -524,7 +524,7 @@ export function CounterfactualPanel() {
               </p>
             )}
             {!scanning && counterfactualPlans.length > 0 && (
-              <p className="text-[9px] text-[#4d5870]">
+              <p className={`text-[9px] ${UI_SURFACES.textDimMid}`}>
                 {counterfactualPlans.length} fix candidate
                 {counterfactualPlans.length !== 1 ? "s" : ""} — ranked by coverage gain
               </p>
@@ -561,7 +561,7 @@ export function CounterfactualPanel() {
                 <button
                   type="button"
                   onClick={() => setShowBatchCompare((v) => !v)}
-                  className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-medium text-[#9da8c0] transition-colors hover:border-[#3a4158] hover:text-white`}
+                  className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-medium ${UI_SURFACES.textSoftMuted} transition-colors hover:border-[#3a4158] hover:text-white`}
                 >
                   {showBatchCompare ? "Card View" : "Batch Compare"}
                 </button>
@@ -589,10 +589,10 @@ export function CounterfactualPanel() {
                   </thead>
                   <tbody>
                     {aiCandidates.map((c) => (
-                      <tr key={c.id} className="border-b border-[#131a28] text-[#c7cfdf]">
-                        <td className="px-2 py-1.5 font-mono text-[#9da8c0]">#{c.rank ?? "—"}</td>
+                      <tr key={c.id} className={`border-b border-[#131a28] ${UI_SURFACES.textBody}`}>
+                        <td className={`px-2 py-1.5 font-mono ${UI_SURFACES.textSoftMuted}`}>#{c.rank ?? "—"}</td>
                         <td className="max-w-[220px] px-2 py-1.5 text-[9px] leading-snug">{c.description}</td>
-                        <td className="px-2 py-1.5 uppercase text-[#9da8c0]">{c.costCategory}</td>
+                        <td className={`px-2 py-1.5 uppercase ${UI_SURFACES.textSoftMuted}`}>{c.costCategory}</td>
                         <td className="px-2 py-1.5 font-mono">
                           {c.verifiedDelta?.totalCoveragePctDelta ?? 0}%
                         </td>

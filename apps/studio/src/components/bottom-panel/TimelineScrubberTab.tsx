@@ -14,7 +14,7 @@ export function TimelineScrubberTab() {
 
   if (operationalEvidenceEvents.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-[11px] text-[#6a748b]">
+      <div className={`flex h-full items-center justify-center text-[11px] ${UI_SURFACES.textSoftMid}`}>
         No operational evidence history available.
       </div>
     );
@@ -54,7 +54,7 @@ export function TimelineScrubberTab() {
 
       <div className="flex-1 p-4 flex flex-col gap-4 overflow-y-auto">
         <div className={`${UI_SURFACES.card} border ${UI_SURFACES.borderThin} rounded-lg p-4 relative`}>
-          <div className="mb-4 flex justify-between text-[10px] text-[#6a748b]">
+          <div className={`mb-4 flex justify-between text-[10px] ${UI_SURFACES.textSoftMid}`}>
             <span>Start</span>
             <span>Now</span>
           </div>
@@ -65,12 +65,12 @@ export function TimelineScrubberTab() {
             max={operationalEvidenceEvents.length - 1}
             value={scrubIndex}
             onChange={(e) => handleScrub(parseInt(e.target.value))}
-            className="w-full accent-emerald-500 bg-[#1e2130] rounded-full appearance-none h-1.5 cursor-pointer"
+            className={`w-full accent-emerald-500 ${UI_SURFACES.bgPanel} rounded-full appearance-none h-1.5 cursor-pointer`}
           />
 
           <div className={`{mt-4 pt-4 border-t ${UI_SURFACES.borderPanel} grid grid-cols-2 gap-4}`}>
             <div>
-              <div className="text-[9px] uppercase tracking-wider text-[#6a748b] mb-1">Scrubbed Event</div>
+              <div className={`text-[9px] uppercase tracking-wider ${UI_SURFACES.textSoftMid} mb-1`}>Scrubbed Event</div>
               <div className="text-[12px] font-medium text-white">{currentEvent?.title || "Unknown Event"}</div>
               <div className="text-[10px] text-[#8192b0] mt-1 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
@@ -78,9 +78,9 @@ export function TimelineScrubberTab() {
               </div>
             </div>
             <div>
-              <div className="text-[9px] uppercase tracking-wider text-[#6a748b] mb-1">Details</div>
+              <div className={`text-[9px] uppercase tracking-wider ${UI_SURFACES.textSoftMid} mb-1`}>Details</div>
               <div className={`text-[11px] ${UI_SURFACES.textBody}`}>{currentEvent?.details || "No details"}</div>
-              <div className="text-[10px] text-[#5d6880] mt-1">Affected Nodes: {currentEvent?.affectedNodeIds.length || 0}</div>
+              <div className={`text-[10px] ${UI_SURFACES.textMuted7} mt-1`}>Affected Nodes: {currentEvent?.affectedNodeIds.length || 0}</div>
             </div>
           </div>
         </div>

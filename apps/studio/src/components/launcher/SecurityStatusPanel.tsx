@@ -4,6 +4,18 @@ import { cn } from "@/lib/cn";
 import { HideSectionButton } from "@/components/launcher/HideSectionButton";
 import type { SecurityIssue } from "@/schema/security-scene";
 import { TruthBadge } from "@/components/shared/TruthBadge";
+import {
+  getCapabilityStatus,
+  type CapabilityId,
+} from "@/lib/capability-registry";
+
+/** Capabilities surfaced in the security status panel. */
+const PANEL_CAPABILITIES: CapabilityId[] = [
+  "real_footage_verification",
+  "live_camera_connection",
+  "sensor_ingest",
+  "governance",
+];
 
 export type SecurityStatusPanelProps = {
   displayOutcomeStatus: string;
@@ -79,6 +91,34 @@ export function SecurityStatusPanel({
             )}>
               {railCoveragePct}
             </span>
+          </div>
+
+          {/* Capability maturity indicators */}
+          <div className="mt-3">
+            <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">
+              Capabilities
+            </div>
+            <div className="space-y-1">
+              {PANEL_CAPABILITIES.map((cid) => {
+                const cap = getCapabilityStatus(cid);
+                if (!cap) return null;
+                return (
+                  <div key={cid} className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.015] px-3 py-1.5">
+                    <span className="text-[10px] text-[#7a8baa]">{cap.label}</span>
+                    <span className={cn(
+                      "flex-none rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em]",
+                      cap.level === "Available"
+                        ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300"
+                        : cap.level === "Preview"
+                        ? "border-violet-400/25 bg-violet-500/10 text-violet-300"
+                        : "border-amber-400/25 bg-amber-500/10 text-amber-300",
+                    )}>
+                      {cap.level}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

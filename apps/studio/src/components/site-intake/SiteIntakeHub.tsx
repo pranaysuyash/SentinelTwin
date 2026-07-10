@@ -21,6 +21,11 @@ import {
 } from "lucide-react";
 import type { SiteIntakeSource } from "@/lib/site-compiler";
 import { CreationFlowShell } from "@/components/site-intake/CreationFlowShell";
+import {
+  getCapabilityStatus,
+  type CapabilityId,
+  type CapabilityLevel,
+} from "@/lib/capability-registry";
 
 export type { SiteIntakeSource };
 
@@ -51,6 +56,8 @@ type SourceCard = {
   id: SiteIntakeSource;
   icon: React.ComponentType<{ className?: string }>;
   title: string;
+  /** Capability IDs from the registry — used to derive status automatically. */
+  capabilityIds: CapabilityId[];
   status: "Working" | "Preview" | "Planned";
   description: string;
   output: string;
@@ -79,6 +86,7 @@ const SOURCES: SourceCard[] = [
     id: "scan",
     icon: ScanSearch,
     title: "Scan Site Photos",
+    capabilityIds: ["scan_site", "guided_scan_reconstruction", "reconstruction_compilation"],
     status: "Working",
     // Truth-audit surface — the maturity tagline is enforced by
     // `src/lib/truth-audit.ts` ("Site intake hub truthful maturity"). The
@@ -125,6 +133,7 @@ const SOURCES: SourceCard[] = [
     id: "ai_prompt",
     icon: Sparkles,
     title: "Describe with AI",
+    capabilityIds: ["ai_layout_draft"],
     status: "Preview",
     description: "Draft a layout from a text description. Review required before use.",
     output: "Draft",
@@ -154,6 +163,7 @@ const SOURCES: SourceCard[] = [
     id: "floor_plan",
     icon: ImageIcon,
     title: "Upload Floor Plan",
+    capabilityIds: ["floor_plan_import"],
     status: "Working",
     description: "Extract walls from blueprints, PDFs, or images. Manual correction may be needed.",
     output: "Scene Shell",
@@ -183,6 +193,7 @@ const SOURCES: SourceCard[] = [
     id: "json",
     icon: FileUp,
     title: "Import Site Twin",
+    capabilityIds: ["json_import"],
     status: "Working",
     description: "Import a full site twin data file. Validates automatically before review.",
     output: "Site Twin",
@@ -212,6 +223,7 @@ const SOURCES: SourceCard[] = [
     id: "manual",
     icon: Square,
     title: "Build Manually",
+    capabilityIds: ["manual_builder"],
     status: "Working",
     description: "Start from a blank canvas. Draw walls, place cameras, define zones.",
     output: "Site Twin",
@@ -242,6 +254,7 @@ const SOURCES: SourceCard[] = [
     id: "camera_evidence",
     icon: Video,
     title: "Verify from Footage",
+    capabilityIds: ["real_footage_verification", "live_camera_connection"],
     status: "Preview",
     description: "Compare virtual cameras against reference evidence. Static alignment only.",
     output: "Evidence",
@@ -405,7 +418,23 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                               ? card.accent.badge
                               : "border-violet-500/20 bg-violet-500/8 text-violet-300",
                           ].join(" ")}>
-                            {card.status}
+                            {(() => {
+                              // Derive the lowest capability level across the card's capabilities
+                              const LEVEL_ORDER: CapabilityLevel[] = [
+                                "Available", "Preview", "Stub", "RequiresBackend",
+                                "RequiresIntegration", "Planned",
+                              ];
+                              const levels = card.capabilityIds
+                                .map((cid) => getCapabilityStatus(cid)?.level)
+                                .filter(Boolean) as CapabilityLevel[];
+                              const worst = levels.length > 0
+                                ? levels.reduce((a, b) =>
+                                    LEVEL_ORDER.indexOf(a) > LEVEL_ORDER.indexOf(b) ? a : b)
+                                : null;
+                              return worst && worst !== "Available"
+                                ? worst
+                                : card.status;
+                            })()}
                           </span>
                         </div>
                       </div>
@@ -433,14 +462,24 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                       <div className="text-[16px] font-semibold text-white">{selected.title}</div>
                       <div className="mt-1 flex items-center gap-2 text-[12px] text-[#5a6882]">
                         <span className="inline-flex items-center gap-1">
-                          <span className={[
-                            "rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em]",
-                            selected.status === "Working"
-                              ? selected.accent.badge
-                              : "border-violet-500/20 bg-violet-500/8 text-violet-300",
-                          ].join(" ")}>
-                            {selected.status}
-                          </span>
+                          {selected.capabilityIds.map((cid) => {
+                            const cap = getCapabilityStatus(cid);
+                            if (!cap) return null;
+                            return (
+                              <span
+                                key={cid}
+                                className={[
+                                  "rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em]",
+                                  cap.level === "Available"
+                                    ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300"
+                                    : cap.level === "Preview"
+                                    ? "border-violet-500/20 bg-violet-500/8 text-violet-300"
+                                    : "border-amber-500/20 bg-amber-500/8 text-amber-300",
+                                ].join(" ")}>
+                                {cap.label}: {cap.level}
+                              </span>
+                            );
+                          })}
                         </span>
                         {selected.recommended && (
                           <span className="text-sky-400">· Recommended</span>
@@ -524,9 +563,35 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                     </div>
                   )}
 
-                  <p className="mt-4 text-[11px] leading-4 text-[#3a4560]">
-                    Local-only mode is available. Cloud-backed AI actions are explicitly labeled before use.
-                  </p>
+                  <div className="mt-4 rounded-xl border border-[#1a2030] bg-white/[0.02] p-3">
+                    <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">
+                      Capability Status
+                    </div>
+                    <div className="space-y-1.5">
+                      {selected.capabilityIds.map((cid) => {
+                        const cap = getCapabilityStatus(cid);
+                        if (!cap) return null;
+                        return (
+                          <div key={cid} className="flex items-center justify-between">
+                            <span className="text-[11px] text-[#7a8baa]">{cap.label}</span>
+                            <span className={[
+                              "rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em]",
+                              cap.level === "Available"
+                                ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300"
+                                : cap.level === "Preview"
+                                ? "border-violet-400/25 bg-violet-500/10 text-violet-300"
+                                : "border-amber-400/25 bg-amber-500/10 text-amber-300",
+                            ].join(" ")}>
+                              {cap.level}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-[10px] leading-4 text-[#3a4560]">
+                      Local-only mode is available. Cloud-backed AI actions are explicitly labeled before use.
+                    </p>
+                  </div>
                 </div>
               </aside>
             </div>

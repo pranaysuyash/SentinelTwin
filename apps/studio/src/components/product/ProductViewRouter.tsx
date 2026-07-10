@@ -16,6 +16,7 @@ import { SettingsView } from "./SettingsView";
 import { MobileEditGate } from "@/components/shared/MobileEditGate";
 import { MOBILE_EDIT_MEDIA_QUERY } from "@/lib/viewport-tiers";
 import { useProductLifecycle } from "@/lib/use-product-lifecycle";
+import { useLifecycleTransitions } from "@/lib/use-lifecycle-transitions";
 import { isStageReachable, stageLabel } from "@/lib/product-lifecycle";
 import type { ProductLifecycleStage } from "@/lib/product-lifecycle";
 import type { SiteIntakeSource, SiteIntakeSession } from "@/lib/site-compiler";
@@ -161,6 +162,9 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
   // Product lifecycle — derived state for ordering enforcement.
   // Prevents jumping to later stages without passing through earlier ones.
   const lifecycle = useProductLifecycle();
+
+  // Lifecycle transition side effects — fires notices on stage changes.
+  useLifecycleTransitions();
 
   // First-time user routing: if the user has no workspace and no cameras in the
   // active scene, send them to the Site Intake Hub (the canonical first

@@ -43,6 +43,9 @@ export type ProductView =
   | "floor_plan_import"
   | "ai_layout_draft"
   | "site_draft_review"
+  // Job lens — first-run persona/workflow selection (D-331). Shown before the
+  // intake redirect when lensConfirmed === false.
+  | "job_lens"
   // The studio workspace itself.
   | "studio"
   // Intent-level deep-links into specific studio configurations (see header

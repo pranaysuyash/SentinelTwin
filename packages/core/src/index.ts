@@ -15,6 +15,8 @@ export * from "./lib/target-quality-requirements";
 export * from "./lib/node-factory";
 export * from "./lib/workspace-catalog";
 export * from "./lib/ifc-structural-parser";
+export * from "./lib/job-catalog";
 
 // Backend schemas
 export * from "./schema/workspace-backend";
+export * from "./schema/job";

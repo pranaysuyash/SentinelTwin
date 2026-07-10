@@ -2,7 +2,11 @@
 
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
-import { simulateStudio } from "@sentineltwin/simulation";
+
+// P1-2026-07-10: StatusBar quick-run now delegates to the canonical
+// simulation runner (runStudioSimulation) instead of calling simulateStudio()
+// directly. This fixes the review finding that flagged direct engine calls
+// from UI/store flows. See Docs/review/PRODUCT_REVIEW_2026-07-10.md §7.
 
 type StatusBarNode = {
   nodeType?: string;
@@ -140,8 +144,6 @@ export function StatusBar() {
   const activeWorkflowId = useStudioStore((s) => s.activeWorkflowId);
   const activeWorkflowStep = useStudioStore((s) => s.activeWorkflowStep);
   const activeWorkflowSteps = useStudioStore((s) => s.activeWorkflowSteps);
-  const setSimulationRunning = useStudioStore((s) => s.setSimulationRunning);
-  const setSimulationResult = useStudioStore((s) => s.setSimulationResult);
   const simulationDirty = useStudioStore((s) => s.simulationDirty);
 
   if (!visible) return null;
@@ -202,10 +204,10 @@ export function StatusBar() {
       <button type="button"
         onClick={() => {
           if (!running) {
-            setSimulationRunning(true);
-            const start = performance.now();
-            const simResult = simulateStudio(scene as never);
-            setSimulationResult(simResult, performance.now() - start);
+            // Delegate to the canonical simulation runner instead of calling
+            // simulateStudio() directly (P1 fix — review §7).
+            const { runSimulation } = useStudioStore.getState();
+            runSimulation();
           }
         }}
         disabled={running}

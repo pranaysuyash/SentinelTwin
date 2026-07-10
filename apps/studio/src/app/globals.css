@@ -1,4 +1,10 @@
 @import "tailwindcss";
+@import "./tokens-safelist.css";
+
+/* Safelist: ensure Tailwind scans token definition files for literal class
+   strings so UI_TONES and UI_SURFACES values survive JIT purging. */
+@source "../lib/design-tokens.ts";
+@source "../lib/studio-surface-tokens.ts";
 
 @theme {
   --color-st-surface:      #0b0f17;

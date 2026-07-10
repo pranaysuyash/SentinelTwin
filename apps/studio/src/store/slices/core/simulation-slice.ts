@@ -156,6 +156,10 @@ export interface SimulationSlice {
   counterfactualObsId: string | null;
   counterfactualPlans: CounterfactualPlan[];
   activeCounterfactualPlanId: string | null;
+  /** Snapshot of the scene before any counterfactual preview was applied.
+   * Stored on preview start so revert is deterministic and auditable.
+   * Per review §8: preview must be reversible without relying only on generic undo. */
+  counterfactualPreviewBaselineScene: SecurityScene | null;
 
   scenarioBatchResults: ScenarioBatchResult[] | null;
   assumptionSensitivityResults: AssumptionSensitivity[] | null;
@@ -202,6 +206,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
   counterfactualObsId: null,
   counterfactualPlans: [],
   activeCounterfactualPlanId: null,
+  counterfactualPreviewBaselineScene: null,
 
   scenarioBatchResults: null,
   assumptionSensitivityResults: null,
@@ -394,6 +399,11 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
     set({ temporalProfile: profile });
   },
 
+  // KNOWN EXCEPTION (review §7): runCounterfactual calls simulateStudio()
+  // synchronously for a quick single-obstruction removal check. This is
+  // intentional — the engine call is fast (<50ms), does not need a temporal
+  // profile, and runs on a patched clone that never touches the live scene.
+  // All other UI/store simulation flows use the canonical runStudioSimulation.
   runCounterfactual: (obstructionId) => {
     const { scene } = get();
     const patched = cloneSecurityScene(scene);
@@ -432,7 +442,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
     });
   },
 
-  clearCounterfactual: () => set({ counterfactualResult: null, counterfactualObsId: null }),
+  clearCounterfactual: () => set({ counterfactualResult: null, counterfactualObsId: null, activeCounterfactualPlanId: null, counterfactualPreviewBaselineScene: null }),
 
   generateCounterfactuals: (constraints) => {
     const { scene } = get();
@@ -445,6 +455,16 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
     const state = get();
     const plan = state.counterfactualPlans.find((p: CounterfactualPlan) => p.planId === planId);
     if (!plan) return;
+
+    // P0: Store the baseline scene before preview so revert is deterministic.
+    // If we already have a baseline from a prior preview, only update it if
+    // no plan is currently active (user reverted, then previews a new plan).
+    // When a plan IS active, we're re-previewing — keep the original baseline.
+    // See review §8.
+    const existingBaseline = state.counterfactualPreviewBaselineScene;
+    const baselineScene = existingBaseline
+      ? (state.activeCounterfactualPlanId ? existingBaseline : cloneSecurityScene(state.scene))
+      : cloneSecurityScene(state.scene);
 
     const patched = cloneSecurityScene(state.scene);
     for (const action of plan.actions) {
@@ -496,7 +516,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
       patched.simulation = plan.simulationResult;
     }
 
-    set({ scene: patched, activeCounterfactualPlanId: planId });
+    set({ scene: patched, activeCounterfactualPlanId: planId, counterfactualPreviewBaselineScene: baselineScene });
   },
 
   applyCounterfactualPlan: (planId) => {
@@ -524,6 +544,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
 
     set({
       activeCounterfactualPlanId: null,
+      counterfactualPreviewBaselineScene: null,
       operationalEvidenceEvents: nextEvents,
       scene: {
         ...cloneSecurityScene(state.scene),
@@ -535,8 +556,19 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
   },
 
   revertCounterfactualPreview: () => {
-    get().undo();
-    set({ activeCounterfactualPlanId: null });
+    const { counterfactualPreviewBaselineScene } = get();
+    // P0: Restore from the stored baseline if available, falling back to undo.
+    // This makes preview revert deterministic and auditable (review §8).
+    if (counterfactualPreviewBaselineScene) {
+      set({
+        scene: counterfactualPreviewBaselineScene,
+        activeCounterfactualPlanId: null,
+        counterfactualPreviewBaselineScene: null,
+      });
+    } else {
+      get().undo();
+      set({ activeCounterfactualPlanId: null, counterfactualPreviewBaselineScene: null });
+    }
   },
 
   runScenarioComparison: () => {

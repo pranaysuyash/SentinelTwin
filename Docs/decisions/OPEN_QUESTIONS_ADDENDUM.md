@@ -214,3 +214,19 @@ Should SentinelTwin add screen-space ambient occlusion (SSAO) to improve depth p
 
 ### OQ-3D-10 | Visual realism regression strategy
 How should rendering realism improvements be regression-tested without visual drift? Options: a `Docs/quality/VISUAL_SCORECARD.md`, Playwright canvas pixel snapshots, or deterministic shader-output unit tests. We need a strategy before adding PBR/IBL/post-processing so changes can be defended.
+
+---
+
+## Job Lens Router (D-331) — open questions
+
+### OQ-JOB-01 | Job lens capability semantics — foregrounding vs whitelist
+Does a `Job` carry a capability *whitelist* (suggestive of what's relevant) or only *foregrounding* (which tool/panel is front-and-center)? D-331's stance: foregrounding only — authorization stays the sole gate, so a Job never carries capability semantics. Needs confirmation during S4 implementation: if analytics show users confused by disabled tools in a lens, revisit whether the lens should *hide* irrelevant tools (foregrounding+) rather than merely not-defaulting to them.
+
+### OQ-JOB-02 | v1 job catalog coverage sufficiency
+Is the 4-job v1 catalog (installer, auditor, operator, insurer) sufficient, or should a 5th (e.g. small-business-owner as distinct from operator) ship in v1? Product thesis lists small business owners as a value-hierarchy segment but maps them onto the operator lens. Revisit after S3 analytics on lens adoption/switch-away rates.
+
+### OQ-JOB-03 | Auth dependency boundary for the lens
+When real authentication lands (separate identity & accounts subsystem), does the lens resolve from the authenticated `Account`'s stored preference, from the user's `UserRole`/profession, or both? D-331's stance: both — anonymous trial self-selects (browser trial key); logged-in resolves from `Account` preference with `UserRole` as a default hint. Revisit when the auth subsystem design is concrete.
+
+### OQ-JOB-04 | `UserRole` mixed-grain cleanup (flagged follow-up)
+The existing `UserRole` = `admin | operator | reviewer | installer | auditor | privacy_reviewer | insurer` conflates three axes: system-administration authority (`admin`), professional identity (`installer`/`auditor`/`insurer`), and workflow-stage responsibility (`reviewer`/`privacy_reviewer`). Should this be split into `SystemRole` / `Profession` / `WorkflowStage`? This is out of scope for D-331 (the Job lens composes with the current enum today), but is the natural follow-up once the lens is in production and the grain friction is observable. Needs its own decision record when taken up.

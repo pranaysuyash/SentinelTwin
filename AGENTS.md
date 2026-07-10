@@ -204,6 +204,7 @@ Key packages:
 | `Docs/architecture/06_TEMPORAL_SIMULATION.md` | 24h temporal security profile |
 | `Docs/architecture/07_RENDERING_PIPELINE.md` | R3F, WebGPU, camera feed view |
 | `Docs/architecture/08_MONOREPO_STRUCTURE.md` | Full monorepo layout |
+| `Docs/architecture/11_JOB_LENS_ROUTER.md` | Job lens — persona/workflow router primitive (decouples lens from identity & authz). See D-331. |
 | `Docs/decisions/DECISION_LOG.md` | Architecture decisions made — read before proposing changes |
 | `Docs/decisions/DECISION_LOG_ADDENDUM.md` | Subsequent decisions (D-027+) — check after DECISION_LOG.md |
 | `Docs/decisions/OPEN_QUESTIONS.md` | Open questions — pick up from here |

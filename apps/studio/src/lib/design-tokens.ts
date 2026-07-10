@@ -38,6 +38,18 @@ export interface ToneClasses {
   bg: string;
   /** Small status-dot bg, e.g. `bg-emerald-400`. */
   dot: string;
+  /** Lighter text for emphasis on dark backgrounds, e.g. `text-emerald-100`. */
+  textLight: string;
+  /** Softer background at ~8% opacity, e.g. `bg-emerald-500/8`. */
+  bgSubtle: string;
+  /** Lighter background at ~10% opacity, e.g. `bg-emerald-500/10`. */
+  bgSoft: string;
+  /** Stronger background at ~25% opacity, e.g. `bg-emerald-500/25`. */
+  bgStrong: string;
+  /** Lighter border at 20% opacity, e.g. `border-emerald-400/20`. */
+  borderLight: string;
+  /** Stronger border at 35% opacity, e.g. `border-emerald-400/35`. */
+  borderStrong: string;
 }
 
 export type UiToneClasses = Record<UiTone, ToneClasses>;
@@ -56,36 +68,72 @@ export const UI_TONES: UiToneClasses = {
     border: "border-emerald-500/30",
     bg: "bg-emerald-500/12",
     dot: "bg-emerald-400",
+    textLight: "text-emerald-100",
+    bgSubtle: "bg-emerald-500/8",
+    bgSoft: "bg-emerald-500/10",
+    bgStrong: "bg-emerald-500/25",
+    borderLight: "border-emerald-400/20",
+    borderStrong: "border-emerald-400/35",
   },
   warning: {
     text: "text-amber-200",
     border: "border-amber-500/30",
     bg: "bg-amber-500/12",
     dot: "bg-amber-400",
+    textLight: "text-amber-100",
+    bgSubtle: "bg-amber-500/8",
+    bgSoft: "bg-amber-500/10",
+    bgStrong: "bg-amber-500/25",
+    borderLight: "border-amber-400/20",
+    borderStrong: "border-amber-400/35",
   },
   danger: {
     text: "text-rose-300",
     border: "border-rose-500/30",
     bg: "bg-rose-500/12",
     dot: "bg-rose-400",
+    textLight: "text-rose-100",
+    bgSubtle: "bg-rose-500/8",
+    bgSoft: "bg-rose-500/10",
+    bgStrong: "bg-rose-500/25",
+    borderLight: "border-rose-400/20",
+    borderStrong: "border-rose-400/35",
   },
   info: {
     text: "text-sky-300",
     border: "border-sky-500/30",
     bg: "bg-sky-500/12",
     dot: "bg-sky-400",
+    textLight: "text-sky-100",
+    bgSubtle: "bg-sky-500/8",
+    bgSoft: "bg-sky-500/10",
+    bgStrong: "bg-sky-500/25",
+    borderLight: "border-sky-400/20",
+    borderStrong: "border-sky-400/35",
   },
   accent: {
     text: "text-violet-300",
     border: "border-violet-500/30",
     bg: "bg-violet-500/12",
     dot: "bg-violet-400",
+    textLight: "text-violet-100",
+    bgSubtle: "bg-violet-500/8",
+    bgSoft: "bg-violet-500/10",
+    bgStrong: "bg-violet-500/25",
+    borderLight: "border-violet-400/20",
+    borderStrong: "border-violet-400/35",
   },
   neutral: {
     text: "text-slate-300",
     border: "border-slate-500/30",
     bg: "bg-slate-500/12",
     dot: "bg-slate-400",
+    textLight: "text-slate-100",
+    bgSubtle: "bg-slate-500/8",
+    bgSoft: "bg-slate-500/10",
+    bgStrong: "bg-slate-500/25",
+    borderLight: "border-slate-400/20",
+    borderStrong: "border-slate-400/35",
   },
 };
 

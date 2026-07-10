@@ -1,0 +1,108 @@
+/*
+ * Token safelist — belt-and-suspenders for Tailwind v4 JIT.
+ *
+ * Tailwind's content scanner detects literal class strings in source files,
+ * but template-literal interpolation like `${UI_TONES.success.text}` inside
+ * JSX strings may not resolve at scan time. This file forces Tailwind to
+ * generate every token class value by listing them as CSS rules.
+ *
+ * Keep in sync with:
+ *   - @/lib/design-tokens.ts  (UI_TONES)
+ *   - @/lib/studio-surface-tokens.ts  (UI_SURFACES)
+ */
+
+/* ── UI_TONES · success (emerald) ─────────────────────────────────────── */
+.text-emerald-300 {}
+.border-emerald-500\/30 {}
+.bg-emerald-500\/12 {}
+.bg-emerald-400 {}
+.text-emerald-100 {}
+.bg-emerald-500\/8 {}
+.bg-emerald-500\/10 {}
+.bg-emerald-500\/25 {}
+.border-emerald-400\/20 {}
+.border-emerald-400\/35 {}
+
+/* ── UI_TONES · warning (amber) ──────────────────────────────────────── */
+.text-amber-200 {}
+.border-amber-500\/30 {}
+.bg-amber-500\/12 {}
+.bg-amber-400 {}
+.text-amber-100 {}
+.bg-amber-500\/8 {}
+.bg-amber-500\/10 {}
+.bg-amber-500\/25 {}
+.border-amber-400\/20 {}
+.border-amber-400\/35 {}
+
+/* ── UI_TONES · danger (rose) ────────────────────────────────────────── */
+.text-rose-300 {}
+.border-rose-500\/30 {}
+.bg-rose-500\/12 {}
+.bg-rose-400 {}
+.text-rose-100 {}
+.bg-rose-500\/8 {}
+.bg-rose-500\/10 {}
+.bg-rose-500\/25 {}
+.border-rose-400\/20 {}
+.border-rose-400\/35 {}
+
+/* ── UI_TONES · info (sky) ───────────────────────────────────────────── */
+.text-sky-300 {}
+.border-sky-500\/30 {}
+.bg-sky-500\/12 {}
+.bg-sky-400 {}
+.text-sky-100 {}
+.bg-sky-500\/8 {}
+.bg-sky-500\/10 {}
+.bg-sky-500\/25 {}
+.border-sky-400\/20 {}
+.border-sky-400\/35 {}
+
+/* ── UI_TONES · accent (violet) ──────────────────────────────────────── */
+.text-violet-300 {}
+.border-violet-500\/30 {}
+.bg-violet-500\/12 {}
+.bg-violet-400 {}
+.text-violet-100 {}
+.bg-violet-500\/8 {}
+.bg-violet-500\/10 {}
+.bg-violet-500\/25 {}
+.border-violet-400\/20 {}
+.border-violet-400\/35 {}
+
+/* ── UI_TONES · neutral (slate) ──────────────────────────────────────── */
+.text-slate-300 {}
+.border-slate-500\/30 {}
+.bg-slate-500\/12 {}
+.bg-slate-400 {}
+.text-slate-100 {}
+.bg-slate-500\/8 {}
+.bg-slate-500\/10 {}
+.bg-slate-500\/25 {}
+.border-slate-400\/20 {}
+.border-slate-400\/35 {}
+
+/* ── UI_SURFACES · surfaces ──────────────────────────────────────────── */
+.bg-\[\#07090d\] {}
+.bg-\[\#0b0f17\] {}
+.bg-\[\#0b0f17\]\/92 {}
+.bg-\[\#0b0f17\]\/95 {}
+.bg-\[\#111521\] {}
+.bg-\[\#0e1422\]\/95 {}
+.bg-black\/40 {}
+.border-\[\#243146\] {}
+.border-\[\#1f2536\] {}
+.border-\[\#24283a\] {}
+.border-\[\#27364e\] {}
+.border-\[\#2a3246\] {}
+.text-\[\#4a5568\] {}
+.text-\[\#6b7c95\] {}
+.text-\[\#8ea5cc\] {}
+.text-\[\#9ab0ce\] {}
+.text-\[\#c7d0e4\] {}
+.text-\[\#d2d9e8\] {}
+.text-\[\#7dd3fc\] {}
+.hover\:bg-\[\#1a2333\] {}
+.hover\:bg-\[\#253454\] {}
+.hover\:text-white {}

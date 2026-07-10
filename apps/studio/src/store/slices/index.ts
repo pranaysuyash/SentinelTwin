@@ -28,3 +28,8 @@ export type { TelemetrySlice } from "./enterprise/telemetry-slice";
 export { createWorkflowSlice } from "./enterprise/workflow-slice";
 export { createGovernanceSlice } from "./enterprise/governance-slice";
 export { createTelemetrySlice } from "./enterprise/telemetry-slice";
+
+// Job lens — persona/workflow router (D-331). Lives at slices root because it
+// is cross-cutting (consumed by both product routing and capability gates).
+export type { JobLensSlice } from "./job-lens-slice";
+export { createJobLensSlice, selectActiveJob } from "./job-lens-slice";

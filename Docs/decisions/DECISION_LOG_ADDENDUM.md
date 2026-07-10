@@ -705,3 +705,65 @@ durable exploration document, as a launchpad for any new component touching crea
 - `packages/report/src/__tests__/compliance-templates.test.ts` (verified regression test suite)
 - `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` (Q-020, Q-021, Q-022 resolved)
 
+---
+
+## D-331 | 2026-07-09 | Job Lens — Persona/Workflow Router primitive (not an identity/auth layer)
+
+**Decision:** Introduce `Job` as a **data-driven lens primitive** (motto §0.8 — data layer is product) that shapes the product surface around the visitor's job-to-be-done, decoupled from both identity (`Account`/`User`) and authorization (`UserRole`/`Permission`/entitlements). A `Job` owns foregrounding only — entry surface, default scene, foregrounded tool, primary output, vocabulary, suggested value-staircase rung. Capability stays gated by the existing authorization system; the Job never grants or denies. v1 ships a typed catalog of four jobs: `installer`, `auditor`, `operator`, `insurer`.
+
+**Context:**
+- The app shipped live (`https://sentinel-twin-studio.vercel.app`) but is single-funnel: every visitor gets the same entry/default/foreground/output regardless of job.
+- The product thesis names distinct users (installers, agencies, facility managers, insurers, compliance) with different value staircases and primary deliverables.
+- Full multi-user *plumbing* already exists in `@sentinel-twin/core` (`Account`, `Organization`, `WorkspaceMember`, `Permission`, entitlements, invites, audit log), but no *experience layer* shapes the surface per user/job.
+- The existing `ProductViewRouter` already centralizes intent→surface mapping (motto §11) and `StudioModeRedirect` binds `(viewMode, preset, bottomTab)` triples — the Job lens sits *above* this and feeds it defaults, it does not duplicate it.
+
+**Options considered:**
+- **A. Persona = identity layer** (first-class `Persona` concept above `UserRole`). Rejected: duplicates the "who am I" question and creates a second identity concept alongside `Account`/`User` — premature abstraction (§11).
+- **B. Persona = derived from `UserRole`** (extend existing enum to the surface). Rejected: `UserRole` is a mixed-grain enum conflating system-admin authority (`admin`), professional identity (`installer`/`auditor`/`insurer`), and workflow-stage responsibility (`reviewer`/`privacy_reviewer`); deriving the surface from it conflates job-identity with workspace-authorization (an installer operating as `reviewer` in a workspace would get a confusing experience).
+- **C. Persona = unanchored UI preset** (free-floating preference). Rejected: less observable, less correct; a first-class `Job` with composition semantics is more defensible.
+- **D. `Job` = data-driven lens, orthogonal to identity and authz** *(chosen)*. One simulation, one loop; the Job only selects which facet is foregrounded. Authorization stays the gate. Identity stays singular.
+
+**Why this path:**
+- First-principles correct: the simulation is genuinely singular; the only thing that differs between users is the lens, not the engine or the truth.
+- Avoids creating parallel truth sources (§11) — `SecurityScene`, simulation, coverage, and report engines are untouched.
+- Composes cleanly with the existing (and any future cleaned-up) authorization model. The critical safety property: `canPerform = Permission.check(role, action, subject) && postureAllows(action)`. Job never enters the permission check.
+- Observable (§0.10): every resolution/switch emits a structured audit event.
+- Extensible: adding a lens is adding a catalog entry (data), not a code change.
+
+**Tradeoffs / assumptions:**
+- Introduces a new concept to maintain (acknowledged against §11 — justified by proven need: the live app is single-funnel and the thesis names distinct jobs).
+- v1 catalog is intentionally narrow (4 jobs) — broader coverage deferred per §0.13.
+- `Job` is sticky per-user but freely switchable mid-session; this assumes users are willing to self-identify a job (validated by GTM thesis: India-first installers and compliance buyers have strong professional identity).
+
+**Risks:**
+- Lens/authorization composition bug could leak capability to a read-only posture. Mitigation: centralized capability helper, single source of truth, tested at every boundary (§0.6 risk-based verification).
+- Over-fitting the v1 catalog to current assumptions. Mitigation: catalog is data; evolves without code change.
+
+**Validation plan:**
+- S1 (schema+catalog): Zod schema tests; catalog completeness test; zero UI impact.
+- S2 (slice+resolution): resolution helper unit tests (anonymous trial, user default, explicit switch); localStorage persistence tests.
+- S3 (router+entry): first-run lens picker renders; lens switcher in TopBar; visual QA.
+- S4 (defaults+posture): lens applies defaults to `layout-slice`; read-only posture blocks writes (targeted authz test — Tier 2, high-risk path per §0.5).
+- S5 (vocab+output): per-lens vocabulary and output deliverable rendered.
+
+**Rollback / migration path:**
+- The Job lens is additive and sits above existing routing. Disabling it (removing `JobLensRouter`, defaulting `activeJobId` to `installer`) restores the current single-funnel behavior with no data migration. No existing contract changes.
+
+**Owner / next reviewer:** Pranay. Implementation begins after spec review approval.
+
+**Links to affected files (planned, not yet implemented):**
+- `packages/core/src/schema/job.ts` (new), `packages/core/src/lib/job-catalog.ts` (new), `packages/core/src/index.ts` (export).
+- `apps/studio/src/store/slices/job-lens-slice.ts` (new), `apps/studio/src/components/product/JobLensRouter.tsx` (new).
+- Reads: `product-view-store.ts`, `layout-slice.ts`, `studio-store.ts`.
+- No changes to: `SecurityScene`, simulation, coverage, report engines.
+
+**Related docs/tests/configs:**
+- `Docs/architecture/11_JOB_LENS_ROUTER.md` (full spec).
+- `Docs/exploration/EXPLORATION_MAP.md` Thread 155 (research trace).
+- `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` OQ-JOB-01..04.
+
+**What would cause this decision to be revisited:**
+- If real-user analytics show the 4-job v1 catalog does not cover the majority of sessions (need a 5th+ lens).
+- If the `UserRole` grain cleanup (OQ-JOB-04) reveals the lens should subsume part of authorization.
+- If the lens/authz composition proves unsafe or confusing in practice.
+

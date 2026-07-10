@@ -25,6 +25,7 @@ import { cn } from "@/lib/cn";
 import { MiniMap } from "@/components/map/MiniMap";
 import { ExplainBadge } from "@/components/shared/ExplainBadge";
 import { type ActiveTool, type LayerId, useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const TOOLS: { id: ActiveTool; label: string; icon: React.ReactNode; key: string }[] = [
   { id: "select", label: "Select", icon: <MousePointer2 className="h-3.5 w-3.5" />, key: "V" },
@@ -70,15 +71,15 @@ function SectionTitle({
   helpText?: string;
 }) {
   return (
-    <div className="mb-1.5 flex items-center gap-1 px-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#64738f]">
+    <div className={`mb-1.5 flex items-center gap-1 px-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted2}`}>
       {icon}
       <span className="min-w-0 truncate">{title}</span>
-      {summary ? <span className="ml-1 min-w-0 truncate text-[10px] normal-case tracking-[0.06em] text-[#7a86a0]">{summary}</span> : null}
+      {summary ? <span className={`ml-1 min-w-0 truncate text-[10px] normal-case tracking-[0.06em] ${UI_SURFACES.textMuted3}`}>{summary}</span> : null}
       {helpText ? <ExplainBadge text={helpText} /> : null}
       <button
         type="button"
         onClick={onToggle}
-        className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-md border border-[#24283a] bg-[#111521] text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white"
+        className={`ml-auto inline-flex h-5 w-5 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors hover:border-[#32384d] hover:text-white`}
         title={collapsed ? `Expand ${title}` : `Collapse ${title}`}
       >
         {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -128,19 +129,19 @@ export function LeftPanel() {
   };
 
   return (
-    <aside className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-r border-[#1e2130] bg-[#0d1017]">
-      <div className="flex shrink-0 items-center gap-2 border-b border-[#1e2130] bg-[#0b0f17] px-2.5 py-1">
+    <aside className={`flex h-full min-w-0 flex-1 flex-col overflow-hidden border-r border-[#1e2130] ${UI_SURFACES.panel}`}>
+      <div className={`flex shrink-0 items-center gap-2 border-b border-[#1e2130] ${UI_SURFACES.panel} px-2.5 py-1`}>
         <div className="flex h-5 w-5 items-center justify-center rounded-md border border-sky-500/20 bg-sky-500/12">
           <Layers className="h-3 w-3 text-sky-400" />
         </div>
         <div className="min-w-0">
           <div className="truncate text-[11px] font-semibold text-white">Scene Authoring</div>
-          <div className="truncate text-[10px] uppercase tracking-[0.14em] text-[#64738f]">
+          <div className={`truncate text-[10px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted2}`}>
             {workspacePreset.replace(/_/g, " ")} · {viewMode.replace(/_/g, " ")}
           </div>
         </div>
-        <div className="ml-auto inline-flex min-w-0 items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[10px] text-[#9fb1d1]">
-          <span className={cn("truncate font-mono", editor.snapEnabled ? "text-emerald-400 font-bold" : "text-[#6c768f]")}>
+        <div className={`ml-auto inline-flex min-w-0 items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-0.5 text-[10px] ${UI_SURFACES.textMuted4}`}>
+          <span className={cn("truncate font-mono", editor.snapEnabled ? "text-emerald-400 font-bold" : `${UI_SURFACES.textMuted}`)}>
             {editor.snapEnabled ? "Snap ON" : "Snap OFF"}
           </span>
         </div>
@@ -155,7 +156,7 @@ export function LeftPanel() {
             helpText="Choose the active authoring tool. Keyboard hints on the right speed up expert workflows."
           />
           {!collapsedSections.tools ? (
-            <div className="space-y-1 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+            <div className={`space-y-1 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
               {TOOLS.map((tool) => {
                 const active = activeTool === tool.id;
                 return (
@@ -166,18 +167,18 @@ export function LeftPanel() {
                       "flex h-7 w-full items-center gap-2 rounded-lg px-2 text-[10px] font-medium transition-colors",
                       active
                         ? "bg-blue-500/14 text-blue-300 ring-1 ring-inset ring-blue-500/30"
-                        : "text-[#8b96ae] hover:bg-[#141926] hover:text-[#d6deef]",
+                        : `${UI_SURFACES.textMuted3} ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`,
                     )}
                   >
-                    <span className={cn("flex-shrink-0", active ? "text-blue-300" : "text-[#68748d]")}>{tool.icon}</span>
+                    <span className={cn("flex-shrink-0", active ? "text-blue-300" : `${UI_SURFACES.textMuted}`)}>{tool.icon}</span>
                     <span className="min-w-0 flex-1 truncate text-left">{tool.label}</span>
-                    <span className="rounded bg-[#111521] px-1 py-0.5 font-mono text-[8px] text-[#4d566b]">{tool.key}</span>
+                    <span className={`rounded ${UI_SURFACES.card} px-1 py-0.5 font-mono text-[8px] ${UI_SURFACES.textMuted}`}>{tool.key}</span>
                   </button>
                 );
               })}
             </div>
           ) : (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#72809a]">
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] ${UI_SURFACES.textMuted2}`}>
               Toolbar hidden to favor canvas space.
             </div>
           )}
@@ -192,14 +193,14 @@ export function LeftPanel() {
             helpText="Save a reusable authoring configuration: active tool and snapping setup."
           />
           {!collapsedSections.presets ? (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-1.5">
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-1.5`}>
               <div className="flex gap-1">
                 <input
                   value={toolPresetName}
                   onChange={(e) => setToolPresetName(e.target.value)}
                   placeholder="Preset name"
                   aria-label="Preset name"
-                  className="h-7 min-w-0 flex-1 rounded border border-[#2a3248] bg-[#111521] px-2 text-[10px] text-[#d6deef]"
+                  className={`h-7 min-w-0 flex-1 rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 text-[10px] ${UI_SURFACES.textBody}`}
                 />
                 <button
                   type="button"
@@ -218,9 +219,9 @@ export function LeftPanel() {
                 </button>
               </div>
               <div className="mt-1.5 space-y-1">
-                {toolPresets.length === 0 ? <div className="text-[10px] text-[#7384a5]">No presets saved.</div> : null}
+                {toolPresets.length === 0 ? <div className={`text-[10px] ${UI_SURFACES.textMuted2}`}>No presets saved.</div> : null}
                 {toolPresets.map((preset) => (
-                  <div key={preset.name} className="flex items-center gap-1 rounded border border-[#242a3a] bg-[#111521] px-1.5 py-1">
+                  <div key={preset.name} className={`flex items-center gap-1 rounded border border-[#242a3a] ${UI_SURFACES.card} px-1.5 py-1`}>
                     <button
                       type="button"
                       onClick={() => {
@@ -229,7 +230,7 @@ export function LeftPanel() {
                         setSnapDistanceM(preset.snapDistanceM);
                         setGridSnapM(preset.gridSnapM);
                       }}
-                      className="flex-1 truncate text-left text-[10px] text-[#c6d2ea]"
+                      className={`flex-1 truncate text-left text-[10px] ${UI_SURFACES.textBody}`}
                     >
                       {preset.name}
                     </button>
@@ -245,7 +246,7 @@ export function LeftPanel() {
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#72809a]">
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] ${UI_SURFACES.textMuted2}`}>
               Presets hidden. Expand to load saved tool setups.
             </div>
           )}
@@ -260,7 +261,7 @@ export function LeftPanel() {
             helpText="Grid and wall snapping control how new points, walls, and transforms resolve while you edit."
           />
           {!collapsedSections.snapping ? (
-            <div className="space-y-1 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+            <div className={`space-y-1 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
             <button
               type="button"
               onClick={() => setSnapEnabled(!editor.snapEnabled)}
@@ -268,15 +269,15 @@ export function LeftPanel() {
                 "flex h-7 w-full items-center justify-between rounded-lg px-2 text-[10px] font-medium transition-colors",
                 editor.snapEnabled
                   ? "bg-emerald-500/14 text-emerald-200 ring-1 ring-inset ring-emerald-500/25"
-                  : "bg-[#111521] text-[#8b96ae] hover:bg-[#141926] hover:text-[#d6deef]",
+                  : `${UI_SURFACES.card} ${UI_SURFACES.textMuted3} ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`,
               )}
             >
               <span>Enable snapping</span>
-              <span className="rounded bg-[#111521] px-1.5 py-0.5 font-mono text-[8px] text-[#647187]">
+              <span className={`rounded ${UI_SURFACES.card} px-1.5 py-0.5 font-mono text-[8px] ${UI_SURFACES.textMuted}`}>
                 {editor.snapEnabled ? "On" : "Off"}
               </span>
             </button>
-            <label className="flex items-center gap-2 rounded-lg bg-[#111521] px-2 py-1.5 text-[10px] text-[#8b96ae]">
+            <label className={`flex items-center gap-2 rounded-lg ${UI_SURFACES.card} px-2 py-1.5 text-[10px] ${UI_SURFACES.textMuted3}`}>
               <span className="w-24 flex-shrink-0">Snap distance</span>
               <input
                 type="number"
@@ -287,11 +288,11 @@ export function LeftPanel() {
                   const next = Number(event.target.value);
                   if (Number.isFinite(next)) setSnapDistanceM(next);
                 }}
-                className="h-7 w-full rounded border border-[#2a3248] bg-[#0d111a] px-2 text-[10px] text-[#d6deef]"
+                className={`h-7 w-full rounded border ${UI_SURFACES.borderDark} bg-[#0d111a] px-2 text-[10px] ${UI_SURFACES.textBody}`}
               />
-              <span className="text-[10px] text-[#647187]">m</span>
+              <span className={`text-[10px] ${UI_SURFACES.textMuted}`}>m</span>
             </label>
-            <label className="flex items-center gap-2 rounded-lg bg-[#111521] px-2 py-1.5 text-[10px] text-[#8b96ae]">
+            <label className={`flex items-center gap-2 rounded-lg ${UI_SURFACES.card} px-2 py-1.5 text-[10px] ${UI_SURFACES.textMuted3}`}>
               <span className="w-24 flex-shrink-0">Grid size</span>
               <input
                 type="number"
@@ -302,16 +303,16 @@ export function LeftPanel() {
                   const next = Number(event.target.value);
                   if (Number.isFinite(next)) setGridSnapM(next);
                 }}
-                className="h-7 w-full rounded border border-[#2a3248] bg-[#0d111a] px-2 text-[10px] text-[#d6deef]"
+                className={`h-7 w-full rounded border ${UI_SURFACES.borderDark} bg-[#0d111a] px-2 text-[10px] ${UI_SURFACES.textBody}`}
               />
-              <span className="text-[10px] text-[#647187]">m</span>
+              <span className={`text-[10px] ${UI_SURFACES.textMuted}`}>m</span>
             </label>
-            <div className="px-0.5 text-[10px] leading-relaxed text-[#6d7891]">
+            <div className={`px-0.5 text-[10px] leading-relaxed ${UI_SURFACES.textMuted}`}>
               Grid visibility lives in Scene Layers, while these settings control edit snapping.
             </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#72809a]">
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] ${UI_SURFACES.textMuted2}`}>
               Snapping settings hidden. Expand to tune grid and wall resolution.
             </div>
           )}
@@ -327,11 +328,11 @@ export function LeftPanel() {
             helpText="Toggle visibility only; analysis still uses full scene geometry unless removed."
           />
           {!collapsedSections.layers ? (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
               {LAYERS.map((layer) => {
                 const visible = layerVis[layer.id];
                 return (
-                  <div key={layer.id} className="group flex h-6 items-center gap-1.5 rounded-lg px-1.5 transition-colors hover:bg-[#141926]">
+                  <div key={layer.id} className={`group flex h-6 items-center gap-1.5 rounded-lg px-1.5 transition-colors ${UI_SURFACES.hoverBg}`}>
                     <span
                       className={cn(
                         "flex h-3 w-3 flex-shrink-0 items-center justify-center rounded-[4px] border",
@@ -344,8 +345,8 @@ export function LeftPanel() {
                         </svg>
                       )}
                     </span>
-                    <span className={cn("flex-1 truncate text-[10px]", visible ? "text-[#c6cfdf]" : "text-[#535d73]")}>{layer.label}</span>
-                    <button type="button" onClick={() => toggleLayer(layer.id)} className="flex-shrink-0 text-[#57627a] transition-colors hover:text-white">
+                    <span className={cn("flex-1 truncate text-[10px]", visible ? `${UI_SURFACES.textBody}` : `${UI_SURFACES.textMuted}`)}>{layer.label}</span>
+                    <button type="button" onClick={() => toggleLayer(layer.id)} className={`flex-shrink-0 ${UI_SURFACES.textMuted} transition-colors hover:text-white`}>
                       {visible ? <Eye className="h-2.5 w-2.5" /> : <EyeOff className="h-2.5 w-2.5" />}
                     </button>
                   </div>
@@ -353,7 +354,7 @@ export function LeftPanel() {
               })}
             </div>
           ) : (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#72809a]">
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] ${UI_SURFACES.textMuted2}`}>
               Layer visibility hidden. Selected layers still drive the canvas.
             </div>
           )}
@@ -371,7 +372,7 @@ export function LeftPanel() {
           {!collapsedSections.minimap && visibleComponents.minimap ? (
             <MiniMap />
           ) : (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#72809a]">
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] ${UI_SURFACES.textMuted2}`}>
               Minimap hidden. Expand only when navigating the scene.
             </div>
           )}

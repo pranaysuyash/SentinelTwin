@@ -19,6 +19,7 @@ import {
 } from "@/components/view/camera-view-utils";
 import type { DoriQuality, ScenarioPath, SimulationResult } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -229,7 +230,7 @@ export function TimelineTab() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex flex-wrap items-center gap-2 border-b border-[#1e2130] px-3 py-2">
+      <div className="`{flex flex-wrap items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-2}`">
         <div className="flex items-center gap-1.5">
           <Route className="h-3.5 w-3.5 text-[#60a5fa]" />
           <TruthBadge label="simulated" className="mr-1" />
@@ -352,7 +353,7 @@ export function TimelineTab() {
         </div>
       </div>
 
-        <div className="flex items-center gap-3 border-b border-[#1e2130] bg-[#090c12] px-3 py-1.5 text-[8px] text-[#4d566b]">
+        <div className="`{flex items-center gap-3 border-b ${UI_SURFACES.borderPanel} bg-[#090c12] px-3 py-1.5 text-[8px] text-[#4d566b]}`">
           <span>
             Path: <span className="text-[#c7d0e4]">{activePath.label}</span>
           </span>
@@ -375,7 +376,7 @@ export function TimelineTab() {
           ) : null}
       </div>
 
-      <div className="flex items-center gap-0.5 border-b border-[#1e2130] px-2 pt-1.5">
+      <div className="`{flex items-center gap-0.5 border-b ${UI_SURFACES.borderPanel} px-2 pt-1.5}`">
         {[
           { id: "timeline" as const, label: "TIMELINE" },
           { id: "events" as const, label: "EVENTS" },
@@ -400,11 +401,11 @@ export function TimelineTab() {
       <div className="min-h-0 flex-1 overflow-hidden bg-[#0b0f17]">
         {subTab === "timeline" && (
           <div className="flex h-full min-h-0 flex-col overflow-hidden">
-            <div className="flex items-center gap-2 border-b border-[#1e2130] px-3 py-1.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
+            <div className="`{flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]}`">
               Coverage Failure Timeline
               <ExplainBadge text="Timeline shows when visibility is gained, lost, or degraded along the selected path." />
             </div>
-            <div className="grid gap-2 border-b border-[#1e2130] px-3 py-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="`{grid gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-2 sm:grid-cols-2 xl:grid-cols-4}`">
               <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2">
                 <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">Replay Focus</div>
                 <div className="mt-1 text-[10px] font-medium text-[#d5e0f5]">
@@ -458,7 +459,7 @@ export function TimelineTab() {
                 )}
               </div>
             </div>
-            <div className="grid gap-2 border-b border-[#1e2130] px-3 py-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="`{grid gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-2 sm:grid-cols-2 xl:grid-cols-4}`">
               {visibleCameraSummary.length > 0 ? visibleCameraSummary.map((entry) => (
                 <div key={entry.cameraId} className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2">
                   <div className="flex items-center justify-between gap-2">
@@ -473,7 +474,7 @@ export function TimelineTab() {
                 <div className="px-3 py-2 text-[10px] text-[#5b667c]">No camera reach data available for this path.</div>
               )}
             </div>
-            <div className="border-b border-[#1e2130] px-3 py-2">
+            <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-2}`">
               <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">High-risk jumps</div>
               <div className="flex flex-wrap gap-1.5">
                 {highRiskEvents.length > 0 ? highRiskEvents.map((event) => (

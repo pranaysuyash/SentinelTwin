@@ -6,6 +6,7 @@ import { TruthBadge } from "@/components/shared/TruthBadge";
 import { cn } from "@/lib/cn";
 import { QUALITY_RANK, QUALITY_SHORT_LABEL, QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export function CameraStatusSummaryPanel() {
   const scene = useStudioStore((s) => s.scene);
@@ -25,8 +26,8 @@ export function CameraStatusSummaryPanel() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* Left: Camera Status Table */}
-      <div className="flex flex-1 min-w-0 flex-col overflow-hidden border-r border-[#1e2130]">
-        <div className="flex items-center gap-2 border-b border-[#1e2130] px-3 py-1.5">
+      <div className="`{flex flex-1 min-w-0 flex-col overflow-hidden border-r ${UI_SURFACES.borderPanel}}`">
+        <div className="`{flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-1.5}`">
           <TruthBadge label="simulated" />
           <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5a6478]">
             Camera Status Summary
@@ -48,7 +49,7 @@ export function CameraStatusSummaryPanel() {
                 {["Tag", "Status", "Quality", "Coverage", "FOV", "Mount"].map((h) => (
                   <th
                     key={h}
-                    className="py-1 px-2 text-left text-[8px] font-semibold uppercase tracking-wider text-[#3a4158] border-b border-[#1e2130]"
+                    className="`{py-1 px-2 text-left text-[8px] font-semibold uppercase tracking-wider text-[#3a4158] border-b ${UI_SURFACES.borderPanel}}`"
                   >
                     {h}
                   </th>

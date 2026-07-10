@@ -193,8 +193,8 @@ export function BottomPanel() {
   // Camera Wall: dedicated camera status summary (no tabs)
   if (workspacePreset === "camera_wall") {
     return (
-      <div className={`flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] ${UI_SURFACES.panel}`}>
-        <div className={`flex items-center gap-2 border-b border-[#1e2130] px-3 py-1.5`}>
+      <div className={`flex h-[208px] flex-shrink-0 flex-col border-t ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel}`}>
+        <div className={`flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-1.5`}>
           <div className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted2}`}>Camera Wall Summary</div>
           <TabBadge tone="blue">Live multiview</TabBadge>
           <div className={`ml-auto text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted2}`}>Focus on active feeds and coverage gaps</div>
@@ -208,7 +208,7 @@ export function BottomPanel() {
 
   if (bottomDrawerMode === "hidden") {
     return (
-      <div className={`flex h-[72px] flex-shrink-0 flex-col border-t border-[#1e2130] ${UI_SURFACES.panel}`}>
+      <div className={`flex h-[72px] flex-shrink-0 flex-col border-t ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel}`}>
         <div className="flex h-full items-center gap-2 px-3">
           <div className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted2}`}>Analysis Drawer Hidden</div>
           <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted2}`}>
@@ -236,8 +236,8 @@ export function BottomPanel() {
 
   if (bottomDrawerMode === "single_module") {
     return (
-      <div className={`flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] ${UI_SURFACES.panel}`}>
-        <div className={`flex items-center gap-2 border-b border-[#1e2130] px-3 py-1.5`}>
+      <div className={`flex h-[208px] flex-shrink-0 flex-col border-t ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel}`}>
+        <div className={`flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-1.5`}>
           <div className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted2}`}>Single-Module Drawer</div>
           <TabBadge tone="amber">{getTabLabel(singleModuleTab)}</TabBadge>
           <div className="ml-auto flex items-center gap-1">
@@ -269,13 +269,13 @@ export function BottomPanel() {
     const compareTabs = enabledTabs.filter((tab) => tab.id === "beforeafter" || tab.id === "metrics" || tab.id === "outcome");
     const compareActiveTab = compareTabs.some((tab) => tab.id === activeTabSafe) ? activeTabSafe : compareTabs[0]?.id ?? activeTabSafe;
     return (
-      <div className={`flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] ${UI_SURFACES.panel}`}>
-        <div className={`flex items-center gap-2 border-b border-[#1e2130] px-3 py-1.5`}>
+      <div className={`flex h-[208px] flex-shrink-0 flex-col border-t ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel}`}>
+        <div className={`flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-1.5`}>
           <div className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted2}`}>Compare Drawer</div>
           <TabBadge tone="green">Before / After</TabBadge>
           <div className={`ml-auto text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted2}`}>Snapshot deltas and comparison metrics</div>
         </div>
-        <div className={`flex items-end gap-0.5 border-b border-[#1e2130] px-1.5 pt-1.5`}>
+        <div className={`flex items-end gap-0.5 border-b ${UI_SURFACES.borderPanel} px-1.5 pt-1.5`}>
           {compareTabs.map(({ id }) => (
             <button type="button"
               key={id}
@@ -299,9 +299,9 @@ export function BottomPanel() {
   }
 
   return (
-    <div className={`flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] ${UI_SURFACES.panel}`}>
+    <div className={`flex h-[208px] flex-shrink-0 flex-col border-t ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel}`}>
       {/* Tab strip — scrollable so the dock tabs don't overflow on narrow layouts */}
-      <div className={`flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-[#1e2130] px-3 py-1.5`}>
+      <div className={`flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 border-b ${UI_SURFACES.borderPanel} px-3 py-1.5`}>
         <div className="min-w-[180px] flex-1">
           <div className={`truncate text-[10px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted}`}>Analysis Drawer</div>
           <div className={`truncate text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted2}`}>
@@ -333,11 +333,11 @@ export function BottomPanel() {
         </div>
       </div>
 
-      <div className={`flex items-center gap-2 border-b border-[#1e2130] ${UI_SURFACES.panel} px-3 py-1`}>
+      <div className={`flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-1`}>
         <WorkflowChips activeTab={activeTabSafe} />
       </div>
 
-      <div className={`relative flex min-w-0 items-end gap-0.5 border-b border-[#1e2130] px-1.5 pt-1.5`}>
+      <div className={`relative flex min-w-0 items-end gap-0.5 border-b ${UI_SURFACES.borderPanel} px-1.5 pt-1.5`}>
         {/* Foreground cluster — contextually-prioritized tabs (always-core ∪
             view-mode primary ∪ selection-contextual ∪ active tab). The rest
             of the enabled tabs live behind the "More" overflow button below.
@@ -389,7 +389,7 @@ export function BottomPanel() {
                 ? `${attentionInOverflow.length} tab${attentionInOverflow.length === 1 ? "" : "s"} want attention`
                 : `${overflow.length} more analysis modules`}
               className={cn(
-                `relative mb-0.5 ml-1 flex flex-shrink-0 items-center gap-1 rounded-t-lg border border-[#1e2130] ${UI_SURFACES.panel} px-2.5 py-1.5 text-[10px] font-medium tracking-[0.06em] transition-colors`,
+                `relative mb-0.5 ml-1 flex flex-shrink-0 items-center gap-1 rounded-t-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-2.5 py-1.5 text-[10px] font-medium tracking-[0.06em] transition-colors`,
                 moreOpen
                   ? `${UI_SURFACES.textMuted3} ring-1 ring-inset ring-[#1f2536]`
                   : `${UI_SURFACES.textMuted} hover:text-[#9da8c0]`,
@@ -407,7 +407,7 @@ export function BottomPanel() {
               <div
                 id="bottom-panel-more-menu"
                 role="menu"
-                className={`absolute bottom-full right-0 z-[420] mb-1 w-64 max-h-80 overflow-y-auto rounded-md border border-[#1e2130] ${UI_SURFACES.panel} py-1 shadow-2xl shadow-black/60`}
+                className={`absolute bottom-full right-0 z-[420] mb-1 w-64 max-h-80 overflow-y-auto rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} py-1 shadow-2xl shadow-black/60`}
               >
                 {TAB_GROUPS.flatMap((group) => {
                   const groupTabs = group.ids
@@ -456,7 +456,7 @@ export function BottomPanel() {
                         </button>
                       );
                     }),
-                    <div key={`sep-${group.label}`} className="my-0.5 border-t border-[#1e2130]" />,
+                    <div key={`sep-${group.label}`} className="`{my-0.5 border-t ${UI_SURFACES.borderPanel}}`" />,
                   ];
                 })}
               </div>
@@ -466,7 +466,7 @@ export function BottomPanel() {
       </div>
 
       {showPanelExplain ? (
-        <div className={`border-b border-[#1e2130] bg-[#0f141f] px-3 py-1.5 text-[11px] ${UI_SURFACES.textMuted4}`}>
+        <div className={`border-b ${UI_SURFACES.borderPanel} bg-[#0f141f] px-3 py-1.5 text-[11px] ${UI_SURFACES.textMuted4}`}>
           <span className={`font-medium ${UI_SURFACES.textBody}`}>{getTabLabel(activeTabSafe)}:</span> {panelExplainer}
         </div>
       ) : null}

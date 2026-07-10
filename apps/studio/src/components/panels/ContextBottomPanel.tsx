@@ -17,7 +17,7 @@ export function ContextBottomPanel({ sizePx }: { sizePx: number }) {
           </div>
 
           {showSecondary && (
-            <div className={`flex-1 min-h-0 overflow-hidden border-t border-[#1e2130]`}>
+            <div className={`flex-1 min-h-0 overflow-hidden border-t ${UI_SURFACES.borderPanel}`}>
               <BottomRow />
             </div>
           )}

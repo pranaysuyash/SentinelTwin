@@ -32,6 +32,7 @@ import { useStudioStore } from "@/store/studio-store";
 
 import type { SecurityScene } from "@/schema/security-scene";
 import type { ScanCompilationProvenance } from "@/lib/scan-to-scene";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 interface ScanSiteWizardProps {
   onClose?: () => void;
@@ -1096,7 +1097,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#0b0f17]">
-      <div className="flex items-center justify-between border-b border-[#1e2130] px-4 py-3">
+      <div className="`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-4 py-3}`">
         <div>
           <div className="flex items-center gap-2 text-white">
             <ScanSearch className="h-4 w-4 text-cyan-300" />
@@ -1114,7 +1115,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
         <SurfaceButton onClick={onClose}>Close</SurfaceButton>
       </div>
 
-      <div className="border-b border-[#1e2130] px-4 py-3">
+      <div className="`{border-b ${UI_SURFACES.borderPanel} px-4 py-3}`">
         <div className="grid gap-3 md:grid-cols-4">
           <StepBadge step={0} current={step} label="Scene setup" />
           <StepBadge step={1} current={step} label="Image source" />
@@ -2093,7 +2094,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
         {error ? <p className="mt-3 text-xs text-rose-300">{error}</p> : null}
       </div>
 
-      <div className="flex items-center justify-between border-t border-[#1e2130] px-4 py-3">
+      <div className="`{flex items-center justify-between border-t ${UI_SURFACES.borderPanel} px-4 py-3}`">
         <SurfaceButton
           type="button"
           onClick={() => {

@@ -158,7 +158,7 @@ export function GovernanceReviewPanel() {
 
   return (
     <div className={`flex flex-col h-full ${UI_SURFACES.panel} ${UI_SURFACES.textBody}`}>
-      <div className={`p-4 border-b border-[#1e2130]`}>
+      <div className={`p-4 border-b ${UI_SURFACES.borderPanel}`}>
         <h2 className="text-sm font-semibold text-white flex items-center gap-2">
           <GitPullRequest className="w-4 h-4 text-emerald-400" />
           Review Draft: {activeBranch}
@@ -188,22 +188,22 @@ export function GovernanceReviewPanel() {
         <div className={`${UI_SURFACES.card} border ${UI_SURFACES.borderThin} rounded-lg p-3`}>
           <div className="flex items-center justify-between gap-2">
             <h3 className={`text-xs font-semibold uppercase tracking-wider ${UI_SURFACES.textMuted}`}>Change Summary</h3>
-            <span className={`rounded border border-[#1e2130] ${UI_SURFACES.panel} px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted3}`}>
+            <span className={`rounded border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted3}`}>
               Compared with main
             </span>
           </div>
           {branchDiff ? (
             <div className="mt-3 space-y-3">
               <div className="grid grid-cols-3 gap-2 text-xs">
-                <div className={`rounded-lg border border-[#1e2130] ${UI_SURFACES.panel} p-2`}>
+                <div className={`rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} p-2`}>
                   <div className={`text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted}`}>Before</div>
                   <div className="mt-1 text-white">{branchDiff.totalBefore} nodes</div>
                 </div>
-                <div className={`rounded-lg border border-[#1e2130] ${UI_SURFACES.panel} p-2`}>
+                <div className={`rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} p-2`}>
                   <div className={`text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted}`}>After</div>
                   <div className="mt-1 text-white">{branchDiff.totalAfter} nodes</div>
                 </div>
-                <div className={`rounded-lg border border-[#1e2130] ${UI_SURFACES.panel} p-2`}>
+                <div className={`rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} p-2`}>
                   <div className={`text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted}`}>Delta</div>
                   <div className="mt-1 text-white">{branchDiff.totalAfter - branchDiff.totalBefore >= 0 ? "+" : ""}{branchDiff.totalAfter - branchDiff.totalBefore} nodes</div>
                 </div>
@@ -218,7 +218,7 @@ export function GovernanceReviewPanel() {
                   branchDiff.collections
                     .filter((item) => item.beforeCount !== item.afterCount || item.added.length > 0 || item.removed.length > 0 || item.changed.length > 0)
                     .map((item) => (
-                      <div key={item.key} className={`rounded-lg border border-[#1e2130] ${UI_SURFACES.panel} p-2`}>
+                      <div key={item.key} className={`rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} p-2`}>
                         <div className="flex items-center justify-between gap-2">
                           <div className={`text-[10px] font-semibold uppercase tracking-wider ${UI_SURFACES.textMuted3}`}>{item.label}</div>
                           <div className={`text-[9px] ${UI_SURFACES.textMuted}`}>
@@ -248,7 +248,7 @@ export function GovernanceReviewPanel() {
                       </div>
                     ))
                 ) : (
-                  <div className={`rounded-lg border border-dashed border-[#1e2130] ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textMuted3}`}>
+                  <div className={`rounded-lg border border-dashed ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textMuted3}`}>
                     No structural differences detected against main.
                   </div>
                 )}
@@ -260,7 +260,7 @@ export function GovernanceReviewPanel() {
         </div>
       </div>
 
-      <div className={`p-4 border-t border-[#1e2130] flex flex-col gap-2`}>
+      <div className={`p-4 border-t ${UI_SURFACES.borderPanel} flex flex-col gap-2`}>
         <SurfaceButton 
           onClick={() => {
             const confirmed = window.confirm(`Approve and merge '${activeBranch}' into main?`);

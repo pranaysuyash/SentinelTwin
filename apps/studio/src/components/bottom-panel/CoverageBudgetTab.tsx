@@ -11,6 +11,7 @@ import {
   LABOR_RATE_PER_HOUR,
   type CoverageBudget,
 } from "@/lib/coverage-budgeting";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 // ── Format helpers ────────────────────────────────────────────────────────────
 
@@ -97,7 +98,7 @@ export function CoverageBudgetTab() {
 
       {/* ── Stats strip ───────────────────────────────────────────────── */}
       {budget && (
-        <div className="flex flex-shrink-0 items-center gap-3 border-b border-[#1e2130] bg-[#090c12] px-3 py-1">
+        <div className="`{flex flex-shrink-0 items-center gap-3 border-b ${UI_SURFACES.borderPanel} bg-[#090c12] px-3 py-1}`">
 
           <TruthBadge label="simulated" />
 
@@ -188,7 +189,7 @@ export function CoverageBudgetTab() {
                   </div>
                   <table className="w-full border-collapse text-[9px]">
                     <thead>
-                      <tr className="border-b border-[#1e2130]">
+                      <tr className="`{border-b ${UI_SURFACES.borderPanel}}`">
                         <th className="px-2 py-1 text-left text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Camera</th>
                         <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Hardware</th>
                         <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Install</th>
@@ -221,7 +222,7 @@ export function CoverageBudgetTab() {
                   </div>
                   <table className="w-full border-collapse text-[9px]">
                     <thead>
-                      <tr className="border-b border-[#1e2130]">
+                      <tr className="`{border-b ${UI_SURFACES.borderPanel}}`">
                         <th className="px-2 py-1 text-left text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Light</th>
                         <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Hardware</th>
                         <th className="px-2 py-1 text-right text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">Install</th>
@@ -289,7 +290,7 @@ export function CoverageBudgetTab() {
             </div>
 
             {/* ── Sidebar: constants reference ────────────────────────────── */}
-            <div className="w-[144px] flex-shrink-0 border-l border-[#1e2130] p-2">
+            <div className="`{w-[144px] flex-shrink-0 border-l ${UI_SURFACES.borderPanel} p-2}`">
               <div className="mb-1 text-[7px] font-semibold uppercase tracking-wider text-[#3a4158]">
                 Rates
               </div>

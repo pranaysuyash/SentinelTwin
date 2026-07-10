@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import { NumberInput, TextInput } from "@/components/inspector/inspector-controls";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export function EntryPointInspector() {
   const selectedId = useStudioStore((s) => s.selectedNodeId);
@@ -27,7 +28,7 @@ export function EntryPointInspector() {
 
   return (
     <>
-      <div className="border-b border-[#1e2130] px-3 py-3">
+      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <div className="text-[12px] font-semibold text-white">{entryPoint.label}</div>
         <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Entry Point</div>
       </div>
@@ -74,7 +75,7 @@ export function EntryPointInspector() {
         </SectionCard>
       </div>
 
-      <div className="border-t border-[#1e2130] px-3 py-3">
+      <div className="`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <button
           type="button"
           onClick={() => removeNode(entryPoint.id)}

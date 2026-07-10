@@ -6,6 +6,7 @@ import { History, Play, RotateCcw, Clock } from "lucide-react";
 import { SurfaceButton } from "@/components/shared/SurfaceButton";
 import { TruthBadge } from "@/components/shared/TruthBadge";
 import { reconstructSceneFromEvidence } from "@/lib/operational-evidence";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export function TimelineScrubberTab() {
   const { operationalEvidenceEvents, setScene } = useStudioStore();
@@ -39,7 +40,7 @@ export function TimelineScrubberTab() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-[#1e2130] p-3">
+      <div className="`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} p-3}`">
         <div className="flex items-center gap-2">
           <TruthBadge label="simulated" />
           <History className="h-4 w-4 text-emerald-500" />
@@ -67,7 +68,7 @@ export function TimelineScrubberTab() {
             className="w-full accent-emerald-500 bg-[#1e2130] rounded-full appearance-none h-1.5 cursor-pointer"
           />
 
-          <div className="mt-4 pt-4 border-t border-[#1e2130] grid grid-cols-2 gap-4">
+          <div className="`{mt-4 pt-4 border-t ${UI_SURFACES.borderPanel} grid grid-cols-2 gap-4}`">
             <div>
               <div className="text-[9px] uppercase tracking-wider text-[#6a748b] mb-1">Scrubbed Event</div>
               <div className="text-[12px] font-medium text-white">{currentEvent?.title || "Unknown Event"}</div>

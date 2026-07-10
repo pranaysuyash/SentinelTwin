@@ -13,6 +13,7 @@ import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-
 // diff so changed findings can float to the top with a "changed by last edit"
 // tag. See `@/lib/contextual-tabs` and `Docs/review/UI_REVIEW_2026-06-19.md`.
 import { issueFingerprint } from "@/lib/contextual-tabs";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 function SeverityBadge({ severity }: { severity: SecurityIssue["severity"] }) {
   const map: Record<SecurityIssue["severity"], { variant: "red" | "amber" | "blue" | "gray"; label: string }> = {
@@ -149,7 +150,7 @@ export function IssuesTab() {
           <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#556076]">Issues</span>
           <TruthBadge label="simulated" />
         </div>
-        <div className="rounded-lg border border-[#1e2130] bg-[#0b1018] px-2.5 py-2 text-[10px] text-[#b9c7df]">
+        <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b1018] px-2.5 py-2 text-[10px] text-[#b9c7df]}`">
           Outcome status: {outcome.summary.status.replace(/_/g, " ")}
           {outcome.summary.primaryRisk ? ` · Primary risk: ${outcome.summary.primaryRisk}` : ""}
         </div>
@@ -160,7 +161,7 @@ export function IssuesTab() {
             key={`${issue.category}-${issue.description}`}
             className={
               "flex gap-2.5 p-2.5 bg-[#0d0f17] border rounded-lg hover:border-[#2a3045] transition-colors group " +
-              (isRecentlyChanged ? "border-amber-500/40 shadow-[0_0_0_1px_rgba(251,191,36,0.15)]" : "border-[#1e2130]")
+              (isRecentlyChanged ? "border-amber-500/40 shadow-[0_0_0_1px_rgba(251,191,36,0.15)]" : "${UI_SURFACES.borderPanel}")
             }
           >
             <SeverityIcon severity={issue.severity} />
@@ -212,22 +213,22 @@ export function IssuesTab() {
               <Badge variant="blue">{privacyIssues.length} issues</Badge>
             </div>
             <div className="grid grid-cols-3 gap-1.5 mb-2">
-              <div className="rounded-lg border border-[#1e2130] bg-[#090d14] px-2 py-1.5 text-[9px]">
+              <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5 text-[9px]}`">
                 <div className="text-[#4a5568] uppercase tracking-[0.12em]">Zones</div>
                 <div className="text-[#c7d0e4]">{privacyIssueZones.length}</div>
               </div>
-              <div className="rounded-lg border border-[#1e2130] bg-[#090d14] px-2 py-1.5 text-[9px]">
+              <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5 text-[9px]}`">
                 <div className="text-[#4a5568] uppercase tracking-[0.12em]">Cameras</div>
                 <div className="text-[#c7d0e4]">{privacyIssueCameras.length}</div>
               </div>
-              <div className="rounded-lg border border-[#1e2130] bg-[#090d14] px-2 py-1.5 text-[9px]">
+              <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5 text-[9px]}`">
                 <div className="text-[#4a5568] uppercase tracking-[0.12em]">Restricted Cells</div>
                 <div className="text-[#c7d0e4]">{result.coverageCells.filter((cell) => cell.privacyRestricted).length}</div>
               </div>
             </div>
             <div className="space-y-1.5">
               {privacyIssues.map((issue, index) => (
-                <div key={`privacy-${index}`} className="rounded-lg border border-[#1e2130] bg-[#0d0f17] p-2.5">
+                <div key={`privacy-${index}`} className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0d0f17] p-2.5}`">
                   <div className="flex items-start gap-2">
                     <ShieldAlert className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-rose-400" />
                     <div className="min-w-0 flex-1">
@@ -286,7 +287,7 @@ export function IssuesTab() {
                       ? "bg-red-950/20 border-red-800/30 hover:border-red-600/40"
                       : region.severity === "high"
                       ? "bg-amber-950/20 border-amber-800/30 hover:border-amber-600/40"
-                      : "bg-[#0d0f17] border-[#1e2130] hover:border-[#2a3045]"
+                      : "bg-[#0d0f17] ${UI_SURFACES.borderPanel} hover:border-[#2a3045]"
                   }`}
                 >
                   <BlindRegionIcon severity={region.severity} />

@@ -4,6 +4,7 @@ import { useStudioStore } from "@/store/studio-store";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { Badge } from "@/components/shared/Badge";
 import { reconstructSceneFromEvidence } from "@/lib/operational-evidence";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export function NodeHistoryTab({ nodeId }: { nodeId: string }) {
   const { operationalEvidenceEvents, setScene } = useStudioStore();
@@ -52,7 +53,7 @@ export function NodeHistoryTab({ nodeId }: { nodeId: string }) {
             {event.details}
           </div>
 
-          <div className="flex justify-end border-t border-[#1e2130] pt-2 mt-2">
+          <div className="`{flex justify-end border-t ${UI_SURFACES.borderPanel} pt-2 mt-2}`">
              <button
                 type="button"
                 onClick={() => handleRestore(event.id, event.title)}

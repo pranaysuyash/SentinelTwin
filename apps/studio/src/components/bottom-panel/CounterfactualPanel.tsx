@@ -25,6 +25,7 @@ import { useAiCommand } from "@/hooks/use-ai-command";
 import { cn } from "@/lib/cn";
 import type { CounterfactualConstraint, CounterfactualPlan } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 // ─── Cost colour helpers ──────────────────────────────────────────────────────
 
@@ -419,7 +420,7 @@ export function CounterfactualPanel() {
       {/* Mode toggle + truth badge */}
       <div className="mb-2 flex items-center gap-2">
         <TruthBadge label="simulated" />
-        <div className="ml-auto flex items-center rounded-lg border border-[#1e2130] bg-[#0a0d15] p-0.5">
+        <div className="`{ml-auto flex items-center rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0d15] p-0.5}`">
           <button
             type="button"
             onClick={() => setMode("sim")}

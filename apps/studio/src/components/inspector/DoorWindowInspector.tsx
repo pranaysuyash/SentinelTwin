@@ -9,6 +9,7 @@ import { snapDoorWindowToWall } from "@/components/inspector/door-window-snap";
 import { OBJECT_PRESET_CHOICES } from "@/lib/scene-appearance";
 import type { DoorAccessControl, DoorNode, WindowNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
   const scene = useStudioStore((s) => s.scene);
@@ -33,7 +34,7 @@ export function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
 
   return (
     <>
-      <div className="border-b border-[#1e2130] px-3 py-3">
+      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <div className="text-[12px] font-semibold text-white">{node.label}</div>
         <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">{isWindow ? "Window" : "Door"}</div>
       </div>
@@ -152,7 +153,7 @@ export function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
         />
       </div>
 
-      <div className="border-t border-[#1e2130] px-3 py-3">
+      <div className="`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <button
           type="button"
           onClick={() => removeNode(node.id)}

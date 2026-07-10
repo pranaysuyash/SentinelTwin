@@ -7,6 +7,7 @@ import { GeminiProvider } from "@/agents/providers/GeminiProvider";
 import { OpenAIProvider } from "@/agents/providers/OpenAIProvider";
 import { QwenProvider } from "@/agents/providers/QwenProvider";
 import type { AiProviderSelection } from "@/agents/provider-selection";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 interface ProviderOption {
   id: string;
@@ -92,9 +93,9 @@ export function ProviderConfigPanel({
   );
 
   return (
-    <div className="space-y-3 rounded-lg border border-[#1e2130] bg-[#0b0f17] p-3">
+    <div className="`{space-y-3 rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b0f17] p-3}`">
       {/* Header */}
-      <div className="flex items-center gap-1.5 border-b border-[#1e2130] pb-2">
+      <div className="`{flex items-center gap-1.5 border-b ${UI_SURFACES.borderPanel} pb-2}`">
         <Settings2 className="h-3.5 w-3.5 text-blue-400/70" />
         <span className="text-[11px] font-medium text-[#e8edf5]">Provider Configuration</span>
       </div>
@@ -110,7 +111,7 @@ export function ProviderConfigPanel({
               className={`rounded-lg border px-2 py-1.5 text-left text-[9px] transition-colors ${
                 selectedId === p.id
                   ? "border-blue-500/40 bg-blue-500/10 text-blue-200"
-                  : "border-[#1e2130] text-[#68738a] hover:border-[#2a3045] hover:text-[#9da8c0]"
+                  : "${UI_SURFACES.borderPanel} text-[#68738a] hover:border-[#2a3045] hover:text-[#9da8c0]"
               }`}
             >
               <div className="font-medium">{p.name}</div>
@@ -126,7 +127,7 @@ export function ProviderConfigPanel({
         <select
           value={selectedModel || currentProvider.defaultModel}
           onChange={(e) => handleModelChange(e.target.value)}
-          className="w-full rounded-lg border border-[#1e2130] bg-[#070a12] px-2 py-1.5 text-[10px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+          className="`{w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] px-2 py-1.5 text-[10px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
         >
           {currentProvider.models.map((m) => (
             <option key={m} value={m}>{m}</option>
@@ -144,7 +145,7 @@ export function ProviderConfigPanel({
 
       {/* API Key Status */}
       {showAdvanced && (
-        <div className="space-y-1.5 rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
+        <div className="`{space-y-1.5 rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] p-2}`">
           <span className="text-[8px] font-medium uppercase tracking-wider text-[#59637a]">
             API Keys
           </span>

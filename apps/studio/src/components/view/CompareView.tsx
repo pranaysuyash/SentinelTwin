@@ -1037,7 +1037,7 @@ export function CompareView() {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07090d]">
-      <div className="flex flex-wrap items-center gap-2 border-b border-[#1e2130] bg-[#0c0f16] px-3 py-2">
+      <div className="`{flex flex-wrap items-center gap-2 border-b ${UI_SURFACES.borderPanel} bg-[#0c0f16] px-3 py-2}`">
         <div className="flex min-w-[260px] items-center gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#65718a]">Compare - Before / After</span>
           <div className="flex items-center gap-1.5 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-medium text-rose-300">
@@ -1167,7 +1167,7 @@ export function CompareView() {
           </ToolbarGroup>
         </div>
       </div>
-      <div className="border-b border-[#1e2130] px-3 py-1.5 text-[10px] text-[#74809a]">
+      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[10px] text-[#74809a]}`">
         {compareSelectionProvenanceNote ? (
           <span>Compare provenance: {compareSelectionProvenanceNote}</span>
         ) : (
@@ -1175,7 +1175,7 @@ export function CompareView() {
         )}
       </div>
       {(outcomeA || outcomeB) ? (
-        <div className="border-b border-[#1e2130] px-3 py-1.5 text-[10px] text-[#8ea0bf]">
+        <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[10px] text-[#8ea0bf]}`">
           <span>
             Baseline outcome: {outcomeA?.summary.status.replace(/_/g, " ") ?? "not_run"}
             {outcomeA?.summary.primaryRisk ? ` · risk: ${outcomeA.summary.primaryRisk}` : ""}
@@ -1188,7 +1188,7 @@ export function CompareView() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-2 border-b border-[#1e2130] bg-[#0a0d14] px-3 py-2">
+      <div className="`{grid grid-cols-2 gap-2 border-b ${UI_SURFACES.borderPanel} bg-[#0a0d14] px-3 py-2}`">
         <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-[#556076]">
           <span className="min-w-[64px] font-bold text-rose-300">Baseline (A)</span>
           <select

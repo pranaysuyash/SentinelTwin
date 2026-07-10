@@ -15,6 +15,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { OBJECT_PRESET_CHOICES } from "@/lib/scene-appearance";
 import type { ObstructionNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const OBSTRUCTION_MATERIALS = [
   { value: "solid", label: "Solid" },
@@ -96,7 +97,7 @@ export function ObstructionInspector() {
 
   return (
     <>
-      <div className="border-b border-[#1e2130] px-3 py-3">
+      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/12">
@@ -218,7 +219,7 @@ export function ObstructionInspector() {
         />
       </div>
 
-      <div className="border-t border-[#1e2130] px-3 py-3 space-y-2">
+      <div className="`{border-t ${UI_SURFACES.borderPanel} px-3 py-3 space-y-2}`">
         <button
           type="button"
           onClick={() => isRunningForThis ? clearCounterfactual() : runCounterfactual(obs.id)}
@@ -229,7 +230,7 @@ export function ObstructionInspector() {
         </button>
 
         {delta && (
-          <div className="rounded-lg border border-[#1e2130] bg-[#0a0d15] p-2.5 space-y-1.5">
+          <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0d15] p-2.5 space-y-1.5}`">
             <div className="text-[9px] font-semibold uppercase tracking-widest text-[#3a4158] mb-2">
               If removed — delta vs current
             </div>

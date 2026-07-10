@@ -20,6 +20,7 @@ import { cn } from "@/lib/cn";
 import { DEFAULT_LAYERS } from "@/lib/workspace-layouts";
 import { getPresetLayoutSnapshot, isWorkspaceLayoutModified } from "@/lib/workspace-layouts";
 import { useStudioStore, type WorkspacePreset } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const PRESETS: Array<{
   id: WorkspacePreset;
@@ -176,7 +177,7 @@ export function WorkspacePresetSwitcher() {
             ))}
           </div>
 
-          <div className="mt-2 border-t border-[#1e2130] pt-2">
+          <div className="`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-2}`">
             <div className="px-2 py-1 text-[9px] uppercase tracking-[0.22em] text-[#4d566b]">
               Layout actions
             </div>
@@ -210,7 +211,7 @@ export function WorkspacePresetSwitcher() {
             </div>
           </div>
 
-          <div className="mt-2 border-t border-[#1e2130] pt-2">
+          <div className="`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-2}`">
             <div className="px-2 py-1 text-[9px] uppercase tracking-[0.22em] text-[#4d566b]">
               Saved layouts
             </div>

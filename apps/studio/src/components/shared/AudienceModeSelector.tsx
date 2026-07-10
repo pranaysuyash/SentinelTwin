@@ -7,6 +7,7 @@ import {
   audienceModeDescription,
   audienceModeLabel,
 } from "@/lib/report-summary";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const AUDIENCE_MODES: AudienceMode[] = [
   "operator",
@@ -44,7 +45,7 @@ export function AudienceModeSelector({
           value={value}
           onChange={(e) => onChange(e.target.value as AudienceMode)}
           className={cn(
-            "w-full appearance-none rounded-lg border border-[#1e2130] bg-[#0d1017]",
+            "w-full appearance-none rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0d1017]",
             "px-2.5 py-1.5 pr-7 text-[11px] text-[#c8d3e8]",
             "focus:outline-none focus:ring-1 focus:ring-blue-500/40",
             "cursor-pointer",

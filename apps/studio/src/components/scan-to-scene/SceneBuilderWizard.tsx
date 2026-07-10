@@ -26,6 +26,7 @@ import {
   getFloorPlanSourceProfileHint,
   listFloorPlanSourceProfiles,
 } from "./floor-plan-extraction-config";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 type ImportMethod = "blank" | "template" | "floor_plan";
 
@@ -290,7 +291,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#0b0f17]">
         {/* Step indicators */}
-      <div className="flex items-center justify-between border-b border-[#1e2130] px-4 py-3">
+      <div className="`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-4 py-3}`">
         <div className="flex items-center gap-2">
           {stepLabels.map((label, i) => (
             <div key={label} className="flex items-center gap-1.5">
@@ -340,10 +341,10 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between border-t border-[#1e2130] px-4 py-3">
+      <div className="`{flex items-center justify-between border-t ${UI_SURFACES.borderPanel} px-4 py-3}`">
         <button type="button"
           onClick={() => state.step > 0 ? goTo(state.step - 1) : onClose?.()}
-          className="flex items-center gap-1 rounded-lg border border-[#1e2130] px-3 py-2 text-[11px] text-[#68738a] transition-colors hover:border-[#2a3045] hover:text-white"
+          className="`{flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderPanel} px-3 py-2 text-[11px] text-[#68738a] transition-colors hover:border-[#2a3045] hover:text-white}`"
         >
           <ArrowLeft className="h-3 w-3" />
           {backActionLabel}
@@ -390,7 +391,7 @@ function RoomSetupStep({
           value={value.roomName}
           onChange={(e) => onChange({ roomName: e.target.value })}
           placeholder="e.g., Main Retail Floor"
-          className="mt-2 w-full rounded-lg border border-[#1e2130] bg-[#070a12] px-3 py-2 text-[12px] text-[#c5ccdb] outline-none placeholder:text-[#3a4158] focus:border-blue-500/40"
+          className="`{mt-2 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] px-3 py-2 text-[12px] text-[#c5ccdb] outline-none placeholder:text-[#3a4158] focus:border-blue-500/40}`"
           autoFocus
         />
       </div>
@@ -404,7 +405,7 @@ function RoomSetupStep({
             max={100}
             value={value.widthM}
             onChange={(e) => onChange({ widthM: Math.max(1, Number(e.target.value)) })}
-            className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#070a12] px-2 py-1.5 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+            className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] px-2 py-1.5 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
           />
         </div>
         <div>
@@ -415,7 +416,7 @@ function RoomSetupStep({
             max={100}
             value={value.depthM}
             onChange={(e) => onChange({ depthM: Math.max(1, Number(e.target.value)) })}
-            className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#070a12] px-2 py-1.5 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+            className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] px-2 py-1.5 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
           />
         </div>
         <div>
@@ -427,7 +428,7 @@ function RoomSetupStep({
             step={0.1}
             value={value.heightM}
             onChange={(e) => onChange({ heightM: Math.max(2.5, Number(e.target.value)) })}
-            className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#070a12] px-2 py-1.5 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+            className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] px-2 py-1.5 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
           />
         </div>
       </div>
@@ -453,7 +454,7 @@ function MethodStep({
 
       <div className="grid grid-cols-3 gap-2">
         {[
-          { id: "blank" as const, label: "Blank Canvas", desc: "Start from empty room", icon: "⬜", color: "border-[#1e2130]" },
+          { id: "blank" as const, label: "Blank Canvas", desc: "Start from empty room", icon: "⬜", color: `${UI_SURFACES.borderPanel}` },
           { id: "template" as const, label: "Use Template", desc: "Pre-configured spaces", icon: "📐", color: "border-blue-500/40" },
           { id: "floor_plan" as const, label: "Import Floor Plan", desc: "Upload image to detect walls", icon: "📄", color: "border-emerald-500/40" },
         ].map((method) => (
@@ -484,7 +485,7 @@ function MethodStep({
                 className={`rounded-lg border p-2.5 text-left transition-colors ${
                   value.selectedTemplate?.id === t.id
                     ? "border-blue-500/40 bg-blue-500/10"
-                    : "border-[#1e2130] bg-[#070a12] hover:border-[#2a3045]"
+                    : `${UI_SURFACES.borderPanel} bg-[#070a12] hover:border-[#2a3045]`
                 }`}
               >
                 <div className="text-[10px] font-medium text-[#c5ccdb]">{t.name}</div>
@@ -543,7 +544,7 @@ function ConfigureStep({
               max={100}
               value={value.widthM}
               onChange={(e) => onChange({ widthM: Math.max(1, Number(e.target.value)) })}
-              className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#070a12] px-2 py-1.5 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+              className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] px-2 py-1.5 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
             />
           </div>
           <div>
@@ -554,7 +555,7 @@ function ConfigureStep({
               max={100}
               value={value.depthM}
               onChange={(e) => onChange({ depthM: Math.max(1, Number(e.target.value)) })}
-              className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#070a12] px-2 py-1.5 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+              className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] px-2 py-1.5 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
             />
           </div>
           <div>
@@ -566,7 +567,7 @@ function ConfigureStep({
               step={0.1}
               value={value.heightM}
               onChange={(e) => onChange({ heightM: Math.max(2.5, Number(e.target.value)) })}
-              className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#070a12] px-2 py-1.5 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+              className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] px-2 py-1.5 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
             />
           </div>
         </div>
@@ -584,7 +585,7 @@ function ConfigureStep({
           Upload a floor plan image. Walls are detected automatically, then you review structure + calibration before creating.
           If counts feel inflated, treat this as "detected candidates vs kept structure" and clean before final create.
         </p>
-        <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
+        <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] p-2}`">
           <div className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#8090a8]">Plan Source Profile</div>
           <p className="mt-0.5 text-[8px] text-[#59637a]">Choose the source family once to tune detection behavior.</p>
           <div className="mt-2 grid gap-2 md:grid-cols-3">
@@ -597,7 +598,7 @@ function ConfigureStep({
                   className={`rounded-lg border px-2 py-1.5 text-left transition-colors ${
                     isActive
                       ? "border-emerald-500/40 bg-emerald-500/10 text-[#dbe7f8]"
-                      : "border-[#1e2130] bg-[#0a0f18] text-[#8ea5c6] hover:border-[#2a3045]"
+                      : `${UI_SURFACES.borderPanel} bg-[#0a0f18] text-[#8ea5c6] hover:border-[#2a3045]`
                   }`}
                   onClick={() => {
                     onChange({
@@ -629,7 +630,7 @@ function ConfigureStep({
 
         {value.floorPlanResult ? (
           <div className="space-y-3">
-            <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-3">
+            <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] p-3}`">
               <div className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#8090a8]">How this review works</div>
               <div className="mt-2 grid gap-2 text-[9px] text-[#9bb0ce] md:grid-cols-3">
                 <div className="rounded border border-[#1f2a3e] bg-[#0a0f18] px-2 py-1.5">1. Check the zoomed draft shell and remove obvious false positives.</div>
@@ -687,7 +688,7 @@ function ConfigureStep({
           </div>
         ) : (
           <div
-            className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#1e2130] bg-[#070a12] p-8 transition-colors hover:border-[#2a3045] active:scale-[0.97]"
+            className="`{flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed ${UI_SURFACES.borderPanel} bg-[#070a12] p-8 transition-colors hover:border-[#2a3045] active:scale-[0.97]}`"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
@@ -722,7 +723,7 @@ function ConfigureStep({
           </div>
         )}
 
-        <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
+        <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] p-2}`">
           <div className="text-[9px] font-medium text-[#c5ccdb]">Scene Metadata</div>
           <p className="mt-0.5 text-[8px] text-[#59637a]">
             Name the imported scene here. Detected or calibrated dimensions sync into the final review automatically.
@@ -735,10 +736,10 @@ function ConfigureStep({
                 value={value.roomName}
                 onChange={(e) => onChange({ roomName: e.target.value })}
                 placeholder="e.g., East Wing Floor Plan"
-                className="mt-0.5 w-full rounded border border-[#1e2130] bg-[#0a0f18] px-1.5 py-1 text-[9px] text-[#c5ccdb] outline-none placeholder:text-[#3a4158] focus:border-blue-500/40"
+                className="`{mt-0.5 w-full rounded border ${UI_SURFACES.borderPanel} bg-[#0a0f18] px-1.5 py-1 text-[9px] text-[#c5ccdb] outline-none placeholder:text-[#3a4158] focus:border-blue-500/40}`"
               />
             </label>
-            <div className="rounded border border-[#1e2130] bg-[#0a0f18] px-2 py-1.5 text-[8px] text-[#8090a8]">
+            <div className="`{rounded border ${UI_SURFACES.borderPanel} bg-[#0a0f18] px-2 py-1.5 text-[8px] text-[#8090a8]}`">
               <div className="uppercase tracking-[0.14em] text-[#59637a]">Current Footprint</div>
               <div className="mt-1 text-[10px] font-medium text-[#c5ccdb]">
                 {value.widthM}m × {value.depthM}m × {value.heightM}m
@@ -752,7 +753,7 @@ function ConfigureStep({
           </div>
         </div>
 
-        <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
+        <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] p-2}`">
           <span className="text-[8px] font-medium uppercase tracking-wider text-[#59637a]">Scale</span>
           <div className="mt-1 flex items-center gap-2">
             <input
@@ -765,7 +766,7 @@ function ConfigureStep({
                 if (Number.isNaN(next)) return;
                 onChange({ floorPlanScalePixelsPerMeter: Math.max(10, Math.min(200, next)) });
               }}
-              className="w-20 rounded border border-[#1e2130] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#c5ccdb] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+              className="`{w-20 rounded border ${UI_SURFACES.borderPanel} bg-[#0b0f17] px-2 py-1 text-[10px] text-[#c5ccdb] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50}`"
             />
             <span className="text-[8px] text-[#59637a]">pixels/meter</span>
           </div>
@@ -846,14 +847,14 @@ function ReviewStep({
           type="text"
           value={value.roomName}
           onChange={(event) => onChange({ roomName: event.target.value })}
-          className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#070a12] px-3 py-2 text-[12px] text-[#c5ccdb] outline-none placeholder:text-[#3a4158] focus:border-blue-500/40"
+          className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] px-3 py-2 text-[12px] text-[#c5ccdb] outline-none placeholder:text-[#3a4158] focus:border-blue-500/40}`"
           placeholder="Scene name"
         />
       </label>
 
       <div className="space-y-2">
         {summary.map((item) => (
-          <div key={item.label} className="flex items-center justify-between rounded-lg border border-[#1e2130] bg-[#070a12] px-3 py-2">
+          <div key={item.label} className="`{flex items-center justify-between rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] px-3 py-2}`">
             <span className="text-[9px] text-[#59637a]">{item.label}</span>
             <span className="text-[10px] font-medium text-[#c5ccdb]">{item.value}</span>
           </div>
@@ -861,7 +862,7 @@ function ReviewStep({
       </div>
 
       {value.importMethod === "floor_plan" && value.floorPlanResult ? (
-        <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-3">
+        <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] p-3}`">
           <div className="text-[8px] font-medium uppercase tracking-wider text-[#59637a]">Floor Plan Commit Summary</div>
           <div className="mt-1 text-[8px] text-[#8090a8]">
             This action creates a draft scene shell for Studio review. It does not imply the floor plan is production-trusted.
@@ -900,7 +901,7 @@ function ReviewStep({
       ) : null}
 
       {value.floorPlanResult && value.floorPlanResult.walls.length > 0 && (
-        <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-3">
+        <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#070a12] p-3}`">
           <span className="text-[8px] font-medium uppercase tracking-wider text-[#59637a]">Detected Wall Layout</span>
           <div className="mt-2 space-y-1">
             {value.floorPlanResult.walls.slice(0, 8).map((w, i) => (

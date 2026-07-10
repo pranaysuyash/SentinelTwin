@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { globalCoordinator } from "@/agents/CoordinatorAgent";
 import { globalTokenTracker } from "@/agents/providers/AgentConfig";
 import { cn } from "@/lib/cn";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export function AgentCoordinatorPanel() {
   const [agentStatus, setAgentStatus] = useState(globalCoordinator.getAgentStatus());
@@ -23,14 +24,14 @@ export function AgentCoordinatorPanel() {
   return (
     <div className="flex h-full flex-col p-2">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#1e2130] pb-1.5">
+      <div className="`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} pb-1.5}`">
         <div className="flex items-center gap-1.5">
           <Cpu className="h-3.5 w-3.5 text-emerald-400/70" />
           <span className="text-[11px] font-medium text-[#e8edf5]">Agent Pipeline</span>
         </div>
         <button type="button"
           onClick={() => setShowDetails(!showDetails)}
-          className="rounded border border-[#1e2130] px-2 py-0.5 text-[8px] text-[#59637a] hover:text-white"
+          className="`{rounded border ${UI_SURFACES.borderPanel} px-2 py-0.5 text-[8px] text-[#59637a] hover:text-white}`"
         >
           {showDetails ? "Hide Details" : "Show Details"}
         </button>
@@ -47,7 +48,7 @@ export function AgentCoordinatorPanel() {
                 ? "border-amber-500/20 bg-amber-500/5"
                 : agent.status === "error"
                   ? "border-red-500/20 bg-red-500/5"
-                  : "border-[#1e2130] bg-[#0b0f17]",
+                  : "${UI_SURFACES.borderPanel} bg-[#0b0f17]",
             )}
           >
             <div className="flex items-center gap-2">
@@ -78,8 +79,8 @@ export function AgentCoordinatorPanel() {
 
       {/* Token Usage */}
       {showDetails && (
-        <div className="mt-2 space-y-1 rounded-lg border border-[#1e2130] bg-[#0b0f17] p-2">
-          <div className="flex items-center gap-1.5 border-b border-[#1e2130] pb-1">
+        <div className="`{mt-2 space-y-1 rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b0f17] p-2}`">
+          <div className="`{flex items-center gap-1.5 border-b ${UI_SURFACES.borderPanel} pb-1}`">
             <Zap className="h-3 w-3 text-amber-400/70" />
             <span className="text-[9px] font-medium text-[#8090a8]">Token Usage</span>
           </div>
@@ -102,7 +103,7 @@ export function AgentCoordinatorPanel() {
             </div>
           </div>
           {Object.entries(usage.byModel).length > 0 && (
-            <div className="border-t border-[#1e2130] pt-1">
+            <div className="`{border-t ${UI_SURFACES.borderPanel} pt-1}`">
               <span className="text-[8px] text-[#59637a]">By Model:</span>
               {Object.entries(usage.byModel).map(([model, tokens]) => (
                 <div key={model} className="flex justify-between text-[8px]">
@@ -117,7 +118,7 @@ export function AgentCoordinatorPanel() {
 
       {/* Active Chain */}
       {globalCoordinator.getActiveChain().length > 0 && showDetails && (
-        <div className="mt-2 space-y-1 rounded-lg border border-[#1e2130] bg-[#0b0f17] p-2">
+        <div className="`{mt-2 space-y-1 rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b0f17] p-2}`">
           <span className="text-[8px] font-medium uppercase tracking-wider text-[#59637a]">Active Chain</span>
           {globalCoordinator.getActiveChain().map((task) => (
             <div key={task.id} className="flex items-center gap-1.5 text-[8px] text-[#68738a]">

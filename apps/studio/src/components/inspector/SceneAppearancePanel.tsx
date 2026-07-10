@@ -22,6 +22,7 @@ import type {
   SceneAppearance,
 } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const ENV_MODE_LABEL: Record<string, string> = {
   day: "Day",
@@ -68,7 +69,7 @@ export function SceneAppearancePanel() {
 
   return (
     <>
-      <div className="border-b border-[#1e2130] px-3 py-3">
+      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/12">

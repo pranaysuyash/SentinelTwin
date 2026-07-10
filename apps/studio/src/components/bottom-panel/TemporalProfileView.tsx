@@ -7,6 +7,7 @@ import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useStudioStore } from "@/store/studio-store";
 import { computeTemporalProfile } from "@sentineltwin/simulation";
 import type { HourlySecuritySnapshot, TemporalAnomalyWindow, VulnerabilityWindow } from "@/schema/security-scene";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const DAY_COLORS = [
   "#22c55e", // 0  – safe
@@ -421,7 +422,7 @@ export function TemporalProfileView() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header row */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#1e2130] flex-shrink-0">
+      <div className="`{flex items-center justify-between px-3 py-1.5 border-b ${UI_SURFACES.borderPanel} flex-shrink-0}`">
         <div className="flex items-center gap-2">
           <TruthBadge label="simulated" />
           <Clock className="w-3.5 h-3.5 text-green-400" />
@@ -459,7 +460,7 @@ export function TemporalProfileView() {
 
       {/* Collapsible schedule editor */}
       {showScheduleEditor && (
-        <div className="border-b border-[#1e2130] overflow-y-auto max-h-[280px] flex-shrink-0">
+        <div className="`{border-b ${UI_SURFACES.borderPanel} overflow-y-auto max-h-[280px] flex-shrink-0}`">
           <div className="px-2 pt-1.5 pb-0.5">
             <span className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Site Schedule Configuration</span>
           </div>
@@ -480,8 +481,8 @@ export function TemporalProfileView() {
       ) : (
         <div className="flex-1 overflow-y-auto">
           {/* ── Summary cards ── */}
-          <div className="grid grid-cols-3 gap-2 px-3 py-2 border-b border-[#1e2130]">
-            <div className="rounded-lg border border-[#1e2130] bg-[#0b0f17] px-2.5 py-2">
+          <div className="`{grid grid-cols-3 gap-2 px-3 py-2 border-b ${UI_SURFACES.borderPanel}}`">
+            <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b0f17] px-2.5 py-2}`">
               <div className="text-[8px] text-[#4a5568] uppercase tracking-wide">Worst Coverage</div>
               <div className={`text-[18px] font-bold font-mono mt-0.5 ${
                 snapshot && snapshot.coveragePct >= 75 ? "text-green-400"
@@ -492,7 +493,7 @@ export function TemporalProfileView() {
               </div>
               <div className="text-[8px] text-[#3a4158] mt-0.5">4-hour trough average</div>
             </div>
-            <div className="rounded-lg border border-[#1e2130] bg-[#0b0f17] px-2.5 py-2">
+            <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b0f17] px-2.5 py-2}`">
               <div className="text-[8px] text-[#4a5568] uppercase tracking-wide">Vulnerability Windows</div>
               <div className="text-[18px] font-bold font-mono mt-0.5 text-orange-400">
                 {temporalProfile.peakVulnerabilityWindows.length}
@@ -501,7 +502,7 @@ export function TemporalProfileView() {
                 {temporalProfile.peakVulnerabilityWindows.filter(w => w.severity === "high").length} high severity
               </div>
             </div>
-            <div className="rounded-lg border border-[#1e2130] bg-[#0b0f17] px-2.5 py-2">
+            <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b0f17] px-2.5 py-2}`">
               <div className="text-[8px] text-[#4a5568] uppercase tracking-wide">Safe Periods</div>
               <div className="text-[18px] font-bold font-mono mt-0.5 text-green-400">
                 {temporalProfile.safestPeriods.length}
@@ -511,7 +512,7 @@ export function TemporalProfileView() {
           </div>
 
           {/* ── FORECAST strip ── */}
-          <div className="px-3 py-2 border-b border-[#1e2130]">
+          <div className="`{px-3 py-2 border-b ${UI_SURFACES.borderPanel}}`">
             <ForecastStrip
               snapshots={temporalProfile.hourlySnapshots}
               vulnerabilityWindows={temporalProfile.peakVulnerabilityWindows}
@@ -521,7 +522,7 @@ export function TemporalProfileView() {
           </div>
 
           {/* ── Current time indicator ── */}
-          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[#1e2130] bg-[#090c12]">
+          <div className="`{flex items-center gap-2 px-3 py-1.5 border-b ${UI_SURFACES.borderPanel} bg-[#090c12]}`">
             <span className="text-[8px] text-[#4a5568] uppercase tracking-wider">Current</span>
             <span className="text-[10px] font-bold font-mono text-white">
               {hourToTime(temporalScrubHour, temporalScrubMinute)}
@@ -537,7 +538,7 @@ export function TemporalProfileView() {
           </div>
 
           {/* ── State transition map ── */}
-          <div className="px-3 py-1.5 border-b border-[#1e2130]">
+          <div className="`{px-3 py-1.5 border-b ${UI_SURFACES.borderPanel}}`">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[8px] text-[#4a5568] uppercase tracking-wider">State Timeline</span>
               <span className="text-[7px] text-[#3a4158]">Hover for state details</span>
@@ -546,7 +547,7 @@ export function TemporalProfileView() {
           </div>
 
           {/* ── Coverage Timeline ── */}
-          <div className="px-3 py-1.5 border-b border-[#1e2130]">
+          <div className="`{px-3 py-1.5 border-b ${UI_SURFACES.borderPanel}}`">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[8px] text-[#4a5568] uppercase tracking-wider">Coverage Over 24 Hours</span>
               <span className="text-[7px] text-[#3a4158]">Click to scrub</span>
@@ -555,7 +556,7 @@ export function TemporalProfileView() {
           </div>
 
           {/* ── Latest snapshot details ── */}
-          <div className="px-3 py-1.5 border-b border-[#1e2130]">
+          <div className="`{px-3 py-1.5 border-b ${UI_SURFACES.borderPanel}}`">
             <div className="flex items-center gap-3 text-[8px] text-[#4a5568]">
               <span>Active Cameras: <span className="text-[#c7d0e4] font-semibold">
                 {temporalProfile.hourlySnapshots.find(s => s.hour === temporalScrubHour)?.activeCameraCount ?? 0}
@@ -572,7 +573,7 @@ export function TemporalProfileView() {
 
           {/* ── Vulnerability Windows ── */}
           {temporalProfile.peakVulnerabilityWindows.length > 0 && (
-            <div className="px-3 py-2 border-b border-[#1e2130]">
+            <div className="`{px-3 py-2 border-b ${UI_SURFACES.borderPanel}}`">
               <div className="flex items-center gap-2 mb-1.5">
                 <ShieldAlert className="w-3 h-3 text-orange-400" />
                 <span className="text-[9px] font-semibold text-[#c7d0e4]">Vulnerability Windows</span>
@@ -594,7 +595,7 @@ export function TemporalProfileView() {
 
           {/* ── Temporal Anomalies ── */}
           {temporalProfile.anomalyWindows.length > 0 && (
-            <div className="px-3 py-2 border-b border-[#1e2130]">
+            <div className="`{px-3 py-2 border-b ${UI_SURFACES.borderPanel}}`">
               <div className="flex items-center gap-2 mb-1.5">
                 <AlertTriangle className="w-3 h-3 text-amber-400" />
                 <span className="text-[9px] font-semibold text-[#c7d0e4]">Temporal Anomalies</span>
@@ -603,15 +604,15 @@ export function TemporalProfileView() {
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-1.5 mb-2">
-                <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-2 py-1">
+                <div className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0b0f17] px-2 py-1}`">
                   <div className="text-[9px] uppercase tracking-wide text-[#4a5568]">High</div>
                   <div className="text-[14px] font-bold text-red-400">{temporalProfile.anomalySummary?.highSeverityCount ?? 0}</div>
                 </div>
-                <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-2 py-1">
+                <div className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0b0f17] px-2 py-1}`">
                   <div className="text-[7px] uppercase tracking-wide text-[#4a5568]">Medium</div>
                   <div className="text-[14px] font-bold text-orange-300">{temporalProfile.anomalySummary?.mediumSeverityCount ?? 0}</div>
                 </div>
-                <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-2 py-1">
+                <div className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0b0f17] px-2 py-1}`">
                   <div className="text-[7px] uppercase tracking-wide text-[#4a5568]">Low</div>
                   <div className="text-[14px] font-bold text-yellow-300">{temporalProfile.anomalySummary?.lowSeverityCount ?? 0}</div>
                 </div>
@@ -626,7 +627,7 @@ export function TemporalProfileView() {
 
           {/* ── Safest Periods ── */}
           {temporalProfile.safestPeriods.length > 0 && (
-            <div className="px-3 py-2 border-b border-[#1e2130]">
+            <div className="`{px-3 py-2 border-b ${UI_SURFACES.borderPanel}}`">
               <div className="flex items-center gap-2 mb-1.5">
                 <Shield className="w-3 h-3 text-green-400" />
                 <span className="text-[9px] font-semibold text-[#c7d0e4]">Safest Periods</span>

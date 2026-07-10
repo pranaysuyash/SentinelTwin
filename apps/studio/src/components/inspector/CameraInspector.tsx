@@ -122,6 +122,7 @@ type ViewToggleKey = "overlays" | "dori" | "path" | "zones" | "timestamp" | "bou
 type ViewToggleState = Record<ViewToggleKey, boolean>;
 
 import type { CameraMetadataArchiveRecord } from "@/lib/camera-metadata-ingest-history";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -843,7 +844,7 @@ export function CameraInspector() {
 
   return (
     <>
-      <div className="border-b border-[#1e2130] px-3 py-3">
+      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/12">
@@ -865,7 +866,7 @@ export function CameraInspector() {
         </div>
       </div>
 
-      <div className="flex items-end justify-between border-b border-[#1e2130] px-2 pt-1.5">
+      <div className="`{flex items-end justify-between border-b ${UI_SURFACES.borderPanel} px-2 pt-1.5}`">
         <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto scrollbar-none">
           {tabs.map((tab) => (
             <button
@@ -2374,7 +2375,7 @@ export function CameraInspector() {
         })()}
       </div>
 
-      <div className="space-y-2 border-t border-[#1e2130] px-3 py-3">
+      <div className="`{space-y-2 border-t ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <div className="flex gap-2">
           <button
             type="button" onClick={aimAtZone} disabled={!targetZone}

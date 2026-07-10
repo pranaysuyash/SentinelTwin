@@ -43,7 +43,7 @@ export function DockRail({
   return (
     <div
       className={cn(
-        `flex h-full w-full items-stretch gap-1 border-[#1e2130] ${UI_SURFACES.panel} ${UI_SURFACES.textBody}`,
+        `flex h-full w-full items-stretch gap-1 ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} ${UI_SURFACES.textBody}`,
         isBottom ? "flex-row border-t px-1.5 py-1" : "flex-col border-r px-1 py-1",
       )}
     >

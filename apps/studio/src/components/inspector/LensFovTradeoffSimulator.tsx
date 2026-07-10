@@ -21,6 +21,7 @@ import {
   type LensFovResult,
 } from "@/lib/lens-fov-tradeoff";
 import type { CameraNode } from "@/schema/security-scene";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -178,7 +179,7 @@ export function LensFovTradeoffSimulator({ camera, onClose }: LensFovTradeoffSim
   }, [camera.id, focalLength, result, updateNode, onClose]);
 
   return (
-    <div className="rounded-xl border border-[#1e2130] bg-[#0b0f17] p-3">
+    <div className="`{rounded-xl border ${UI_SURFACES.borderPanel} bg-[#0b0f17] p-3}`">
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -251,7 +252,7 @@ export function LensFovTradeoffSimulator({ camera, onClose }: LensFovTradeoffSim
                     "rounded border px-1.5 py-1 text-[8px] transition-colors",
                     sensorFormat === fmt
                       ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-300"
-                      : "border-[#1e2130] text-[#6a748b] hover:border-[#2a3045]",
+                      : "${UI_SURFACES.borderPanel} text-[#6a748b] hover:border-[#2a3045]",
                   )}
                 >
                   {fmt}
@@ -316,31 +317,31 @@ export function LensFovTradeoffSimulator({ camera, onClose }: LensFovTradeoffSim
         {/* Right: Visualization & Results */}
         <div className="space-y-3">
           {/* FOV Visualization */}
-          <div className="flex justify-center rounded-lg border border-[#1e2130] bg-[#090d14] p-2">
+          <div className="`{flex justify-center rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] p-2}`">
             <FovConeVisualization fovDeg={result.fovHorizontalDeg} />
           </div>
 
           {/* Key Metrics */}
           <div className="grid grid-cols-2 gap-1.5">
-            <div className="rounded-lg border border-[#1e2130] bg-[#090d14] px-2 py-1.5">
+            <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5}`">
               <div className="text-[7px] uppercase tracking-[0.16em] text-[#4a5568]">H FOV</div>
               <div className="font-mono text-[12px] font-bold text-[#c7d0e4]">
                 {result.fovHorizontalDeg.toFixed(1)}°
               </div>
             </div>
-            <div className="rounded-lg border border-[#1e2130] bg-[#090d14] px-2 py-1.5">
+            <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5}`">
               <div className="text-[7px] uppercase tracking-[0.16em] text-[#4a5568]">V FOV</div>
               <div className="font-mono text-[12px] font-bold text-[#c7d0e4]">
                 {result.fovVerticalDeg.toFixed(1)}°
               </div>
             </div>
-            <div className="rounded-lg border border-[#1e2130] bg-[#090d14] px-2 py-1.5">
+            <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5}`">
               <div className="text-[7px] uppercase tracking-[0.16em] text-[#4a5568]">PPM @ Target</div>
               <div className="font-mono text-[12px] font-bold text-[#c7d0e4]">
                 {result.ppm.toFixed(1)}
               </div>
             </div>
-            <div className="rounded-lg border border-[#1e2130] bg-[#090d14] px-2 py-1.5">
+            <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5}`">
               <div className="text-[7px] uppercase tracking-[0.16em] text-[#4a5568]">Quality</div>
               <div
                 className="font-mono text-[11px] font-bold capitalize"
@@ -352,7 +353,7 @@ export function LensFovTradeoffSimulator({ camera, onClose }: LensFovTradeoffSim
           </div>
 
           {/* DORI Range Bars */}
-          <div className="space-y-1 rounded-lg border border-[#1e2130] bg-[#090d14] p-2">
+          <div className="`{space-y-1 rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] p-2}`">
             <div className="mb-1.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">
               DORI Reach
             </div>
@@ -380,9 +381,9 @@ export function LensFovTradeoffSimulator({ camera, onClose }: LensFovTradeoffSim
       </div>
 
       {/* Compare with current & Apply */}
-      <div className="mt-3 flex items-center gap-3 border-t border-[#1e2130] pt-3">
+      <div className="`{mt-3 flex items-center gap-3 border-t ${UI_SURFACES.borderPanel} pt-3}`">
         {currentResult && (
-          <div className="flex items-center gap-2 rounded-lg border border-[#1e2130] bg-[#090d14] px-2 py-1.5 text-[8px] text-[#6a748b]">
+          <div className="`{flex items-center gap-2 rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5 text-[8px] text-[#6a748b]}`">
             <SlidersHorizontal className="h-3 w-3" />
             <span>
               Current: {currentResult.fovHorizontalDeg.toFixed(1)}° / {currentResult.ppm.toFixed(0)} PPM
@@ -411,7 +412,7 @@ export function LensFovTradeoffSimulator({ camera, onClose }: LensFovTradeoffSim
         <div className="mt-1.5 overflow-x-auto">
           <table className="w-full text-[8px] border-collapse">
             <thead>
-              <tr className="border-b border-[#1e2130]">
+              <tr className="`{border-b ${UI_SURFACES.borderPanel}}`">
                 <th className="px-1.5 py-1 text-left text-[#4a5568]">Focal</th>
                 <th className="px-1.5 py-1 text-right text-[#4a5568]">H FOV</th>
                 <th className="px-1.5 py-1 text-right text-[#4a5568]">PPM</th>

@@ -4,6 +4,7 @@ import { QUALITY_ABBR, QUALITY_COLOR } from "@/lib/quality-display";
 import { TruthBadge } from "@/components/shared/TruthBadge";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -69,7 +70,7 @@ export function RedundancyTab() {
     <div className="flex h-full flex-col overflow-hidden">
 
       {/* ── Stats strip ─────────────────────────────────────────────────── */}
-      <div className="flex flex-shrink-0 items-center gap-3 border-b border-[#1e2130] bg-[#090c12] px-3 py-1">
+      <div className="`{flex flex-shrink-0 items-center gap-3 border-b ${UI_SURFACES.borderPanel} bg-[#090c12] px-3 py-1}`">
         <TruthBadge label="simulated" />
 
         {/* Redundancy score ring */}
@@ -139,7 +140,7 @@ export function RedundancyTab() {
               {/* Column headers: zone names */}
               <thead className="sticky top-0 z-10 bg-[#090c12]">
                 <tr>
-                  <th className="min-w-[130px] border-b border-r border-[#1e2130] px-2.5 py-1.5 text-left text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">
+                  <th className="`{min-w-[130px] border-b border-r ${UI_SURFACES.borderPanel} px-2.5 py-1.5 text-left text-[8px] font-medium uppercase tracking-wider text-[#3a4158]}`">
                     Camera
                   </th>
                   {criticalZones.map((zone) => {
@@ -150,7 +151,7 @@ export function RedundancyTab() {
                     return (
                       <th
                         key={zone.id}
-                        className="min-w-[52px] max-w-[80px] border-b border-r border-[#1e2130] px-1 py-1"
+                        className="`{min-w-[52px] max-w-[80px] border-b border-r ${UI_SURFACES.borderPanel} px-1 py-1}`"
                       >
                         <div className="flex flex-col items-center gap-0.5">
                           <span
@@ -177,10 +178,10 @@ export function RedundancyTab() {
                       </th>
                     );
                   })}
-                  <th className="min-w-[44px] border-b border-r border-[#1e2130] px-1.5 py-1 text-center text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">
+                  <th className="`{min-w-[44px] border-b border-r ${UI_SURFACES.borderPanel} px-1.5 py-1 text-center text-[8px] font-medium uppercase tracking-wider text-[#3a4158]}`">
                     Solo
                   </th>
-                  <th className="min-w-[48px] border-b border-[#1e2130] px-1.5 py-1 text-center text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">
+                  <th className="`{min-w-[48px] border-b ${UI_SURFACES.borderPanel} px-1.5 py-1 text-center text-[8px] font-medium uppercase tracking-wider text-[#3a4158]}`">
                     Cover
                   </th>
                 </tr>
@@ -303,8 +304,8 @@ export function RedundancyTab() {
 
         {/* ── SPOF sidebar ────────────────────────────────────────────── */}
         {showSpofSidebar && (
-          <div className="flex w-[144px] flex-shrink-0 flex-col overflow-hidden border-l border-[#1e2130]">
-            <div className="flex-shrink-0 border-b border-[#1e2130] px-2.5 py-1">
+          <div className="`{flex w-[144px] flex-shrink-0 flex-col overflow-hidden border-l ${UI_SURFACES.borderPanel}}`">
+            <div className="`{flex-shrink-0 border-b ${UI_SURFACES.borderPanel} px-2.5 py-1}`">
               <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-red-400">
                 Vulnerable Zones
               </span>
@@ -358,7 +359,7 @@ export function RedundancyTab() {
 
               {/* Redundant zones (positive signal) */}
               {redundantZones.length > 0 && (
-                <div className="border-t border-[#1e2130] pt-1.5">
+                <div className="`{border-t ${UI_SURFACES.borderPanel} pt-1.5}`">
                   <div className="mb-1 text-[7px] font-semibold uppercase tracking-wider text-green-500">
                     Protected ({redundantZones.length})
                   </div>

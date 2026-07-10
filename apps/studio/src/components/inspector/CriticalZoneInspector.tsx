@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import { getTargetRequirementInfo } from "@/lib/target-quality-requirements";
 import type { CriticalZoneNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const TARGET_TYPE_LABELS: Record<CriticalZoneNode["targetType"], string> = {
   person_detection: "Person Detection",
@@ -49,7 +50,7 @@ export function CriticalZoneInspector() {
 
   return (
     <>
-      <div className="border-b border-[#1e2130] px-3 py-3">
+      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10">
@@ -225,7 +226,7 @@ export function CriticalZoneInspector() {
         )}
       </div>
 
-      <div className="border-t border-[#1e2130] px-3 py-3">
+      <div className="`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <button
           type="button"
           onClick={() => removeNode(zone.id)}

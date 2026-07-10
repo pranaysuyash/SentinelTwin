@@ -14,6 +14,7 @@ import {
 } from "@/components/map/MapProjection";
 import type { ScenarioPath, SecurityScene, SimulationResult } from "@/schema/security-scene";
 import { MapLayers } from "@/components/map/MapLayers";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 type MapMode = "mini" | "path" | "overview" | "picker";
 
@@ -267,7 +268,7 @@ export function MapCanvas({
       <svg
         width={width}
         height={height}
-        className="block rounded-lg border border-[#1e2130] bg-[#0a0d14]"
+        className="`{block rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0d14]}`"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

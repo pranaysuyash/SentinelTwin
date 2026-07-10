@@ -8,6 +8,7 @@ import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outco
 import { buildReportSummaryLines } from "@/lib/report-summary";
 import type { SimulationAssumptions } from "@/schema/security-scene";
 import { buildEnvironmentRows, summarizeWindowStates } from "./bottom-row-utils";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 function panelTimeLabel(ts: number) {
   const d = new Date(ts);
@@ -381,7 +382,7 @@ function EnvironmentPanel() {
 export function BottomRow() {
   return (
     <div
-      className="grid flex-shrink-0 grid-cols-4 divide-x divide-[#1e2130] border-t border-[#1e2130] bg-[#0c0f16]"
+      className="`{grid flex-shrink-0 grid-cols-4 divide-x divide-[#1e2130] border-t ${UI_SURFACES.borderPanel} bg-[#0c0f16]}`"
       style={{ height: 148 }}
     >
       <div className="flex overflow-hidden px-3 py-2"><SnapshotsPanel /></div>

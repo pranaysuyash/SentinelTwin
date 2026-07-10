@@ -12,6 +12,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { WALL_PRESET_CHOICES } from "@/lib/scene-appearance";
 import type { WallNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export function WallInspector() {
   const selectedId = useStudioStore((s) => s.selectedNodeId);
@@ -26,7 +27,7 @@ export function WallInspector() {
 
   return (
     <>
-      <div className="border-b border-[#1e2130] px-3 py-3">
+      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <div className="text-[12px] font-semibold text-white">{wall.label}</div>
         <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Wall · {lengthM.toFixed(2)}m</div>
       </div>
@@ -72,7 +73,7 @@ export function WallInspector() {
         />
       </div>
 
-      <div className="border-t border-[#1e2130] px-3 py-3">
+      <div className="`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <button
           type="button"
           onClick={() => removeNode(wall.id)}

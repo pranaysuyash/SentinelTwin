@@ -29,6 +29,7 @@ import type { WorkspaceMembershipArchiveRecord } from "@/lib/workspace-membershi
 import type { WorkspaceControlPlaneSnapshot } from "@/lib/workspace-control-plane-history";
 import { useStudioStore } from "@/store/studio-store";
 import { resolveSyncConflict, type WorkspaceSyncConflict } from "@/lib/workspace-sync-conflict";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 function Section({
   title,
   children,
@@ -64,8 +65,8 @@ function PillButton({
         "rounded-md border px-2 py-1 text-[9px] transition-colors",
         active
           ? "border-sky-500/30 bg-sky-500/10 text-sky-200"
-          : "border-[#1e2130] bg-[#0f141f] text-[#8090a8] hover:border-[#2a3245] hover:text-white",
-        disabled && "cursor-not-allowed opacity-50 hover:border-[#1e2130] hover:text-[#8090a8]",
+          : "${UI_SURFACES.borderPanel} bg-[#0f141f] text-[#8090a8] hover:border-[#2a3245] hover:text-white",
+        disabled && "cursor-not-allowed opacity-50 hover:${UI_SURFACES.borderPanel} hover:text-[#8090a8]",
       )}
     >
       {children}

@@ -20,6 +20,7 @@ import {
 } from "@/lib/confidence-display";
 // Intake Pass I3 — canvas-direct wall picker replaces the checkbox list.
 import { WallCanvasPicker } from "./WallCanvasPicker";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 interface ImportReviewProps {
   result: FloorPlanResult;
@@ -417,7 +418,7 @@ export function ImportReview({
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4 text-center">
+          <div className="`{rounded-2xl border ${UI_SURFACES.borderPanel} bg-[#070a12] p-4 text-center}`">
             <div className="text-[22px] font-bold text-[#c5ccdb]">
               {keptWallCount}
             </div>
@@ -425,7 +426,7 @@ export function ImportReview({
           </div>
         <div
           className={`rounded-2xl border bg-[#070a12] p-4 text-center ${
-            renderedConfidence.gated ? "border-amber-500/40" : "border-[#1e2130]"
+            renderedConfidence.gated ? "border-amber-500/40" : "${UI_SURFACES.borderPanel}"
           }`}
           title={renderedConfidence.source}
         >
@@ -457,7 +458,7 @@ export function ImportReview({
             // source). See `Docs/review/UI_REVIEW_2026-06-19.md` Trust Pass T2.
             (hasManualCalibration
               ? "border-emerald-500/50 bg-emerald-500/5 shadow-[0_0_0_1px_rgba(16,185,129,0.18)]"
-              : "border-[#1e2130]")
+              : "${UI_SURFACES.borderPanel}")
           }
           title={hasManualCalibration ? "User-authoritative dimensions — these define the scene footprint and scale. The detector cannot overwrite them." : "System-derived dimensions from detector output — not yet locked."}
         >
@@ -471,7 +472,7 @@ export function ImportReview({
         </div>
       </div>
 
-          <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4">
+          <div className="`{rounded-2xl border ${UI_SURFACES.borderPanel} bg-[#070a12] p-4}`">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-medium text-[#9bb0cf]">Detection Details</span>
         </div>
@@ -517,7 +518,7 @@ export function ImportReview({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4">
+      <div className="`{rounded-2xl border ${UI_SURFACES.borderPanel} bg-[#070a12] p-4}`">
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-[11px] font-medium text-[#9bb0cf]">Detection Corrections</span>
           <button type="button"
@@ -881,7 +882,7 @@ export function ImportReview({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[#1e2130] bg-[#070a12] p-4">
+      <div className="`{rounded-2xl border ${UI_SURFACES.borderPanel} bg-[#070a12] p-4}`">
         <div className="mb-1.5 text-[11px] font-medium text-[#9bb0cf]">Known Footprint (meters)</div>
         <p className="mb-2 text-[11px] leading-5 text-[#7f93b3]">{calibrationGuidance}</p>
         <p className="mb-2 text-[11px] leading-5 text-[#9aaed0]">{calibrationSourceCopy}</p>
@@ -916,7 +917,7 @@ export function ImportReview({
             <input
               value={widthM}
               onChange={(event) => setWidthM(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#0a0f18] px-2 py-2 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+              className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0f18] px-2 py-2 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
             />
           </label>
           <label className="text-[11px] text-[#59637a]">
@@ -924,7 +925,7 @@ export function ImportReview({
             <input
               value={depthM}
               onChange={(event) => setDepthM(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#0a0f18] px-2 py-2 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+              className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0f18] px-2 py-2 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
             />
           </label>
           <label className="text-[11px] text-[#59637a]">
@@ -932,7 +933,7 @@ export function ImportReview({
             <input
               value={heightM}
               onChange={(event) => setHeightM(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-[#1e2130] bg-[#0a0f18] px-2 py-2 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+              className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0f18] px-2 py-2 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
             />
           </label>
         </div>
@@ -991,7 +992,7 @@ export function ImportReview({
       {/* Re-upload button */}
       <button type="button"
         onClick={onImageChange}
-        className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-[#1e2130] px-3 py-3 text-[11px] text-[#59637a] transition-colors hover:border-[#2a3045] hover:text-[#68738a]"
+        className="`{flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed ${UI_SURFACES.borderPanel} px-3 py-3 text-[11px] text-[#59637a] transition-colors hover:border-[#2a3045] hover:text-[#68738a]}`"
       >
         <RotateCcw className="h-3 w-3" />
         Choose different image

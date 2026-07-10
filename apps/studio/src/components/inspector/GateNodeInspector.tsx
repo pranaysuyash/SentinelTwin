@@ -11,6 +11,7 @@ import {
 import { SectionCard } from "@/components/shared/SectionCard";
 import type { GateNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export function GateNodeInspector() {
   const selectedId = useStudioStore((s) => s.selectedNodeId);
@@ -25,7 +26,7 @@ export function GateNodeInspector() {
 
   return (
     <>
-      <div className="border-b border-[#1e2130] px-3 py-3">
+      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <div className="text-[12px] font-semibold text-white">{gate.label}</div>
         <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Gate · {gate.gateType}</div>
       </div>

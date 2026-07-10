@@ -11,6 +11,7 @@ import { QUALITY_RANK } from "@/lib/quality-display";
 import type { CameraNode } from "@/schema/security-scene";
 import { pathLength } from "@/components/workspace/editing/editor-geometry";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const STATUS_COLOR: Record<CameraNode["status"], { bg: string; text: string; label: string }> = {
   on:             { bg: "bg-emerald-500/15", text: "text-emerald-300", label: "Online" },
@@ -80,8 +81,8 @@ export function ScenarioPathPanel() {
   const activeTimeOfDay = activePath?.timeOfDay ?? "day";
 
   return (
-    <div className="flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] bg-[#0d1017]">
-      <div className="flex h-8 items-center justify-between border-b border-[#1e2130] px-3">
+    <div className="`{flex h-[208px] flex-shrink-0 flex-col border-t ${UI_SURFACES.borderPanel} bg-[#0d1017]}`">
+      <div className="`{flex h-8 items-center justify-between border-b ${UI_SURFACES.borderPanel} px-3}`">
         <div className="flex items-center gap-2">
           <TruthBadge label="simulated" />
           <div>

@@ -5,6 +5,7 @@ import { Loader2, ShieldAlert, Zap } from "lucide-react";
 import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useStudioStore } from "@/store/studio-store";
 import { cn } from "@/lib/cn";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export function RedundancyMatrixPanel() {
   const result = useStudioStore((s) => s.simulationResult);
@@ -91,7 +92,7 @@ export function RedundancyMatrixPanel() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Summary bar */}
-      <div className="flex items-center gap-3 border-b border-[#1e2130] bg-[#0d1017] px-3 py-2">
+      <div className="`{flex items-center gap-3 border-b ${UI_SURFACES.borderPanel} bg-[#0d1017] px-3 py-2}`">
         <TruthBadge label="simulated" />
         <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">
           Redundancy Matrix
@@ -105,7 +106,7 @@ export function RedundancyMatrixPanel() {
       </div>
 
       {focusedCamera ? (
-        <div className="border-b border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+        <div className="`{border-b ${UI_SURFACES.borderPanel} bg-[#0b0f17] px-3 py-2}`">
           <div className="flex items-start gap-3">
             <div className="min-w-0">
               <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">
@@ -241,7 +242,7 @@ export function RedundancyMatrixPanel() {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-3 border-t border-[#1e2130] px-3 py-1.5 text-[8px] text-[#3a4158]">
+      <div className="`{flex items-center gap-3 border-t ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[8px] text-[#3a4158]}`">
         <span className="flex items-center gap-1">
           <span className="h-2 w-2 rounded bg-green-900/40" /> Redundant
         </span>

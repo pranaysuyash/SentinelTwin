@@ -12,6 +12,7 @@ import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";
 import type { CameraNode, SensorNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const SENSOR_TYPE_LABELS: Record<SensorNode["sensorType"], string> = {
   motion: "Motion",
@@ -66,7 +67,7 @@ export function SensorInspector() {
 
   return (
     <>
-      <div className="border-b border-[#1e2130] px-3 py-3">
+      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-500/20 bg-cyan-500/10">
@@ -231,7 +232,7 @@ export function SensorInspector() {
         </SectionCard>
       </div>
 
-      <div className="border-t border-[#1e2130] px-3 py-3">
+      <div className="`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`">
         <button
           type="button"
           onClick={() => removeNode(sensor.id)}

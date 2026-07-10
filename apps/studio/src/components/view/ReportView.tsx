@@ -17,6 +17,7 @@ import { buildRedundancyMatrixReport } from "@sentineltwin/report";
 import { useStudioStore } from "@/store/studio-store";
 import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-outcome-selectors";
 import { computeSceneInputHash } from "@sentineltwin/simulation";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const REPORT_VIEW_UNCERTAINTY_SAMPLE_COUNT = 2;
 const REPORT_VIEW_SIMULATION_STALE_BUFFER_MS = 1_500;
@@ -371,7 +372,7 @@ export function ReportView() {
             </section>
           ) : null}
           <section className="min-h-0 overflow-hidden rounded-[28px] border border-[#1f2536] bg-[#0b0f17]/92 shadow-2xl shadow-black/20">
-            <div className="flex items-center gap-2 border-b border-[#1e2130] px-4 py-3">
+            <div className="`{flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-4 py-3}`">
               <ShieldCheck className="h-4 w-4 text-emerald-300" />
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#7a86a0]">Verified Outcome</div>
@@ -384,7 +385,7 @@ export function ReportView() {
           </section>
 
           <section className="min-h-0 overflow-hidden rounded-[28px] border border-[#1f2536] bg-[#0b0f17]/92 shadow-2xl shadow-black/20">
-            <div className="flex items-center gap-2 border-b border-[#1e2130] px-4 py-3">
+            <div className="`{flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-4 py-3}`">
               <LayoutDashboard className="h-4 w-4 text-sky-300" />
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#7a86a0]">Report Lite</div>

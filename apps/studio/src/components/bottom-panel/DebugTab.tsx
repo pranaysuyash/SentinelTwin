@@ -49,6 +49,7 @@ import type { SupportIngestHistoryRecord } from "@/lib/support-ingest-history";
 import type { TrustAuditReport } from "@/lib/truth-audit";
 import { OPERATIONAL_EVIDENCE_STORAGE_KEY, useStudioStore } from "@/store/studio-store";
 import { DEBUG_TOGGLE_LABELS } from "@/store/slices/core/debug-toggles-slice";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 type TrustAuditPayload = TrustAuditReport & {
   formatted: string;
@@ -121,7 +122,7 @@ function PillButton({
       className={`rounded-md border px-2 py-1 text-[9px] transition-colors ${
         active
           ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-          : "border-[#1e2130] bg-[#0f141f] text-[#8090a8] hover:border-[#2a3245] hover:text-white"
+          : "${UI_SURFACES.borderPanel} bg-[#0f141f] text-[#8090a8] hover:border-[#2a3245] hover:text-white"
       }`}
     >
       {children}
@@ -1258,7 +1259,7 @@ export function DebugTab() {
             onChange={handleArchiveFileChange}
           />
           {pendingArchive ? (
-            <div className="mt-2 rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+            <div className="`{mt-2 rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Archive Merge Preflight</div>
@@ -1272,7 +1273,7 @@ export function DebugTab() {
               </div>
               {pendingArchiveComparison?.readiness ? (
                 <>
-                  <div className="mt-2 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2 text-[10px] text-[#dbe2f0]">
+                  <div className="`{mt-2 rounded-md border ${UI_SURFACES.borderPanel} bg-[#0b0f17] px-3 py-2 text-[10px] text-[#dbe2f0]}`">
                     {pendingArchiveComparison.readiness.recommendation}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1366,19 +1367,19 @@ export function DebugTab() {
               Append-only journal batches keep the browser evidence trail as records instead of a single rewritten array.
             </div>
             <div className="grid grid-cols-4 gap-1.5">
-              <div className="rounded-md border border-[#1e2130] bg-[#0f141f] px-2 py-1.5">
+              <div className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5}`">
                 <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Batches</div>
                 <div className="mt-0.5 text-[13px] font-semibold text-[#edf2ff]">{journalEntries.length}</div>
               </div>
-              <div className="rounded-md border border-[#1e2130] bg-[#0f141f] px-2 py-1.5">
+              <div className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5}`">
                 <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Append</div>
                 <div className="mt-0.5 text-[13px] font-semibold text-[#edf2ff]">{journalAppendCount}</div>
               </div>
-              <div className="rounded-md border border-[#1e2130] bg-[#0f141f] px-2 py-1.5">
+              <div className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5}`">
                 <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Merge</div>
                 <div className="mt-0.5 text-[13px] font-semibold text-[#edf2ff]">{journalMergeCount}</div>
               </div>
-              <div className="rounded-md border border-[#1e2130] bg-[#0f141f] px-2 py-1.5">
+              <div className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5}`">
                 <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Replace</div>
                 <div className="mt-0.5 text-[13px] font-semibold text-[#edf2ff]">{journalReplaceCount}</div>
               </div>
@@ -1386,7 +1387,7 @@ export function DebugTab() {
             <div className="space-y-1.5">
               {journalEntries.length > 0 ? (
                 [...journalEntries].slice(-4).reverse().map((entry) => (
-                  <div key={entry.id} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                  <div key={entry.id} className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f1320] px-3 py-2}`">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-[11px] font-semibold text-[#edf2ff]">{entry.reason}</div>
                       <Badge variant={entry.kind === "append" ? "green" : entry.kind === "merge" ? "blue" : "amber"}>{entry.kind}</Badge>
@@ -2315,14 +2316,14 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={() => recordAiProviderGovernanceSnapshot("manual", "Captured from Debug panel.")}
-                  className="rounded-md border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-emerald-500/30 hover:text-emerald-200"
+                  className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-emerald-500/30 hover:text-emerald-200}`"
                 >
                   Capture snapshot
                 </button>
                 <button
                   type="button"
                   onClick={clearAiProviderGovernanceHistory}
-                  className="rounded-md border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-rose-500/30 hover:text-rose-200"
+                  className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-rose-500/30 hover:text-rose-200}`"
                 >
                   Clear history
                 </button>
@@ -2667,14 +2668,14 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={() => recordPromptRegistrySnapshot("manual", "Captured from Debug panel.")}
-                  className="rounded-md border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-emerald-500/30 hover:text-emerald-200"
+                  className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-emerald-500/30 hover:text-emerald-200}`"
                 >
                   Capture snapshot
                 </button>
                 <button
                   type="button"
                   onClick={clearPromptRegistryHistory}
-                  className="rounded-md border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-rose-500/30 hover:text-rose-200"
+                  className="`{rounded-md border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-rose-500/30 hover:text-rose-200}`"
                 >
                   Clear history
                 </button>

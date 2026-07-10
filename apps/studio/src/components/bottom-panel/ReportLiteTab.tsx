@@ -51,6 +51,7 @@ import { buildOutcomeDrivenReportMarkdown } from "@/lib/report-outcome-markdown"
 import { truthLabelDetail } from "@/lib/truth-labels";
 import { buildPlainLanguageReport, formatPlainLanguageMarkdown } from "@/lib/report-plain-language";
 import { buildCoverageProvenance, formatProvenanceMarkdown } from "@/lib/coverage-provenance";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 type InfrastructureEstimate = {
   cameraCount: number;
@@ -569,12 +570,12 @@ export function ReportLiteTab() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center justify-between border-b border-[#1e2130] px-3 py-1.5">
+      <div className="`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-3 py-1.5}`">
         <span className="text-[10px] text-[#68738a]">
           {aiReport ? "AI Report" : "Markdown Report"}
         </span>
         <div className="flex items-center gap-1.5">
-        <div className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] p-0.5">
+        <div className="`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} bg-[#0f141f] p-0.5}`">
             <button type="button"
               onClick={() => setReportMode("single")}
               className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "single" ? "bg-[#1d2738] text-white" : "text-[#8090a8]"}`}
@@ -594,7 +595,7 @@ export function ReportLiteTab() {
               Before/After
             </button>
         </div>
-          <div className="min-w-[22rem] rounded border border-[#1e2130] bg-[#0f141f] p-2">
+          <div className="`{min-w-[22rem] rounded border ${UI_SURFACES.borderPanel} bg-[#0f141f] p-2}`">
             <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#c7d0e4]">Catalog</div>
@@ -642,7 +643,7 @@ export function ReportLiteTab() {
               })}
             </div>
             {reportCatalog.some((preset) => preset.isCustom) ? (
-              <div className="mt-2 border-t border-[#1e2130] pt-2">
+              <div className="`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-2}`">
                 <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#70809c]">Saved presets</div>
                 <div className="flex flex-wrap gap-1.5">
                   {reportCatalog.filter((preset) => preset.isCustom).map((preset) => {
@@ -683,7 +684,7 @@ export function ReportLiteTab() {
               </div>
             ) : null}
           </div>
-          <label className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
+          <label className="`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]}`">
             Template
             <select
               value={reportTemplateId}
@@ -701,7 +702,7 @@ export function ReportLiteTab() {
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
+          <label className="`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]}`">
             Audience
             <select
               value={reportAudience}
@@ -722,7 +723,7 @@ export function ReportLiteTab() {
             <option value="privacy_reviewer">Privacy reviewer</option>
           </select>
           </label>
-          <label className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
+          <label className="`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]}`">
             Visibility
             <select
               value={reportVisibility}
@@ -738,7 +739,7 @@ export function ReportLiteTab() {
               <option value="privacy_safe">Privacy safe</option>
             </select>
           </label>
-          <div className="flex flex-wrap items-center gap-2 rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
+          <div className="`{flex flex-wrap items-center gap-2 rounded border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]}`">
             <span className="font-semibold text-[#c7d0e4]">Redactions:</span>
             <label className="inline-flex items-center gap-1 cursor-pointer">
               <input
@@ -777,7 +778,7 @@ export function ReportLiteTab() {
               <span>Mask Vulnerabilities</span>
             </label>
           </div>
-          <div className="rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
+          <div className="`{rounded border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]}`">
             <div className="font-semibold uppercase tracking-[0.14em] text-[#c7d0e4]">Audience Policy</div>
             <div className="mt-0.5 text-[#6f7f9d]">
               {audienceProfile.disclosureLevel.replace(/_/g, " ")} · {audienceProfile.disclosureSummary}
@@ -788,7 +789,7 @@ export function ReportLiteTab() {
           <button type="button"
             onClick={handleGenerateAI}
             disabled={isGenerating || !result}
-            className="inline-flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:opacity-40"
+            className="`{inline-flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:opacity-40}`"
           >
             {isGenerating ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -800,7 +801,7 @@ export function ReportLiteTab() {
           <div className="flex gap-1.5">
             <button type="button"
               onClick={() => { setAiReport(null); }}
-              className="rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#68738a] transition-colors hover:text-white"
+              className="`{rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] text-[#68738a] transition-colors hover:text-white}`"
             >
               Default
             </button>
@@ -820,44 +821,44 @@ export function ReportLiteTab() {
             </button>
             <button type="button"
               onClick={handleExportMarkdown}
-              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
+              className="`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white}`"
             >
               <FileText className="h-3 w-3" /> Export Markdown
             </button>
             <button type="button"
               onClick={handleExportHtml}
-              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
+              className="`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white}`"
             >
               <Globe className="h-3 w-3" /> Export HTML
             </button>
             <button type="button"
               onClick={handleExportProvenance}
               disabled={!result}
-              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white disabled:opacity-40"
+              className="`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white disabled:opacity-40}`"
             >
               <Database className="h-3 w-3" /> Export Provenance
             </button>
             <button type="button"
               onClick={handlePrint}
-              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
+              className="`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white}`"
             >
               <Printer className="h-3 w-3" /> Print
             </button>
             <button type="button"
               onClick={copy}
-              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
+              className="`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white}`"
             >
               <Copy className="h-3 w-3" /> Copy
             </button>
             <button type="button"
               onClick={() => void writeClipboardText(installerHandoffMarkdown)}
-              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
+              className="`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white}`"
             >
               <Copy className="h-3 w-3" /> Copy Installer Handoff
             </button>
             <button type="button"
               onClick={() => void writeClipboardText(commissioningChecklistMarkdown)}
-              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
+              className="`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white}`"
             >
               <Copy className="h-3 w-3" /> Copy Commissioning
             </button>
@@ -875,14 +876,14 @@ export function ReportLiteTab() {
               void copyCompareLink();
             }}
             disabled={reportMode !== "compare" || !snapshotA || !snapshotB}
-              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white disabled:opacity-40"
+              className="`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white disabled:opacity-40}`"
             >
               <Copy className="h-3 w-3" /> Copy compare link
             </button>
           </div>
         </div>
       </div>
-      <div className="border-b border-[#1e2130] px-3 py-1.5 text-[9px] text-[#74809a]">
+      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[9px] text-[#74809a]}`">
         {reportMode === "compare" ? (
           compareSelectionProvenanceNote ? (
             <span>Compare provenance: {compareSelectionProvenanceNote}</span>
@@ -936,8 +937,8 @@ export function ReportLiteTab() {
           />
         ) : null}
         {reportSummary ? (
-          <div className="mb-3 rounded-xl border border-[#1e2130] bg-[#0b1018] p-3">
-            <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-[#1e2130] bg-[#0f141f] px-2 py-1.5 text-[9px] text-[#8b96ab]">
+          <div className="`{mb-3 rounded-xl border ${UI_SURFACES.borderPanel} bg-[#0b1018] p-3}`">
+            <div className="`{mb-2 flex items-center justify-between gap-2 rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0f141f] px-2 py-1.5 text-[9px] text-[#8b96ab]}`">
               <div className="flex items-center gap-2">
                 <span className="font-semibold uppercase tracking-[0.14em] text-[#c7d0e4]">Truth:</span>
                 <TruthBadge label="computed" />
@@ -962,7 +963,7 @@ export function ReportLiteTab() {
             </div>
             <div className="grid gap-1.5 text-[10px] text-[#b9c7df]">
               {reportSummary.map((line) => (
-                <div key={line.label} className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2">
+                <div key={line.label} className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#101521] px-2.5 py-2}`">
                   <span
                     className={`font-semibold ${
                       line.label === "Critical Issue"
@@ -982,7 +983,7 @@ export function ReportLiteTab() {
             </div>
           </div>
         ) : null}
-        <div className="mb-3 rounded-xl border border-[#1e2130] bg-[#0b1018] p-3">
+        <div className="`{mb-3 rounded-xl border ${UI_SURFACES.borderPanel} bg-[#0b1018] p-3}`">
           <div className="mb-2 flex items-center justify-between gap-2">
             <div>
               <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Truth Ladder</div>
@@ -1002,29 +1003,29 @@ export function ReportLiteTab() {
               { label: "Suspect Geometry", value: truthLadder.suspectGeometryCount },
               { label: "Invalid Geometry", value: truthLadder.invalidGeometryCount },
             ].map((item) => (
-              <div key={item.label} className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2">
+              <div key={item.label} className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#101521] px-2.5 py-2}`">
                 <span className="font-semibold text-sky-300">{item.label}:</span> {item.value}
               </div>
             ))}
           </div>
         </div>
-        <div className="mb-3 rounded-xl border border-[#1e2130] bg-[#0b1018] p-3">
+        <div className="`{mb-3 rounded-xl border ${UI_SURFACES.borderPanel} bg-[#0b1018] p-3}`">
           <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Infrastructure Estimate</div>
           <div className="grid gap-1.5 text-[10px] text-[#b9c7df] md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2"><span className="font-semibold text-sky-300">Bandwidth:</span> {infrastructureEstimate.bandwidthMbps} Mbps</div>
-            <div className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2"><span className="font-semibold text-sky-300">Storage:</span> {infrastructureEstimate.storageTb} TB / {infrastructureEstimate.retentionDays}d</div>
-            <div className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2"><span className="font-semibold text-sky-300">PoE:</span> {infrastructureEstimate.poeEstimatedW}W est / {infrastructureEstimate.poeBudgetW}W budget</div>
-            <div className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2"><span className="font-semibold text-sky-300">Cable + NVR:</span> {infrastructureEstimate.cableEstimateM}m · {infrastructureEstimate.nvrChannels}ch</div>
+            <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#101521] px-2.5 py-2}`"><span className="font-semibold text-sky-300">Bandwidth:</span> {infrastructureEstimate.bandwidthMbps} Mbps</div>
+            <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#101521] px-2.5 py-2}`"><span className="font-semibold text-sky-300">Storage:</span> {infrastructureEstimate.storageTb} TB / {infrastructureEstimate.retentionDays}d</div>
+            <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#101521] px-2.5 py-2}`"><span className="font-semibold text-sky-300">PoE:</span> {infrastructureEstimate.poeEstimatedW}W est / {infrastructureEstimate.poeBudgetW}W budget</div>
+            <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#101521] px-2.5 py-2}`"><span className="font-semibold text-sky-300">Cable + NVR:</span> {infrastructureEstimate.cableEstimateM}m · {infrastructureEstimate.nvrChannels}ch</div>
           </div>
         </div>
-        <div className="mb-3 rounded-xl border border-[#1e2130] bg-[#0b1018] p-3">
+        <div className="`{mb-3 rounded-xl border ${UI_SURFACES.borderPanel} bg-[#0b1018] p-3}`">
           <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Zone Compliance</div>
           {zoneComplianceRows.length === 0 ? (
             <div className="text-[10px] text-[#8090a8]">No critical zones available for compliance summary.</div>
           ) : (
             <div className="grid gap-1 text-[10px] text-[#b9c7df]">
               {zoneComplianceRows.map((row) => (
-                <div key={row.id} className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2">
+                <div key={row.id} className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#101521] px-2.5 py-2}`">
                   <span className={`font-semibold ${row.pass ? "text-emerald-300" : "text-rose-300"}`}>{row.label}:</span> required {row.required}, actual {row.actual} ({row.status})
                 </div>
               ))}
@@ -1032,19 +1033,19 @@ export function ReportLiteTab() {
           )}
         </div>
         {activePathId ? (
-          <div className="mb-3 rounded-lg border border-[#1e2130] bg-[#0b1018] px-3 py-2 text-[10px] text-[#8090a8]">
+          <div className="`{mb-3 rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b1018] px-3 py-2 text-[10px] text-[#8090a8]}`">
             Route evidence is tied to the selected active path.
           </div>
         ) : (
-          <div className="mb-3 rounded-lg border border-dashed border-[#1e2130] bg-[#0b1018] px-3 py-2 text-[10px] text-[#8090a8]">
+          <div className="`{mb-3 rounded-lg border border-dashed ${UI_SURFACES.borderPanel} bg-[#0b1018] px-3 py-2 text-[10px] text-[#8090a8]}`">
             Select a path in Scenario / Path to include route evidence in report summaries and exports.
           </div>
         )}
-        <div className="mb-3 rounded-lg border border-[#1e2130] bg-[#0b1018] p-3 text-[10px] text-[#b9c7df]">
+        <div className="`{mb-3 rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b1018] p-3 text-[10px] text-[#b9c7df]}`">
           Security Outcome: {outcome.summary.status.replace(/_/g, " ")} · Coverage {outcome.summary.coveragePct == null ? "n/a" : `${Math.round(outcome.summary.coveragePct)}%`} · Critical Zones {outcome.summary.criticalZonesPassing}/{outcome.summary.criticalZonesTotal} · Issues {outcome.summary.issueCount}
         </div>
         {reportMode === "compare" ? (
-          <div className="mb-3 rounded-lg border border-[#1e2130] bg-[#0b1018] p-3">
+          <div className="`{mb-3 rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0b1018] p-3}`">
             <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Compare Export Context</div>
             {compareSelectionMissing ? (
               <div className="mb-2 rounded-lg border border-dashed border-[#243048] bg-[#091018] px-3 py-2 text-[10px] text-[#8a97af]">

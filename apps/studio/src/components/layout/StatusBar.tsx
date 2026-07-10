@@ -162,7 +162,7 @@ export function StatusBar() {
     : `Workflow: ${formatWorkflowLabel(activeWorkflowId)} ${workflowStepNumber}/${workflowTotalSteps}`;
 
   return (
-    <footer className={`flex h-6 flex-shrink-0 select-none items-center gap-4 border-t border-[#1e2130] ${UI_SURFACES.panel} px-3`}>
+    <footer className={`flex h-6 flex-shrink-0 select-none items-center gap-4 border-t ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3`}>
       {/* Unsaved / stale indicator */}
       {simulationDirty ? (
         <span className="text-[10px] text-amber-400/80 flex items-center gap-1">

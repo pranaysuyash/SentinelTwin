@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { UI_TONES } from "@/lib/design-tokens";
 import { useStudioStore } from "@/store/studio-store";
 import { cloneSecurityScene, type CameraNode, type SecurityScene } from "@/schema/security-scene";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const DEMO_STEPS = [
   {
@@ -309,8 +310,8 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
   }, [restoreFailureCase]);
 
   return (
-    <div         className="pointer-events-auto absolute inset-y-0 left-0 z-40 flex w-[340px] max-w-[90vw] flex-col border-r border-[#1e2130] bg-[#0b0f17]/95 shadow-[4px_0_24px_rgba(0,0,0,0.3)]">
-      <div className="flex items-center justify-between border-b border-[#1e2130] px-3 py-2">
+    <div         className="`{pointer-events-auto absolute inset-y-0 left-0 z-40 flex w-[340px] max-w-[90vw] flex-col border-r ${UI_SURFACES.borderPanel} bg-[#0b0f17]/95 shadow-[4px_0_24px_rgba(0,0,0,0.3)]}`">
+      <div className="`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-3 py-2}`">
         <div className="flex items-center gap-2">
           <Shield className="h-3.5 w-3.5 text-emerald-400" />
           <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Judge Demo Walkthrough (4:15)</span>
@@ -430,7 +431,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
         </div>
       </div>
 
-      <div className="border-t border-[#1e2130] px-3 py-2">
+      <div className="`{border-t ${UI_SURFACES.borderPanel} px-3 py-2}`">
         <div className="mb-2 h-1 w-full overflow-hidden rounded-full bg-[#1a2333]">
           <div className="h-full rounded-full bg-emerald-400 transition-[width] duration-300" style={{ width: `${progress}%` }} />
         </div>

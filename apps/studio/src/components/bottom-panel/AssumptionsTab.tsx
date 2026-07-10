@@ -5,6 +5,7 @@ import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useStudioStore } from "@/store/studio-store";
 import type { SimulationAssumptions, DoriQuality } from "@/schema/security-scene";
 import { OODPCVS_THRESHOLDS } from "@sentineltwin/core";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const DORI_PRESETS: Record<SimulationAssumptions["doriStandard"], SimulationAssumptions["pixelsPerMeter"]> = {
   dori_2014: { detection: 25, observation: 62.5, recognition: 125, identification: 250 },
@@ -67,7 +68,7 @@ export function AssumptionsTab() {
                 className={`flex-1 py-1 text-[10px] rounded transition-colors capitalize ${
                   assumptions.timeOfDay === t
                     ? "bg-blue-600/30 border border-blue-500/40 text-blue-300"
-                    : "bg-[#0d0f17] border border-[#1e2130] text-[#59637a] hover:text-[#9da8c0]"
+                    : "bg-[#0d0f17] border ${UI_SURFACES.borderPanel} text-[#59637a] hover:text-[#9da8c0]"
                 }`}
               >
                 {t}
@@ -87,7 +88,7 @@ export function AssumptionsTab() {
                 className={`flex-1 py-1 text-[9px] rounded transition-colors capitalize ${
                   assumptions.interiorLightLevel === lvl
                     ? "bg-amber-600/30 border border-amber-500/40 text-amber-300"
-                    : "bg-[#0d0f17] border border-[#1e2130] text-[#59637a] hover:text-[#9da8c0]"
+                    : "bg-[#0d0f17] border ${UI_SURFACES.borderPanel} text-[#59637a] hover:text-[#9da8c0]"
                 }`}
               >
                 {lvl}
@@ -107,7 +108,7 @@ export function AssumptionsTab() {
                 className={`flex-1 py-1 text-[9px] rounded transition-colors ${
                   assumptions.doriStandard === std
                     ? "bg-green-600/30 border border-green-500/40 text-green-300"
-                    : "bg-[#0d0f17] border border-[#1e2130] text-[#59637a] hover:text-[#9da8c0]"
+                    : "bg-[#0d0f17] border ${UI_SURFACES.borderPanel} text-[#59637a] hover:text-[#9da8c0]"
                 }`}
               >
                 {std === "dori_2014" ? "2014 (legacy)" : "2025 (latest)"}
@@ -127,7 +128,7 @@ export function AssumptionsTab() {
               {OODPCVS_DISPLAY_THRESHOLDS.map(({ level, ppm }) => (
                 <div key={level} className="text-center">
                   <div className="text-[8px] text-[#4a5568] capitalize mb-0.5">{level}</div>
-                  <div className="text-[10px] font-mono font-semibold text-[#c0c8da] bg-[#0d0f17] border border-[#1e2130] rounded px-1 py-0.5">
+                  <div className="`{text-[10px] font-mono font-semibold text-[#c0c8da] bg-[#0d0f17] border ${UI_SURFACES.borderPanel} rounded px-1 py-0.5}`">
                     {ppm}
                   </div>
                 </div>
@@ -138,7 +139,7 @@ export function AssumptionsTab() {
               {(["detection", "observation", "recognition", "identification"] as const).map((level) => (
                 <div key={level} className="text-center">
                   <div className="text-[8px] text-[#4a5568] capitalize mb-0.5">{level}</div>
-                  <div className="text-[10px] font-mono font-semibold text-[#c0c8da] bg-[#0d0f17] border border-[#1e2130] rounded px-1 py-0.5">
+                  <div className="`{text-[10px] font-mono font-semibold text-[#c0c8da] bg-[#0d0f17] border ${UI_SURFACES.borderPanel} rounded px-1 py-0.5}`">
                     {assumptions.pixelsPerMeter[level]}
                   </div>
                 </div>
@@ -161,7 +162,7 @@ export function AssumptionsTab() {
                 className={`flex-1 py-1 text-[9px] rounded transition-colors ${
                   assumptions.nightPenaltyMode === mode
                     ? "bg-purple-600/30 border border-purple-500/40 text-purple-300"
-                    : "bg-[#0d0f17] border border-[#1e2130] text-[#59637a] hover:text-[#9da8c0]"
+                    : "bg-[#0d0f17] border ${UI_SURFACES.borderPanel} text-[#59637a] hover:text-[#9da8c0]"
                 }`}
               >
                 {mode === "none" ? "Off" : mode === "simple" ? "Basic" : "Full model"}
@@ -186,7 +187,7 @@ export function AssumptionsTab() {
                     const v = parseFloat(e.target.value);
                     if (!isNaN(v) && v > 0) update(field, v as SimulationAssumptions[typeof field]);
                   }}
-                  className="w-full bg-[#0d0f17] border border-[#1e2130] rounded px-1.5 py-0.5 text-[10px] font-mono text-[#c0c8da] focus:outline-none focus:border-blue-500/50"
+                  className="`{w-full bg-[#0d0f17] border ${UI_SURFACES.borderPanel} rounded px-1.5 py-0.5 text-[10px] font-mono text-[#c0c8da] focus:outline-none focus:border-blue-500/50}`"
                 />
               </label>
             ))}
@@ -202,7 +203,7 @@ export function AssumptionsTab() {
                     const v = parseFloat(e.target.value);
                     if (!isNaN(v) && v >= 0) update("exteriorLightLux", v);
                   }}
-                  className="w-full bg-[#0d0f17] border border-[#1e2130] rounded px-1.5 py-0.5 text-[10px] font-mono text-[#c0c8da] focus:outline-none focus:border-blue-500/50"
+                  className="`{w-full bg-[#0d0f17] border ${UI_SURFACES.borderPanel} rounded px-1.5 py-0.5 text-[10px] font-mono text-[#c0c8da] focus:outline-none focus:border-blue-500/50}`"
                 />
               </label>
             )}
@@ -218,7 +219,7 @@ export function AssumptionsTab() {
               <select
                 value={assumptions.backlightIntensity ?? "none"}
                 onChange={(e) => update("backlightIntensity", e.target.value as typeof assumptions.backlightIntensity)}
-                className="w-full rounded border border-[#1e2130] bg-[#0d0f17] px-1.5 py-0.5 text-[10px] capitalize text-[#c0c8da] outline-none focus:border-blue-500/40"
+                className="`{w-full rounded border ${UI_SURFACES.borderPanel} bg-[#0d0f17] px-1.5 py-0.5 text-[10px] capitalize text-[#c0c8da] outline-none focus:border-blue-500/40}`"
               >
                 <option value="none">None</option>
                 <option value="low">Low</option>
@@ -231,7 +232,7 @@ export function AssumptionsTab() {
               <select
                 value={assumptions.glareIntensity ?? "none"}
                 onChange={(e) => update("glareIntensity", e.target.value as typeof assumptions.glareIntensity)}
-                className="w-full rounded border border-[#1e2130] bg-[#0d0f17] px-1.5 py-0.5 text-[10px] capitalize text-[#c0c8da] outline-none focus:border-blue-500/40"
+                className="`{w-full rounded border ${UI_SURFACES.borderPanel} bg-[#0d0f17] px-1.5 py-0.5 text-[10px] capitalize text-[#c0c8da] outline-none focus:border-blue-500/40}`"
               >
                 <option value="none">None</option>
                 <option value="low">Low</option>
@@ -239,7 +240,7 @@ export function AssumptionsTab() {
                 <option value="high">High</option>
               </select>
             </label>
-            <label className="flex items-center gap-2 col-span-2 rounded border border-[#1e2130] bg-[#0d0f17] px-2 py-1.5">
+            <label className="`{flex items-center gap-2 col-span-2 rounded border ${UI_SURFACES.borderPanel} bg-[#0d0f17] px-2 py-1.5}`">
               <span className="text-[8px] text-[#4a5568]">Overexposed Zones</span>
               <input
                 type="checkbox"

@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { useStudioStore } from "@/store/studio-store";
 import { cn } from "@/lib/cn";
 import type { CommentNode } from "@/schema/security-scene";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 interface CommentInspectorProps {
   comment: CommentNode;
@@ -44,7 +45,7 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
   }, [comment.attachedToNodeId, selectNode]);
 
   return (
-    <div className="rounded-lg border border-[#1e2130] bg-[#0d0f17] p-2.5">
+    <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0d0f17] p-2.5}`">
       {/* Header */}
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
@@ -113,7 +114,7 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
           </div>
         </div>
       ) : (
-        <div className="rounded-lg border border-[#1e2130] bg-[#090d14] px-2 py-1.5">
+        <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5}`">
           <p className="text-[10px] leading-relaxed text-[#c7d0e4] whitespace-pre-wrap">
             {comment.text}
           </p>

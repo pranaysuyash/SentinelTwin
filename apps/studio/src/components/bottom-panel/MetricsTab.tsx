@@ -11,12 +11,13 @@ import { TruthBadge } from "@/components/shared/TruthBadge";
 import { truthLabelDetail } from "@/lib/truth-labels";
 import { QUALITY_COLOR } from "@/lib/quality-display";
 import { getTargetRequirementInfo } from "@/lib/target-quality-requirements";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 function MetricCard({ label, children, className = "" }: {
   label: string; children: React.ReactNode; className?: string;
 }) {
   return (
-    <div className={`flex flex-col items-center justify-between px-3 py-2.5 border-r border-[#1e2130] min-w-0 ${className}`}>
+    <div className={`flex flex-col items-center justify-between px-3 py-2.5 border-r ${UI_SURFACES.borderPanel} min-w-0 ${className}`}>
       <div className="text-[9px] text-[#4a5568] font-medium tracking-wide uppercase mb-2 text-center w-full">
         {label}
       </div>
@@ -273,7 +274,7 @@ export function MetricsTab() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[#1e2130] px-3 py-2 text-[9px] text-[#8090a8] shrink-0">
+      <div className="`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-3 py-2 text-[9px] text-[#8090a8] shrink-0}`">
         <div className="flex items-center gap-2">
           <span className="font-semibold uppercase tracking-[0.14em] text-[#c7d0e4]">Truth:</span>
           <TruthBadge label="simulated" />
@@ -287,7 +288,7 @@ export function MetricsTab() {
       </div>
 
       {/* ── Main metric cards: 6-column grid ── */}
-      <div className="grid shrink-0 gap-2 border-b border-[#1e2130] py-2" style={{gridTemplateColumns: "repeat(6, minmax(0, 1fr))"}}>
+      <div className="`{grid shrink-0 gap-2 border-b ${UI_SURFACES.borderPanel} py-2}`" style={{gridTemplateColumns: "repeat(6, minmax(0, 1fr))"}}>
 
         {/* 1: Overall Coverage */}
         <MetricCard label="Overall Coverage (Detection)">
@@ -383,7 +384,7 @@ export function MetricsTab() {
             </div>
             <div className="text-[9px] text-[#68738a] mt-1">{blockageLabel}</div>
             {fragilityPct !== null ? (
-              <div className="mt-2 border-t border-[#1e2130] pt-1.5">
+              <div className="`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-1.5}`">
                 <div className="text-[8px] uppercase tracking-[0.14em] text-[#4a5568]">Fragility</div>
                 <div className="text-[13px] font-semibold leading-none" style={{ color: fragilityColor }}>
                   {fragilityPct}% <span className="text-[9px] font-normal" style={{ color: fragilityColor }}>

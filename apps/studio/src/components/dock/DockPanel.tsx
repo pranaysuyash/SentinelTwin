@@ -57,7 +57,7 @@ export function DockPanel({
     return (
       <aside
         className={cn(
-          `group relative flex flex-shrink-0 items-center justify-center border-[#1e2130] ${UI_SURFACES.panel} transition-colors ${UI_SURFACES.hoverBg}`,
+          `group relative flex flex-shrink-0 items-center justify-center ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} transition-colors ${UI_SURFACES.hoverBg}`,
           isBottom ? "flex-row border-t" : "flex-col border-r",
           side === "right" && "border-l border-r-0",
           className,
@@ -101,7 +101,7 @@ export function DockPanel({
   return (
     <aside
       className={cn(
-        `relative flex flex-shrink-0 overflow-hidden border-[#1e2130] ${UI_SURFACES.panel}`,
+        `relative flex flex-shrink-0 overflow-hidden ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel}`,
         isBottom ? "flex-col border-t" : "flex-col",
         className,
       )}

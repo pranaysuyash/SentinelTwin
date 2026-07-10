@@ -73,7 +73,7 @@ export function ContextRightPanel() {
 
   return (
     <div className={`relative z-[120] flex h-full min-w-0 min-h-0 flex-col overflow-visible ${UI_SURFACES.panel}`}>
-      <div className={`flex items-center gap-2 border-b border-[#1e2130] ${UI_SURFACES.panel} px-2.5 py-1`}>
+      <div className={`flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-2.5 py-1`}>
         <div className="flex h-5 w-5 items-center justify-center rounded-md border border-blue-500/20 bg-blue-500/12">
           <MonitorSmartphone className="h-3 w-3 text-blue-400" />
         </div>
@@ -90,7 +90,7 @@ export function ContextRightPanel() {
           </span>
         </div>
       </div>
-      <div className={`flex min-w-0 items-center gap-1 overflow-x-auto border-b border-[#1e2130] px-2 py-1`}>
+      <div className={`flex min-w-0 items-center gap-1 overflow-x-auto border-b ${UI_SURFACES.borderPanel} px-2 py-1`}>
         {([
           ["inspector", "Inspector"],
           ["security_status", "Security Status"],

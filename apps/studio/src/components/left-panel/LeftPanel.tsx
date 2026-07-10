@@ -129,8 +129,8 @@ export function LeftPanel() {
   };
 
   return (
-    <aside className={`flex h-full min-w-0 flex-1 flex-col overflow-hidden border-r border-[#1e2130] ${UI_SURFACES.panel}`}>
-      <div className={`flex shrink-0 items-center gap-2 border-b border-[#1e2130] ${UI_SURFACES.panel} px-2.5 py-1`}>
+    <aside className={`flex h-full min-w-0 flex-1 flex-col overflow-hidden border-r ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel}`}>
+      <div className={`flex shrink-0 items-center gap-2 border-b ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-2.5 py-1`}>
         <div className="flex h-5 w-5 items-center justify-center rounded-md border border-sky-500/20 bg-sky-500/12">
           <Layers className="h-3 w-3 text-sky-400" />
         </div>

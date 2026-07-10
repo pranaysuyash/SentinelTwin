@@ -33,3 +33,8 @@ export { createTelemetrySlice } from "./enterprise/telemetry-slice";
 // is cross-cutting (consumed by both product routing and capability gates).
 export type { JobLensSlice } from "./job-lens-slice";
 export { createJobLensSlice, selectActiveJob } from "./job-lens-slice";
+
+// Product lifecycle — derived state for scene lifecycle ordering.
+// Not a slice: computed from scene + simulation + governance via selector.
+export type { ProductLifecycleState, ProductLifecycleStage } from "@/lib/product-lifecycle";
+export { deriveProductLifecycleState, stageLabel, isStageReachable, getPreviousStage, getNextStage, getLifecycleStages } from "@/lib/product-lifecycle";

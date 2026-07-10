@@ -15,6 +15,9 @@ import { ReferenceSitesView } from "./ReferenceSitesView";
 import { SettingsView } from "./SettingsView";
 import { MobileEditGate } from "@/components/shared/MobileEditGate";
 import { MOBILE_EDIT_MEDIA_QUERY } from "@/lib/viewport-tiers";
+import { useProductLifecycle } from "@/lib/use-product-lifecycle";
+import { isStageReachable, stageLabel } from "@/lib/product-lifecycle";
+import type { ProductLifecycleStage } from "@/lib/product-lifecycle";
 import type { SiteIntakeSource, SiteIntakeSession } from "@/lib/site-compiler";
 import type { SecurityScene } from "@/schema/security-scene";
 
@@ -33,6 +36,25 @@ const CREATION_PRODUCT_VIEWS = new Set<ProductView>([
   "ai_layout_draft",
   "site_draft_review",
 ]);
+
+/**
+ * Maps ProductView to the minimum lifecycle stage required to access it.
+ * Views not in this map have no lifecycle gate (e.g. settings, reference_sites).
+ * This enforces the canonical lifecycle: intake → draft → approved → simulated → reported.
+ *
+ * @see ~/lib/product-lifecycle.ts
+ */
+const LIFECYCLE_GATE: Partial<Record<ProductView, ProductLifecycleStage>> = {
+  // Studio views require at least a draft (scene has content).
+  studio: "draft",
+  camera_operations: "draft",
+  incident_review: "simulated",
+  counterfactual_compare: "simulated",
+  // Audit report requires at least simulated (report needs simulation data).
+  audit_report: "simulated",
+  // Floor plan import requires at least intake (you need a scene to import into).
+  floor_plan_import: "intake",
+};
 
 /**
  * All the orchestration handlers that page.tsx provides.
@@ -136,6 +158,10 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
     return () => media.removeEventListener("change", syncCompactViewport);
   }, [setCompactViewport]);
 
+  // Product lifecycle — derived state for ordering enforcement.
+  // Prevents jumping to later stages without passing through earlier ones.
+  const lifecycle = useProductLifecycle();
+
   // First-time user routing: if the user has no workspace and no cameras in the
   // active scene, send them to the Site Intake Hub (the canonical first
   // full-product entry screen per the design pack) instead of an empty dashboard.
@@ -177,6 +203,35 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
     const label = formatClock(currentResult?.computedAt);
     return label ? `Last run ${label}` : null;
   })();
+
+  // Lifecycle gate — enforce canonical lifecycle ordering.
+  // If the current view requires a lifecycle stage that hasn't been reached
+  // yet, redirect to the appropriate earlier stage.
+  const requiredStage = LIFECYCLE_GATE[productView];
+  if (requiredStage && !isStageReachable(lifecycle.stage, requiredStage)) {
+    // Determine the best redirect target based on current lifecycle stage.
+    const redirectView: ProductView = lifecycle.stage === "intake"
+      ? "site_intake"
+      : "product_home";
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-4" style={{ background: "var(--bg)" }}>
+        <div className="text-center">
+          <div className="text-sm font-medium text-white">Lifecycle Stage: {lifecycle.label}</div>
+          <div className="mt-1 text-xs text-[color:var(--text-muted)]">{lifecycle.reason}</div>
+          <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+            This view requires at least a <span className="font-medium text-white">{stageLabel(requiredStage)}</span> stage.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate(redirectView)}
+          className="rounded-lg border border-white/10 px-4 py-2 text-sm text-[color:var(--text-muted)] hover:text-white"
+        >
+          {lifecycle.stage === "intake" ? "Start Site Intake" : "Return to Product Home"}
+        </button>
+      </div>
+    );
+  }
 
   // Mobile edit gate — creation/import/review flows require a tablet-or-larger
   // screen. Viewing-only surfaces (product_home, studio's viewing ViewModes,

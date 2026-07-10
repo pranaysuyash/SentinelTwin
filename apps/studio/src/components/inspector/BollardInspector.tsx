@@ -12,6 +12,7 @@ import type { BollardLine } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 export function BollardInspector() {
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const scene = useStudioStore((s) => s.scene);
@@ -25,9 +26,9 @@ export function BollardInspector() {
 
   return (
     <>
-      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <div className="text-[12px] font-semibold text-white">{bollard.label}</div>
-        <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Bollard Line · {lengthM.toFixed(2)}m</div>
+        <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Bollard Line · {lengthM.toFixed(2)}m</div>
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">

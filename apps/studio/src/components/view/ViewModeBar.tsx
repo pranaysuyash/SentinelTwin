@@ -10,6 +10,7 @@ import { VIEW_MODE_PRESETS } from "@/lib/studio-constants";
 import type { ViewMode } from "@/store/studio-store";
 import { useStudioStore } from "@/store/studio-store";
 
+
 type ViewTabOption = {
   mode: ViewMode;
   label: string;
@@ -56,7 +57,7 @@ function ContextChip() {
     const cam = scene.cameras.find((c) => c.id === selectedCameraId) ?? scene.cameras.find((c) => c.id === selectedId) ?? null;
     if (!cam) return null;
     return (
-      <div className={`flex max-w-[min(220px,35vw)] items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} bg-[#111827] px-2 py-1 text-[10px]`}>
+      <div className={`flex max-w-[min(220px,35vw)] items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.cardAlt} px-2 py-1 text-[10px]`}>
         <span className={`h-1.5 w-1.5 rounded-full ${cam.status === "on" ? "bg-emerald-400" : "bg-red-400"}`} />
         <span className="min-w-0 truncate font-medium" style={{ color: MAP_COLORS.viewport }}>{cam.name}</span>
       </div>
@@ -66,7 +67,7 @@ function ContextChip() {
   if (viewMode === "replay") {
     const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
     return (
-      <div className={`flex max-w-[min(220px,35vw)] items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} bg-[#111827] px-2 py-1 text-[10px]`}>
+      <div className={`flex max-w-[min(220px,35vw)] items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.cardAlt} px-2 py-1 text-[10px]`}>
         <Play className="h-2.5 w-2.5 text-emerald-400" />
         <span className="min-w-0 truncate font-medium" style={{ color: MAP_COLORS.viewport }}>
           {activePath ? activePath.label : "No path selected"}
@@ -79,7 +80,7 @@ function ContextChip() {
     const activeCount = scene.cameras.filter((camera) => camera.status === "on").length;
     const selectedCamera = scene.cameras.find((c) => c.id === selectedCameraId) ?? scene.cameras.find((c) => c.id === selectedId) ?? null;
     return (
-      <div className={`flex max-w-[min(240px,36vw)] items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} bg-[#111827] px-2 py-1 text-[10px]`}>
+      <div className={`flex max-w-[min(240px,36vw)] items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.cardAlt} px-2 py-1 text-[10px]`}>
         <span className="font-mono font-bold" style={{ color: MAP_COLORS.viewport }}>{activeCount}/{scene.cameras.length || 0}</span>
         <span className={`${UI_SURFACES.textMuted}`}>feeds</span>
         {selectedCamera ? (
@@ -98,7 +99,7 @@ function ContextChip() {
     const pct = Math.round(result.totalCoveragePct);
     const color = pct > 80 ? "text-emerald-400" : pct > 60 ? "text-yellow-400" : "text-red-400";
     return (
-      <div className={`flex items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} bg-[#111827] px-2 py-1 text-[10px]`}>
+      <div className={`flex items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.cardAlt} px-2 py-1 text-[10px]`}>
         <span className={`font-mono font-bold ${color}`}>{pct}%</span>
         <span className={`${UI_SURFACES.textMuted}`}>coverage</span>
         <span className={`${UI_SURFACES.textMuted}`}>·</span>
@@ -109,7 +110,7 @@ function ContextChip() {
 
   if (viewMode === "compare") {
     return (
-      <div className={`flex items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} bg-[#111827] px-2 py-1 text-[10px]`}>
+      <div className={`flex items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.cardAlt} px-2 py-1 text-[10px]`}>
         <GitCompare className="h-2.5 w-2.5 text-sky-300" />
         <span className="font-medium" style={{ color: MAP_COLORS.viewport }}>Before / after review</span>
         {result ? (
@@ -125,7 +126,7 @@ function ContextChip() {
 
   if (viewMode === "report") {
     return (
-      <div className={`flex items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} bg-[#111827] px-2 py-1 text-[10px]`}>
+      <div className={`flex items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.cardAlt} px-2 py-1 text-[10px]`}>
         <FileText className="h-2.5 w-2.5 text-sky-300" />
         <span className="font-medium" style={{ color: MAP_COLORS.viewport }}>Evidence handoff</span>
         {result ? (
@@ -141,7 +142,7 @@ function ContextChip() {
 
   if (viewMode === "analytics") {
     return (
-      <div className={`flex items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} bg-[#111827] px-2 py-1 text-[10px]`}>
+      <div className={`flex items-center gap-1 rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.cardAlt} px-2 py-1 text-[10px]`}>
         <BarChart3 className="h-2.5 w-2.5 text-sky-300" />
         <span className="font-medium" style={{ color: MAP_COLORS.viewport }}>Operational trends</span>
         {result ? (

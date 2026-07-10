@@ -27,6 +27,7 @@ import ShortcutsModal from "./ShortcutsModal";
 import FirstRunGuide, { hasDismissedFirstRunGuide } from "./FirstRunGuide";
 import { STUDIO_SHORTCUT_EVENTS } from "@/lib/studio-shortcuts";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 const FULL_CANVAS_SAFE_ZONE_STYLE = {
   "--st-view-mode-bar-top": "0.75rem",
   "--st-view-mode-bar-height": "2.75rem",
@@ -206,7 +207,7 @@ export default function StudioShell() {
 
   return (
     <MotionConfig reducedMotion="user">
-    <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">
+    <div className={`h-screen flex flex-col overflow-hidden bg-[#0b0c10] ${UI_SURFACES.textBody3}`}>
       <TopBar />
       <AutosaveRecoveryBanner />
       {studioBypassMode ? (

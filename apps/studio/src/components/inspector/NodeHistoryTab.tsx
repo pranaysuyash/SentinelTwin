@@ -6,6 +6,7 @@ import { Badge } from "@/components/shared/Badge";
 import { reconstructSceneFromEvidence } from "@/lib/operational-evidence";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 export function NodeHistoryTab({ nodeId }: { nodeId: string }) {
   const { operationalEvidenceEvents, setScene } = useStudioStore();
 
@@ -17,7 +18,7 @@ export function NodeHistoryTab({ nodeId }: { nodeId: string }) {
 
   if (nodeEvents.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center p-4 text-center text-[11px] text-[#6a748b]">
+      <div className={`flex h-full items-center justify-center p-4 text-center text-[11px] ${UI_SURFACES.textSoftMid}`}>
         No history available for this node.
       </div>
     );
@@ -49,11 +50,11 @@ export function NodeHistoryTab({ nodeId }: { nodeId: string }) {
             <Badge variant="blue">{event.kind}</Badge>
           </div>
           
-          <div className="text-[11px] text-[#c7d0e4] mb-3">
+          <div className={`text-[11px] ${UI_SURFACES.textBody} mb-3`}>
             {event.details}
           </div>
 
-          <div className="`{flex justify-end border-t ${UI_SURFACES.borderPanel} pt-2 mt-2}`">
+          <div className={`{flex justify-end border-t ${UI_SURFACES.borderPanel} pt-2 mt-2}`}>
              <button
                 type="button"
                 onClick={() => handleRestore(event.id, event.title)}

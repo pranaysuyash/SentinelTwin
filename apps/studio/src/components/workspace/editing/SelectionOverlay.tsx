@@ -3,6 +3,7 @@ import { SceneHtml } from "@/components/shared/SceneHtml";
 
 import type { Point2 } from "./editor-geometry";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 export function SelectionOverlay({ center, label, showSnap = false }: {
   center?: Point2;
   label?: string;
@@ -18,7 +19,7 @@ export function SelectionOverlay({ center, label, showSnap = false }: {
       </mesh>
       {label ? (
         <SceneHtml position={[center[0], 0.09, center[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-          <div className="rounded-md border border-[#2b3a58] bg-[#0b0f17]/90 px-2 py-0.5 text-[8px] font-semibold text-[#d2d9e8] shadow-[0_8px_20px_rgba(0,0,0,0.22)]">
+          <div className={`rounded-md border border-[#2b3a58] ${UI_SURFACES.panel}/90 px-2 py-0.5 text-[8px] font-semibold ${UI_SURFACES.textBody2} shadow-[0_8px_20px_rgba(0,0,0,0.22)]`}>
             {label}
           </div>
         </SceneHtml>

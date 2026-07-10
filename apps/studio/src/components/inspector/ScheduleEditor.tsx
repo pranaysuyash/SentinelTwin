@@ -9,6 +9,7 @@ import { EventConfigPanel } from "@/components/inspector/EventConfigPanel";
 import type { OccupancyPeriod, PatrolSchedule, TimeSchedule } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 const OCCUPANCY_OPTIONS: Array<{ value: OccupancyPeriod["level"]; label: string; color: string }> = [
   { value: "empty",  label: "Empty",  color: "#4a5568" },
   { value: "low",    label: "Low",    color: "#60a5fa" },
@@ -27,11 +28,11 @@ function HourSelect({
 }) {
   return (
     <label className="flex flex-col gap-0.5">
-      <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">{label}</span>
+      <span className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="rounded border border-[#1f2536] bg-[#111521] px-2 py-1 font-mono text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+        className={`rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 font-mono text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
       >
         {Array.from({ length: 25 }, (_, h) => (
           <option key={h} value={h}>{h === 24 ? "24:00" : `${h.toString().padStart(2, "0")}:00`}</option>
@@ -60,7 +61,7 @@ function NumberField({
 }) {
   return (
     <label className="flex flex-col gap-0.5">
-      <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">{label}</span>
+      <span className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>{label}</span>
       <div className="flex items-center gap-1">
         <input
           type="number"
@@ -69,9 +70,9 @@ function NumberField({
           max={max}
           step={step ?? 1}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="w-full rounded border border-[#1f2536] bg-[#111521] px-2 py-1 font-mono text-right text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+          className={`w-full rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 font-mono text-right text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
         />
-        {unit && <span className="text-[8px] text-[#556076]">{unit}</span>}
+        {unit && <span className={`text-[8px] ${UI_SURFACES.textDimMid}`}>{unit}</span>}
       </div>
     </label>
   );
@@ -94,7 +95,7 @@ function CoordField({
 }) {
   return (
     <label className="flex flex-col gap-0.5">
-      <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">{label}</span>
+      <span className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>{label}</span>
       <input
         type="number"
         value={value}
@@ -103,7 +104,7 @@ function CoordField({
         step={step}
         placeholder="—"
         onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
-        className="rounded border border-[#1f2536] bg-[#111521] px-2 py-1 font-mono text-right text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+        className={`rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 font-mono text-right text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
       />
     </label>
   );
@@ -209,7 +210,7 @@ export function ScheduleEditor() {
           <HourSelect label="On from" value={intStart} onChange={(v) => setInteriorHours(v, intEnd)} />
           <HourSelect label="Off at"  value={intEnd}   onChange={(v) => setInteriorHours(intStart, v)} />
         </div>
-        <p className="mt-1 text-[8px] text-[#4a5568]">
+        <p className={`mt-1 text-[8px] ${UI_SURFACES.textMuted}`}>
           Lights on {intStart}:00–{intEnd}:00. Affects camera IR quality outside these hours.
         </p>
       </SectionCard>
@@ -225,7 +226,7 @@ export function ScheduleEditor() {
           <HourSelect label="On from (dusk)" value={extStart} onChange={(v) => setExteriorHours(v, extEnd)} />
           <HourSelect label="Off at (dawn)"  value={extEnd}   onChange={(v) => setExteriorHours(extStart, v)} />
         </div>
-        <p className="mt-1 text-[8px] text-[#4a5568]">
+        <p className={`mt-1 text-[8px] ${UI_SURFACES.textMuted}`}>
           Exterior lights on {extStart}:00–{extEnd === 0 ? "24:00 / 0:00" : `${extEnd}:00`}. Add site location below for seasonal sunrise/sunset.
         </p>
       </SectionCard>
@@ -237,17 +238,17 @@ export function ScheduleEditor() {
             {occupancy.map((op, i) => {
               const col = OCCUPANCY_OPTIONS.find((o) => o.value === op.level);
               return (
-                <div key={i} className="flex items-center justify-between rounded border border-[#1f2536] bg-[#111521] px-2 py-1">
+                <div key={i} className={`flex items-center justify-between rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1`}>
                   <div className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: col?.color }} />
-                    <span className="font-mono text-[9px] text-[#d2d9e8]">
+                    <span className={`font-mono text-[9px] ${UI_SURFACES.textBody2}`}>
                       {op.timeRange.startHour}:00–{op.timeRange.endHour}:00
                     </span>
                     <span className="text-[8px] uppercase tracking-wide" style={{ color: col?.color }}>
                       {op.level}
                     </span>
                   </div>
-                  <button type="button" onClick={() => removeOccupancyPeriod(i)} className="text-[#4a5568] hover:text-red-400">
+                  <button type="button" onClick={() => removeOccupancyPeriod(i)} className={`${UI_SURFACES.textMuted} hover:text-red-400`}>
                     <Trash2 className="h-2.5 w-2.5" />
                   </button>
                 </div>
@@ -259,11 +260,11 @@ export function ScheduleEditor() {
           <HourSelect label="Start" value={newOccStart} onChange={setNewOccStart} />
           <HourSelect label="End"   value={newOccEnd}   onChange={setNewOccEnd} />
           <label className="flex flex-col gap-0.5">
-            <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Level</span>
+            <span className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Level</span>
             <select
               value={newOccLevel}
               onChange={(e) => setNewOccLevel(e.target.value as OccupancyPeriod["level"])}
-              className="rounded border border-[#1f2536] bg-[#111521] px-2 py-1 text-[10px] text-[#d2d9e8] outline-none"
+              className={`rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[10px] ${UI_SURFACES.textBody2} outline-none`}
             >
               {OCCUPANCY_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -274,7 +275,7 @@ export function ScheduleEditor() {
         <button
           type="button"
           onClick={addOccupancyPeriod}
-          className="mt-2 w-full rounded border border-[#1f2536] bg-[#111521] py-1 text-[9px] text-[#8090a8] hover:border-[#2a3246] hover:text-[#c7d0e4]"
+          className={`mt-2 w-full rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} py-1 text-[9px] ${UI_SURFACES.textMuted5} hover:${UI_SURFACES.borderDark} hover:${UI_SURFACES.textBody}`}
         >
           + Add Period
         </button>
@@ -285,13 +286,13 @@ export function ScheduleEditor() {
         {patrols.length > 0 && (
           <div className="mb-2 space-y-1">
             {patrols.map((p, i) => (
-              <div key={i} className="flex items-center justify-between rounded border border-[#1f2536] bg-[#111521] px-2 py-1">
-                <div className="text-[9px] text-[#d2d9e8]">
+              <div key={i} className={`flex items-center justify-between rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1`}>
+                <div className={`text-[9px] ${UI_SURFACES.textBody2}`}>
                   <span className="font-mono">First at {p.firstPatrolHour}:00</span>
-                  <span className="ml-2 text-[#556076]">every {p.intervalMinutes}min</span>
-                  <span className="ml-2 text-[#556076]">({p.durationMinutes}min each)</span>
+                  <span className={`ml-2 ${UI_SURFACES.textDimMid}`}>every {p.intervalMinutes}min</span>
+                  <span className={`ml-2 ${UI_SURFACES.textDimMid}`}>({p.durationMinutes}min each)</span>
                 </div>
-                <button type="button" onClick={() => removePatrol(i)} className="text-[#4a5568] hover:text-red-400">
+                <button type="button" onClick={() => removePatrol(i)} className={`${UI_SURFACES.textMuted} hover:text-red-400`}>
                   <Trash2 className="h-2.5 w-2.5" />
                 </button>
               </div>
@@ -306,11 +307,11 @@ export function ScheduleEditor() {
         <button
           type="button"
           onClick={addPatrol}
-          className="mt-2 w-full rounded border border-[#1f2536] bg-[#111521] py-1 text-[9px] text-[#8090a8] hover:border-[#2a3246] hover:text-[#c7d0e4]"
+          className={`mt-2 w-full rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} py-1 text-[9px] ${UI_SURFACES.textMuted5} hover:${UI_SURFACES.borderDark} hover:${UI_SURFACES.textBody}`}
         >
           + Add Guard Round
         </button>
-        <p className="mt-1 text-[8px] text-[#4a5568]">
+        <p className={`mt-1 text-[8px] ${UI_SURFACES.textMuted}`}>
           Guard patrols reduce adversarial path exposure during active rounds.
         </p>
       </SectionCard>
@@ -322,13 +323,13 @@ export function ScheduleEditor() {
           <CoordField label="Longitude" value={lngVal}  min={-180} max={180} step={0.001} onChange={setLngVal} />
         </div>
         <label className="mt-2 flex flex-col gap-0.5">
-          <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Timezone</span>
+          <span className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Timezone</span>
           <input
             type="text"
             value={tzVal}
             onChange={(e) => setTzVal(e.target.value)}
             placeholder="America/New_York"
-            className="rounded border border-[#1f2536] bg-[#111521] px-2 py-1 font-mono text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+            className={`rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 font-mono text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
           />
         </label>
         <div className="mt-2 flex gap-2">
@@ -336,7 +337,7 @@ export function ScheduleEditor() {
             type="button"
             onClick={applyLocation}
             disabled={latVal === "" || lngVal === ""}
-            className="flex-1 rounded border border-[#2a3246] bg-[#111521] py-1 text-[9px] text-[#8090a8] hover:border-[#3a4560] hover:text-[#c7d0e4] disabled:opacity-40"
+            className={`flex-1 rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} py-1 text-[9px] ${UI_SURFACES.textMuted5} hover:border-[#3a4560] hover:${UI_SURFACES.textBody} disabled:opacity-40`}
           >
             Apply
           </button>
@@ -350,7 +351,7 @@ export function ScheduleEditor() {
             </button>
           )}
         </div>
-        <p className="mt-1 text-[8px] text-[#4a5568]">
+        <p className={`mt-1 text-[8px] ${UI_SURFACES.textMuted}`}>
           Enables real sunrise/sunset times for accurate exterior lighting simulation.
         </p>
       </SectionCard>
@@ -364,7 +365,7 @@ export function ScheduleEditor() {
       <EventConfigPanel />
 
       {/* ── Clock icon hint ── */}
-      <div className="flex items-center gap-1 text-[8px] text-[#3a4158]">
+      <div className={`flex items-center gap-1 text-[8px] ${UI_SURFACES.textDim}`}>
         <Clock className="h-2.5 w-2.5" />
         <span>Changes apply on next "Compute 24h Profile" run.</span>
       </div>

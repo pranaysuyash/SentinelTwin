@@ -5,6 +5,7 @@ import { CircleCheck, CircleX, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { InstallabilityResult } from "@/lib/installability-validator";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 // ── Props ────────────────────────────────────────────────────────────────────
 
 interface InstallabilityBadgeProps {
@@ -53,7 +54,7 @@ export function InstallabilityBadge({ result, className }: InstallabilityBadgePr
       </span>
 
       {/* Tooltip */}
-      <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-xl border border-[#1f2536] bg-[#0d111c] px-3 py-2.5 text-[10px] leading-relaxed opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+      <div className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0d111c] px-3 py-2.5 text-[10px] leading-relaxed opacity-0 shadow-lg transition-opacity group-hover:opacity-100`}>
         {/* Status line */}
         <div className="mb-1.5 flex items-center gap-1.5">
           {icon}
@@ -78,7 +79,7 @@ export function InstallabilityBadge({ result, className }: InstallabilityBadgePr
               ) : (
                 <CircleX className="h-2.5 w-2.5 text-red-400" />
               )}
-              <span className={cn("text-[9px]", result[key] ? "text-[#8a9bb5]" : "text-[#c7d0e4]")}>
+              <span className={cn("text-[9px]", result[key] ? "text-[#8a9bb5]" : "${UI_SURFACES.textBody}")}>
                 {checkLabel}
               </span>
             </div>
@@ -120,7 +121,7 @@ export function InstallabilityBadge({ result, className }: InstallabilityBadgePr
         )}
 
         {/* Arrow */}
-        <div className="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-b border-r border-[#1f2536] bg-[#0d111c]" />
+        <div className={`absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-b border-r ${UI_SURFACES.borderSubtle} bg-[#0d111c]`} />
       </div>
     </div>
   );

@@ -133,6 +133,6 @@ describe("InspectorPanel", () => {
   test("uses a full-width dock shell so the right panel can expand with context", () => {
     const source = readFileSync(inspectorPath, "utf8");
 
-    expect(source).toContain("flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-[#1e2130] bg-[#0d1017]");
+    expect(source).toContain("flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l ${UI_SURFACES.borderPanel} bg-[#0d1017]");
   });
 });

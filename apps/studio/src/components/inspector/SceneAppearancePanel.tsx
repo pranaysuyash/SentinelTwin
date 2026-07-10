@@ -24,6 +24,7 @@ import type {
 import { useStudioStore } from "@/store/studio-store";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 const ENV_MODE_LABEL: Record<string, string> = {
   day: "Day",
   dusk: "Dusk",
@@ -69,7 +70,7 @@ export function SceneAppearancePanel() {
 
   return (
     <>
-      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/12">
@@ -77,14 +78,14 @@ export function SceneAppearancePanel() {
             </div>
             <div>
               <div className="text-[12px] font-semibold text-white">Scene Appearance</div>
-              <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">
+              <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
                 Lighting · Materials · Environment
               </div>
             </div>
           </div>
           <Badge variant="gray">Visual only</Badge>
         </div>
-        <div className="mt-2 text-[9px] leading-relaxed text-[#556076]">
+        <div className={`mt-2 text-[9px] leading-relaxed ${UI_SURFACES.textDimMid}`}>
           Customizes how the scene renders. Coverage simulation is never affected.
           Select an object in the canvas to edit its own finish instead.
         </div>
@@ -98,7 +99,7 @@ export function SceneAppearancePanel() {
               <button
                 type="button"
                 onClick={() => updateSceneAppearance({ lighting: { [envMode]: undefined } })}
-                className="rounded px-1.5 py-0.5 text-[9px] text-[#556076] transition-colors hover:text-[#a8b4cc]"
+                className={`rounded px-1.5 py-0.5 text-[9px] ${UI_SURFACES.textDimMid} transition-colors hover:text-[#a8b4cc]`}
                 title={`Reset ${ENV_MODE_LABEL[envMode] ?? envMode} lighting to defaults`}
               >
                 Reset
@@ -274,7 +275,7 @@ export function SceneAppearancePanel() {
                 surfaces: undefined,
               })
             }
-            className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-[#24304a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#3b4a69] hover:bg-[#172235]"
+            className={`flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-[#24304a] ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#3b4a69] hover:bg-[#172235]`}
           >
             Reset All Appearance Customization
           </button>

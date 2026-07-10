@@ -1,5 +1,7 @@
 "use client";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+
 export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
   const shortcuts = [
     { keys: "⌘ + N", action: "New Scene" },
@@ -37,24 +39,24 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="w-[420px] rounded-xl border border-[#1f2536] bg-[#0d1017] p-4 shadow-2xl"
+        className={`w-[420px] rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0d1017] p-4 shadow-2xl`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 text-[11px] font-semibold text-white">Keyboard Shortcuts</div>
-        <div className="mb-3 rounded-lg border border-[#222a3e] bg-[#0b0f17] px-3 py-2 text-[9px] leading-relaxed text-[#7d8aa4]">
+        <div className={`mb-3 rounded-lg border border-[#222a3e] ${UI_SURFACES.panel} px-3 py-2 text-[9px] leading-relaxed text-[#7d8aa4]`}>
           Selected cameras also expose drag handles on the canvas and the same actions in the right-click menu.
         </div>
         <div className="space-y-2">
           {shortcuts.map(({ keys, action }) => (
             <div key={keys} className="flex items-center justify-between">
-              <span className="text-[10px] text-[#8090a8]">{action}</span>
-              <kbd className="rounded border border-[#24283a] bg-[#111521] px-2 py-0.5 font-mono text-[10px] text-[#c7d0e4]">
+              <span className={`text-[10px] ${UI_SURFACES.textMuted5}`}>{action}</span>
+              <kbd className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-0.5 font-mono text-[10px] ${UI_SURFACES.textBody}`}>
                 {keys}
               </kbd>
             </div>
           ))}
         </div>
-        <p className="mt-3 text-[9px] text-[#4a5568]">Press <kbd className="rounded border border-[#24283a] bg-[#111521] px-1 font-mono text-[9px]">?</kbd> or click anywhere to close.</p>
+        <p className={`mt-3 text-[9px] ${UI_SURFACES.textMuted}`}>Press <kbd className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1 font-mono text-[9px]`}>?</kbd> or click anywhere to close.</p>
       </div>
     </div>
   );

@@ -38,6 +38,7 @@ import {
   computeWallTileDpr,
 } from "@/lib/adaptive-dpr-budget";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
+
 import {
   clampPathDuration,
   clampReplayProgress,
@@ -435,7 +436,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
   return (
     <div
       className={cn(
-        "relative h-full overflow-hidden rounded-lg border bg-[#07090d] transition-all duration-200",
+        "relative h-full overflow-hidden rounded-lg border ${UI_SURFACES.page} transition-all duration-200",
         isSelected
           ? `border-2 ${UI_TONES.info.border} shadow-[0_0_20px_rgba(56,189,248,0.25)] ring-1 ring-[#38bdf8]/40`
           : isBestCamera
@@ -897,7 +898,7 @@ export function CameraWallView() {
             <CameraGhost />
           </div>
           <p className={`mt-3 text-[11px] font-medium ${CAMERA_WALL_SURFACES.muted}`}>No cameras in scene</p>
-          <p className="mt-1 text-[9px] text-[#3a4158]">
+          <p className={`mt-1 text-[9px] ${UI_SURFACES.textDim}`}>
             Place cameras on the map to see live POV feeds
           </p>
         </div>
@@ -965,7 +966,7 @@ export function CameraWallView() {
               <span className="rounded-md border border-sky-500/15 bg-sky-500/8 px-2 py-0.5 text-sky-300" title="Telemetry from /api/camera-live-session-health">
                 Bridge Health: {sessionHealth?.totals?.active ?? activeCount} Active · {sessionHealth?.totals?.expired ?? offlineCount} Expired
               </span>
-              <span className={`rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5 ${CAMERA_WALL_SURFACES.body}`}>
+              <span className={`rounded-md border ${UI_SURFACES.borderStrong} bg-black/30 px-2 py-0.5 ${CAMERA_WALL_SURFACES.body}`}>
                 Selected {selectedCamera?.name ?? "None"}
               </span>
               {activePath ? (
@@ -998,7 +999,7 @@ export function CameraWallView() {
                 className={`rounded-md border px-2 py-0.5 transition-colors ${
                   syncTime
                     ? "border-sky-400/20 bg-sky-500/10 text-sky-200"
-                    : "border-[#27364e] bg-black/30 text-[#9ca3af]"
+                    : "${UI_SURFACES.borderStrong} bg-black/30 text-[#9ca3af]"
                 }`}
               >
                 {syncTime ? "Synchronized Time" : "Free Running Time"}
@@ -1007,7 +1008,7 @@ export function CameraWallView() {
             <div className={`mt-1 text-[9px] ${CAMERA_WALL_SURFACES.muted3}`}>{wallActionHint}</div>
           </div>
           <div className="flex items-center gap-2">
-            <div className={`flex items-center gap-1 rounded-lg border border-[#27364e] bg-black/40 p-1 text-[9px] font-semibold uppercase tracking-[0.16em] ${CAMERA_WALL_SURFACES.body}`}>
+            <div className={`flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderStrong} bg-black/40 p-1 text-[9px] font-semibold uppercase tracking-[0.16em] ${CAMERA_WALL_SURFACES.body}`}>
               <button
                 type="button"
                 onClick={() => setLayoutMode("quad")}
@@ -1048,7 +1049,7 @@ export function CameraWallView() {
                 3D Map
               </button>
             </div>
-            <div className={`rounded-lg border border-[#27364e] bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] ${CAMERA_WALL_SURFACES.body}`}>
+            <div className={`rounded-lg border ${UI_SURFACES.borderStrong} bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] ${CAMERA_WALL_SURFACES.body}`}>
               {viewCount} Views
             </div>
           </div>
@@ -1058,7 +1059,7 @@ export function CameraWallView() {
       <button
         type="button"
         onClick={toggleImmersiveMode}
-        className={`absolute right-3 top-[calc(var(--st-full-canvas-safe-top,4.25rem)+0.5rem)] z-30 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium ${CAMERA_WALL_SURFACES.body} transition-colors hover:border-[#3a4a66] hover:text-white`}
+        className={`absolute right-3 top-[calc(var(--st-full-canvas-safe-top,4.25rem)+0.5rem)] z-30 rounded-lg border ${UI_SURFACES.borderDark} bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium ${CAMERA_WALL_SURFACES.body} transition-colors hover:border-[#3a4a66] ${UI_SURFACES.hoverText}`}
       >
         {immersiveMode ? "Exit Focus" : "Focus"}
       </button>
@@ -1133,14 +1134,14 @@ export function CameraWallView() {
         )}
       </div>
       {showMapPreview && (
-        <div className={`absolute bottom-5 right-5 z-40 h-60 w-80 overflow-hidden rounded-xl border border-[#27364e] ${CAMERA_WALL_SURFACES.panelSoft} shadow-[0_16px_48px_rgba(0,0,0,0.65)] backdrop-blur-md transition-all duration-300`}>
-          <div className={`absolute left-2.5 top-2.5 z-50 flex items-center gap-1.5 rounded-lg border border-[#27364e] bg-black/70 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.18em] ${CAMERA_WALL_SURFACES.accent}`}>
+        <div className={`absolute bottom-5 right-5 z-40 h-60 w-80 overflow-hidden rounded-xl border ${UI_SURFACES.borderStrong} ${CAMERA_WALL_SURFACES.panelSoft} shadow-[0_16px_48px_rgba(0,0,0,0.65)] backdrop-blur-md transition-all duration-300`}>
+          <div className={`absolute left-2.5 top-2.5 z-50 flex items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderStrong} bg-black/70 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.18em] ${CAMERA_WALL_SURFACES.accent}`}>
             <span>3D Map Overview</span>
           </div>
           <button
             type="button"
             onClick={() => setShowMapPreview(false)}
-            className={`absolute right-2.5 top-2.5 z-50 rounded-lg border border-[#27364e] bg-black/70 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] ${CAMERA_WALL_SURFACES.muted3} transition-colors hover:border-[#4a5f80] hover:text-white`}
+            className={`absolute right-2.5 top-2.5 z-50 rounded-lg border ${UI_SURFACES.borderStrong} bg-black/70 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] ${CAMERA_WALL_SURFACES.muted3} transition-colors hover:border-[#4a5f80] ${UI_SURFACES.hoverText}`}
           >
             Hide
           </button>

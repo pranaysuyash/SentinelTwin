@@ -6,9 +6,10 @@ import { useState } from "react";
 import { useStudioStore } from "@/store/studio-store";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#181c27] py-2 last:border-b-0">
+    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0`}>
       <span className={`text-[10px] ${UI_SURFACES.textMuted2}`}>{label}</span>
       <span className={`flex items-center gap-1 text-right text-[11px] font-medium ${UI_SURFACES.textBody}`}>
         {children}
@@ -197,7 +198,7 @@ export function AssumptionsPanel() {
           </Field>
 
           {/* Pixels Per Meter thresholds */}
-          <div className="border-b border-[#181c27] py-2 last:border-b-0">
+          <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0`}>
             <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textMuted2}`}>PPM Thresholds (px/m)</div>
             <div className="grid grid-cols-2 gap-1">
               {([
@@ -228,7 +229,7 @@ export function AssumptionsPanel() {
 
           <button type="button"
             onClick={() => setBottomTab("assumptions")}
-            className="mt-1.5 w-full rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-1.5 text-[8px] uppercase tracking-[0.14em] text-blue-200 transition-colors hover:border-blue-400/50 hover:text-white"
+            className={`mt-1.5 w-full rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-1.5 text-[8px] uppercase tracking-[0.14em] text-blue-200 transition-colors hover:border-blue-400/50 ${UI_SURFACES.hoverText}`}
           >
             Open Full Assumptions Tab
           </button>

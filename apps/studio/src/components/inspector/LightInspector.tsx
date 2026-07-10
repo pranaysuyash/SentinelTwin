@@ -15,6 +15,7 @@ import type { SecurityLightNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 export function LightInspector() {
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const scene = useStudioStore((s) => s.scene);
@@ -29,7 +30,7 @@ export function LightInspector() {
 
   return (
     <>
-      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-yellow-500/20 bg-yellow-500/10">
@@ -37,7 +38,7 @@ export function LightInspector() {
             </div>
             <div>
               <div className="text-[12px] font-semibold text-white">{light.name}</div>
-              <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">{light.lightType}</div>
+              <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>{light.lightType}</div>
             </div>
           </div>
           <Badge variant={statusColor as "green" | "red" | "gray"} dot>
@@ -138,7 +139,7 @@ export function LightInspector() {
             label="Night Contribution"
             value={nightCoverageActive ? "Active" : "Inactive"}
           />
-          <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2 text-[10px] leading-relaxed text-[#8d98b0]">
+          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2 text-[10px] leading-relaxed text-[#8d98b0]`}>
             {nightCoverageActive
               ? "This light reduces night-mode penalty in the simulation and can improve low-light camera quality."
               : "This light does not currently reduce night-mode penalty. Turn it on and enable night coverage to influence simulation results."}
@@ -146,7 +147,7 @@ export function LightInspector() {
         </SectionCard>
       </div>
 
-      <div className="`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <button
           type="button"
           onClick={() => removeNode(light.id)}

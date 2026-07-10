@@ -21,6 +21,7 @@ import { AxisArrow, CenterPuck, GIZMO_AXIS_COLORS, GizmoRig, RotationRing } from
 import { makeSnapEngine } from "./SnapEngine";
 import { insertPolygonVertex, pathLength, removePathPoint, removePolygonVertex, type Point2 } from "./editor-geometry";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 export type TransformableNode =
   | CameraNode
   | SecurityLightNode
@@ -323,7 +324,7 @@ function HandleSphere({
       </mesh>
       {label && hovered ? (
         <SceneHtml center position={[0, 0.22, 0]} style={{ pointerEvents: "none" }}>
-          <div className="rounded border border-[#24304a] bg-[#0b0f17]/92 px-1.5 py-0.5 text-[8px] font-semibold text-[#d2d9e8] whitespace-nowrap">
+          <div className={`rounded border border-[#24304a] ${UI_SURFACES.panel}/92 px-1.5 py-0.5 text-[8px] font-semibold ${UI_SURFACES.textBody2} whitespace-nowrap`}>
             {label}
           </div>
         </SceneHtml>
@@ -815,7 +816,7 @@ export function TransformHandles() {
           />
         ))}
         <SceneHtml position={[center[0], 0.22, center[1]]} center style={{ pointerEvents: "none" }}>
-          <div className="rounded border border-[#24304a] bg-[#0b0f17]/90 px-2 py-1 text-[8px] font-semibold text-[#d2d9e8]">
+          <div className={`rounded border border-[#24304a] ${UI_SURFACES.panel}/90 px-2 py-1 text-[8px] font-semibold ${UI_SURFACES.textBody2}`}>
             {pathLength(points).toFixed(2)}m
           </div>
         </SceneHtml>

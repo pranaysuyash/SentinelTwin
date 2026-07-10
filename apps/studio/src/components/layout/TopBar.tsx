@@ -44,6 +44,7 @@ import type { CriticalZoneNode, SecurityScene } from "@/schema/security-scene";
 import { bakeoffToSecurityScene } from "@/lib/bakeoff-bridge";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 
+
 const TARGET_TYPE_OPTIONS: Array<{
   value: CriticalZoneNode["targetType"];
   label: string;
@@ -415,7 +416,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                           setSceneOpen(false);
                         }}
                         className={cn(
-                          "flex-1 truncate rounded-lg px-2.5 py-2 text-left text-[11px] transition-colors hover:bg-[#171c2b]",
+                          "flex-1 truncate rounded-lg px-2.5 py-2 text-left text-[11px] transition-colors ${UI_SURFACES.hoverBgMuted}",
                           saved.id === scene.id ? UI_TONES.success.dot : UI_SURFACES.textBody,
                         )}
                       >
@@ -470,7 +471,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                           duplicateReferenceToWorkspace(ref.id);
                           setSceneOpen(false);
                         }}
-                        className={`flex-1 truncate rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                        className={`flex-1 truncate rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
                       >
                         {ref.name}
                       </button>
@@ -588,7 +589,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
               {TARGET_TYPE_OPTIONS.map((entry) => (
                 <button type="button"
                   key={entry.value}
-                  className={`w-full rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-[#171c2b]`}
+                  className={`w-full rounded-lg px-2.5 py-2 text-left transition-colors ${UI_SURFACES.hoverBgMuted}`}
                   onClick={() => {
                     useStudioStore.getState().setCriticalZoneTargetType(entry.value);
                     setAllZoneTargetTypes(entry.value);
@@ -683,21 +684,21 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
               <div className={`px-2.5 pb-1 pt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted2}`}>Simulation</div>
               <button type="button"
                 onClick={() => { setEnvMode(envMode === "night" ? "day" : "night"); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
               >
                 <Moon className="h-3 w-3" />
                 Night Mode
               </button>
               <button type="button"
                 onClick={() => { handleCameraFailure(); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
               >
                 <Shield className="h-3 w-3" />
                 Test Camera Outage
               </button>
               <button type="button"
                 onClick={() => { saveSnapshot(`Snapshot ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
               >
                 <Copy className="h-3 w-3" />
                 Save Snapshot
@@ -709,35 +710,35 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
               <div className={`px-2.5 pb-1 pt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted2}`}>Jump to</div>
               <button type="button"
                 onClick={() => { setBottomTab("beforeafter"); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
               >
                 <Clapperboard className="h-3 w-3" />
                 Compare
               </button>
               <button type="button"
                 onClick={() => { setBottomTab("threat"); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
               >
                 <Crosshair className="h-3 w-3" />
                 Path Risk
               </button>
               <button type="button"
                 onClick={() => { setBottomTab("report"); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
               >
                 <FileText className="h-3 w-3" />
                 Prepare Report
               </button>
               <button type="button"
                 onClick={() => { setBottomTab("assumptions"); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
               >
                 <Info className="h-3 w-3" />
                 Assumptions
               </button>
               <button type="button"
                 onClick={() => { setBottomTab("provenance"); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
               >
                 <SlidersHorizontal className="h-3 w-3" />
                 Evidence Trail
@@ -748,28 +749,28 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
               {/* Tools */}
               <button type="button"
                 onClick={() => { setDemoMode(!demoMode); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
               >
                 {demoMode ? "Exit Guided Walkthrough" : "Start Guided Walkthrough"}
               </button>
               <button type="button"
                 onClick={() => { toggleViewSettingsOpen(); setMoreOpen(false); }}
                 data-testid="more-view-settings"
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
               >
                 <SlidersHorizontal className="h-3 w-3" />
                 View Settings
               </button>
               <button type="button"
                 onClick={() => { handleExportScene(); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
               >
                 <Download className="h-3 w-3" />
                 Export Site Twin File
               </button>
               <button type="button"
                 onClick={() => { window.dispatchEvent(new CustomEvent(STUDIO_SHORTCUT_EVENTS.toggleShortcuts)); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors hover:bg-[#171c2b] ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
               >
                 <Keyboard className="h-3 w-3" />
                 Keyboard Shortcuts

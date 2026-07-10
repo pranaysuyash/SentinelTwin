@@ -6,6 +6,7 @@ import { MAP_COLORS } from "@/components/map/map-colors";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 import { useStudioStore, type OverlayDensity, type OverlayFilterId, type HeatmapMode } from "@/store/studio-store";
 
+
 type LegendModeLevel = { label: string; range: string; detail: string; color: string };
 type CoverageLegendConfig = {
   mode: HeatmapMode;
@@ -174,7 +175,7 @@ export function CoverageLegend() {
           aria-expanded={showFilters}
           aria-controls="coverage-legend-filters"
           aria-label={`${showFilters ? "Hide" : "Show"} overlay filters and density`}
-          className={`rounded p-0.5 transition-colors ${showFilters ? "text-sky-300" : "text-[#3a4158] hover:text-[#647089]"}`}
+          className={`rounded p-0.5 transition-colors ${showFilters ? "text-sky-300" : "${UI_SURFACES.textDim} hover:text-[#647089]"}`}
           style={showFilters ? { color: MAP_COLORS.viewport } : undefined}
           title="Overlay filters & density"
         >
@@ -254,7 +255,7 @@ export function CoverageLegend() {
                   className={`flex-1 py-0.5 text-[8px] font-medium rounded transition-colors ${
                     overlayDensity === opt.value
                       ? "bg-[#1e2d4a] text-sky-300"
-                      : "text-[#3a4158] hover:text-[#647089] hover:bg-[#1a1f2e]"
+                      : "${UI_SURFACES.textDim} hover:text-[#647089] hover:bg-[#1a1f2e]"
                   }`}
                   style={overlayDensity === opt.value ? { backgroundColor: MAP_COLORS.panelFillAlt, color: MAP_COLORS.viewport } : undefined}
                 >
@@ -283,7 +284,7 @@ export function CoverageLegend() {
                     className={`h-2.5 w-2.5 rounded ${UI_SURFACES.borderDark} bg-[#151a28] accent-[#3b82f6] cursor-pointer`}
                   />
                   <span className={`text-[9px] transition-colors ${
-                    overlayFilters[opt.id] ? `${UI_SURFACES.textBody}` : "text-[#3a4158]"
+                    overlayFilters[opt.id] ? `${UI_SURFACES.textBody}` : "${UI_SURFACES.textDim}"
                   }`}>
                     {opt.label}
                   </span>

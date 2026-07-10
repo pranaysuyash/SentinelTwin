@@ -12,6 +12,7 @@ import type { FenceSegment } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 export function FenceInspector() {
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const scene = useStudioStore((s) => s.scene);
@@ -25,9 +26,9 @@ export function FenceInspector() {
 
   return (
     <>
-      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <div className="text-[12px] font-semibold text-white">{fence.label}</div>
-        <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Fence Segment · {lengthM.toFixed(2)}m</div>
+        <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Fence Segment · {lengthM.toFixed(2)}m</div>
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">

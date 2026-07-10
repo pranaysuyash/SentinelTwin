@@ -13,6 +13,7 @@ import { ENVIRONMENT_THEMES } from "@/components/workspace/SharedScene";
 import { DEFAULT_PLACEMENT_YAW_DEG } from "@/components/workspace/workspace-canvas-utils";
 import { useStudioStore } from "@/store/studio-store";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 /**
  * Live placement preview — answers "if the camera is here at this angle,
  * what does it see?" before the camera exists.
@@ -77,7 +78,7 @@ export function PlacementPreviewPanel() {
   const theme = ENVIRONMENT_THEMES[environmentMode] ?? ENVIRONMENT_THEMES.day;
 
   return (
-    <div className="pointer-events-none absolute bottom-16 right-3 z-20 w-[260px] overflow-hidden rounded-xl border border-[#1f2536] bg-[#0b0f17]/96 shadow-2xl shadow-black/45">
+    <div className={`pointer-events-none absolute bottom-16 right-3 z-20 w-[260px] overflow-hidden rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/96 shadow-2xl shadow-black/45`}>
       <div className="flex items-center justify-between gap-2 border-b border-[#1c2130] px-2.5 py-1.5">
         <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-sky-200">
           <Video className="h-3 w-3" />

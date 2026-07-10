@@ -4,6 +4,7 @@ import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 // P1-2026-07-10: StatusBar quick-run now delegates to the canonical
 // simulation runner (runStudioSimulation) instead of calling simulateStudio()
 // directly. This fixes the review finding that flagged direct engine calls
@@ -231,7 +232,7 @@ export function StatusBar() {
       {/* Auto recompute toggle */}
       <button type="button"
         onClick={toggleAuto}
-        className={`flex items-center gap-1.5 text-[10px] ${UI_SURFACES.textMuted} transition-colors hover:text-white`}
+        className={`flex items-center gap-1.5 text-[10px] ${UI_SURFACES.textMuted} transition-colors ${UI_SURFACES.hoverText}`}
       >
         Auto:
         <span className={autoRC ? "text-green-400" : `${UI_SURFACES.textMuted}`}>{autoRC ? "On" : "Off"}</span>

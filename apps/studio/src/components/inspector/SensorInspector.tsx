@@ -14,6 +14,7 @@ import type { CameraNode, SensorNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 const SENSOR_TYPE_LABELS: Record<SensorNode["sensorType"], string> = {
   motion: "Motion",
   door_contact: "Door Contact",
@@ -67,7 +68,7 @@ export function SensorInspector() {
 
   return (
     <>
-      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-500/20 bg-cyan-500/10">
@@ -75,7 +76,7 @@ export function SensorInspector() {
             </div>
             <div>
               <div className="text-[12px] font-semibold text-white">{sensor.label}</div>
-              <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">
+              <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
                 {SENSOR_TYPE_LABELS[sensor.sensorType]} · {SENSOR_COVERAGE_LABELS[sensor.coverageMode]}
               </div>
             </div>
@@ -144,7 +145,7 @@ export function SensorInspector() {
           <Field label="Nearest Camera" value={nearestCamera?.name ?? "None"} />
           <Field label="Camera Distance" value={nearestCamera ? `${nearestDistance.toFixed(1)}m` : "—"} />
           <Field label="Coverage Mode" value={SENSOR_COVERAGE_LABELS[sensor.coverageMode]} />
-          <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2 text-[10px] leading-relaxed text-[#8d98b0]">
+          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2 text-[10px] leading-relaxed text-[#8d98b0]`}>
             Sensors participate in the canonical scene graph and report summary. Live event binding records sensor triggers, heartbeats, faults, and restores into the evidence trail.
           </div>
         </SectionCard>
@@ -175,7 +176,7 @@ export function SensorInspector() {
                 details: `${sensor.label} sent a heartbeat.`,
                 resultingState: sensor.state,
               })}
-              className="rounded-lg border border-[#24304a] bg-[#111521] px-2 py-2 text-[10px] font-medium text-[#d2d9e8] transition-colors hover:border-[#32506a] hover:bg-[#172235]"
+              className={`rounded-lg border border-[#24304a] ${UI_SURFACES.card} px-2 py-2 text-[10px] font-medium ${UI_SURFACES.textBody2} transition-colors hover:border-[#32506a] hover:bg-[#172235]`}
             >
               Heartbeat
             </button>
@@ -217,22 +218,22 @@ export function SensorInspector() {
         </SectionCard>
 
         <SectionCard title="Notes">
-          <label className="block rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+          <label className={`block rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
             <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Notes</span>
+              <span className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Notes</span>
             </div>
             <textarea
               value={sensor.notes ?? ""}
               onChange={(event) => updateNode(sensor.id, { notes: event.target.value })}
               rows={3}
-              className="w-full resize-none bg-transparent text-[11px] leading-relaxed text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+              className={`w-full resize-none bg-transparent text-[11px] leading-relaxed ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
               placeholder="Optional sensor notes"
             />
           </label>
         </SectionCard>
       </div>
 
-      <div className="`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <button
           type="button"
           onClick={() => removeNode(sensor.id)}

@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import type { DockSide, WorkspacePreset } from "@/store/studio-store";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 const RAIL_ICONS: Record<DockSide, ReactNode> = {
   left: <PanelLeft className="h-3.5 w-3.5" />,
   right: <PanelRight className="h-3.5 w-3.5" />,
@@ -51,7 +52,7 @@ export function DockRail({
         type="button"
         onClick={onToggle}
         className={cn(
-          `inline-flex items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted4} transition-colors hover:border-[#32384d] hover:text-white`,
+          `inline-flex items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted4} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`,
           attention && "border-amber-400/40 bg-amber-500/15 text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.25)]",
           isBottom ? "h-6 w-6 flex-shrink-0" : "h-7 w-7 flex-shrink-0",
         )}
@@ -79,7 +80,7 @@ export function DockRail({
             <button
               type="button"
               onClick={onFocus}
-              className={`inline-flex h-5 w-5 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors hover:border-[#32384d] hover:text-white`}
+              className={`inline-flex h-5 w-5 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
               title="Focus mode"
             >
               {FOCUS_ICON}
@@ -88,7 +89,7 @@ export function DockRail({
           <button
             type="button"
             onClick={onToggle}
-            className={`inline-flex h-5 w-5 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors hover:border-[#32384d] hover:text-white`}
+            className={`inline-flex h-5 w-5 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
             title={`Collapse ${title}`}
           >
             {COLLAPSE_ICONS[side]}

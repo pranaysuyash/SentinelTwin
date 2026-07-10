@@ -11,6 +11,7 @@ import type { CriticalZoneNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 const TARGET_TYPE_LABELS: Record<CriticalZoneNode["targetType"], string> = {
   person_detection: "Person Detection",
   face_recognition: "Face Recognition",
@@ -50,7 +51,7 @@ export function CriticalZoneInspector() {
 
   return (
     <>
-      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10">
@@ -58,7 +59,7 @@ export function CriticalZoneInspector() {
             </div>
             <div>
               <div className="text-[12px] font-semibold text-white">{zone.label}</div>
-              <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">
+              <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
                 {TARGET_TYPE_LABELS[zone.targetType]} · {zone.priority}
               </div>
             </div>
@@ -83,15 +84,15 @@ export function CriticalZoneInspector() {
         <SectionCard title="Evidence Quality" helpText="Shows the required and measured camera evidence level for this zone. A pass means the current simulation meets the zone target under the active assumptions." helpTitle="Evidence quality help">
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] text-[#6a748b]">Required</span>
-              <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize", QUALITY_BADGE_COLORS[zone.requiredQuality] ?? "bg-[#1f2536] text-[#8090a8]")}>
+              <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Required</span>
+              <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize", QUALITY_BADGE_COLORS[zone.requiredQuality] ?? "bg-[#1f2536] ${UI_SURFACES.textMuted5}")}>
                 {zone.requiredQuality}
               </span>
             </div>
             {zoneResult && (
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] text-[#6a748b]">Actual</span>
-                <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize", QUALITY_BADGE_COLORS[zoneResult.actualQuality] ?? "bg-[#1f2536] text-[#8090a8]")}>
+                <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Actual</span>
+                <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize", QUALITY_BADGE_COLORS[zoneResult.actualQuality] ?? "bg-[#1f2536] ${UI_SURFACES.textMuted5}")}>
                   {zoneResult.actualQuality}
                 </span>
               </div>
@@ -100,24 +101,24 @@ export function CriticalZoneInspector() {
         </SectionCard>
 
         <SectionCard title="Properties" helpText="Set what this zone needs operationally: the target type, required evidence quality, priority, night requirement, and redundancy requirement." helpTitle="Zone properties help">
-          <div className="flex items-center justify-between gap-2 border-b border-[#181c27] py-1.5">
-            <span className="text-[10px] text-[#6a748b]">Target Type</span>
+          <div className={`flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+            <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Target Type</span>
             <select
               value={zone.targetType}
               onChange={(e) => updateNode(zone.id, { targetType: e.target.value as CriticalZoneNode["targetType"] })}
-              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+              className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
             >
               {(Object.keys(TARGET_TYPE_LABELS) as CriticalZoneNode["targetType"][]).map((t) => (
                 <option key={t} value={t}>{TARGET_TYPE_LABELS[t]}</option>
               ))}
             </select>
           </div>
-          <div className="flex items-center justify-between gap-2 border-b border-[#181c27] py-1.5">
-            <span className="text-[10px] text-[#6a748b]">Required Quality</span>
+          <div className={`flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+            <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Required Quality</span>
             <select
               value={zone.requiredQuality}
               onChange={(e) => updateNode(zone.id, { requiredQuality: e.target.value as CriticalZoneNode["requiredQuality"] })}
-              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+              className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
             >
               <option value="detection">Detection</option>
               <option value="observation">Observation</option>
@@ -125,12 +126,12 @@ export function CriticalZoneInspector() {
               <option value="identification">Identification</option>
             </select>
           </div>
-          <div className="flex items-center justify-between gap-2 border-b border-[#181c27] py-1.5">
-            <span className="text-[10px] text-[#6a748b]">Priority</span>
+          <div className={`flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+            <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Priority</span>
             <select
               value={zone.priority}
               onChange={(e) => updateNode(zone.id, { priority: e.target.value as CriticalZoneNode["priority"] })}
-              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+              className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>
@@ -142,8 +143,8 @@ export function CriticalZoneInspector() {
             { label: "Night Coverage Required", value: zone.nightRequired, key: "nightRequired" as const },
             { label: "Redundancy Required", value: zone.redundancyRequired, key: "redundancyRequired" as const },
           ].map(({ label, value, key }) => (
-            <div key={key} className="flex items-center justify-between gap-2 border-b border-[#181c27] py-1.5 last:border-0">
-              <span className="text-[10px] text-[#6a748b]">{label}</span>
+            <div key={key} className={`flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderFaintAlt} py-1.5 last:border-0`}>
+              <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
               <button
                 type="button"
                 onClick={() => updateNode(zone.id, { [key]: !value })}
@@ -166,20 +167,20 @@ export function CriticalZoneInspector() {
         </SectionCard>
 
         <SectionCard title="Target Requirement" helpText="Explains the default evidence quality SentinelTwin expects for this type of zone, plus the detail threshold used by the simulation." helpTitle="Target requirement help">
-          <div className="space-y-1.5 text-[10px] text-[#c7d0e4]">
+          <div className={`space-y-1.5 text-[10px] ${UI_SURFACES.textBody}`}>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[#6a748b]">Default quality</span>
-              <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize", QUALITY_BADGE_COLORS[targetRequirement.defaultRequiredQuality] ?? "bg-[#1f2536] text-[#8090a8]")}>
+              <span className={`${UI_SURFACES.textSoftMid}`}>Default quality</span>
+              <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize", QUALITY_BADGE_COLORS[targetRequirement.defaultRequiredQuality] ?? "bg-[#1f2536] ${UI_SURFACES.textMuted5}")}>
                 {targetRequirement.defaultRequiredQuality}
               </span>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[#6a748b]">PPM threshold</span>
-              <span className="rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize bg-[#1f2536] text-[#d2d9e8]">
+              <span className={`${UI_SURFACES.textSoftMid}`}>PPM threshold</span>
+              <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize bg-[#1f2536] ${UI_SURFACES.textBody2}`}>
                 {targetRequirement.ppmThreshold}
               </span>
             </div>
-            <div className="rounded-md border border-[#181c27] bg-[#0f141f] px-2 py-1.5 text-[9px] leading-relaxed text-[#8b96ab]">
+            <div className={`rounded-md border ${UI_SURFACES.borderFaintAlt} bg-[#0f141f] px-2 py-1.5 text-[9px] leading-relaxed text-[#8b96ab]`}>
               {targetRequirement.rationale}
             </div>
             {zone.requiredQuality !== targetRequirement.defaultRequiredQuality ? (
@@ -198,7 +199,7 @@ export function CriticalZoneInspector() {
           <SectionCard title={`Covered By (${coveringCameras.length})`}>
             <div className="space-y-1">
               {coveringCameras.map((camId) => (
-                <div key={camId} className="flex items-center gap-1.5 text-[10px] text-[#8090a8]">
+                <div key={camId} className={`flex items-center gap-1.5 text-[10px] ${UI_SURFACES.textMuted5}`}>
                   <Camera className="h-3 w-3 flex-shrink-0 text-blue-400" />
                   {camNames[camId] ?? camId}
                 </div>
@@ -210,7 +211,7 @@ export function CriticalZoneInspector() {
         {zoneResult && !isPassing && (
           <div className="rounded-xl border border-red-500/15 bg-red-500/5 p-2.5">
             <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-red-400">Coverage Gap</div>
-            <div className="text-[9px] leading-relaxed text-[#c7d0e4]">
+            <div className={`text-[9px] leading-relaxed ${UI_SURFACES.textBody}`}>
               This zone requires <strong>{zone.requiredQuality}</strong> but is receiving <strong>{zoneResult.actualQuality}</strong>.
               {coveringCameras.length === 0
                 ? " No camera currently covers this zone."
@@ -220,13 +221,13 @@ export function CriticalZoneInspector() {
         )}
 
         {!result && (
-          <div className="rounded-lg border border-[#1f2536] bg-[#111521] p-3 text-[10px] leading-relaxed text-[#6a748b]">
+          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-3 text-[10px] leading-relaxed ${UI_SURFACES.textSoftMid}`}>
             Run simulation to see zone coverage results.
           </div>
         )}
       </div>
 
-      <div className="`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <button
           type="button"
           onClick={() => removeNode(zone.id)}

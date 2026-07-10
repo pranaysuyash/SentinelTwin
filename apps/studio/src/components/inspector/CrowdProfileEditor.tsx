@@ -6,6 +6,7 @@ import { useStudioStore } from "@/store/studio-store";
 import type { CrowdProfile, AgentArchetype, CriticalZoneNode } from "@/schema/security-scene";
 import { DEFAULT_RETAIL_ARCHETYPES } from "@sentineltwin/simulation";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 function newProfile(): CrowdProfile {
   return {
     id: `crowd_${Date.now().toString(36)}`,
@@ -37,7 +38,7 @@ function ZonePicker({
   onChange: (ids: string[]) => void;
 }) {
   if (zones.length === 0) {
-    return <p className="text-[9px] text-[#556076]">No critical zones defined in this scene.</p>;
+    return <p className={`text-[9px] ${UI_SURFACES.textDimMid}`}>No critical zones defined in this scene.</p>;
   }
 
   const toggle = (id: string) => {
@@ -56,7 +57,7 @@ function ZonePicker({
         className={`rounded px-1.5 py-0.5 text-[9px] transition-colors ${
           selected.length === 0
             ? "bg-sky-500/20 text-sky-200 ring-1 ring-sky-400/40"
-            : "bg-[#111521] text-[#556076] hover:text-[#9fb1cf]"
+            : "${UI_SURFACES.card} ${UI_SURFACES.textDimMid} hover:text-[#9fb1cf]"
         }`}
       >
         All zones
@@ -72,7 +73,7 @@ function ZonePicker({
             className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] transition-colors ${
               active
                 ? "bg-sky-500/20 text-sky-200 ring-1 ring-sky-400/40"
-                : "bg-[#111521] text-[#556076] hover:text-[#9fb1cf]"
+                : "${UI_SURFACES.card} ${UI_SURFACES.textDimMid} hover:text-[#9fb1cf]"
             }`}
           >
             <MapPin className="h-2.5 w-2.5" />
@@ -114,7 +115,7 @@ function PeakHourScrubber({
           />
         ))}
       </div>
-      <div className="flex justify-between text-[9px] text-[#556076]">
+      <div className={`flex justify-between text-[9px] ${UI_SURFACES.textDimMid}`}>
         <span>0:00</span>
         <span>12:00</span>
         <span>23:00</span>
@@ -190,20 +191,20 @@ export function CrowdProfileEditor() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Users className="h-3.5 w-3.5 text-[#60a5fa]" />
-          <span className="text-[11px] font-semibold text-[#dde2ef]">Crowd Profiles</span>
+          <span className={`text-[11px] font-semibold ${UI_SURFACES.textBody3}`}>Crowd Profiles</span>
         </div>
         <div className="flex gap-1">
           <button
             type="button"
             onClick={addRetailDefault}
-            className="rounded border border-[#28304a] px-2 py-0.5 text-[10px] text-[#9fb1cf] hover:bg-white/5"
+            className={`rounded border ${UI_SURFACES.borderMid} px-2 py-0.5 text-[10px] text-[#9fb1cf] hover:bg-white/5`}
           >
             + Retail Preset
           </button>
           <button
             type="button"
             onClick={addProfile}
-            className="rounded border border-[#28304a] px-2 py-0.5 text-[10px] text-[#9fb1cf] hover:bg-white/5"
+            className={`rounded border ${UI_SURFACES.borderMid} px-2 py-0.5 text-[10px] text-[#9fb1cf] hover:bg-white/5`}
           >
             <Plus className="inline h-2.5 w-2.5" /> Add
           </button>
@@ -211,8 +212,8 @@ export function CrowdProfileEditor() {
       </div>
 
       {profiles.length === 0 && (
-        <div className="rounded-xl border border-dashed border-[#28304a] px-3 py-4 text-center">
-          <p className="text-[11px] text-[#7a86a0]">
+        <div className={`rounded-xl border border-dashed ${UI_SURFACES.borderMid} px-3 py-4 text-center`}>
+          <p className={`text-[11px] ${UI_SURFACES.textMuted1}`}>
             No crowd profiles. Add one to model dynamic occlusion from people moving through the scene.
           </p>
         </div>
@@ -221,14 +222,14 @@ export function CrowdProfileEditor() {
       {profiles.map((profile) => (
         <div
           key={profile.id}
-          className="rounded-xl border border-[#1f2536] bg-[#0d1220] p-3"
+          className={`rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0d1220] p-3`}
         >
           <div className="flex items-center gap-2">
             <input
               type="text"
               value={profile.label}
               onChange={(e) => patchProfile(profile.id, { label: e.target.value })}
-              className="min-w-0 flex-1 rounded border border-[#1f2536] bg-[#111521] px-2 py-0.5 font-mono text-[11px] text-[#dde2ef] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+              className={`min-w-0 flex-1 rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-0.5 font-mono text-[11px] ${UI_SURFACES.textBody3} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
             />
             <label className="flex items-center gap-1 text-[10px] text-[#9fb1cf]">
               <input
@@ -242,7 +243,7 @@ export function CrowdProfileEditor() {
             <button
               type="button"
               onClick={() => removeProfile(profile.id)}
-              className="text-[#556076] hover:text-rose-400"
+              className={`${UI_SURFACES.textDimMid} hover:text-rose-400`}
               title="Remove profile"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -251,7 +252,7 @@ export function CrowdProfileEditor() {
 
           <div className="mt-3 flex flex-col gap-2">
             {profile.archetypes.map((arch) => (
-              <div key={arch.archetypeId} className="rounded-lg border border-[#1f2536] bg-[#0a0f1c] p-2">
+              <div key={arch.archetypeId} className={`rounded-lg border ${UI_SURFACES.borderSubtle} bg-[#0a0f1c] p-2`}>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
@@ -259,20 +260,20 @@ export function CrowdProfileEditor() {
                     onChange={(e) =>
                       patchArchetype(profile.id, arch.archetypeId, { label: e.target.value })
                     }
-                    className="min-w-0 flex-1 rounded border border-[#1f2536] bg-[#111521] px-1.5 py-0.5 font-mono text-[10px] text-[#dde2ef] outline-none"
+                    className={`min-w-0 flex-1 rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 font-mono text-[10px] ${UI_SURFACES.textBody3} outline-none`}
                   />
-                  <span className="text-[9px] text-[#556076]">r={arch.bodyRadiusM}m</span>
+                  <span className={`text-[9px] ${UI_SURFACES.textDimMid}`}>r={arch.bodyRadiusM}m</span>
                   <button
                     type="button"
                     onClick={() => removeArchetype(profile.id, arch.archetypeId)}
-                    className="text-[#556076] hover:text-rose-400"
+                    className={`${UI_SURFACES.textDimMid} hover:text-rose-400`}
                     title="Remove archetype"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
                 </div>
                 <div className="mt-2">
-                  <div className="mb-1 text-[9px] uppercase tracking-[0.12em] text-[#556076]">
+                  <div className={`mb-1 text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textDimMid}`}>
                     Agents by hour (click bar to edit)
                   </div>
                   <PeakHourScrubber
@@ -284,7 +285,7 @@ export function CrowdProfileEditor() {
                 </div>
                 {criticalZones.length > 0 && (
                   <div className="mt-2">
-                    <div className="mb-1 text-[9px] uppercase tracking-[0.12em] text-[#556076]">
+                    <div className={`mb-1 text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textDimMid}`}>
                       Preferred zones (empty = all)
                     </div>
                     <ZonePicker
@@ -302,7 +303,7 @@ export function CrowdProfileEditor() {
             <button
               type="button"
               onClick={() => addArchetype(profile.id)}
-              className="mt-1 w-full rounded border border-dashed border-[#28304a] py-1 text-[10px] text-[#7a86a0] hover:border-[#60a5fa]/40 hover:text-[#9fb1cf]"
+              className={`mt-1 w-full rounded border border-dashed ${UI_SURFACES.borderMid} py-1 text-[10px] ${UI_SURFACES.textMuted1} hover:border-[#60a5fa]/40 hover:text-[#9fb1cf]`}
             >
               + Add archetype
             </button>

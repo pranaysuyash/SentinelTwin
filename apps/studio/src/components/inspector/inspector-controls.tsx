@@ -2,13 +2,14 @@
 
 import { cn } from "@/lib/cn";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 export function Field({ label, value, unit }: { label: string; value: React.ReactNode; unit?: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#181c27] py-2 last:border-b-0 last:pb-0 first:pt-0">
-      <span className="text-[10px] text-[#6a748b]">{label}</span>
-      <span className="flex items-center gap-1 text-right text-[11px] font-medium text-[#d2d9e8]">
+    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
+      <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
+      <span className={`flex items-center gap-1 text-right text-[11px] font-medium ${UI_SURFACES.textBody2}`}>
         {value}
-        {unit ? <span className="text-[9px] text-[#556076]">{unit}</span> : null}
+        {unit ? <span className={`text-[9px] ${UI_SURFACES.textDimMid}`}>{unit}</span> : null}
       </span>
     </div>
   );
@@ -32,10 +33,10 @@ export function NumberInput({
   onChange: (v: number) => void;
 }) {
   return (
-    <label className="block rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+    <label className={`block rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
       <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">{label}</span>
-        {unit ? <span className="text-[8px] text-[#556076]">{unit}</span> : null}
+        <span className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>{label}</span>
+        {unit ? <span className={`text-[8px] ${UI_SURFACES.textDimMid}`}>{unit}</span> : null}
       </div>
       <input
         type="number"
@@ -48,7 +49,7 @@ export function NumberInput({
           if (Number.isNaN(next)) return;
           onChange(next);
         }}
-        className="w-full bg-transparent text-right font-mono text-[11px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+        className={`w-full bg-transparent text-right font-mono text-[11px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
       />
     </label>
   );
@@ -72,10 +73,10 @@ export function SliderInput({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="border-b border-[#181c27] py-2 last:border-b-0 last:pb-0 first:pt-0">
+    <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
       <div className="mb-1.5 flex items-center justify-between gap-3">
-        <span className="text-[10px] text-[#6a748b]">{label}</span>
-        <span className="text-[11px] font-mono text-[#d2d9e8]">
+        <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
+        <span className={`text-[11px] font-mono ${UI_SURFACES.textBody2}`}>
           {value}
           {unit}
         </span>
@@ -107,15 +108,15 @@ export function ToggleField({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#181c27] py-2 last:border-b-0 last:pb-0 first:pt-0">
-      <span className="text-[10px] text-[#6a748b]">{label}</span>
-      <div className="inline-flex overflow-hidden rounded-md border border-[#24283a] bg-[#111521]">
+    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
+      <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
+      <div className={`inline-flex overflow-hidden rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card}`}>
         <button
           type="button"
           onClick={() => onChange(true)}
           className={cn(
             "px-2 py-1 text-[10px] font-medium transition-colors",
-            value ? "bg-emerald-500/18 text-emerald-200" : "text-[#7f8aa3] hover:text-white",
+            value ? "bg-emerald-500/18 text-emerald-200" : "text-[#7f8aa3] ${UI_SURFACES.hoverText}",
           )}
         >
           {trueLabel}
@@ -124,8 +125,8 @@ export function ToggleField({
           type="button"
           onClick={() => onChange(false)}
           className={cn(
-            "border-l border-[#24283a] px-2 py-1 text-[10px] font-medium transition-colors",
-            !value ? "bg-red-500/15 text-red-200" : "text-[#7f8aa3] hover:text-white",
+            "border-l ${UI_SURFACES.borderThin} px-2 py-1 text-[10px] font-medium transition-colors",
+            !value ? "bg-red-500/15 text-red-200" : "text-[#7f8aa3] ${UI_SURFACES.hoverText}",
           )}
         >
           {falseLabel}
@@ -147,12 +148,12 @@ export function SelectInput({
   onChange: (v: string) => void;
 }) {
   return (
-    <label className="flex items-center justify-between gap-3 border-b border-[#181c27] py-2 last:border-b-0 last:pb-0 first:pt-0">
-      <span className="text-[10px] text-[#6a748b]">{label}</span>
+    <label className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
+      <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+        className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -164,11 +165,11 @@ export function SelectInput({
   );
 }
 
-export function SummaryStat({ label, value, accent = "text-[#d2d9e8]" }: { label: string; value: string; accent?: string }) {
+export function SummaryStat({ label, value, accent = "${UI_SURFACES.textBody2}" }: { label: string; value: string; accent?: string }) {
   return (
-    <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+    <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
       <div className={cn("text-[12px] font-semibold", accent)}>{value}</div>
-      <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">{label}</div>
+      <div className={`mt-0.5 text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>{label}</div>
     </div>
   );
 }
@@ -185,16 +186,16 @@ export function TextInput({
   onChange: (v: string) => void;
 }) {
   return (
-    <label className="block rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+    <label className={`block rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
       <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">{label}</span>
+        <span className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>{label}</span>
       </div>
       <input
         type="text"
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full bg-transparent text-right font-mono text-[11px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+        className={`w-full bg-transparent text-right font-mono text-[11px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
       />
     </label>
   );
@@ -216,14 +217,14 @@ export function ColorInput({
   onClear?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#181c27] py-2 last:border-b-0 last:pb-0 first:pt-0">
-      <span className="text-[10px] text-[#6a748b]">{label}</span>
+    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
+      <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
       <div className="flex items-center gap-1.5">
         {value !== undefined && onClear ? (
           <button
             type="button"
             onClick={onClear}
-            className="rounded px-1 py-0.5 text-[9px] text-[#556076] transition-colors hover:text-[#a8b4cc]"
+            className={`rounded px-1 py-0.5 text-[9px] ${UI_SURFACES.textDimMid} transition-colors hover:text-[#a8b4cc]`}
             title="Reset to default color"
           >
             Reset
@@ -234,7 +235,7 @@ export function ColorInput({
           type="color"
           value={value ?? placeholder}
           onChange={(event) => onChange(event.target.value)}
-          className="h-6 w-8 cursor-pointer rounded border border-[#24283a] bg-[#111521] p-0.5"
+          className={`h-6 w-8 cursor-pointer rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} p-0.5`}
         />
       </div>
     </div>
@@ -250,12 +251,12 @@ export function PropSelect({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#181c27] py-1.5 last:border-b-0">
-      <span className="text-[10px] text-[#6a748b]">{label}</span>
+    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-1.5 last:border-b-0`}>
+      <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+        className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>

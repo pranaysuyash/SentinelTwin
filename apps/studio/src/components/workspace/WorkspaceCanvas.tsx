@@ -96,6 +96,7 @@ import "@/lib/three-compat";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import { SceneHtml } from "@/components/shared/SceneHtml";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 function getMapFrame(width: number, depth: number) {
   const centerX = width / 2;
   const centerZ = depth / 2;
@@ -317,7 +318,7 @@ function SelectionHighlights() {
             </mesh>
             {selectedNodeIds.length > 1 ? (
               <SceneHtml position={[anchor[0], anchor[1] + 0.2, anchor[2]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-                <div className="rounded border border-[#2b3a58] bg-[#0b0f17]/90 px-1.5 py-0.5 text-[8px] font-semibold text-[#d2d9e8]">
+                <div className={`rounded border border-[#2b3a58] ${UI_SURFACES.panel}/90 px-1.5 py-0.5 text-[8px] font-semibold ${UI_SURFACES.textBody2}`}>
                   {isPrimary ? "Primary" : `+${index}`}
                 </div>
               </SceneHtml>
@@ -1865,7 +1866,7 @@ function EditorStatusBanner() {
   if (!message) return null;
 
   return (
-    <div className="pointer-events-none absolute bottom-14 left-3 z-10 max-w-[min(32rem,calc(100%-1.5rem))] rounded-lg border border-[#2a3246] bg-[#0b0f17]/92 px-3 py-2 text-[10px] font-medium text-[#d2d9e8] shadow-xl">
+    <div className={`pointer-events-none absolute bottom-14 left-3 z-10 max-w-[min(32rem,calc(100%-1.5rem))] rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel}/92 px-3 py-2 text-[10px] font-medium ${UI_SURFACES.textBody2} shadow-xl`}>
       <span className="inline-flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-sky-400" />
         {message}
@@ -1933,7 +1934,7 @@ function HeatmapCellExplainabilityCard() {
 
   return (
     <div
-      className="pointer-events-none absolute z-20 w-85 rounded-xl border border-[#25304a] bg-[#0a0f1a]/95 p-3 text-[10px] text-[#d2d9e8] shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
+      className={`pointer-events-none absolute z-20 w-85 rounded-xl border border-[#25304a] bg-[#0a0f1a]/95 p-3 text-[10px] ${UI_SURFACES.textBody2} shadow-[0_16px_40px_rgba(0,0,0,0.38)]`}
       style={{ left, top }}
     >
       <div className="mb-1 flex items-center justify-between">
@@ -2170,7 +2171,7 @@ export function WorkspaceCanvas() {
   }, []);
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#07090d]">
+    <div className={`absolute inset-0 overflow-hidden ${UI_SURFACES.page}`}>
       <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_50%_36%,rgba(255,255,255,0.06),transparent_46%),linear-gradient(180deg,rgba(6,9,14,0.1),rgba(6,9,14,0.48)_100%)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-16 bg-gradient-to-b from-black/18 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-24 bg-gradient-to-t from-black/28 to-transparent" />

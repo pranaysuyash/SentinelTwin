@@ -40,6 +40,7 @@ import { buildCoverageGrid } from "@sentineltwin/core";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { SceneHtml } from "@/components/shared/SceneHtml";
+
 import {
   SINGLE_PERF_MONITOR_ITERATIONS,
   SINGLE_PERF_MONITOR_MS,
@@ -1368,8 +1369,8 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
           )}
           {!compactViewport && (
             <div className={`mt-2 flex flex-wrap items-center gap-1.5 text-[9px] ${REPLAY_SURFACES.mutedText2}`}>
-              <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5">Time {safeCurrentTime.toFixed(1)}s</span>
-              <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5">Visible {activePathResult ? `${replayCameraStateSummary.visibleNow.length}/${scene.cameras.length}` : "--"}</span>
+              <span className={`rounded-md border ${UI_SURFACES.borderStrong} bg-black/30 px-2 py-0.5`}>Time {safeCurrentTime.toFixed(1)}s</span>
+              <span className={`rounded-md border ${UI_SURFACES.borderStrong} bg-black/30 px-2 py-0.5`}>Visible {activePathResult ? `${replayCameraStateSummary.visibleNow.length}/${scene.cameras.length}` : "--"}</span>
               <button
                 type="button"
                 onClick={handlePlayPause}
@@ -1380,7 +1381,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
               <button
                 type="button"
                 onClick={handleReset}
-                className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5 font-medium text-[#c7d0e4] transition-colors hover:text-white"
+                className={`rounded-md border ${UI_SURFACES.borderStrong} bg-black/30 px-2 py-0.5 font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverText}`}
               >
                 Reset
               </button>
@@ -1399,7 +1400,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <select
-                className={`min-w-55 rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-2.5 py-1.5 text-[11px] font-medium text-[#d7deed] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                className={`min-w-55 rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-2.5 py-1.5 text-[11px] font-medium ${UI_SURFACES.textNear} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                 value={activePathId ?? ""}
                 onChange={(event) => handlePathChange(event.target.value || null)}
                 aria-label="Select active replay path"
@@ -1454,7 +1455,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
       <button
         type="button"
         onClick={toggleImmersiveMode}
-        className={`absolute right-3 top-3 z-30 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium ${REPLAY_SURFACES.bodyText} transition-colors hover:border-[#3a4a66] ${REPLAY_SURFACES.hoverText}`}
+        className={`absolute right-3 top-3 z-30 rounded-lg border ${UI_SURFACES.borderDark} bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium ${REPLAY_SURFACES.bodyText} transition-colors hover:border-[#3a4a66] ${REPLAY_SURFACES.hoverText}`}
       >
         {immersiveMode ? "Exit Focus" : "Focus"}
       </button>

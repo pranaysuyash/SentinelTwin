@@ -27,6 +27,7 @@ import { ExplainBadge } from "@/components/shared/ExplainBadge";
 import { type ActiveTool, type LayerId, useStudioStore } from "@/store/studio-store";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 const TOOLS: { id: ActiveTool; label: string; icon: React.ReactNode; key: string }[] = [
   { id: "select", label: "Select", icon: <MousePointer2 className="h-3.5 w-3.5" />, key: "V" },
   { id: "camera", label: "Camera", icon: <Camera className="h-3.5 w-3.5" />, key: "C" },
@@ -79,7 +80,7 @@ function SectionTitle({
       <button
         type="button"
         onClick={onToggle}
-        className={`ml-auto inline-flex h-5 w-5 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors hover:border-[#32384d] hover:text-white`}
+        className={`ml-auto inline-flex h-5 w-5 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
         title={collapsed ? `Expand ${title}` : `Collapse ${title}`}
       >
         {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -346,7 +347,7 @@ export function LeftPanel() {
                       )}
                     </span>
                     <span className={cn("flex-1 truncate text-[10px]", visible ? `${UI_SURFACES.textBody}` : `${UI_SURFACES.textMuted}`)}>{layer.label}</span>
-                    <button type="button" onClick={() => toggleLayer(layer.id)} className={`flex-shrink-0 ${UI_SURFACES.textMuted} transition-colors hover:text-white`}>
+                    <button type="button" onClick={() => toggleLayer(layer.id)} className={`flex-shrink-0 ${UI_SURFACES.textMuted} transition-colors ${UI_SURFACES.hoverText}`}>
                       {visible ? <Eye className="h-2.5 w-2.5" /> : <EyeOff className="h-2.5 w-2.5" />}
                     </button>
                   </div>

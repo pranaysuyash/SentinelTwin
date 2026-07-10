@@ -15,6 +15,7 @@ import { PathActor, CoverageSegmentPath, SceneEnvironmentSetup, SceneShadowCaste
 import { CameraFeedPostProcessing } from "@/components/view/CameraFeedPostProcessing";
 import { CameraRigLive, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 type FeedViewMode = "normal" | "ir" | "low_light" | "thermal";
 type FeedOverlayOptions = {
   doriLabels: boolean;
@@ -196,7 +197,7 @@ function FeedArtifacts({
       ) : null}
 
       {overlayOptions.timestamp ? (
-        <div className="pointer-events-none absolute left-3 bottom-3 z-10 rounded-lg border border-[#2d3d56] bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.12em] text-[#c7d0e4]">
+        <div className={`pointer-events-none absolute left-3 bottom-3 z-10 rounded-lg border border-[#2d3d56] bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.12em] ${UI_SURFACES.textBody}`}>
           {timestamp}
         </div>
       ) : null}
@@ -384,7 +385,7 @@ export function CameraFeedCanvas({
   ].join(" ");
 
   return (
-    <div className="relative w-full overflow-hidden rounded-lg border border-[#1f2536]" style={{ aspectRatio: "16 / 9" }}>
+    <div className={`relative w-full overflow-hidden rounded-lg border ${UI_SURFACES.borderSubtle}`} style={{ aspectRatio: "16 / 9" }}>
       <div className={cn("absolute inset-0", canvasFilterClass)}>
         <Canvas
           camera={{ position: camera.position, fov: camera.fovHorizontalDeg, near: 0.1, far: 50 }}
@@ -467,7 +468,7 @@ export function CameraFeedCanvas({
             onClick={() => setViewMode(mode)}
             className={cn(
               "rounded-md px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] transition-colors",
-              viewMode === mode ? "bg-blue-500/25 text-blue-200" : "text-[#8592a9] hover:text-white",
+              viewMode === mode ? "bg-blue-500/25 text-blue-200" : "text-[#8592a9] ${UI_SURFACES.hoverText}",
             )}
           >
             {FEED_MODE_LABELS[mode]}
@@ -492,7 +493,7 @@ export function CameraFeedCanvas({
           <div className="text-[11px] font-semibold text-white">
             {targetZone.label}
           </div>
-          <div className="mt-1 text-[9px] text-[#c7d0e4]">
+          <div className={`mt-1 text-[9px] ${UI_SURFACES.textBody}`}>
             {targetZoneResult?.status === "pass"
               ? "PASS"
               : targetZoneResult?.status === "partial"
@@ -507,19 +508,19 @@ export function CameraFeedCanvas({
           <div className="mt-1 grid grid-cols-2 gap-2 text-[8px] text-[#94a3b8]">
             <div>
               <div className="uppercase tracking-[0.16em] text-[#546078]">Target Type</div>
-              <div className="mt-0.5 text-[#d7deed]">{targetZone.targetType.replace(/_/g, " ")}</div>
+              <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{targetZone.targetType.replace(/_/g, " ")}</div>
             </div>
             <div>
               <div className="uppercase tracking-[0.16em] text-[#546078]">Distance</div>
-              <div className="mt-0.5 text-[#d7deed]">{targetDistanceM != null ? `${targetDistanceM.toFixed(1)}m` : "—"}</div>
+              <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{targetDistanceM != null ? `${targetDistanceM.toFixed(1)}m` : "—"}</div>
             </div>
             <div>
               <div className="uppercase tracking-[0.16em] text-[#546078]">Angle</div>
-              <div className="mt-0.5 text-[#d7deed]">{angleFromCenterDeg != null ? `${angleFromCenterDeg.toFixed(1)}°` : "—"}</div>
+              <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{angleFromCenterDeg != null ? `${angleFromCenterDeg.toFixed(1)}°` : "—"}</div>
             </div>
             <div>
               <div className="uppercase tracking-[0.16em] text-[#546078]">Best Camera</div>
-              <div className="mt-0.5 text-[#d7deed]">{bestCameraName}</div>
+              <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{bestCameraName}</div>
             </div>
           </div>
           <div className="mt-2 text-[8px] uppercase tracking-[0.18em] text-[#546078]">

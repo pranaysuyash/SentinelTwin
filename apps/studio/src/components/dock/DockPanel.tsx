@@ -14,6 +14,7 @@ import { UI_TONES } from "@/lib/design-tokens";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 import { ResizeHandle } from "./ResizeHandle";
 
+
 export function DockPanel({
   side,
   title,
@@ -70,7 +71,7 @@ export function DockPanel({
           onClick={onToggle}
           onFocus={onFocus}
           className={cn(
-            `flex h-full w-full items-center justify-center ${UI_SURFACES.textMuted3} transition-colors hover:text-white`,
+            `flex h-full w-full items-center justify-center ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverText}`,
             attention && `${attentionTone.text} font-bold`,
           )}
           title={
@@ -115,7 +116,7 @@ export function DockPanel({
         type="button"
         onClick={onToggle}
         className={cn(
-          `absolute z-30 inline-flex h-6 w-6 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors hover:border-[#32384d] hover:text-white`,
+          `absolute z-30 inline-flex h-6 w-6 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`,
           isBottom ? "right-2 top-2" : side === "left" ? "right-2 top-2" : "left-2 top-2",
         )}
         title={`Collapse ${title}`}

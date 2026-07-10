@@ -8,6 +8,7 @@ import {
 } from "@/lib/scene-appearance";
 import type { AppearancePresetId, NodeAppearance } from "@/schema/security-scene";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 /**
  * Reusable "Appearance" inspector section for the cosmetic material override
  * on walls, doors, windows, and obstructions. Appearance is rendering-only:
@@ -44,7 +45,7 @@ export function NodeAppearanceSection({
           <button
             type="button"
             onClick={() => onChange(undefined)}
-            className="rounded px-1.5 py-0.5 text-[9px] text-[#556076] transition-colors hover:text-[#a8b4cc]"
+            className={`rounded px-1.5 py-0.5 text-[9px] ${UI_SURFACES.textDimMid} transition-colors hover:text-[#a8b4cc]`}
             title="Reset appearance to the built-in look"
           >
             Reset

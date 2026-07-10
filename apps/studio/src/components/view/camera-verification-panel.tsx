@@ -2,6 +2,7 @@
 
 import { type CameraVerificationSnapshot, type VerificationAlignmentMethod, type VerificationSourceType, type VerificationViewMode, type VideoFrameCandidate, formatSecondsShort, formatSnapshotEvidenceSummary } from "@/components/view/camera-verification-utils";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 export function VerificationPanel({
   enabled,
   mode,
@@ -96,9 +97,9 @@ export function VerificationPanel({
   const bestCandidate = bestCandidateId ? (videoCandidates.find((candidate) => candidate.id === bestCandidateId) ?? null) : null;
   const selectedCandidate = selectedCandidateId ? (videoCandidates.find((candidate) => candidate.id === selectedCandidateId) ?? null) : null;
   return (
-    <div className="pointer-events-auto w-full rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
+    <div className={`pointer-events-auto w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel}/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]`}>
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">Footage Verification</div>
+        <div className={`text-[8px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textAccent}`}>Footage Verification</div>
         <label className="inline-flex cursor-pointer items-center gap-1 text-[9px] text-[#c5d4ef]">
           <input type="checkbox" checked={enabled} onChange={(event) => onToggle(event.target.checked)} />
           Enable
@@ -113,7 +114,7 @@ export function VerificationPanel({
           <input
             type="file"
             accept="image/*,video/*"
-            className="mt-1 block w-full rounded border border-[#2a3650] bg-[#0f1624] px-2 py-1 text-[9px] text-[#cdd8ee]"
+            className={`mt-1 block w-full rounded border ${UI_SURFACES.borderStrongAlt} bg-[#0f1624] px-2 py-1 text-[9px] text-[#cdd8ee]`}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) onUpload(file);
@@ -122,7 +123,7 @@ export function VerificationPanel({
           />
           {fileName ? <span className="mt-1 block truncate text-[8px] text-[#8aa0c8]">{fileName}</span> : null}
           {sourceType === "video" && videoDurationS !== null ? (
-            <div className="mt-1 space-y-1.5 rounded border border-[#2a3650] bg-[#0d1523] p-1.5">
+            <div className={`mt-1 space-y-1.5 rounded border ${UI_SURFACES.borderStrongAlt} bg-[#0d1523] p-1.5`}>
               <span className="block text-[8px] text-[#9db7e1]">
                 Video frame sampled at {sampleTimeS !== null ? formatSecondsShort(sampleTimeS) : "0:00"} / {formatSecondsShort(videoDurationS)}
               </span>
@@ -149,7 +150,7 @@ export function VerificationPanel({
               </button>
 
               {videoCandidates.length ? (
-                <div className="rounded border border-[#2a3650] bg-[#0b1220] p-1.5">
+                <div className={`rounded border ${UI_SURFACES.borderStrongAlt} bg-[#0b1220] p-1.5`}>
                   <div className="mb-1 flex items-center justify-between text-[8px] text-[#9db7e1]">
                     <span className="uppercase tracking-[0.12em]">Extracted frames</span>
                     <button
@@ -161,7 +162,7 @@ export function VerificationPanel({
                       Auto-pick best extracted frame
                     </button>
                   </div>
-                  <div className="mb-1 rounded border border-[#243146] bg-[#0c1320] px-1.5 py-1 text-[8px] text-[#9db7e1]">
+                  <div className={`mb-1 rounded border ${UI_SURFACES.border} bg-[#0c1320] px-1.5 py-1 text-[8px] text-[#9db7e1]`}>
                     {bestCandidate ? (
                       <div className="flex items-center justify-between gap-1">
                         <span>
@@ -184,7 +185,7 @@ export function VerificationPanel({
                           key={candidate.id}
                           type="button"
                           onClick={() => onSelectVideoCandidate(candidate.id)}
-                          className={`flex items-center justify-between gap-2 rounded border px-1.5 py-1 text-left text-[8px] ${selected ? "border-cyan-300 bg-cyan-500/20 text-cyan-100" : "border-[#2a3650] bg-[#111b2c] text-[#9db7e1]"}`}
+                          className={`flex items-center justify-between gap-2 rounded border px-1.5 py-1 text-left text-[8px] ${selected ? "border-cyan-300 bg-cyan-500/20 text-cyan-100" : "${UI_SURFACES.borderStrongAlt} bg-[#111b2c] text-[#9db7e1]"}`}
                           title={`Sharpness score ${candidate.qualityScore.toFixed(1)}`}
                         >
                           <span className="min-w-0 truncate">
@@ -205,22 +206,22 @@ export function VerificationPanel({
           {errorMessage ? <span className="mt-1 block text-[8px] text-rose-300">{errorMessage}</span> : null}
         </label>
         <div className="flex gap-1">
-          <button type="button" onClick={() => onModeChange("overlay")} className={`rounded px-2 py-1 ${mode === "overlay" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] text-[#8ea5cc]"}`}>Overlay</button>
-          <button type="button" onClick={() => onModeChange("split")} className={`rounded px-2 py-1 ${mode === "split" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] text-[#8ea5cc]"}`}>Split</button>
+          <button type="button" onClick={() => onModeChange("overlay")} className={`rounded px-2 py-1 ${mode === "overlay" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] ${UI_SURFACES.textMuted3}"}`}>Overlay</button>
+          <button type="button" onClick={() => onModeChange("split")} className={`rounded px-2 py-1 ${mode === "split" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] ${UI_SURFACES.textMuted3}"}`}>Split</button>
           <button type="button" onClick={onSaveSnapshot} className="rounded bg-[#14304a] px-2 py-1 text-cyan-200">Save</button>
           <button type="button" onClick={onClear} className="rounded bg-[#2b1a20] px-2 py-1 text-rose-200">Clear</button>
         </div>
         {snapshots.length ? (
-          <div className="rounded-lg border border-[#2a3650] bg-[#0f1624] p-2">
+          <div className={`rounded-lg border ${UI_SURFACES.borderStrongAlt} bg-[#0f1624] p-2`}>
             <div className="mb-1 text-[8px] uppercase tracking-[0.12em] text-[#7a8fb6]">Saved snapshots</div>
             <div className="max-h-24 space-y-1 overflow-y-auto pr-1">
               {snapshots.map((snapshot) => (
-                <div key={snapshot.id} className="rounded border border-[#243146] bg-[#0c1320] px-1.5 py-1">
+                <div key={snapshot.id} className={`rounded border ${UI_SURFACES.border} bg-[#0c1320] px-1.5 py-1`}>
                   <div className="flex items-center justify-between gap-1">
                     <button
                       type="button"
                       onClick={() => onLoadSnapshot(snapshot.id)}
-                      className="truncate text-left text-[8px] text-[#c9d8f3] hover:text-white"
+                      className={`truncate text-left text-[8px] text-[#c9d8f3] ${UI_SURFACES.hoverText}`}
                       title={snapshot.fileName}
                     >
                       {snapshot.fileName}
@@ -241,7 +242,7 @@ export function VerificationPanel({
             </div>
           </div>
         ) : null}
-        <div className="rounded-lg border border-[#2a3650] bg-[#0f1624] px-2 py-1.5">
+        <div className={`rounded-lg border ${UI_SURFACES.borderStrongAlt} bg-[#0f1624] px-2 py-1.5`}>
           <div className="flex items-center justify-between text-[#7a8fb6]">
             <span>Alignment Quality</span>
             <span className="font-mono text-[#d4e6ff]">{alignmentScore !== null ? `${Math.round(alignmentScore)}/100` : "N/A"}</span>
@@ -254,7 +255,7 @@ export function VerificationPanel({
             Difference heat overlay
           </label>
         </div>
-        <div className="rounded-lg border border-[#2a3650] bg-[#0f1624] px-2 py-1.5">
+        <div className={`rounded-lg border ${UI_SURFACES.borderStrongAlt} bg-[#0f1624] px-2 py-1.5`}>
           <div className="flex items-center justify-between text-[#7a8fb6]">
             <span>Alignment Assist</span>
             <span className="font-mono text-[#d4e6ff]">{alignmentMethod === "auto" ? "AUTO" : alignmentMethod === "manual" ? "MANUAL" : "IDLE"}</span>
@@ -291,10 +292,10 @@ export function VerificationPanel({
         </label>
         <div className="flex items-center justify-between gap-1">
           <div className="flex gap-1">
-            <button type="button" onClick={() => onNudge(-4, 0)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">◀</button>
-            <button type="button" onClick={() => onNudge(4, 0)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">▶</button>
-            <button type="button" onClick={() => onNudge(0, -4)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">▲</button>
-            <button type="button" onClick={() => onNudge(0, 4)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">▼</button>
+            <button type="button" onClick={() => onNudge(-4, 0)} className={`rounded bg-[#1a2233] px-1.5 py-1 ${UI_SURFACES.textBody}`}>◀</button>
+            <button type="button" onClick={() => onNudge(4, 0)} className={`rounded bg-[#1a2233] px-1.5 py-1 ${UI_SURFACES.textBody}`}>▶</button>
+            <button type="button" onClick={() => onNudge(0, -4)} className={`rounded bg-[#1a2233] px-1.5 py-1 ${UI_SURFACES.textBody}`}>▲</button>
+            <button type="button" onClick={() => onNudge(0, 4)} className={`rounded bg-[#1a2233] px-1.5 py-1 ${UI_SURFACES.textBody}`}>▼</button>
           </div>
           <div className="flex gap-1">
             <button type="button" disabled={!canAutoAlign} onClick={onAutoAlign} className="rounded bg-[#13354a] px-2 py-1 text-[#8ce3ff] disabled:cursor-not-allowed disabled:opacity-50">Auto align</button>

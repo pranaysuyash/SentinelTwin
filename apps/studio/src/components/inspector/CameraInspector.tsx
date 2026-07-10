@@ -124,6 +124,7 @@ type ViewToggleState = Record<ViewToggleKey, boolean>;
 import type { CameraMetadataArchiveRecord } from "@/lib/camera-metadata-ingest-history";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Compute DORI effective ranges in metres for a camera, using the scene's PPM thresholds. */
@@ -844,7 +845,7 @@ export function CameraInspector() {
 
   return (
     <>
-      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/12">
@@ -857,7 +858,7 @@ export function CameraInspector() {
                   <InstallabilityBadge result={installabilityResult} />
                 )}
               </div>
-              <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">{camera.mountType} mount · {camera.resolutionMP}MP</div>
+              <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>{camera.mountType} mount · {camera.resolutionMP}MP</div>
             </div>
           </div>
           <Badge variant={camera.status === "on" ? "green" : "red"} dot>
@@ -866,7 +867,7 @@ export function CameraInspector() {
         </div>
       </div>
 
-      <div className="`{flex items-end justify-between border-b ${UI_SURFACES.borderPanel} px-2 pt-1.5}`">
+      <div className={`{flex items-end justify-between border-b ${UI_SURFACES.borderPanel} px-2 pt-1.5}`}>
         <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto scrollbar-none">
           {tabs.map((tab) => (
             <button
@@ -918,25 +919,25 @@ export function CameraInspector() {
 
             <SectionCard title="Move & Rotate" helpText="Use the same manipulation model everywhere: keyboard nudges, on-canvas handles, and the right-click menu all patch the selected camera through the canonical store." helpTitle="Camera transform help" truthLabel="placeholder">
               <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2.5">
-                  <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Keyboard</div>
+                <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2.5`}>
+                  <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Keyboard</div>
                   <div className="mt-2 space-y-2 text-[9px] leading-relaxed text-[#7b889f]">
                     <div>
-                      <span className="rounded border border-[#24283a] bg-[#0b0f17] px-1.5 py-0.5 font-mono text-[8px] text-[#d2d9e8]">Arrow keys</span>
+                      <span className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-1.5 py-0.5 font-mono text-[8px] ${UI_SURFACES.textBody2}`}>Arrow keys</span>
                       <span className="ml-2">Nudge the selected camera or object in the plane.</span>
                     </div>
                     <div>
-                      <span className="rounded border border-[#24283a] bg-[#0b0f17] px-1.5 py-0.5 font-mono text-[8px] text-[#d2d9e8]">PageUp / PageDown</span>
+                      <span className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-1.5 py-0.5 font-mono text-[8px] ${UI_SURFACES.textBody2}`}>PageUp / PageDown</span>
                       <span className="ml-2">Raise or lower the selected camera or object.</span>
                     </div>
                     <div>
-                      <span className="rounded border border-[#24283a] bg-[#0b0f17] px-1.5 py-0.5 font-mono text-[8px] text-[#d2d9e8]">Q / E</span>
+                      <span className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-1.5 py-0.5 font-mono text-[8px] ${UI_SURFACES.textBody2}`}>Q / E</span>
                       <span className="ml-2">Rotate the selected camera or object left and right.</span>
                     </div>
                   </div>
                 </div>
-                <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2.5">
-                  <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Mouse</div>
+                <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2.5`}>
+                  <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Mouse</div>
                   <div className="mt-2 space-y-2 text-[9px] leading-relaxed text-[#7b889f]">
                     <div>Drag the blue handle to move, the orange handle to change height, the pitch nub to tilt, and the green ring to yaw.</div>
                     <div>Right-click the camera for snap, aim, open-view, duplicate, and delete actions.</div>
@@ -948,67 +949,67 @@ export function CameraInspector() {
             <SectionCard title="Live Camera Binding" helpText="Connect this planned camera to live feed evidence. Use it to compare the site twin against the real device without making the simulation depend on the feed." helpTitle="Live camera binding help" truthLabel="live">
               <div className="space-y-2">
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Live feed URL</div>
+                  <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Live feed URL</div>
                     <input
                       aria-label="Live feed URL"
                       value={liveConnectionUrl}
                       onChange={(event) => setLiveConnectionUrl(event.target.value)}
                       placeholder="rtsp://camera.example.com/live"
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                     />
                   </div>
-                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Feed label</div>
+                  <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Feed label</div>
                     <input
                       aria-label="Live feed label"
                       value={liveConnectionLabel}
                       onChange={(event) => setLiveConnectionLabel(event.target.value)}
                       placeholder="Front entrance live stream"
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                     />
                   </div>
-                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">ONVIF username</div>
+                  <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>ONVIF username</div>
                     <input
                       aria-label="ONVIF username"
                       value={liveConnectionOnvifUsername}
                       onChange={(event) => setLiveConnectionOnvifUsername(event.target.value)}
                       placeholder="camera operator"
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                     />
                   </div>
-                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">ONVIF password</div>
+                  <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>ONVIF password</div>
                     <input
                       aria-label="ONVIF password"
                       type="password"
                       value={liveConnectionOnvifPassword}
                       onChange={(event) => setLiveConnectionOnvifPassword(event.target.value)}
                       placeholder="••••••••"
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                     />
                   </div>
-                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Connection mode</div>
+                  <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Connection mode</div>
                     <select
                       aria-label="Connection mode"
                       value={liveConnectionMode ?? "onvif"}
                       onChange={(event) => setLiveConnectionMode(event.target.value as CameraNode["liveConnectionMode"])}
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                     >
                       {LIVE_CONNECTION_MODE_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
                       ))}
                     </select>
                   </div>
-                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Connection status</div>
+                  <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Connection status</div>
                     <select
                       aria-label="Connection status"
                       value={liveConnectionStatus ?? "disconnected"}
                       onChange={(event) => setLiveConnectionStatus(event.target.value as CameraNode["liveConnectionStatus"])}
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                     >
                       {LIVE_CONNECTION_STATUS_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
@@ -1017,15 +1018,15 @@ export function CameraInspector() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
+                <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Connection notes</div>
+                      <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Connection notes</div>
                       <div className="mt-0.5 text-[9px] text-[#7b889f]">
                         Bind the live camera connection through the canonical store so the camera glass, Scene Intelligence, and evidence trail stay aligned.
                       </div>
                     </div>
-                    <div className="text-[9px] text-[#556076]">{cameraLiveConnectionEvents.length} records</div>
+                    <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>{cameraLiveConnectionEvents.length} records</div>
                   </div>
                   <textarea
                     aria-label="Connection notes"
@@ -1033,7 +1034,7 @@ export function CameraInspector() {
                     onChange={(event) => setLiveConnectionNotes(event.target.value)}
                     placeholder="Notes about the remote camera, relay, or ONVIF proxy."
                     rows={3}
-                    className="mt-2 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                    className={`mt-2 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                   />
                 </div>
 
@@ -1066,7 +1067,7 @@ export function CameraInspector() {
                     type="button"
                     onClick={disconnectLiveConnection}
                     disabled={liveConnectionLoading}
-                    className="rounded-xl border border-[#2a2f40] bg-[#0b0f17] px-3 py-1.5 text-[10px] font-medium text-[#c9d2e5] transition-colors hover:border-[#39425a] hover:bg-[#111521] disabled:cursor-not-allowed disabled:opacity-50"
+                    className={`rounded-xl border border-[#2a2f40] ${UI_SURFACES.panel} px-3 py-1.5 text-[10px] font-medium text-[#c9d2e5] transition-colors hover:border-[#39425a] hover:${UI_SURFACES.card} disabled:cursor-not-allowed disabled:opacity-50`}
                   >
                     {liveConnectionLoading ? "Clearing..." : "Clear Binding"}
                   </button>
@@ -1096,130 +1097,130 @@ export function CameraInspector() {
                   {cameraLiveSessionRegistry.length > 0 ? (
                     <div className="mt-2 space-y-2">
                       {cameraLiveSessionRegistry.slice(0, 2).map((entry) => (
-                        <div key={entry.sessionId} className="rounded-lg border border-[#1f2536] bg-[#111521] p-2">
+                        <div key={entry.sessionId} className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <div className="truncate text-[11px] font-semibold text-[#e6ebf7]">
+                              <div className={`truncate text-[11px] font-semibold ${UI_SURFACES.textBody4}`}>
                                 {entry.cameraName}
                               </div>
-                              <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">
+                              <div className={`mt-0.5 text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>
                                 {entry.status} · {entry.lastAction} · {entry.liveSessionState ?? "unknown"} · {entry.transportSessionState ?? "transport?"}{entry.transportResponseStatus == null ? "" : ` · ${entry.transportResponseStatus}${entry.transportResponseStatusText ? ` ${entry.transportResponseStatusText}` : ""}`}
                               </div>
                             </div>
-                            <div className="rounded-full border border-[#1f2536] bg-[#0b0f17] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]">
+                            <div className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]`}>
                               {entry.sessionId.slice(-8)}
                             </div>
                           </div>
                           <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">
                             Expires {entry.liveSessionExpiresAt == null ? "—" : new Date(entry.liveSessionExpiresAt).toLocaleTimeString()}
                           </div>
-                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                          <div className={`mt-0.5 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
                             Registry {entry.sessionExpiresAt == null ? "—" : new Date(entry.sessionExpiresAt).toLocaleTimeString()}
                           </div>
-                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                          <div className={`mt-0.5 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
                             Auth {entry.authState ?? "unauthenticated"} · {entry.authMode ?? "none"}{entry.authRealm ? ` · realm ${entry.authRealm}` : ""}{entry.authSessionId ? ` · session ${entry.authSessionId.slice(-8)}` : ""}{entry.authSessionExpiresAt == null ? "" : ` · expires ${new Date(entry.authSessionExpiresAt).toLocaleTimeString()}`}{entry.authChallengeHeader ? ` · challenge ${entry.authChallengeHeader}` : ""}{entry.transportResponseStatus == null ? "" : ` · response ${entry.transportResponseStatus}${entry.transportResponseStatusText ? ` ${entry.transportResponseStatusText}` : ""}`}
                           </div>
-                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                          <div className={`mt-0.5 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
                             Events {entry.eventSubscriptionUri ? entry.eventSubscriptionUri : "—"}{entry.eventSubscriptionReference ? ` · ref ${entry.eventSubscriptionReference}` : ""}{entry.eventSubscriptionExpiresAt == null ? "" : ` · expires ${new Date(entry.eventSubscriptionExpiresAt).toLocaleTimeString()}`}
                           </div>
-                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                          <div className={`mt-0.5 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
                             Transport {entry.transportSessionId ? entry.transportSessionId.slice(-8) : "—"} · {entry.protocolProfile ?? "unknown"} · probes {entry.probeCount}
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="mt-2 text-[9px] text-[#6a748b]">No active live session lease is currently registered.</div>
+                    <div className={`mt-2 text-[9px] ${UI_SURFACES.textSoftMid}`}>No active live session lease is currently registered.</div>
                   )}
                 </div>
 
-                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2">
+                <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2`}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Connection archive</div>
+                      <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Connection archive</div>
                       <div className="mt-0.5 text-[9px] text-[#7b889f]">
                         Backend archive records for live camera probe, refresh, heartbeat, and disconnect actions.
                       </div>
                     </div>
-                    <div className="text-[9px] text-[#556076]">{cameraLiveConnectionHistory.length} records</div>
+                    <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>{cameraLiveConnectionHistory.length} records</div>
                   </div>
                   {cameraLiveConnectionHistory.length > 0 ? (
                     <div className="mt-2 space-y-2">
                       {cameraLiveConnectionHistory.slice(0, 3).map((entry) => (
-                        <div key={`${entry.storedAt}-${entry.record.cameraId}-${entry.action}`} className="rounded-lg border border-[#1f2536] bg-[#111521] p-2">
+                        <div key={`${entry.storedAt}-${entry.record.cameraId}-${entry.action}`} className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <div className="truncate text-[11px] font-semibold text-[#e6ebf7]">
+                              <div className={`truncate text-[11px] font-semibold ${UI_SURFACES.textBody4}`}>
                                 {entry.record.liveFeedLabel ?? entry.record.cameraName}
                               </div>
-                              <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">
+                              <div className={`mt-0.5 text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>
                                 {entry.action === "bind" ? "Bind probe" : entry.action === "refresh" ? "Refresh session" : "Disconnect"} · {entry.protocol.toUpperCase()}
                               </div>
                             </div>
-                            <div className="rounded-full border border-[#1f2536] bg-[#0b0f17] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]">
+                            <div className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]`}>
                               {entry.record.liveConnectionStatus}
                             </div>
                           </div>
                           <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">
                             {entry.summary}
                           </div>
-                          <div className="mt-1 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                          <div className={`mt-1 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
                             Session {entry.record.liveSessionState ?? "unknown"}{entry.record.liveSessionId ? ` · ${entry.record.liveSessionId}` : ""}
                           </div>
-                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                          <div className={`mt-0.5 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
                             Auth {entry.record.authState ?? "unauthenticated"} · {entry.record.authMode ?? "none"}{entry.record.authSessionId ? ` · ${entry.record.authSessionId.slice(-8)}` : ""}{entry.record.authSessionExpiresAt == null ? "" : ` · expires ${new Date(entry.record.authSessionExpiresAt).toLocaleTimeString()}`}
                           </div>
-                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                          <div className={`mt-0.5 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
                             Events {entry.record.eventSubscriptionUri ? entry.record.eventSubscriptionUri : "—"}{entry.record.eventSubscriptionReference ? ` · ref ${entry.record.eventSubscriptionReference}` : ""}{entry.record.eventSubscriptionExpiresAt == null ? "" : ` · expires ${new Date(entry.record.eventSubscriptionExpiresAt).toLocaleTimeString()}`}
                           </div>
-                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                          <div className={`mt-0.5 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
                             Expires {entry.record.liveSessionExpiresAt == null ? "—" : new Date(entry.record.liveSessionExpiresAt).toLocaleTimeString()}
                           </div>
-                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                          <div className={`mt-0.5 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
                             Transport {entry.record.transportSessionId ? entry.record.transportSessionId.slice(-8) : "—"} · {entry.record.protocolProfile ?? "unknown"} · {entry.record.lastHeartbeatAt == null ? "no heartbeat" : new Date(entry.record.lastHeartbeatAt).toLocaleTimeString()}
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="mt-2 text-[9px] text-[#6a748b]">No connection archive records yet. Bind, refresh, or disconnect a camera to create the first backend probe record.</div>
+                    <div className={`mt-2 text-[9px] ${UI_SURFACES.textSoftMid}`}>No connection archive records yet. Bind, refresh, or disconnect a camera to create the first backend probe record.</div>
                   )}
                 </div>
 
                 {cameraLiveConnectionEvents.length > 0 ? (
                   <div className="space-y-2">
                     {cameraLiveConnectionEvents.slice(0, 3).map((entry) => (
-                      <div key={entry.id} className="rounded-lg border border-[#1f2536] bg-[#0b0f17] p-2">
+                      <div key={entry.id} className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2`}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <div className="truncate text-[11px] font-semibold text-[#e6ebf7]">
+                            <div className={`truncate text-[11px] font-semibold ${UI_SURFACES.textBody4}`}>
                               {entry.liveFeedLabel ?? entry.cameraName}
                             </div>
-                            <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">
+                            <div className={`mt-0.5 text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>
                               {entry.liveConnectionStatus ?? "disconnected"} · {entry.liveConnectionMode ?? "unknown"} · {entry.ingestMode === "external" ? "External" : "Manual"} · {entry.transportSessionState ?? "transport?"}
                             </div>
                           </div>
-                          <div className="rounded-full border border-[#1f2536] bg-[#111521] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]">
+                          <div className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]`}>
                             {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </div>
                         </div>
                         <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">
                           {entry.summary}
                         </div>
-                        <div className="mt-1 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                        <div className={`mt-1 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
                           Session {entry.liveSessionState ?? "unknown"}{entry.liveSessionId ? ` · ${entry.liveSessionId}` : ""}
                         </div>
-                        <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                        <div className={`mt-0.5 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
                           Expires {entry.liveSessionExpiresAt == null ? "—" : new Date(entry.liveSessionExpiresAt).toLocaleTimeString()}
                         </div>
-                        <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                        <div className={`mt-0.5 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
                           Transport {entry.transportSessionId ? entry.transportSessionId.slice(-8) : "—"} · {entry.protocolProfile ?? "unknown"} · {entry.lastHeartbeatAt == null ? "no heartbeat" : new Date(entry.lastHeartbeatAt).toLocaleTimeString()}{entry.transportResponseStatus == null ? "" : ` · ${entry.transportResponseStatus}${entry.transportResponseStatusText ? ` ${entry.transportResponseStatusText}` : ""}`}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-[9px] text-[#6a748b]">No live camera binding has been archived yet.</div>
+                  <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>No live camera binding has been archived yet.</div>
                 )}
               </div>
             </SectionCard>
@@ -1227,42 +1228,42 @@ export function CameraInspector() {
             <SectionCard title="Camera Metadata Bridge" helpText="Bring camera health, clarity, night mode, and feed status into the evidence trail. This helps explain whether a coverage issue is a design problem or an operational camera problem." helpTitle="Camera metadata help" truthLabel="imported">
               <div className="space-y-2">
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">External feed URL</div>
+                  <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>External feed URL</div>
                     <input
                       value={cameraMetadataUrl}
                       onChange={(event) => setCameraMetadataUrl(event.target.value)}
                       placeholder="https://camera-feed.example.com/metadata"
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                     />
                   </div>
-                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Feed label</div>
+                  <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Feed label</div>
                     <input
                       value={cameraMetadataLabel}
                       onChange={(event) => setCameraMetadataLabel(event.target.value)}
                       placeholder="ONVIF relay"
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                     />
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
+                <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Paste metadata</div>
+                      <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Paste metadata</div>
                       <div className="mt-0.5 text-[9px] text-[#7b889f]">
                         Paste JSON or NDJSON camera records. Matching scene cameras update through the canonical store.
                       </div>
                     </div>
-                    <div className="text-[9px] text-[#556076]">{scene.cameras.length} cameras in scene</div>
+                    <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>{scene.cameras.length} cameras in scene</div>
                   </div>
                   <textarea
                     value={cameraMetadataRaw}
                     onChange={(event) => setCameraMetadataRaw(event.target.value)}
                     placeholder='[{"cameraName":"Front Entrance","status":"malfunctioning","clarity":"poor"}]'
                     rows={5}
-                    className="mt-2 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                    className={`mt-2 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                   />
                 </div>
 
@@ -1279,7 +1280,7 @@ export function CameraInspector() {
                     type="button"
                     onClick={() => void ingestCameraMetadata("external")}
                     disabled={cameraMetadataLoading}
-                    className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-1.5 text-[10px] font-medium text-[#d2d9e8] transition-colors hover:border-[#2d3750] hover:bg-[#111521] disabled:cursor-not-allowed disabled:opacity-50"
+                    className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-3 py-1.5 text-[10px] font-medium ${UI_SURFACES.textBody2} transition-colors hover:border-[#2d3750] hover:${UI_SURFACES.card} disabled:cursor-not-allowed disabled:opacity-50`}
                   >
                     {cameraMetadataLoading ? "Pulling..." : "Pull External Feed"}
                   </button>
@@ -1297,25 +1298,25 @@ export function CameraInspector() {
                   </div>
                 ) : null}
 
-                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2">
+                <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2`}>
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Ingest archive</div>
-                    <div className="text-[9px] text-[#556076]">{cameraMetadataHistory.length} records</div>
+                    <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>Ingest archive</div>
+                    <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>{cameraMetadataHistory.length} records</div>
                   </div>
                   {cameraMetadataHistory.length > 0 ? (
                     <div className="space-y-2">
                       {cameraMetadataHistory.slice(0, 3).map((entry) => (
-                        <div key={`${entry.storedAt}-${entry.receivedAt}-${entry.feedUrl ?? entry.source}`} className="rounded-lg border border-[#1f2536] bg-[#111521] p-2">
+                        <div key={`${entry.storedAt}-${entry.receivedAt}-${entry.feedUrl ?? entry.source}`} className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <div className="truncate text-[11px] font-semibold text-[#e6ebf7]">
+                              <div className={`truncate text-[11px] font-semibold ${UI_SURFACES.textBody4}`}>
                                 {entry.feedLabel ?? entry.source}
                               </div>
-                              <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">
+                              <div className={`mt-0.5 text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>
                                 {entry.ingestMode === "external" ? "External feed" : "Pasted metadata"} · {entry.sceneName ?? "Scene"}
                               </div>
                             </div>
-                            <div className="rounded-full border border-[#1f2536] bg-[#0b0f17] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]">
+                            <div className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]`}>
                               {entry.records.length} matched
                             </div>
                           </div>
@@ -1326,7 +1327,7 @@ export function CameraInspector() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-[9px] text-[#6a748b]">No camera metadata has been archived yet.</div>
+                    <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>No camera metadata has been archived yet.</div>
                   )}
                 </div>
               </div>
@@ -1334,7 +1335,7 @@ export function CameraInspector() {
 
             <SectionCard title="Camera Spec Import" helpText="Paste manufacturer specs to update field of view, resolution, IR range, and mounting values. Review the parsed values before trusting them in an audit." helpTitle="Camera specs help" truthLabel="imported">
               <div className="space-y-2">
-                <div className="text-[9px] leading-relaxed text-[#6a748b]">
+                <div className={`text-[9px] leading-relaxed ${UI_SURFACES.textSoftMid}`}>
                   Paste a spec sheet snippet or JSON payload, then let the inspector stamp the parsed optics values back onto this camera through the canonical store.
                 </div>
                 <CameraSpecImport camera={camera} updateNode={updateNode} />
@@ -1344,21 +1345,21 @@ export function CameraInspector() {
             <SectionCard title="Placement Presets" truthLabel="computed">
               <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Tool rail</div>
-                    <div className="mt-0.5 text-[10px] font-medium text-[#d2d9e8]">
+                  <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Tool rail</div>
+                    <div className={`mt-0.5 text-[10px] font-medium ${UI_SURFACES.textBody2}`}>
                       {placementPreset ? placementPreset.label : "Custom camera"}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Best fit</div>
-                    <div className="mt-0.5 text-[10px] font-medium text-[#d2d9e8]">
+                  <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Best fit</div>
+                    <div className={`mt-0.5 text-[10px] font-medium ${UI_SURFACES.textBody2}`}>
                       {bestPreset ? bestPreset.label : "None"}
                     </div>
                   </div>
                 </div>
 
-                <div className="text-[9px] leading-relaxed text-[#6a748b]">
+                <div className={`text-[9px] leading-relaxed ${UI_SURFACES.textSoftMid}`}>
                   Pick a placement preset for the next camera, or stamp one onto this camera so the inspector and editor stay on the same optics profile.
                 </div>
 
@@ -1378,12 +1379,12 @@ export function CameraInspector() {
                           "rounded-xl border px-2.5 py-2 text-left transition-colors",
                           isPlacementPreset
                             ? "border-blue-400/50 bg-blue-500/10"
-                            : "border-[#1f2536] bg-[#0b0f17] hover:border-[#2d3750] hover:bg-[#111521]",
+                            : "${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} hover:border-[#2d3750] hover:${UI_SURFACES.card}",
                         )}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <div className="truncate text-[11px] font-semibold text-[#e6ebf7]">{preset.label}</div>
+                            <div className={`truncate text-[11px] font-semibold ${UI_SURFACES.textBody4}`}>{preset.label}</div>
                             <div className="mt-0.5 text-[9px] leading-relaxed text-[#7b889f]">{describeCameraPreset(preset)}</div>
                           </div>
                           <div className="flex shrink-0 flex-col items-end gap-1">
@@ -1400,13 +1401,13 @@ export function CameraInspector() {
                           </div>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-1">
-                          <span className="rounded-full border border-[#1f2536] bg-[#111521] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]">
+                          <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]`}>
                             {preset.mountType}
                           </span>
-                          <span className="rounded-full border border-[#1f2536] bg-[#111521] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]">
+                          <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]`}>
                             {preset.ptz ? "PTZ" : "Fixed"}
                           </span>
-                          <span className="rounded-full border border-[#1f2536] bg-[#111521] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]">
+                          <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]`}>
                             {preset.nightMode === "ir" ? "IR" : preset.nightMode === "low_light" ? "Low light" : preset.nightMode}
                           </span>
                         </div>
@@ -1436,8 +1437,8 @@ export function CameraInspector() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between gap-2 border-b border-[#181c27] pb-2">
-                  <span className="text-[10px] text-[#6a748b]">Preset ID</span>
+                <div className={`flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderFaintAlt} pb-2`}>
+                  <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Preset ID</span>
                   <select
                     value={camera.presetId ?? ""}
                     onChange={(event) => {
@@ -1450,7 +1451,7 @@ export function CameraInspector() {
                         updateNode(camera.id, { presetId: undefined });
                       }
                     }}
-                    className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                    className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                   >
                     <option value="">Custom / no preset</option>
                     {CAMERA_PRESETS.map((preset) => (
@@ -1462,15 +1463,15 @@ export function CameraInspector() {
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="border-b border-[#181c27] pb-2 last:border-b-0 last:pb-0">
+                  <div className={`border-b ${UI_SURFACES.borderFaintAlt} pb-2 last:border-b-0 last:pb-0`}>
                     <label className="mb-1 flex items-center justify-between gap-3">
-                      <span className="text-[10px] text-[#6a748b]">Patrol route ID</span>
+                      <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Patrol route ID</span>
                       <input
                         type="text"
                         value={cameraViewMotion.patrolRouteId ?? ""}
                         onChange={(event) => setViewMotion({ patrolRouteId: event.target.value || undefined })}
                         placeholder="optional"
-                        className="h-7 w-44 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+                        className={`h-7 w-44 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
                       />
                     </label>
                   </div>
@@ -1485,11 +1486,11 @@ export function CameraInspector() {
                 </div>
 
                 {cameraViewMotion.movementMode !== "fixed" ? (
-                  <div className="space-y-2 rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+                  <div className={`space-y-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <div className="text-[10px] font-semibold text-[#e6ebf7]">Patrol waypoints</div>
-                        <div className="text-[8px] text-[#556076]">Optional timeline points for sweep or tracking paths</div>
+                        <div className={`text-[10px] font-semibold ${UI_SURFACES.textBody4}`}>Patrol waypoints</div>
+                        <div className={`text-[8px] ${UI_SURFACES.textDimMid}`}>Optional timeline points for sweep or tracking paths</div>
                       </div>
                       <button
                         type="button"
@@ -1503,7 +1504,7 @@ export function CameraInspector() {
                     {cameraViewMotion.waypoints.length > 0 ? (
                       <div className="space-y-2">
                         {cameraViewMotion.waypoints.map((waypoint, index) => (
-                          <div key={`${waypoint.yawDeg}-${waypoint.pitchDeg}-${index}`} className="space-y-2 rounded-lg border border-[#1f2536] bg-[#0b0f17] p-2">
+                          <div key={`${waypoint.yawDeg}-${waypoint.pitchDeg}-${index}`} className={`space-y-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2`}>
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-[9px] font-semibold text-[#7b889f]">Waypoint {index + 1}</span>
                               <button
@@ -1518,8 +1519,8 @@ export function CameraInspector() {
                               <NumberInput label="Yaw" value={waypoint.yawDeg} step={1} unit="°" onChange={(value) => setWaypoint(index, { yawDeg: value })} />
                               <NumberInput label="Pitch" value={waypoint.pitchDeg} step={1} unit="°" onChange={(value) => setWaypoint(index, { pitchDeg: value })} />
                               <NumberInput label="Hold" value={waypoint.holdSeconds} min={0} step={0.25} unit="s" onChange={(value) => setWaypoint(index, { holdSeconds: value })} />
-                              <label className="flex items-center justify-between gap-1 rounded-md border border-[#1f2536] bg-[#111521] px-2 py-1">
-                                <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Easing</span>
+                              <label className={`flex items-center justify-between gap-1 rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1`}>
+                                <span className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Easing</span>
                                 <select
                                   value={waypoint.easing ?? ""}
                                   onChange={(event) => {
@@ -1528,7 +1529,7 @@ export function CameraInspector() {
                                       easing: nextEasing === "" ? undefined : nextEasing,
                                     });
                                   }}
-                                  className="rounded-md border border-[#24283a] bg-[#0b0f17] px-1.5 py-0.5 text-[9px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                                  className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[9px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
                                 >
                                   {WAYPOINT_EASING_OPTIONS.map((option) => (
                                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -1540,15 +1541,15 @@ export function CameraInspector() {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-[9px] text-[#6a748b]">No waypoints defined. Add points only for sweep / patrol logic.</div>
+                      <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>No waypoints defined. Add points only for sweep / patrol logic.</div>
                     )}
                   </div>
                 ) : null}
               </div>
             </SectionCard>
 
-            <div className="flex items-center justify-between gap-3 border-b border-[#181c27] py-1.5">
-              <span className="text-[10px] text-[#6a748b]">Type</span>
+            <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+              <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Type</span>
               <select
                 value={typeKey}
                 onChange={(e) => {
@@ -1558,7 +1559,7 @@ export function CameraInspector() {
                     mountType: shape === "dome" ? "ceiling" : "wall",
                   });
                 }}
-                className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
               >
                 <option value="4mp_dome">4MP Indoor Dome</option>
                 <option value="2mp_dome">2MP Indoor Dome</option>
@@ -1577,7 +1578,7 @@ export function CameraInspector() {
 
             <SectionCard title="Mount Snap" helpText="Snap this camera to a realistic wall, ceiling, or pole mount so coverage results reflect where the device can actually be installed." helpTitle="Mount snap help" truthLabel="computed">
               <div className="space-y-2">
-                <div className="text-[10px] leading-relaxed text-[#6a748b]">
+                <div className={`text-[10px] leading-relaxed ${UI_SURFACES.textSoftMid}`}>
                   Snap this camera to a wall, ceiling, or pole-like mount target, then re-aim it toward the room interior.
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3">
@@ -1606,21 +1607,21 @@ export function CameraInspector() {
                       type="button"
                       onClick={() => snapToMount(item.mode)}
                       disabled={item.disabled}
-                      className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-left transition-colors hover:border-[#2d3750] hover:bg-[#111521] disabled:cursor-not-allowed disabled:opacity-45"
+                      className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2 text-left transition-colors hover:border-[#2d3750] hover:${UI_SURFACES.card} disabled:cursor-not-allowed disabled:opacity-45`}
                     >
-                      <div className="text-[11px] font-semibold text-[#e6ebf7]">{item.label}</div>
+                      <div className={`text-[11px] font-semibold ${UI_SURFACES.textBody4}`}>{item.label}</div>
                       <div className="mt-0.5 text-[9px] text-[#7b889f]">{item.helper}</div>
                     </button>
                   ))}
                 </div>
-                <div className="text-[9px] text-[#4a5568]">
+                <div className={`text-[9px] ${UI_SURFACES.textMuted}`}>
                   Wall snapping uses room walls, ceiling snapping uses the ceiling plane, and pole snapping prefers the nearest pillar-like obstruction.
                 </div>
               </div>
             </SectionCard>
 
-            <div className="border-b border-[#181c27] py-1.5">
-              <div className="mb-1.5 text-[10px] text-[#6a748b]">Position (m)</div>
+            <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+              <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textSoftMid}`}>Position (m)</div>
               <div className="grid grid-cols-3 gap-1.5">
                 <NumberInput label="X" value={camera.position[0]} step={0.1} unit="m" onChange={(value) => updatePosition([value, camera.position[1], camera.position[2]])} />
                 <NumberInput label="Y" value={camera.position[1]} min={0.5} max={4} step={0.1} unit="m" onChange={updateHeight} />
@@ -1628,8 +1629,8 @@ export function CameraInspector() {
               </div>
             </div>
 
-            <div className="border-b border-[#181c27] py-1.5">
-              <div className="mb-1.5 text-[10px] text-[#6a748b]">Rotation (°)</div>
+            <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+              <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textSoftMid}`}>Rotation (°)</div>
               <div className="grid grid-cols-3 gap-1.5">
                 <NumberInput label="Yaw"   value={camera.yawDeg}   min={-180} max={180} step={1} unit="°" onChange={(value) => updateNode(camera.id, { yawDeg: value })} />
                 <NumberInput label="Pitch" value={camera.pitchDeg} min={-90}  max={0}   step={1} unit="°" onChange={(value) => updateNode(camera.id, { pitchDeg: value })} />
@@ -1637,10 +1638,10 @@ export function CameraInspector() {
               </div>
             </div>
 
-            <div className="border-b border-[#181c27] py-1.5">
+            <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
               <div className="mb-1.5 flex items-center justify-between gap-3">
-                <span className="text-[10px] text-[#6a748b]">FOV (Horizontal)</span>
-                <span className="font-mono text-[11px] text-[#d2d9e8]">{camera.fovHorizontalDeg}°</span>
+                <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>FOV (Horizontal)</span>
+                <span className={`font-mono text-[11px] ${UI_SURFACES.textBody2}`}>{camera.fovHorizontalDeg}°</span>
               </div>
               <input
                 type="range" min={30} max={180} step={1}
@@ -1680,8 +1681,8 @@ export function CameraInspector() {
               Lens / FOV Simulator
             </button>
 
-            <div className="border-b border-[#181c27] py-1.5">
-              <div className="mb-1.5 text-[10px] text-[#6a748b]">Height</div>
+            <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+              <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textSoftMid}`}>Height</div>
               <NumberInput label="Height" value={camera.mountHeightM} min={0.5} max={4} step={0.1} unit="m" onChange={updateHeight} />
             </div>
 
@@ -1703,8 +1704,8 @@ export function CameraInspector() {
             <Field label="PTZ" value={camera.ptz ? "Yes" : "No"} />
             <Field label="Thermal" value={camera.thermalCapable ? "Yes" : "No"} />
 
-            <div className="border-b border-[#181c27] py-1.5">
-              <div className="mb-1.5 text-[10px] text-[#6a748b]">LPR / ALPR</div>
+            <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+              <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textSoftMid}`}>LPR / ALPR</div>
               <div className="space-y-1.5">
                 <ToggleField
                   label="LPR Capable"
@@ -1732,8 +1733,8 @@ export function CameraInspector() {
               </div>
             </div>
 
-            <div className="border-b border-[#181c27] py-1.5">
-              <div className="mb-1.5 text-[10px] text-[#6a748b]">Compliance & Privacy</div>
+            <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+              <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textSoftMid}`}>Compliance & Privacy</div>
               <div className="space-y-1.5">
                 <ToggleField
                   label="NDAA Compliant"
@@ -1757,7 +1758,7 @@ export function CameraInspector() {
               <SectionCard title="Installability" truthLabel="computed">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-[#6a748b]">Overall</span>
+                    <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Overall</span>
                     <InstallabilityBadge result={installabilityResult} />
                   </div>
 
@@ -1836,8 +1837,8 @@ export function CameraInspector() {
             {(() => {
               const dori = computeDoriRanges(camera, scene.assumptions.pixelsPerMeter);
               return (
-                <div className="mt-2.5 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-                  <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">DORI</div>
+                <div className={`mt-2.5 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+                  <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted}`}>DORI</div>
                   <div className="space-y-1">
                     {([
                       { label: "Detect", value: dori.det,   color: "text-orange-300" },
@@ -1845,23 +1846,23 @@ export function CameraInspector() {
                       { label: "Ident",  value: dori.ident, color: "text-emerald-300" },
                     ] as const).map(({ label, value, color }) => (
                       <div key={label} className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] text-[#6a748b]">{label}</span>
+                        <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
                         <div className="flex items-center gap-1">
                           <span className={`font-mono text-[11px] font-semibold ${color}`}>{value.toFixed(1)}</span>
-                          <span className="text-[8px] text-[#556076]">m</span>
+                          <span className={`text-[8px] ${UI_SURFACES.textDimMid}`}>m</span>
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-2 flex items-center justify-between border-t border-[#1f2536] pt-2">
+                  <div className={`mt-2 flex items-center justify-between border-t ${UI_SURFACES.borderSubtle} pt-2`}>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] text-[#6a748b]">Target</span>
-                      <span className="rounded bg-[#131a28] px-1.5 py-0.5 text-[9px] font-medium text-[#c7d0e4]">Face</span>
+                      <span className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>Target</span>
+                      <span className={`rounded bg-[#131a28] px-1.5 py-0.5 text-[9px] font-medium ${UI_SURFACES.textBody}`}>Face</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setTab("view")}
-                      className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+                      className={`flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
                     >
                       Export Frame
                     </button>
@@ -1887,11 +1888,11 @@ export function CameraInspector() {
                   <div className="space-y-2">
                     {recs.slice(0, 3).map((rec) => (
                       <div key={rec.description} className="flex items-start gap-2">
-                        <span className={`mt-0.5 flex-shrink-0 text-[7px] font-bold ${COST_COLOR[rec.costCategory] ?? "text-[#8090a8]"}`}>
+                        <span className={`mt-0.5 flex-shrink-0 text-[7px] font-bold ${COST_COLOR[rec.costCategory] ?? "${UI_SURFACES.textMuted5}"}`}>
                           {rec.costCategory.toUpperCase()}
                         </span>
                         <div className="min-w-0">
-                          <div className="text-[9px] leading-tight text-[#c7d0e4]">{rec.description}</div>
+                          <div className={`text-[9px] leading-tight ${UI_SURFACES.textBody}`}>{rec.description}</div>
                           {rec.estimatedImpact && <div className="mt-0.5 text-[8px] text-[#5a6478]">{rec.estimatedImpact}</div>}
                         </div>
                         {rec.verified && <span className="ml-auto flex-shrink-0 rounded bg-green-900/30 px-1 py-0.5 text-[7px] font-semibold text-green-400">✓</span>}
@@ -1921,20 +1922,20 @@ export function CameraInspector() {
                 <SummaryStat label="Sensors" value={fusionSummary ? `${fusionSummary.sensorFusion.activeCount} / ${fusionSummary.sensorFusion.totalCount}` : "--"} accent="text-amber-300" />
               </div>
               <div className="mt-2 grid grid-cols-2 gap-1.5 text-[9px] text-[#93a0bd]">
-                <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
-                  <div className="uppercase tracking-[0.16em] text-[#556076]">Nearest sensor</div>
-                  <div className="mt-1 text-[#d2d9e8]">{fusionSummary?.sensorFusion.nearestSensor?.label ?? "None"}</div>
+                <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
+                  <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Nearest sensor</div>
+                  <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{fusionSummary?.sensorFusion.nearestSensor?.label ?? "None"}</div>
                 </div>
-                <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
-                  <div className="uppercase tracking-[0.16em] text-[#556076]">Health detail</div>
-                  <div className="mt-1 text-[#d2d9e8]">{fusionSummary?.operationalHealthDetail ?? "Unavailable"}</div>
+                <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
+                  <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Health detail</div>
+                  <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{fusionSummary?.operationalHealthDetail ?? "Unavailable"}</div>
                 </div>
               </div>
             </SectionCard>
             {cameraOvpReport && (
               <SectionCard title="Observed vs Planned" helpText="Compares this camera's current physical state to the last verified baseline. Drift means the camera has moved or been re-aimed since baseline. Live faults mean the camera is not reporting healthy right now." helpTitle="Observed vs Planned help" truthLabel="inferred">
                 {!snapshots[0] ? (
-                  <div className="text-[10px] text-[#6a748b]">No baseline snapshot yet. Take a snapshot to enable drift detection for this camera.</div>
+                  <div className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>No baseline snapshot yet. Take a snapshot to enable drift detection for this camera.</div>
                 ) : cameraOvpReport.thisDrift ? (
                   <div className={`rounded-lg border px-2.5 py-2 text-[11px] ${cameraOvpReport.thisDrift.severity === "major" ? "border-rose-400/25 bg-rose-500/10 text-rose-100" : "border-amber-400/20 bg-amber-500/8 text-amber-100"}`}>
                     <div className="flex items-center justify-between gap-2">
@@ -1964,16 +1965,16 @@ export function CameraInspector() {
                 />
               </div>
               <div className="mt-2 grid grid-cols-2 gap-1.5 text-[9px] text-[#93a0bd]">
-                <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
-                  <div className="uppercase tracking-[0.16em] text-[#556076]">Nearest sensor state</div>
-                  <div className="mt-1 text-[#d2d9e8]">{nearestSensorState}</div>
+                <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
+                  <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Nearest sensor state</div>
+                  <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{nearestSensorState}</div>
                 </div>
-                <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
-                  <div className="uppercase tracking-[0.16em] text-[#556076]">Coverage mode</div>
-                  <div className="mt-1 text-[#d2d9e8]">{nearestSensorCoverage}</div>
+                <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
+                  <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Coverage mode</div>
+                  <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{nearestSensorCoverage}</div>
                 </div>
               </div>
-              <div className="mt-2 text-[10px] leading-relaxed text-[#6a748b]">
+              <div className={`mt-2 text-[10px] leading-relaxed ${UI_SURFACES.textSoftMid}`}>
                 Sensors are schema-backed and live in the same scene graph as cameras. This preview makes the nearest sensor to the selected camera visible while full live fusion remains the next platform step.
               </div>
             </SectionCard>
@@ -1985,7 +1986,7 @@ export function CameraInspector() {
                   ))}
                 </div>
               ) : (
-                <div className="text-[10px] text-[#6a748b]">No single-point failure warnings are active for this camera in the current run.</div>
+                <div className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>No single-point failure warnings are active for this camera in the current run.</div>
               )}
             </SectionCard>
           </div>
@@ -2015,7 +2016,7 @@ export function CameraInspector() {
               <SectionCard title="View Mode" truthLabel="placeholder">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-[#6a748b]">Current Feed</span>
+                    <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Current Feed</span>
                     <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-cyan-200">
                       {viewModeLabel}
                     </span>
@@ -2037,7 +2038,7 @@ export function CameraInspector() {
                       </button>
                     ))}
                   </div>
-                  <div className="text-[9px] leading-relaxed text-[#6a748b]">
+                  <div className={`text-[9px] leading-relaxed ${UI_SURFACES.textSoftMid}`}>
                     The live preview follows the selected camera, and the overlay stack below controls what gets drawn on top of the feed.
                   </div>
                 </div>
@@ -2075,27 +2076,27 @@ export function CameraInspector() {
                   <SummaryStat label="Best Camera" value={bestCameraName} accent="text-cyan-300" />
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-[10px]">
-                  <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Target Type</div>
-                    <div className="mt-1 text-[#d2d9e8]">{targetZone?.targetType.replace(/_/g, " ") ?? "—"}</div>
+                  <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Target Type</div>
+                    <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{targetZone?.targetType.replace(/_/g, " ") ?? "—"}</div>
                   </div>
-                  <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Distance</div>
-                    <div className="mt-1 text-[#d2d9e8]">{targetDistanceM != null ? `${targetDistanceM.toFixed(1)}m` : "—"}</div>
+                  <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Distance</div>
+                    <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{targetDistanceM != null ? `${targetDistanceM.toFixed(1)}m` : "—"}</div>
                   </div>
-                  <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
-                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Angle</div>
-                    <div className="mt-1 text-[#d2d9e8]">{angleFromCenterDeg != null ? `${angleFromCenterDeg.toFixed(1)}°` : "—"}</div>
+                  <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Angle</div>
+                    <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{angleFromCenterDeg != null ? `${angleFromCenterDeg.toFixed(1)}°` : "—"}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-[9px] text-[#93a0bd]">
-                  <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-1.5">
-                    <div className="uppercase tracking-[0.16em] text-[#556076]">DORI band</div>
-                    <div className="mt-1 text-[#d2d9e8]">{targetZone ? qualityRangeLabel(targetQuality, scene.assumptions.doriStandard) : "No target selected"}</div>
+                  <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-1.5`}>
+                    <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>DORI band</div>
+                    <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{targetZone ? qualityRangeLabel(targetQuality, scene.assumptions.doriStandard) : "No target selected"}</div>
                   </div>
-                  <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-1.5">
-                    <div className="uppercase tracking-[0.16em] text-[#556076]">Lighting</div>
-                    <div className="mt-1 text-[#d2d9e8]">
+                  <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-1.5`}>
+                    <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Lighting</div>
+                    <div className={`mt-1 ${UI_SURFACES.textBody2}`}>
                       {scene.assumptions.timeOfDay === "night" ? "Night" : scene.assumptions.timeOfDay === "custom" ? "Custom" : "Day"}
                     </div>
                   </div>
@@ -2124,8 +2125,8 @@ export function CameraInspector() {
               </div>
             </SectionCard>
 
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
-              <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Live Camera Feed</div>
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
+              <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted}`}>Live Camera Feed</div>
               <CameraFeedCanvas cameraId={camera.id} overlayOptions={feedOverlayOptions} />
             </div>
 
@@ -2165,16 +2166,16 @@ export function CameraInspector() {
                         {sortedZoneEntries.length > 0 ? (
                           <div className="space-y-1">
                             {sortedZoneEntries.slice(0, 2).map((entry) => (
-                              <div key={entry.name} className="rounded-md border border-[#1f2b42] bg-[#111827] px-2 py-1.5">
+                              <div key={entry.name} className={`rounded-md border border-[#1f2b42] ${UI_SURFACES.cardAlt} px-2 py-1.5`}>
                                 <div className="flex items-center justify-between gap-2 text-[10px]">
-                                  <span className="truncate text-[#c7d0e4]">{entry.name}</span>
+                                  <span className={`truncate ${UI_SURFACES.textBody}`}>{entry.name}</span>
                                   <span className="font-semibold text-[#93c5fd]">{QUALITY_LABEL[entry.quality]}</span>
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="text-[9px] text-[#4a5568]">No active critical-zone quality samples yet.</div>
+                          <div className={`text-[9px] ${UI_SURFACES.textMuted}`}>No active critical-zone quality samples yet.</div>
                         )}
                       </div>
                       <div className="space-y-1">
@@ -2182,7 +2183,7 @@ export function CameraInspector() {
                           <div key={label} className="flex items-center justify-between gap-2 text-[10px]">
                             <div className="flex items-center gap-2">
                               <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: color }} />
-                              <span className="text-[#d2d9e8] capitalize">{label}</span>
+                              <span className={`${UI_SURFACES.textBody2} capitalize`}>{label}</span>
                             </div>
                             <span className="font-mono text-[10px] text-[#93a0bd]">{value.toFixed(1)}m</span>
                           </div>
@@ -2194,15 +2195,15 @@ export function CameraInspector() {
               </SectionCard>
             </div>
 
-            <div className="space-y-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
-              <div className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Report Snapshot</div>
+            <div className={`space-y-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted}`}>Report Snapshot</div>
               <div className="grid gap-2 md:grid-cols-[1fr_auto]">
                 <input
                   aria-label="Snapshot note"
                   value={snapshotNote}
                   onChange={(event) => setSnapshotNote(event.target.value)}
                   placeholder="e.g. before wall shift"
-                  className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+                  className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
                 />
                 <button
                   type="button" onClick={saveInspectionSnapshot}
@@ -2215,7 +2216,7 @@ export function CameraInspector() {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={openInCameraWall} className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-2 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white">
+              <button type="button" onClick={openInCameraWall} className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-2 text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}>
                 Open in Camera Wall
               </button>
               <button
@@ -2225,7 +2226,7 @@ export function CameraInspector() {
                   store.setWorkspacePreset("coverage");
                   store.setViewMode("camera_view");
                 }}
-                className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-2 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+                className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-2 text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
               >
                 Enter Full Camera View
               </button>
@@ -2255,28 +2256,28 @@ export function CameraInspector() {
           return (
             <div className="space-y-2.5">
               {camResult && (
-                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
-                  <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Camera Criticality</div>
+                <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
+                  <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted}`}>Camera Criticality</div>
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border-2" style={{ borderColor: critBorderColor }}>
                       <span className={`text-[15px] font-bold ${critColor}`}>{critScore}</span>
                     </div>
                     <div>
                       <div className={`text-[12px] font-semibold ${critColor}`}>{critLabel}</div>
-                      <div className="mt-0.5 text-[9px] text-[#4a5568]">
+                      <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textMuted}`}>
                         {coveragePct.toFixed(1)}% scene · {nonRedundantZones.length} sole-coverage zone{nonRedundantZones.length !== 1 ? "s" : ""}
                       </div>
                     </div>
                     <div className="ml-auto text-right">
-                      <div className="font-mono text-[13px] font-bold text-[#c7d0e4]">{pathSegmentCount}</div>
-                      <div className="text-[8px] text-[#4a5568]">path events</div>
+                      <div className={`font-mono text-[13px] font-bold ${UI_SURFACES.textBody}`}>{pathSegmentCount}</div>
+                      <div className={`text-[8px] ${UI_SURFACES.textMuted}`}>path events</div>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
-                <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Simulate Failure</div>
+              <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
+                <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted}`}>Simulate Failure</div>
                 <div className="space-y-2">
                   {[
                     { label: "Camera Offline",       sub: "Power cut / network loss",      isActive: isOffline,       onToggle: () => updateCameraFailure({ status: isOffline ? "on" : "off" }), activeColor: "bg-red-500/60" },
@@ -2285,8 +2286,8 @@ export function CameraInspector() {
                   ].map(({ label, sub, isActive, onToggle, activeColor }) => (
                     <div key={label} className="flex items-center justify-between gap-2">
                       <div>
-                        <div className="text-[10px] text-[#c7d0e4]">{label}</div>
-                        <div className="text-[8px] text-[#4a5568]">{sub}</div>
+                        <div className={`text-[10px] ${UI_SURFACES.textBody}`}>{label}</div>
+                        <div className={`text-[8px] ${UI_SURFACES.textMuted}`}>{sub}</div>
                       </div>
                       <button
                         type="button" onClick={onToggle}
@@ -2309,19 +2310,19 @@ export function CameraInspector() {
                     </button>
                   </div>
                 )}
-                {!isSimulatingFailure && <div className="mt-2.5 text-[8px] text-[#3a4158]">Toggle failures above, then re-run simulation to compute impact.</div>}
+                {!isSimulatingFailure && <div className={`mt-2.5 text-[8px] ${UI_SURFACES.textDim}`}>Toggle failures above, then re-run simulation to compute impact.</div>}
               </div>
 
               {zonesCovered.length > 0 && (
-                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
-                  <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Zone Coverage ({zonesCovered.length})</div>
+                <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
+                  <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted}`}>Zone Coverage ({zonesCovered.length})</div>
                   <div className="space-y-1">
                     {zonesCovered.map((zoneId) => {
                       const hasBackup = otherResults.some((o) => o.criticalZonesCovered.includes(zoneId));
                       const zoneName = scene.criticalZones.find((z) => z.id === zoneId)?.label ?? zoneId;
                       return (
                         <div key={zoneId} className="flex items-center justify-between gap-2">
-                          <span className="truncate text-[10px] text-[#8090a8]">{zoneName}</span>
+                          <span className={`truncate text-[10px] ${UI_SURFACES.textMuted5}`}>{zoneName}</span>
                           <span className={cn("flex-shrink-0 rounded px-1.5 py-0.5 text-[7px] font-semibold", hasBackup ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400")}>
                             {hasBackup ? "Redundant" : "No Backup"}
                           </span>
@@ -2333,19 +2334,19 @@ export function CameraInspector() {
               )}
 
               {pathSegmentCount > 0 && (
-                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
-                  <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Route Exposure Responsibility</div>
+                <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
+                  <div className={`mb-1 text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted}`}>Route Exposure Responsibility</div>
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-[17px] font-bold text-orange-300">{pathSegmentCount}</span>
-                    <span className="text-[9px] text-[#4a5568]">detection event{pathSegmentCount !== 1 ? "s" : ""} rely on this camera</span>
+                    <span className={`text-[9px] ${UI_SURFACES.textMuted}`}>detection event{pathSegmentCount !== 1 ? "s" : ""} rely on this camera</span>
                   </div>
-                  <div className="mt-1 text-[8px] text-[#3a4158]">If offline, {pathSegmentCount} path detection{pathSegmentCount !== 1 ? "s" : ""} would be lost.</div>
+                  <div className={`mt-1 text-[8px] ${UI_SURFACES.textDim}`}>If offline, {pathSegmentCount} path detection{pathSegmentCount !== 1 ? "s" : ""} would be lost.</div>
                 </div>
               )}
 
               {offlineImpact.length > 0 && (
-                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
-                  <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Impact Notes</div>
+                <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
+                  <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted}`}>Impact Notes</div>
                   <div className="space-y-1.5">
                     {offlineImpact.map((message, index) => (
                       <div key={`msg-${index}`} /* stable order */ className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1.5 text-[9px] text-amber-200">{message}</div>
@@ -2355,7 +2356,7 @@ export function CameraInspector() {
               )}
 
               {!camResult && (
-                <div className="rounded-lg border border-[#1f2536] bg-[#111521] p-3 text-[10px] leading-relaxed text-[#6a748b]">
+                <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-3 text-[10px] leading-relaxed ${UI_SURFACES.textSoftMid}`}>
                   <div className="mb-2">
                     Run the shared simulation to populate failure impact analysis for this camera.
                   </div>
@@ -2363,7 +2364,7 @@ export function CameraInspector() {
                     type="button"
                     onClick={runSimulation}
                     disabled={simulationRunning}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-[#24283a] bg-[#0b0f17] px-2.5 py-1.5 text-[9px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    className={`inline-flex items-center gap-1.5 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2.5 py-1.5 text-[9px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60`}
                   >
                     {simulationRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
                     {simulationRunning ? "Running..." : "Run Simulation"}
@@ -2375,11 +2376,11 @@ export function CameraInspector() {
         })()}
       </div>
 
-      <div className="`{space-y-2 border-t ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{space-y-2 border-t ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <div className="flex gap-2">
           <button
             type="button" onClick={aimAtZone} disabled={!targetZone}
-            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             <Crosshair className="h-3 w-3" />
             Aim at Zone
@@ -2387,7 +2388,7 @@ export function CameraInspector() {
           <button
             type="button"
             onClick={() => { setTab("view"); const store = useStudioStore.getState(); store.setWorkspacePreset("coverage"); store.setViewMode("camera_view"); }}
-            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+            className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
           >
             <Eye className="h-3 w-3" />
             Go To Camera View
@@ -2400,7 +2401,7 @@ export function CameraInspector() {
           </button>
           <button
             type="button" onClick={() => duplicateNode(camera.id)}
-            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+            className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
           >
             <Copy className="h-3 w-3" />
             Duplicate
@@ -2411,7 +2412,7 @@ export function CameraInspector() {
       {/* Lens/FOV Tradeoff Simulator Modal */}
       {showLensFovSimulator && camera && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative max-h-[90vh] w-[820px] overflow-y-auto rounded-2xl border border-[#202536] bg-[#0b0f17] shadow-2xl shadow-black/50">
+          <div className={`relative max-h-[90vh] w-[820px] overflow-y-auto rounded-2xl border border-[#202536] ${UI_SURFACES.panel} shadow-2xl shadow-black/50`}>
             <LensFovTradeoffSimulator camera={camera} onClose={() => setShowLensFovSimulator(false)} />
           </div>
         </div>

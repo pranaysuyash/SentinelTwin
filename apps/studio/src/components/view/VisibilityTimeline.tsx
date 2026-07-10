@@ -8,6 +8,7 @@ import { UI_TONES } from "@/lib/design-tokens";
 import type { DoriQuality } from "@/schema/security-scene";
 import type { PathVisibilityResult } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 import {
   clampPathDuration,
   orderCamerasForReplayPlayback,
@@ -215,17 +216,17 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
 
   if (hasNoTimeline) {
     return (
-      <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
-        <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Camera Visibility</div>
+      <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
+        <div className={`mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>Camera Visibility</div>
         <p className="text-[10px] text-[#4d566b]">No visibility data available. Run simulation with a defined path.</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Camera Visibility</span>
+          <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Camera Visibility</span>
           <div className="flex items-center gap-2 text-[8px] text-[#4d566b]">
             <span className="flex items-center gap-1">
             <span className={cn("h-2 w-2 rounded-sm", UI_TONES.success.dot)} />
@@ -263,7 +264,7 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
 
                 {/* Timeline bar (clickable for seeking) */}
                 <div
-                  className="relative h-4 flex-1 cursor-pointer overflow-hidden rounded-md border border-[#202536] bg-[#111521] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#93c5fd]/70"
+                  className={`relative h-4 flex-1 cursor-pointer overflow-hidden rounded-md border border-[#202536] ${UI_SURFACES.card} outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#93c5fd]/70`}
                   onClick={handleSeek}
                   onKeyDown={handleSeekKeys}
                   role="slider"

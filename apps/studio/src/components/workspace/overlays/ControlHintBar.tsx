@@ -3,6 +3,7 @@
 import { TOOL_GHOST_COLORS, TOOL_LABELS } from "@/lib/tool-constants";
 import { useStudioStore } from "@/store/studio-store";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 export function ControlHintBar() {
   const activeTool = useStudioStore((s) => s.activeTool);
 
@@ -22,29 +23,29 @@ export function ControlHintBar() {
       comment: "T",
     };
     return (
-      <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17]/80 px-3 py-1">
+      <div className={`absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/80 px-3 py-1`}>
         <span className="text-[8px]" style={{ color }}>◉ {toolLabel}</span>
         <span className="text-[8px] text-[#2a3246]">•</span>
-        <span className="text-[8px] text-[#4a5568]">Click floor to place</span>
+        <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Click floor to place</span>
         <span className="text-[8px] text-[#2a3246]">•</span>
-        <span className="text-[8px] text-[#4a5568]">Press {toolShortcut[activeTool] ?? "Esc"} or Esc to cancel</span>
+        <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Press {toolShortcut[activeTool] ?? "Esc"} or Esc to cancel</span>
       </div>
     );
   }
 
   return (
-    <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17]/80 px-3 py-1">
-      <span className="text-[8px] text-[#4a5568]">Left: Orbit</span>
+    <div className={`absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/80 px-3 py-1`}>
+      <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Left: Orbit</span>
       <span className="text-[8px] text-[#2a3246]">•</span>
-      <span className="text-[8px] text-[#4a5568]">Middle: Pan</span>
+      <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Middle: Pan</span>
       <span className="text-[8px] text-[#2a3246]">•</span>
-      <span className="text-[8px] text-[#4a5568]">Right: Zoom</span>
+      <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Right: Zoom</span>
       <span className="text-[8px] text-[#2a3246]">•</span>
-      <span className="text-[8px] text-[#4a5568]">Right-click: Object actions</span>
+      <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Right-click: Object actions</span>
       <span className="text-[8px] text-[#2a3246]">•</span>
-      <span className="text-[8px] text-[#4a5568]">Scroll: Zoom</span>
+      <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Scroll: Zoom</span>
       <span className="text-[8px] text-[#2a3246]">•</span>
-      <span className="text-[8px] text-[#4a5568]">Shift+drag: Box select</span>
+      <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Shift+drag: Box select</span>
     </div>
   );
 }

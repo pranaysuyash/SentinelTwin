@@ -13,6 +13,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import type { EventConfig, EventPhase } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 const EVENT_TYPES: { value: EventConfig["eventType"]; label: string }[] = [
   { value: "concert", label: "Concert" },
   { value: "trade_show", label: "Trade Show" },
@@ -178,7 +179,7 @@ export function EventConfigPanel() {
             {phaseTimeline.map((phase) => (
               <div key={phase.id} className="rounded border border-[#1e2536] bg-[#0a0e18] p-2">
                 <div className="mb-1.5 flex items-center justify-between">
-                  <div className="text-[10px] font-semibold text-[#c7d0e4]">{phase.label}</div>
+                  <div className={`text-[10px] font-semibold ${UI_SURFACES.textBody}`}>{phase.label}</div>
                   <button
                     type="button"
                     onClick={() => removePhase(phase.id)}
@@ -208,7 +209,7 @@ export function EventConfigPanel() {
             ))}
           </div>
         ) : (
-          <div className="text-[10px] text-[#556076]">No phases defined.</div>
+          <div className={`text-[10px] ${UI_SURFACES.textDimMid}`}>No phases defined.</div>
         )}
       </SectionCard>
 

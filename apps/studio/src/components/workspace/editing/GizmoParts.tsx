@@ -6,6 +6,7 @@ import * as THREE from "three";
 
 import { SceneHtml } from "@/components/shared/SceneHtml";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 /**
  * Unity / three.js-style transform gizmo primitives.
  *
@@ -28,7 +29,7 @@ export const GIZMO_AXIS_COLORS = {
 function HoverChip({ label, position }: { label: string; position: [number, number, number] }) {
   return (
     <SceneHtml center position={position} style={{ pointerEvents: "none" }}>
-      <div className="rounded border border-[#24304a] bg-[#0b0f17]/92 px-1.5 py-0.5 text-[8px] font-semibold text-[#d2d9e8] whitespace-nowrap">
+      <div className={`rounded border border-[#24304a] ${UI_SURFACES.panel}/92 px-1.5 py-0.5 text-[8px] font-semibold ${UI_SURFACES.textBody2} whitespace-nowrap`}>
         {label}
       </div>
     </SceneHtml>

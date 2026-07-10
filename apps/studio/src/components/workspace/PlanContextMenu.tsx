@@ -24,6 +24,7 @@ import {
 import type { AnyEditableNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 export interface PlanContextMenuProps {
   position: { x: number; y: number };
   scenePoint: [number, number];
@@ -161,7 +162,7 @@ export function PlanContextMenu({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition-colors hover:bg-white/10 ${UI_SURFACES.hoverText}`}
             >
               <X className="h-3.5 w-3.5" />
             </button>

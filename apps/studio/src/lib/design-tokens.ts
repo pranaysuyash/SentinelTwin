@@ -32,6 +32,10 @@ export type UiTone = "success" | "warning" | "danger" | "info" | "accent" | "neu
 export interface ToneClasses {
   /** Foreground text class, e.g. `text-emerald-300`. */
   text: string;
+  /** Brighter text for icons/emphasis, e.g. `text-emerald-400`. */
+  textBright: string;
+  /** Dimmer text for secondary content, e.g. `text-emerald-200`. */
+  textDim: string;
   /** Border class, e.g. `border-emerald-500/30`. */
   border: string;
   /** Background class, e.g. `bg-emerald-500/12`. */
@@ -50,6 +54,10 @@ export interface ToneClasses {
   borderLight: string;
   /** Stronger border at 35% opacity, e.g. `border-emerald-400/35`. */
   borderStrong: string;
+  /** Hover background, e.g. `hover:bg-emerald-500/10`. */
+  bgHover: string;
+  /** Hover border, e.g. `hover:border-emerald-500/30`. */
+  borderHover: string;
 }
 
 export type UiToneClasses = Record<UiTone, ToneClasses>;
@@ -65,6 +73,8 @@ export type UiToneClasses = Record<UiTone, ToneClasses>;
 export const UI_TONES: UiToneClasses = {
   success: {
     text: "text-emerald-300",
+    textBright: "text-emerald-400",
+    textDim: "text-emerald-200",
     border: "border-emerald-500/30",
     bg: "bg-emerald-500/12",
     dot: "bg-emerald-400",
@@ -74,9 +84,13 @@ export const UI_TONES: UiToneClasses = {
     bgStrong: "bg-emerald-500/25",
     borderLight: "border-emerald-400/20",
     borderStrong: "border-emerald-400/35",
+    bgHover: "hover:bg-emerald-500/10",
+    borderHover: "hover:border-emerald-500/30",
   },
   warning: {
     text: "text-amber-200",
+    textBright: "text-amber-400",
+    textDim: "text-amber-300",
     border: "border-amber-500/30",
     bg: "bg-amber-500/12",
     dot: "bg-amber-400",
@@ -86,9 +100,13 @@ export const UI_TONES: UiToneClasses = {
     bgStrong: "bg-amber-500/25",
     borderLight: "border-amber-400/20",
     borderStrong: "border-amber-400/35",
+    bgHover: "hover:bg-amber-500/10",
+    borderHover: "hover:border-amber-500/30",
   },
   danger: {
     text: "text-rose-300",
+    textBright: "text-rose-400",
+    textDim: "text-rose-200",
     border: "border-rose-500/30",
     bg: "bg-rose-500/12",
     dot: "bg-rose-400",
@@ -98,9 +116,13 @@ export const UI_TONES: UiToneClasses = {
     bgStrong: "bg-rose-500/25",
     borderLight: "border-rose-400/20",
     borderStrong: "border-rose-400/35",
+    bgHover: "hover:bg-rose-500/10",
+    borderHover: "hover:border-rose-500/30",
   },
   info: {
     text: "text-sky-300",
+    textBright: "text-sky-400",
+    textDim: "text-sky-200",
     border: "border-sky-500/30",
     bg: "bg-sky-500/12",
     dot: "bg-sky-400",
@@ -110,9 +132,13 @@ export const UI_TONES: UiToneClasses = {
     bgStrong: "bg-sky-500/25",
     borderLight: "border-sky-400/20",
     borderStrong: "border-sky-400/35",
+    bgHover: "hover:bg-sky-500/10",
+    borderHover: "hover:border-sky-500/30",
   },
   accent: {
     text: "text-violet-300",
+    textBright: "text-violet-400",
+    textDim: "text-violet-200",
     border: "border-violet-500/30",
     bg: "bg-violet-500/12",
     dot: "bg-violet-400",
@@ -122,9 +148,13 @@ export const UI_TONES: UiToneClasses = {
     bgStrong: "bg-violet-500/25",
     borderLight: "border-violet-400/20",
     borderStrong: "border-violet-400/35",
+    bgHover: "hover:bg-violet-500/10",
+    borderHover: "hover:border-violet-500/30",
   },
   neutral: {
     text: "text-slate-300",
+    textBright: "text-slate-400",
+    textDim: "text-slate-200",
     border: "border-slate-500/30",
     bg: "bg-slate-500/12",
     dot: "bg-slate-400",
@@ -134,6 +164,8 @@ export const UI_TONES: UiToneClasses = {
     bgStrong: "bg-slate-500/25",
     borderLight: "border-slate-400/20",
     borderStrong: "border-slate-400/35",
+    bgHover: "hover:bg-slate-500/10",
+    borderHover: "hover:border-slate-500/30",
   },
 };
 

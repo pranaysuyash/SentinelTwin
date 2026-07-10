@@ -11,6 +11,7 @@ import type { DoorAccessControl, DoorNode, WindowNode } from "@/schema/security-
 import { useStudioStore } from "@/store/studio-store";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 export function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
   const scene = useStudioStore((s) => s.scene);
   const updateNode = useStudioStore((s) => s.updateNode);
@@ -34,9 +35,9 @@ export function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
 
   return (
     <>
-      <div className="`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <div className="text-[12px] font-semibold text-white">{node.label}</div>
-        <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">{isWindow ? "Window" : "Door"}</div>
+        <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>{isWindow ? "Window" : "Door"}</div>
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
@@ -137,7 +138,7 @@ export function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
                     } as Partial<DoorNode>)
                   }
                 />
-                <div className="pt-0.5 text-[9px] leading-relaxed text-[#6a748b]">
+                <div className={`pt-0.5 text-[9px] leading-relaxed ${UI_SURFACES.textSoftMid}`}>
                   Difficulty 1 = trivial (push through), 5 = extreme (biometric + guard). Breach time adds to total adversarial route duration.
                 </div>
               </>
@@ -153,7 +154,7 @@ export function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
         />
       </div>
 
-      <div className="`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`">
+      <div className={`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`}>
         <button
           type="button"
           onClick={() => removeNode(node.id)}

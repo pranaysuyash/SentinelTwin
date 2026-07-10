@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 import type { CommentNode } from "@/schema/security-scene";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
+
 interface CommentInspectorProps {
   comment: CommentNode;
 }
@@ -45,14 +46,14 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
   }, [comment.attachedToNodeId, selectNode]);
 
   return (
-    <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0d0f17] p-2.5}`">
+    <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeep} p-2.5}`}>
       {/* Header */}
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <div className="flex h-5 w-5 items-center justify-center rounded border border-[#24283a] bg-[#111521]">
+          <div className={`flex h-5 w-5 items-center justify-center rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card}`}>
             <MessageSquare className="h-2.5 w-2.5 text-cyan-400" />
           </div>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">
+          <span className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textAccent}`}>
             Comment
           </span>
         </div>
@@ -69,8 +70,8 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
       </div>
 
       {/* Author & Date */}
-      <div className="mb-1.5 flex items-center justify-between text-[9px] text-[#6a748b]">
-        <span className="font-medium text-[#8090a8]">{comment.author}</span>
+      <div className={`mb-1.5 flex items-center justify-between text-[9px] ${UI_SURFACES.textSoftMid}`}>
+        <span className={`font-medium ${UI_SURFACES.textMuted5}`}>{comment.author}</span>
         <span>{formattedDate}</span>
       </div>
 
@@ -80,9 +81,9 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
           <button
             type="button"
             onClick={handleAttachedNodeClick}
-            className="flex items-center gap-1 rounded bg-[#1a1d26] px-1.5 py-0.5 text-[8px] text-blue-300 hover:bg-[#222635] transition-colors"
+            className={`flex items-center gap-1 rounded ${UI_SURFACES.chip} px-1.5 py-0.5 text-[8px] text-blue-300 hover:bg-[#222635] transition-colors`}
           >
-            <span className="text-[#4a5568]">Attached to:</span> {getNodeLabel(attachedNode)}
+            <span className={`${UI_SURFACES.textMuted}`}>Attached to:</span> {getNodeLabel(attachedNode)}
           </button>
         </div>
       )}
@@ -93,7 +94,7 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
           <textarea
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
-            className="w-full rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] text-[#c7d0e4] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 resize-none"
+            className={`w-full rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] ${UI_SURFACES.textBody} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 resize-none`}
             rows={3}
           />
           <div className="flex items-center gap-1.5">
@@ -107,15 +108,15 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
             <button
               type="button"
               onClick={() => { setEditing(false); setEditText(comment.text); }}
-              className="rounded bg-[#1a1d26] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white transition-colors"
+              className={`rounded ${UI_SURFACES.chip} px-2 py-0.5 text-[9px] ${UI_SURFACES.textMuted5} ${UI_SURFACES.hoverText} transition-colors`}
             >
               Cancel
             </button>
           </div>
         </div>
       ) : (
-        <div className="`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#090d14] px-2 py-1.5}`">
-          <p className="text-[10px] leading-relaxed text-[#c7d0e4] whitespace-pre-wrap">
+        <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5}`}>
+          <p className={`text-[10px] leading-relaxed ${UI_SURFACES.textBody} whitespace-pre-wrap`}>
             {comment.text}
           </p>
         </div>
@@ -127,7 +128,7 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="flex items-center gap-1 rounded border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[8px] text-[#8090a8] hover:text-white transition-colors"
+            className={`flex items-center gap-1 rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-0.5 text-[8px] ${UI_SURFACES.textMuted5} ${UI_SURFACES.hoverText} transition-colors`}
           >
             Edit
           </button>
@@ -160,7 +161,7 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
       </div>
 
       {/* Position info */}
-      <div className="mt-1.5 text-[7px] text-[#3a4158]">
+      <div className={`mt-1.5 text-[7px] ${UI_SURFACES.textDim}`}>
         Position: ({comment.position[0].toFixed(1)}, {comment.position[1].toFixed(1)}, {comment.position[2].toFixed(1)})
       </div>
     </div>

@@ -119,7 +119,7 @@ export function ThreatAnalysisPanel() {
       {!failurePath ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3">
           <Target className={`h-8 w-8 ${UI_SURFACES.textDim}`} />
-          <p className="max-w-[240px] text-center text-[10px] leading-relaxed text-[#4d566b]">
+          <p className={`max-w-[240px] text-center text-[10px] leading-relaxed ${UI_SURFACES.textDimMid}`}>
             Run the simulation to review route exposure, uncovered sections, and reachable critical zones.
           </p>
           {!result && (
@@ -242,7 +242,7 @@ export function ThreatAnalysisPanel() {
           <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
             <div className="mb-1.5 flex items-center justify-between">
               <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Route Visibility Ribbon</span>
-              <span className="text-[8px] text-[#4d566b]">{failurePath.waypoints.length} waypoints</span>
+              <span className={`text-[8px] ${UI_SURFACES.textDimMid}`}>{failurePath.waypoints.length} waypoints</span>
             </div>
             <div className={`flex h-3 overflow-hidden rounded-full border border-[#202536] ${UI_SURFACES.card}`}>
               {failurePath.waypoints.map((wp) => (

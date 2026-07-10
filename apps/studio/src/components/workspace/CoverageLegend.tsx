@@ -175,7 +175,7 @@ export function CoverageLegend() {
           aria-expanded={showFilters}
           aria-controls="coverage-legend-filters"
           aria-label={`${showFilters ? "Hide" : "Show"} overlay filters and density`}
-          className={`rounded p-0.5 transition-colors ${showFilters ? "text-sky-300" : "${UI_SURFACES.textDim} hover:text-[#647089]"}`}
+          className={`rounded p-0.5 transition-colors ${showFilters ? "text-sky-300" : "${UI_SURFACES.textDim} ${UI_SURFACES.hoverTextSoft}"}`}
           style={showFilters ? { color: MAP_COLORS.viewport } : undefined}
           title="Overlay filters & density"
         >
@@ -211,7 +211,7 @@ export function CoverageLegend() {
             </div>
           ) : null}
 
-          <div className={`mb-2 rounded-lg border ${UI_SURFACES.borderSubtle} bg-white/[0.025] px-2 py-1.5 text-[9px] leading-4 text-[#8ea0bf]`}>
+          <div className={`mb-2 rounded-lg border ${UI_SURFACES.borderSubtle} bg-white/[0.025] px-2 py-1.5 text-[9px] leading-4 ${UI_SURFACES.textMuted3}`}>
             {activeConfig.description}
           </div>
 
@@ -222,7 +222,7 @@ export function CoverageLegend() {
                 <span className="mt-0.5 h-3 w-3 flex-shrink-0 rounded-sm" style={{ backgroundColor: color, opacity: 0.9 }} />
                 <div className="min-w-0 flex-1 leading-none">
                   <div className={`text-[10px] ${UI_SURFACES.textBody}`}>{range}</div>
-                  <div className="mt-1 text-[8px] text-[#647089]">{label} &middot; {detail}</div>
+                  <div className={`mt-1 text-[8px] ${UI_SURFACES.textSoftMid}`}>{label} &middot; {detail}</div>
                 </div>
               </div>
             ))}
@@ -255,7 +255,7 @@ export function CoverageLegend() {
                   className={`flex-1 py-0.5 text-[8px] font-medium rounded transition-colors ${
                     overlayDensity === opt.value
                       ? "bg-[#1e2d4a] text-sky-300"
-                      : "${UI_SURFACES.textDim} hover:text-[#647089] hover:bg-[#1a1f2e]"
+                      : "${UI_SURFACES.textDim} ${UI_SURFACES.hoverTextSoft} hover:bg-[#1a1f2e]"
                   }`}
                   style={overlayDensity === opt.value ? { backgroundColor: MAP_COLORS.panelFillAlt, color: MAP_COLORS.viewport } : undefined}
                 >

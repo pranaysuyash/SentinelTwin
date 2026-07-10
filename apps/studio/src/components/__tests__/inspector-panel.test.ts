@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const dir = resolve(fileURLToPath(new URL(".", import.meta.url)), "../inspector");
 const inspectorPath = resolve(dir, "InspectorPanel.tsx");
@@ -133,6 +134,6 @@ describe("InspectorPanel", () => {
   test("uses a full-width dock shell so the right panel can expand with context", () => {
     const source = readFileSync(inspectorPath, "utf8");
 
-    expect(source).toContain("flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l ${UI_SURFACES.borderPanel} bg-[#0d1017]");
+    expect(source).toContain("flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeep}");
   });
 });

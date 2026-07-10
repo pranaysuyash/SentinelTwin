@@ -221,9 +221,9 @@ export function ViewSettingsModal() {
             <Settings2 className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <div id="view-settings-title" className={`text-xs font-semibold uppercase tracking-[0.24em] ${UI_SURFACES.textMuted1}`}>View Settings</div>
+            <div id="view-settings-title" className={`text-xs font-semibold uppercase tracking-[0.24em] ${UI_SURFACES.textSoftDim}`}>View Settings</div>
             <h2 className="mt-1 text-xl font-semibold text-white">Workspace Layout and Viewport Components</h2>
-            <p id="view-settings-description" className="mt-1 max-w-2xl text-sm text-[#8d98b0]">
+            <p id="view-settings-description" className={`mt-1 max-w-2xl text-sm ${UI_SURFACES.textSoftBright}`}>
               Choose what you want to see, what should stay hidden, and which workspace layout should open by default.
             </p>
           </div>
@@ -239,13 +239,13 @@ export function ViewSettingsModal() {
 
         <div className="grid gap-4 p-5 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-4">
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <Monitor className="h-3.5 w-3.5 text-cyan-300" />
                 Readability
               </div>
               <div className="mt-3 grid gap-2">
-                <div className="text-[10px] uppercase tracking-[0.16em] text-[#61708f]">Density</div>
+                <div className={`text-[10px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Density</div>
                 <div className="grid grid-cols-3 gap-2">
                   {UI_DENSITIES.map((density) => (
                     <button
@@ -256,15 +256,15 @@ export function ViewSettingsModal() {
                         "rounded-xl border px-2 py-2 text-left text-[11px] transition-colors",
                         uiDensity === density.id
                           ? "border-cyan-400/30 bg-cyan-500/12 text-cyan-100"
-                          : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                          : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                       )}
                     >
                       <div className="font-medium">{density.label}</div>
-                      <div className="mt-1 text-[9px] text-[#6f7c98]">{density.description}</div>
+                      <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftMid}`}>{density.description}</div>
                     </button>
                   ))}
                 </div>
-                <div className="mt-2 text-[10px] uppercase tracking-[0.16em] text-[#61708f]">Theme</div>
+                <div className={`mt-2 text-[10px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Theme</div>
                 <div className="grid grid-cols-2 gap-2">
                   {UI_THEMES.map((theme) => (
                     <button
@@ -275,7 +275,7 @@ export function ViewSettingsModal() {
                         "rounded-xl border px-2 py-2 text-left text-[11px] transition-colors",
                         uiTheme === theme.id
                           ? "border-cyan-400/30 bg-cyan-500/12 text-cyan-100"
-                          : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                          : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                       )}
                     >
                       {theme.label}
@@ -285,8 +285,8 @@ export function ViewSettingsModal() {
               </div>
             </section>
 
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <Monitor className="h-3.5 w-3.5 text-emerald-300" />
                 AI Provider
               </div>
@@ -294,7 +294,7 @@ export function ViewSettingsModal() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-white">{providerInfo.providerLabel}</div>
-                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted6}`}>{providerInfo.description}</div>
+                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted5}`}>{providerInfo.description}</div>
                   </div>
                   <div className={cn(
                     "rounded-full border px-2 py-0.5 text-[8px] uppercase tracking-[0.18em]",
@@ -315,16 +315,16 @@ export function ViewSettingsModal() {
                         "rounded-xl border px-2 py-2 text-left transition-colors",
                         aiProviderSelection.providerId === option.id
                           ? "border-emerald-400/30 bg-emerald-500/12 text-emerald-100"
-                          : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                          : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                       )}
                     >
                       <div className="text-sm font-semibold">{option.name}</div>
-                      <div className="mt-1 text-[9px] text-[#6f7c98]">{option.description}</div>
+                      <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftMid}`}>{option.description}</div>
                     </button>
                   ))}
                 </div>
                 <div className="mt-3 grid gap-2">
-                  <label className="text-[10px] uppercase tracking-[0.16em] text-[#61708f]">
+                  <label className={`text-[10px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>
                     Model
                     <select
                       value={aiProviderSelection.model || providerOption.defaultModel}
@@ -337,16 +337,16 @@ export function ViewSettingsModal() {
                     </select>
                   </label>
                 </div>
-                <label className={`mt-3 flex items-start gap-3 rounded-xl border ${UI_SURFACES.borderStandard} bg-[#101827] px-3 py-3`}>
+                <label className={`mt-3 flex items-start gap-3 rounded-xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.card} px-3 py-3`}>
                   <input
                     type="checkbox"
                     checked={localOnlyMode}
                     onChange={(event) => setLocalOnlyMode(event.target.checked)}
-                    className={`mt-0.5 h-4 w-4 rounded border-[#31405a] ${UI_SURFACES.panel} text-cyan-500 focus:ring-cyan-500`}
+                    className={`mt-0.5 h-4 w-4 rounded ${UI_SURFACES.borderElevated} ${UI_SURFACES.panel} text-cyan-500 focus:ring-cyan-500`}
                   />
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-white">Local Only Mode</div>
-                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted6}`}>
+                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted5}`}>
                       Keep AI parsing, counterfactuals, and report generation on-device. Cloud-backed provider calls are disabled by policy.
                     </div>
                   </div>
@@ -354,8 +354,8 @@ export function ViewSettingsModal() {
               </div>
             </section>
 
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <Monitor className="h-3.5 w-3.5 text-cyan-300" />
                 Camera Preset Library
               </div>
@@ -363,7 +363,7 @@ export function ViewSettingsModal() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-white">Quick placement presets</div>
-                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted6}`}>
+                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted5}`}>
                       Choose a default camera spec before placing a node, or keep the current manual values.
                     </div>
                   </div>
@@ -381,7 +381,7 @@ export function ViewSettingsModal() {
                         "rounded-xl border px-3 py-3 text-left transition-colors",
                         cameraPresetId === preset.id
                           ? "border-cyan-400/30 bg-cyan-500/12 text-cyan-100"
-                          : "${UI_SURFACES.borderStandard} bg-[#0f1320] ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                          : "${UI_SURFACES.borderStandard} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                       )}
                     >
                       <div className="flex items-center gap-2">
@@ -390,23 +390,23 @@ export function ViewSettingsModal() {
                         </span>
                         <div className="min-w-0">
                           <div className="text-sm font-semibold text-white">{preset.label}</div>
-                          <div className="truncate text-[9px] text-[#6f7c98]">{preset.description}</div>
+                          <div className={`truncate text-[9px] ${UI_SURFACES.textSoftMid}`}>{preset.description}</div>
                         </div>
                       </div>
                     </button>
                   ))}
                 </div>
-                <div className={`mt-3 text-[11px] ${UI_SURFACES.textMuted6}`}>
+                <div className={`mt-3 text-[11px] ${UI_SURFACES.textMuted5}`}>
                   Current preset: <span className={`${UI_SURFACES.textNear}`}>{cameraPresetId ?? "none selected"}</span>
                 </div>
-                <div className="mt-3 rounded-xl border border-dashed border-[#24324c] bg-[#0a0e17] px-3 py-2 text-[11px] text-[#8d98b0]">
+                <div className={`mt-3 rounded-xl border border-dashed border-[#24324c] bg-[#0a0e17] px-3 py-2 text-[11px] ${UI_SURFACES.textSoftBright}`}>
                   The canvas picker appears automatically when the camera tool is active, but these presets are now visible here too so the library is discoverable before placement.
                 </div>
               </div>
             </section>
 
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <LayoutDashboard className="h-3.5 w-3.5 text-sky-300" />
                 Main View
               </div>
@@ -420,18 +420,18 @@ export function ViewSettingsModal() {
                       "rounded-2xl border px-4 py-3 text-left transition-colors",
                       activeView.id === view.id
                         ? "border-sky-400/30 bg-sky-500/12 text-sky-100"
-                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                     )}
                   >
                     <div className="text-sm font-semibold">{view.label}</div>
-                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted6}`}>{view.description}</div>
+                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted5}`}>{view.description}</div>
                   </button>
                 ))}
               </div>
             </section>
 
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <Monitor className="h-3.5 w-3.5 text-emerald-300" />
                 Canvas Mode
               </div>
@@ -448,11 +448,11 @@ export function ViewSettingsModal() {
                       "rounded-2xl border px-4 py-3 text-left transition-colors",
                       canvasMode === mode.id
                         ? "border-emerald-400/30 bg-emerald-500/12 text-emerald-100"
-                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                     )}
                   >
                     <div className="text-sm font-semibold">{mode.label}</div>
-                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted6}`}>{mode.description}</div>
+                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted5}`}>{mode.description}</div>
                   </button>
                 ))}
                 <button
@@ -461,19 +461,19 @@ export function ViewSettingsModal() {
                     resetCanvasView();
                     setOpen(false);
                   }}
-                  className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-4 py-3 text-left ${UI_SURFACES.textNear} transition-colors hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}`}
+                  className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-4 py-3 text-left ${UI_SURFACES.textNear} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}`}
                 >
                   <div className="flex items-center gap-2 text-sm font-semibold">
                     <RotateCcw className="h-3.5 w-3.5 text-sky-300" />
                     Reset View
                   </div>
-                  <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted6}`}>Return to the current scene framing.</div>
+                  <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted5}`}>Return to the current scene framing.</div>
                 </button>
               </div>
             </section>
 
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <Settings2 className="h-3.5 w-3.5 text-violet-300" />
                 Scene Layers
               </div>
@@ -487,7 +487,7 @@ export function ViewSettingsModal() {
                       "rounded-xl border px-3 py-2 text-left text-[11px] transition-colors",
                       layerVisibility[layer.key]
                         ? "border-violet-400/25 bg-violet-500/12 text-violet-100"
-                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} text-[#9aa6bd] hover:border-[#31405a] ${UI_SURFACES.hoverText}",
+                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} text-[#9aa6bd] ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText}",
                     )}
                   >
                     {layer.label}
@@ -498,8 +498,8 @@ export function ViewSettingsModal() {
           </div>
 
           <div className="space-y-4">
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <Settings2 className="h-3.5 w-3.5 text-amber-300" />
                 Layout
               </div>
@@ -514,12 +514,12 @@ export function ViewSettingsModal() {
                       className={cn(
                         "rounded-2xl border px-4 py-3 text-left transition-colors",
                         collapsed
-                          ? "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}"
+                          ? "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}"
                           : "border-amber-400/25 bg-amber-500/12 text-amber-100",
                       )}
                     >
                       <div className="text-sm font-semibold">{panel.label}</div>
-                      <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted6}`}>{panel.description}</div>
+                      <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted5}`}>{panel.description}</div>
                     </button>
                   );
                 })}
@@ -530,14 +530,14 @@ export function ViewSettingsModal() {
                     "rounded-2xl border px-4 py-3 text-left transition-colors",
                     showDebugOverlays
                       ? "border-amber-400/25 bg-amber-500/12 text-amber-100"
-                      : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                      : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                   )}
                 >
                   <div className="text-sm font-semibold">Debug Overlays</div>
-                  <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted6}`}>Show extra diagnostics and developer aids.</div>
+                  <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted5}`}>Show extra diagnostics and developer aids.</div>
                 </button>
                 <div className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} p-3`}>
-                  <div className="text-[9px] uppercase tracking-[0.18em] text-[#61708f]">Right Panel Mode</div>
+                  <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textSoftMid}`}>Right Panel Mode</div>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     {RIGHT_PANEL_MODES.map((mode) => (
                       <button
@@ -548,7 +548,7 @@ export function ViewSettingsModal() {
                           "rounded-xl border px-2 py-2 text-left text-[11px] transition-colors",
                           rightPanelMode === mode.id
                             ? "border-sky-400/30 bg-sky-500/12 text-sky-100"
-                            : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                            : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                         )}
                       >
                         {mode.label}
@@ -557,7 +557,7 @@ export function ViewSettingsModal() {
                   </div>
                 </div>
                 <div className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} p-3`}>
-                  <div className="text-[9px] uppercase tracking-[0.18em] text-[#61708f]">Bottom Drawer Mode</div>
+                  <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textSoftMid}`}>Bottom Drawer Mode</div>
                   <div className="mt-2 grid grid-cols-3 gap-2">
                     {BOTTOM_DRAWER_MODES.map((mode) => (
                       <button
@@ -568,15 +568,15 @@ export function ViewSettingsModal() {
                           "rounded-xl border px-2 py-2 text-left text-[11px] transition-colors",
                           bottomDrawerMode === mode.id
                             ? "border-amber-400/30 bg-amber-500/12 text-amber-100"
-                            : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                            : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                         )}
                       >
                         <div className="font-medium">{mode.label}</div>
-                        <div className="mt-1 text-[9px] text-[#6f7c98]">{mode.description}</div>
+                        <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftMid}`}>{mode.description}</div>
                       </button>
                     ))}
                   </div>
-                  <div className="mt-2 text-[9px] uppercase tracking-[0.18em] text-[#61708f]">Pinned Module</div>
+                  <div className={`mt-2 text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textSoftMid}`}>Pinned Module</div>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     {ANALYSIS_MODULES.filter((module) => enabledAnalysisModules[module.id]).slice(0, 6).map((module) => (
                       <button
@@ -587,7 +587,7 @@ export function ViewSettingsModal() {
                           "rounded-xl border px-2 py-2 text-left text-[11px] transition-colors",
                           pinnedAnalysisModule === module.id
                             ? "border-emerald-400/30 bg-emerald-500/12 text-emerald-100"
-                            : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                            : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                         )}
                       >
                         {module.label}
@@ -603,7 +603,7 @@ export function ViewSettingsModal() {
                       setDockCollapsed("right", false);
                       setDockCollapsed("bottom", false);
                     }}
-                    className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-4 py-3 text-left text-sm ${UI_SURFACES.textNear} transition-colors hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}`}
+                    className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-4 py-3 text-left text-sm ${UI_SURFACES.textNear} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}`}
                   >
                     Show All Panels
                   </button>
@@ -614,7 +614,7 @@ export function ViewSettingsModal() {
                       setDockCollapsed("right", true);
                       setDockCollapsed("bottom", true);
                     }}
-                    className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-4 py-3 text-left text-sm ${UI_SURFACES.textNear} transition-colors hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}`}
+                    className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-4 py-3 text-left text-sm ${UI_SURFACES.textNear} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}`}
                   >
                     Hide All Panels
                   </button>
@@ -622,8 +622,8 @@ export function ViewSettingsModal() {
               </div>
             </section>
 
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <Settings2 className="h-3.5 w-3.5 text-cyan-300" />
                 View Components
               </div>
@@ -637,18 +637,18 @@ export function ViewSettingsModal() {
                       "rounded-2xl border px-4 py-3 text-left transition-colors",
                       visibleComponents[component.key]
                         ? "border-cyan-400/30 bg-cyan-500/12 text-cyan-100"
-                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                     )}
                   >
                     <div className="text-sm font-semibold">{component.label}</div>
-                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted6}`}>{component.description}</div>
+                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted5}`}>{component.description}</div>
                   </button>
                 ))}
               </div>
             </section>
 
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <Settings2 className="h-3.5 w-3.5 text-fuchsia-300" />
                 Analysis Modules
               </div>
@@ -662,18 +662,18 @@ export function ViewSettingsModal() {
                       "rounded-2xl border px-4 py-3 text-left transition-colors",
                       enabledAnalysisModules[module.id]
                         ? "border-fuchsia-400/30 bg-fuchsia-500/12 text-fuchsia-100"
-                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                     )}
                   >
                     <div className="text-sm font-semibold">{module.label}</div>
-                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted6}`}>{module.description}</div>
+                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted5}`}>{module.description}</div>
                   </button>
                 ))}
               </div>
             </section>
 
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <Settings2 className="h-3.5 w-3.5 text-rose-300" />
                 Client / Reference Options
               </div>
@@ -699,7 +699,7 @@ export function ViewSettingsModal() {
                       "rounded-2xl border px-4 py-3 text-left transition-colors",
                       clientDemoOptions[key]
                         ? "border-rose-400/30 bg-rose-500/12 text-rose-100"
-                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                     )}
                   >
                     <div className="text-sm font-semibold">{label}</div>
@@ -708,8 +708,8 @@ export function ViewSettingsModal() {
               </div>
             </section>
 
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <Settings2 className="h-3.5 w-3.5 text-sky-300" />
                 Workspace Presets
               </div>
@@ -724,7 +724,7 @@ export function ViewSettingsModal() {
                     }
                     setOpen(false);
                   }}
-                  className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-4 py-2 text-sm ${UI_SURFACES.textNear} transition-colors hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle} ${UI_SURFACES.hoverText}`}
+                  className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-4 py-2 text-sm ${UI_SURFACES.textNear} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle} ${UI_SURFACES.hoverText}`}
                 >
                   Reset Current Preset
                 </button>
@@ -742,18 +742,18 @@ export function ViewSettingsModal() {
                       "rounded-2xl border px-4 py-3 text-left transition-colors",
                       workspacePreset === preset.id
                         ? "border-sky-400/30 bg-sky-500/12 text-sky-100"
-                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} hover:border-[#31405a] ${UI_SURFACES.hoverBgSubtle}",
+                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textNear} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgSubtle}",
                     )}
                   >
                     <div className="text-sm font-semibold">{preset.label}</div>
-                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted6}`}>{preset.description}</div>
+                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted5}`}>{preset.description}</div>
                   </button>
                 ))}
               </div>
             </section>
 
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <Save className="h-3.5 w-3.5 text-emerald-300" />
                 Saved Layouts
               </div>
@@ -763,7 +763,7 @@ export function ViewSettingsModal() {
                     value={layoutName}
                     onChange={(event) => setLayoutName(event.target.value)}
                     placeholder="Custom layout name"
-                    className={`min-w-0 flex-1 rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[#607089] focus:border-sky-400/35 focus:bg-[#101725]`}
+                    className={`min-w-0 flex-1 rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[#607089] focus:border-sky-400/35 focus:${UI_SURFACES.hoverBgSubtle}`}
                   />
                   <button
                     type="button"
@@ -786,21 +786,21 @@ export function ViewSettingsModal() {
                         <div className="flex items-start gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-semibold text-white">{layout.name}</div>
-                            <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted6}`}>
+                            <div className={`mt-1 text-[11px] ${UI_SURFACES.textMuted5}`}>
                               {layout.workspacePreset.replace(/_/g, " ")} · {layout.canvasMode === "orbit_3d" ? "3D orbit" : "2D top-down"} · {layout.layerVisibility.heatmap ? "heatmap on" : "heatmap off"}
                             </div>
                           </div>
                           <button
                             type="button"
                             onClick={() => applySavedLayout(layout.id)}
-                            className={`rounded-full border border-[#2c374c] bg-[#101725] px-3 py-1.5 text-[11px] ${UI_SURFACES.textNear} transition-colors hover:border-sky-400/30 ${UI_SURFACES.hoverText}`}
+                            className={`rounded-full border border-[#2c374c] ${UI_SURFACES.hoverBgSubtle} px-3 py-1.5 text-[11px] ${UI_SURFACES.textNear} transition-colors hover:border-sky-400/30 ${UI_SURFACES.hoverText}`}
                           >
                             Apply
                           </button>
                           <button
                             type="button"
                             onClick={() => deleteSavedLayout(layout.id)}
-                            className={`rounded-full border border-[#2c374c] bg-[#101725] px-2.5 py-1.5 text-[11px] ${UI_SURFACES.textNear} transition-colors hover:border-red-400/25 hover:text-red-200`}
+                            className={`rounded-full border border-[#2c374c] ${UI_SURFACES.hoverBgSubtle} px-2.5 py-1.5 text-[11px] ${UI_SURFACES.textNear} transition-colors hover:border-red-400/25 hover:text-red-200`}
                           >
                             Delete
                           </button>
@@ -809,22 +809,22 @@ export function ViewSettingsModal() {
                     ))}
                   </div>
                 ) : (
-                  <div className={`rounded-2xl border border-dashed ${UI_SURFACES.borderStandard} px-3 py-4 text-sm ${UI_SURFACES.textMuted6}`}>
+                  <div className={`rounded-2xl border border-dashed ${UI_SURFACES.borderStandard} px-3 py-4 text-sm ${UI_SURFACES.textMuted5}`}>
                     Save the current workspace layout to reuse it later.
                   </div>
                 )}
               </div>
             </section>
 
-            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep2} p-4`}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
+            <section className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] ${UI_SURFACES.textSoftMid}`}>
                 <Settings2 className="h-3.5 w-3.5 text-violet-300" />
                 View Snapshot
               </div>
               <div className={`mt-3 rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-4 py-3 text-sm ${UI_SURFACES.textNear}`}>
                 {activeView.label}
               </div>
-              <div className={`mt-2 text-[11px] ${UI_SURFACES.textMuted6}`}>
+              <div className={`mt-2 text-[11px] ${UI_SURFACES.textMuted5}`}>
                 The current homepage and studio layout can be switched instantly without leaving the workspace.
               </div>
             </section>

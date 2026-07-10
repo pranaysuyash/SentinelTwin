@@ -573,7 +573,7 @@ export function NovelAlgorithmsTab() {
                   className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                     uncertaintySamples === count
                       ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                      : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorderMid} hover:${UI_SURFACES.textBody2}`
+                      : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
                   }`}
                 >
                   <div className="uppercase tracking-[0.08em]">{count} runs</div>
@@ -688,7 +688,7 @@ export function NovelAlgorithmsTab() {
                   className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                     threshold === level
                       ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
-                      : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorderMid} hover:${UI_SURFACES.textBody2}`
+                      : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
                   }`}
                 >
                   <div className="uppercase tracking-[0.08em]">{level}</div>
@@ -703,7 +703,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   exposureBudgetS === 1
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorderMid} hover:${UI_SURFACES.textBody2}`
+                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">1s budget</div>
@@ -715,7 +715,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   exposureBudgetS === 2
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorderMid} hover:${UI_SURFACES.textBody2}`
+                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">2s budget</div>
@@ -727,7 +727,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   exposureBudgetS === 3
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorderMid} hover:${UI_SURFACES.textBody2}`
+                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">3s budget</div>
@@ -806,7 +806,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   uncertaintySamples === 8
                     ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorderMid} hover:${UI_SURFACES.textBody2}`
+                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">8 runs</div>
@@ -818,7 +818,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   uncertaintySamples === 12
                     ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorderMid} hover:${UI_SURFACES.textBody2}`
+                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">12 runs</div>
@@ -830,7 +830,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   uncertaintySamples === 16
                     ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorderMid} hover:${UI_SURFACES.textBody2}`
+                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">16 runs</div>
@@ -842,7 +842,7 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   uncertaintySamples === 24
                     ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorderMid} hover:${UI_SURFACES.textBody2}`
+                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">24 runs</div>

@@ -122,7 +122,7 @@ function PillButton({
       className={`rounded-md border px-2 py-1 text-[9px] transition-colors ${
         active
           ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-          : `${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textMuted5} ${UI_SURFACES.hoverBorderDark} hover:text-white`
+          : `${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textMuted5} ${UI_SURFACES.hoverBorder} hover:text-white`
       }`}
     >
       {children}
@@ -1259,7 +1259,7 @@ export function DebugTab() {
             onChange={handleArchiveFileChange}
           />
           {pendingArchive ? (
-            <div className={`{mt-2 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+            <div className={`{mt-2 rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} px-3 py-2}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}`}>Archive Merge Preflight</div>
@@ -1387,7 +1387,7 @@ export function DebugTab() {
             <div className="space-y-1.5">
               {journalEntries.length > 0 ? (
                 [...journalEntries].slice(-4).reverse().map((entry) => (
-                  <div key={entry.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeepAlt} px-3 py-2}`}>
+                  <div key={entry.id} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} px-3 py-2}`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className={`text-[11px] font-semibold ${UI_SURFACES.textBright}`}>{entry.reason}</div>
                       <Badge variant={entry.kind === "append" ? "green" : entry.kind === "merge" ? "blue" : "amber"}>{entry.kind}</Badge>
@@ -1400,7 +1400,7 @@ export function DebugTab() {
                   </div>
                 ))
               ) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No journal entries yet.
                 </div>
               )}
@@ -1486,7 +1486,7 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={clearAllCameraFailures}
-                  className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                  className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
                 >
                   Clear All
                 </button>
@@ -1570,14 +1570,14 @@ export function DebugTab() {
                       ) : null}
                     </div>
                   )) : (
-                    <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                    <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                       No per-camera evaluation details found for this hovered cell.
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+              <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                 Hover a heatmap cell in Map View to inspect per-camera trust factors here.
               </div>
             )}
@@ -1731,7 +1731,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No sensor ingest archive yet. Paste metadata or pull an external feed in the sensor panel to create the first record.
                   </div>
                 )}
@@ -1778,7 +1778,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No camera live connection archive yet. Bind or disconnect a camera in the inspector to create the first record.
                   </div>
                 )}
@@ -1841,7 +1841,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No active live session lease yet. Bind or refresh a camera in the inspector to create the first lease.
                   </div>
                 )}
@@ -1875,7 +1875,7 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={clearExternalLogEntries}
-                  className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                  className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
                 >
                   Clear External Logs
                 </button>
@@ -1943,7 +1943,7 @@ export function DebugTab() {
                     setSensorMetadataError(null);
                     setSensorMetadataStatus(null);
                   }}
-                  className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                  className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
                 >
                   Clear Draft
                 </button>
@@ -1998,7 +1998,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No alert candidates yet.
                   </div>
                 )}
@@ -2022,7 +2022,7 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={() => setSupportIngestReport(null)}
-                  className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                  className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
                 >
                   Clear Ingest Result
                 </button>
@@ -2074,7 +2074,7 @@ export function DebugTab() {
                   <button
                     type="button"
                     onClick={() => void refreshSupportIngestArchive()}
-                    className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                    className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
                   >
                     {remoteSupportIngestHistoryLoading ? "Refreshing..." : "Refresh Archive"}
                   </button>
@@ -2089,7 +2089,7 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={clearSupportIngestHistory}
-                  className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                  className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
                 >
                   Clear Ingest History
                 </button>
@@ -2112,7 +2112,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No support ingest history yet. Send a bundle to ingest to keep the routed handoff visible over time.
                   </div>
                 )}
@@ -2144,14 +2144,14 @@ export function DebugTab() {
                 <button
                   type="button"
                   onClick={() => setSupportDeliveryReport(null)}
-                  className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                  className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
                 >
                   Clear Delivery Result
                 </button>
                 <button
                   type="button"
                   onClick={() => void refreshSupportDeliveryArchive()}
-                  className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                  className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
                 >
                   {remoteSupportDeliveryHistoryLoading ? "Refreshing..." : "Refresh Delivery Archive"}
                 </button>
@@ -2207,7 +2207,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No support delivery archive yet. Dispatch a routed support payload to create the fan-out history.
                   </div>
                 )}
@@ -2385,7 +2385,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No provider governance snapshots yet. Capture one to start the control-plane trail.
                   </div>
                 )}
@@ -2493,7 +2493,7 @@ export function DebugTab() {
                     inputMode="numeric"
                     value={aiTelemetryPolicy.recentWindowSize}
                     onChange={(event) => setAiTelemetryPolicy({ recentWindowSize: parseTelemetryPolicyInteger(event.target.value, aiTelemetryPolicy.recentWindowSize, 1) })}
-                    className={`mt-1 w-full rounded border ${UI_SURFACES.borderDarkAlt} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBright} outline-none transition-colors focus:border-cyan-500/60`}
+                    className={`mt-1 w-full rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBright} outline-none transition-colors focus:border-cyan-500/60`}
                   />
                 </div>
                 <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
@@ -2505,7 +2505,7 @@ export function DebugTab() {
                     inputMode="numeric"
                     value={aiTelemetryPolicy.baselineWindowSize}
                     onChange={(event) => setAiTelemetryPolicy({ baselineWindowSize: parseTelemetryPolicyInteger(event.target.value, aiTelemetryPolicy.baselineWindowSize, 1) })}
-                    className={`mt-1 w-full rounded border ${UI_SURFACES.borderDarkAlt} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBright} outline-none transition-colors focus:border-cyan-500/60`}
+                    className={`mt-1 w-full rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBright} outline-none transition-colors focus:border-cyan-500/60`}
                   />
                 </div>
                 <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
@@ -2517,7 +2517,7 @@ export function DebugTab() {
                     inputMode="numeric"
                     value={aiTelemetryPolicy.durationDeltaThresholdMs}
                     onChange={(event) => setAiTelemetryPolicy({ durationDeltaThresholdMs: parseTelemetryPolicyInteger(event.target.value, aiTelemetryPolicy.durationDeltaThresholdMs, 0) })}
-                    className={`mt-1 w-full rounded border ${UI_SURFACES.borderDarkAlt} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBright} outline-none transition-colors focus:border-cyan-500/60`}
+                    className={`mt-1 w-full rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBright} outline-none transition-colors focus:border-cyan-500/60`}
                   />
                 </div>
                 <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
@@ -2529,7 +2529,7 @@ export function DebugTab() {
                     inputMode="numeric"
                     value={aiTelemetryPolicy.tokenDeltaThreshold}
                     onChange={(event) => setAiTelemetryPolicy({ tokenDeltaThreshold: parseTelemetryPolicyInteger(event.target.value, aiTelemetryPolicy.tokenDeltaThreshold, 0) })}
-                    className={`mt-1 w-full rounded border ${UI_SURFACES.borderDarkAlt} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBright} outline-none transition-colors focus:border-cyan-500/60`}
+                    className={`mt-1 w-full rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBright} outline-none transition-colors focus:border-cyan-500/60`}
                   />
                 </div>
                 <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5 col-span-2`}>
@@ -2541,7 +2541,7 @@ export function DebugTab() {
                     <button
                       type="button"
                       onClick={resetAiTelemetryPolicy}
-                      className={`rounded-md border ${UI_SURFACES.borderDarkAlt} ${UI_SURFACES.panel} px-2 py-1 text-[9px] font-semibold ${UI_SURFACES.textBody2} transition-colors hover:border-cyan-500/50 hover:text-white`}
+                      className={`rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-2 py-1 text-[9px] font-semibold ${UI_SURFACES.textBody2} transition-colors hover:border-cyan-500/50 hover:text-white`}
                     >
                       Reset telemetry policy
                     </button>
@@ -2554,7 +2554,7 @@ export function DebugTab() {
                     inputMode="decimal"
                     value={aiTelemetryPolicy.successRateDeltaThreshold}
                     onChange={(event) => setAiTelemetryPolicy({ successRateDeltaThreshold: parseTelemetryPolicyFloat(event.target.value, aiTelemetryPolicy.successRateDeltaThreshold, 0, 1) })}
-                    className={`mt-1 w-full rounded border ${UI_SURFACES.borderDarkAlt} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBright} outline-none transition-colors focus:border-cyan-500/60`}
+                    className={`mt-1 w-full rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBright} outline-none transition-colors focus:border-cyan-500/60`}
                   />
                 </div>
               </div>
@@ -2651,7 +2651,7 @@ export function DebugTab() {
                     <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>{entry.note ?? "Measured at the AI action surface."}</div>
                   </div>
                 )) : (
-                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No measured AI actions yet.
                   </div>
                 )}
@@ -2806,7 +2806,7 @@ export function DebugTab() {
                     </div>
                   </div>
                 )) : (
-                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No registry snapshots yet. Capture one to start the governance trail.
                   </div>
                 )}
@@ -2940,7 +2940,7 @@ export function DebugTab() {
                   </div>
                 </div>
               ) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   Run the suite to compare structured outputs against the current provider/model choice.
                 </div>
               )}
@@ -3038,7 +3038,7 @@ export function DebugTab() {
                     </div>
                   );
                 }) : (
-                  <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                  <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     No historical model eval runs yet. Run the suite to start the comparison log.
                   </div>
                 )}
@@ -3091,7 +3091,7 @@ export function DebugTab() {
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No runtime trace entries yet. Trigger import, scan, AI, save, render, or publish actions to populate this view.
                 </div>
               )}
@@ -3108,7 +3108,7 @@ export function DebugTab() {
               <button
                 type="button"
                 onClick={clearRuntimeIncidents}
-                className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 Clear Incidents
               </button>
@@ -3139,7 +3139,7 @@ export function DebugTab() {
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No incidents yet. Open the command bar, trigger a validation error, or run a simulation to populate the log.
                 </div>
               )}
@@ -3162,7 +3162,7 @@ export function DebugTab() {
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No performance traces yet. Run a simulation, save a snapshot, or finish a scan import to record one.
                 </div>
               )}
@@ -3192,7 +3192,7 @@ export function DebugTab() {
                 className={`rounded-md border px-2 py-1.5 text-left text-[9px] transition-colors ${
                   layers[layerId as keyof typeof layers]
                     ? "border-sky-400/20 bg-sky-500/10 text-sky-100"
-                    : "border-[#1e2030] ${UI_SURFACES.bgDeep} ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverBorderDark} hover:text-white"
+                    : "border-[#1e2030] ${UI_SURFACES.bgDeep} ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverBorder} hover:text-white"
                 }`}
               >
                 {label}

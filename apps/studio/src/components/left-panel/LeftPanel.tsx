@@ -80,7 +80,7 @@ function SectionTitle({
       <button
         type="button"
         onClick={onToggle}
-        className={`ml-auto inline-flex h-5 w-5 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
+        className={`ml-auto inline-flex h-5 w-5 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
         title={collapsed ? `Expand ${title}` : `Collapse ${title}`}
       >
         {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}

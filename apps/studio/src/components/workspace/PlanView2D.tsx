@@ -14,6 +14,7 @@ import {
 import { TOOL_LABELS } from "@/lib/tool-constants";
 import { useStudioStore, useFilteredScene } from "@/store/studio-store";
 import { PlanContextMenu } from "./PlanContextMenu";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 /**
  * True-2D architectural plan view for the workspace (canvasMode `plan_2d`).
@@ -185,7 +186,7 @@ export function PlanView2D() {
           <span className="font-sans font-semibold uppercase tracking-wider text-sky-400">
             {TOOL_LABELS[activeTool] ?? "Place"}
           </span>
-          <span className="text-[#647089]">·</span>
+          <span className={`${UI_SURFACES.textSoftMid}`}>·</span>
           <span>Click map to place at [{hoverPoint[0].toFixed(1)}, {hoverPoint[1].toFixed(1)}]</span>
         </div>
       ) : null}

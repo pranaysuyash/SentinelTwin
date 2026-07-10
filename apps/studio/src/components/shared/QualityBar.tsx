@@ -3,6 +3,7 @@
 import { cn } from "@/lib/cn";
 import { qualityToScore } from "@sentineltwin/core";
 import type { DoriQuality } from "@/schema/security-scene";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 interface QualitySegment {
   minScore: number;
@@ -30,7 +31,7 @@ export interface QualityBarProps {
 
 export function QualityBar({ cells, segments = DEFAULT_SEGMENTS, className }: QualityBarProps) {
   if (!cells || cells.length === 0) {
-    return <div className={cn("h-3 rounded-sm bg-[#1a1d26]", className)} />;
+    return <div className={cn("h-3 rounded-sm ${UI_SURFACES.chip}", className)} />;
   }
 
   const total = cells.length;

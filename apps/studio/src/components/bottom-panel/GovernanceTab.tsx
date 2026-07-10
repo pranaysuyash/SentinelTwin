@@ -65,7 +65,7 @@ function PillButton({
         "rounded-md border px-2 py-1 text-[9px] transition-colors",
         active
           ? "border-sky-500/30 bg-sky-500/10 text-sky-200"
-          : `${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textMuted5} ${UI_SURFACES.hoverBorderDark} hover:text-white`,
+          : `${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textMuted5} ${UI_SURFACES.hoverBorder} hover:text-white`,
         disabled && `cursor-not-allowed opacity-50 hover:${UI_SURFACES.borderPanel} ${UI_SURFACES.hoverTextSoft}`,
       )}
     >
@@ -1042,7 +1042,7 @@ export function GovernanceTab() {
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No governance trail yet. Request review, add notes, or change approval mode to create an auditable trail.
                 </div>
               )}
@@ -1076,14 +1076,14 @@ export function GovernanceTab() {
               <button
                 type="button"
                 onClick={() => setApprovalRouteArchiveReport(null)}
-                className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 Clear Route Result
               </button>
               <button
                 type="button"
                 onClick={() => void refreshApprovalRouteArchive()}
-                className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 {remoteApprovalRouteHistoryLoading ? "Refreshing..." : "Refresh Route Archive"}
               </button>
@@ -1185,7 +1185,7 @@ export function GovernanceTab() {
                 </div>
               </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No approval route archive yet. Resolve a route to create the first record.
                 </div>
               )}
@@ -1241,14 +1241,14 @@ export function GovernanceTab() {
               <button
                 type="button"
                 onClick={() => setGovernanceArchiveReport(null)}
-                className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 Clear Handoff Result
               </button>
               <button
                 type="button"
                 onClick={() => void refreshGovernanceArchive()}
-                className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 {remoteGovernanceArchiveHistoryLoading ? "Refreshing..." : "Refresh Governance Archive"}
               </button>
@@ -1304,7 +1304,7 @@ export function GovernanceTab() {
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No governance archive yet. Dispatch a review trail to create the routing history.
                 </div>
               )}
@@ -1338,14 +1338,14 @@ export function GovernanceTab() {
               <button
                 type="button"
                 onClick={() => setWorkspaceMembershipArchiveReport(null)}
-                className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 Clear Membership Result
               </button>
               <button
                 type="button"
                 onClick={() => void refreshWorkspaceMembershipArchive()}
-                className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 {remoteWorkspaceMembershipArchiveHistoryLoading ? "Refreshing..." : "Refresh Membership Archive"}
               </button>
@@ -1482,7 +1482,7 @@ export function GovernanceTab() {
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No membership archive yet. Dispatch a workspace roster to create the backend identity record.
                 </div>
               )}
@@ -1519,14 +1519,14 @@ export function GovernanceTab() {
                   setIdentityConflictArchiveReport(null);
                   setSelectedIdentityConflictStoredAt(null);
                 }}
-                className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 Clear Conflict Result
               </button>
               <button
                 type="button"
                 onClick={() => void refreshIdentityConflictArchive()}
-                className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 {remoteIdentityConflictHistoryLoading ? "Refreshing..." : "Refresh Conflict Archive"}
               </button>
@@ -1623,7 +1623,7 @@ export function GovernanceTab() {
                         setSelectedIdentityConflictStoredAt(null);
                         setIdentityConflictReplayReport(null);
                       }}
-                      className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                      className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
                     >
                       View latest diff
                     </button>
@@ -1634,7 +1634,7 @@ export function GovernanceTab() {
                           setSelectedIdentityConflictStoredAt(null);
                           setIdentityConflictReplayReport(null);
                         }}
-                        className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                        className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
                       >
                         Clear diff selection
                       </button>
@@ -1785,7 +1785,7 @@ export function GovernanceTab() {
                         "rounded-md border px-2 py-1 text-[9px] transition-colors",
                         selectedIdentityConflictStoredAt === record.storedAt
                           ? "border-sky-500/30 bg-sky-500/10 text-sky-100"
-                          : `${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`,
+                          : `${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`,
                       )}
                     >
                       View diff
@@ -1809,7 +1809,7 @@ export function GovernanceTab() {
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No identity conflict resolution yet. Resolve one to create the remote shared-identity record.
                 </div>
               )}
@@ -1833,7 +1833,7 @@ export function GovernanceTab() {
               <button
                 type="button"
                 onClick={() => void refreshWorkspaceControlPlane()}
-                className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 {workspaceControlPlaneLoading ? "Refreshing..." : "Refresh Control Plane"}
               </button>
@@ -1864,7 +1864,7 @@ export function GovernanceTab() {
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.borderMidAlt} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                   No control-plane snapshots yet. Capture the workspace state to create the first record.
                 </div>
               )}
@@ -1928,7 +1928,7 @@ export function GovernanceTab() {
                 <button
                   type="button"
                   onClick={() => setSyncConflictReport(null)}
-                  className={`rounded-md border ${UI_SURFACES.borderSubtleAlt2} ${UI_SURFACES.card} px-2 py-1 ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderDark} hover:text-white`}
+                  className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
                 >
                   Clear Sync Report
                 </button>

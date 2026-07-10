@@ -25,6 +25,7 @@ import { useMemo } from "react";
 
 import { MAP_COLORS } from "@/components/map/map-colors";
 import { UI_TONES } from "@/lib/design-tokens";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export interface PickableWall {
   start: { x: number; y: number };
@@ -112,7 +113,7 @@ export function WallCanvasPicker({
       {/* The mini-canvas. SVG scales to container width via viewBox; height
           caps at maxCanvasHeight to keep the layout bounded on huge plans. */}
       <div
-        className="relative overflow-hidden rounded-lg border border-[#1b2233] bg-[#070a12]"
+        className={`relative overflow-hidden rounded-lg border border-[#1b2233] ${UI_SURFACES.page}`}
         style={{ maxHeight: maxCanvasHeight }}
       >
         <svg
@@ -165,19 +166,19 @@ export function WallCanvasPicker({
       </div>
 
       {/* Bulk actions for power users — kept compact below the canvas. */}
-      <div className="flex flex-wrap items-center gap-2 text-[10px] text-[#7f93b3]">
+      <div className={`flex flex-wrap items-center gap-2 text-[10px] ${UI_SURFACES.textSoftBright}`}>
         <span className="opacity-70">Bulk:</span>
         <button
           type="button"
           onClick={() => walls.forEach((_w, i) => !mask[i] && onToggle(i))}
-          className="rounded border border-[#2a3045] px-2 py-0.5 text-[10px] text-[#93a5c7] hover:border-[#3a4358] hover:text-white"
+          className={`rounded border ${UI_SURFACES.borderHover} px-2 py-0.5 text-[10px] ${UI_SURFACES.textSoftMuted} ${UI_SURFACES.hoverBorder} hover:text-white`}
         >
           Keep all
         </button>
         <button
           type="button"
           onClick={() => walls.forEach((_w, i) => (mask[i] ?? true) && onToggle(i))}
-          className="rounded border border-[#2a3045] px-2 py-0.5 text-[10px] text-[#93a5c7] hover:border-[#3a4358] hover:text-white"
+          className={`rounded border ${UI_SURFACES.borderHover} px-2 py-0.5 text-[10px] ${UI_SURFACES.textSoftMuted} ${UI_SURFACES.hoverBorder} hover:text-white`}
         >
           Exclude all
         </button>

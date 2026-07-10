@@ -5,6 +5,7 @@ import { samplePathQuality, groupPathQualitySamples } from "@/components/map/pat
 import type { CoverageCellLike } from "@/components/map/map-geometry";
 import type { PathQualityBand, PathQualitySample } from "@/components/map/path-quality";
 import type { ScenarioPath } from "@/schema/security-scene";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 type CoverageRibbonProps = {
   path: ScenarioPath | null;
@@ -27,12 +28,12 @@ export function CoverageRibbon({ path, coverageCells, stepM = 0.25 }: CoverageRi
   const totalDistance = samples.length > 1 ? samples[samples.length - 1]!.distanceM : 0;
 
   if (!path || totalDistance <= 0 || bands.length === 0) {
-    return <div className="text-[10px] text-[#556076]">No quality samples for this path.</div>;
+    return <div className={`text-[10px] ${UI_SURFACES.textDimMid}`}>No quality samples for this path.</div>;
   }
 
   return (
     <div className="space-y-1">
-      <div className="flex h-3 overflow-hidden rounded-full border border-[#202536] bg-[#111521]">
+      <div className={`flex h-3 overflow-hidden rounded-full border border-[#202536] ${UI_SURFACES.card}`}>
         {bands.map((band) => {
           const widthPct = totalDistance > 0
             ? ((band.endDistanceM - band.startDistanceM) / totalDistance) * 100
@@ -54,7 +55,7 @@ export function CoverageRibbon({ path, coverageCells, stepM = 0.25 }: CoverageRi
           );
         })}
       </div>
-      <div className="mt-1 flex items-center justify-between text-[8px] uppercase tracking-[0.16em] text-[#556076]">
+      <div className={`mt-1 flex items-center justify-between text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>
         <span>Entry</span>
         <span>{(totalDistance / path.speedMps).toFixed(1)}s total</span>
       </div>

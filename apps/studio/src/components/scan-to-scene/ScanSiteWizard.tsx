@@ -154,7 +154,7 @@ function PhotoCard({
       onClick={onClick}
       className={[
         "group w-full overflow-hidden rounded-2xl border text-left transition-colors",
-        active ? "border-cyan-500/45 bg-cyan-500/10" : "border-[#243049] bg-[#09111b] hover:border-[#39506f] hover:bg-[#0b1320]",
+        active ? "border-cyan-500/45 bg-cyan-500/10" : "${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} hover:border-[#39506f] hover:bg-[#0b1320]",
         compact ? "p-2.5" : "p-3",
       ].join(" ")}
     >
@@ -197,7 +197,7 @@ function StepBadge({ step, current, label }: { step: number; current: number; la
       <div
         className={[
           "flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold",
-          complete ? "bg-emerald-500 text-white" : active ? "bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/40" : "bg-[#182032] text-[#61708f]",
+          complete ? "bg-emerald-500 text-white" : active ? "bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/40" : "bg-[#182032] ${UI_SURFACES.textSoftMid}",
         ].join(" ")}
       >
         {complete ? <Check className="h-3 w-3" /> : current + 1}
@@ -1096,8 +1096,8 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[#0b0f17]">
-      <div className="`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-4 py-3}`">
+    <div className={`flex h-full flex-col overflow-hidden ${UI_SURFACES.panel}`}>
+      <div className={`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-4 py-3}`}>
         <div>
           <div className="flex items-center gap-2 text-white">
             <ScanSearch className="h-4 w-4 text-cyan-300" />
@@ -1115,7 +1115,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
         <SurfaceButton onClick={onClose}>Close</SurfaceButton>
       </div>
 
-      <div className="`{border-b ${UI_SURFACES.borderPanel} px-4 py-3}`">
+      <div className={`{border-b ${UI_SURFACES.borderPanel} px-4 py-3}`}>
         <div className="grid gap-3 md:grid-cols-4">
           <StepBadge step={0} current={step} label="Scene setup" />
           <StepBadge step={1} current={step} label="Image source" />
@@ -1127,111 +1127,111 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
       <div className="flex-1 overflow-hidden px-4 py-4">
         {step === 0 ? (
           <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
+            <div className={`rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
               <h3 className="text-sm font-semibold text-white">Room details</h3>
-              <p className="mt-1 text-xs text-[#8292af]">
+              <p className={`mt-1 text-xs ${UI_SURFACES.textSoftBright}`}>
                 These values seed the output scene. You can fine-tune them later in Camera Studio.
               </p>
 
               <div className="mt-4 space-y-4">
                 <label className="block">
-                  <span className="text-[11px] text-[#9db0d0]">Scene name</span>
+                  <span className={`text-[11px] ${UI_SURFACES.textSoftMuted}`}>Scene name</span>
                   <input
                     value={session.roomName}
                     onChange={(event) => updateSession({ roomName: event.target.value })}
-                    className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                    className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-sm ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                     placeholder="Manual Assisted Scan"
                   />
                 </label>
 
                 <div className="grid grid-cols-3 gap-3">
                   <label className="block">
-                    <span className="text-[11px] text-[#9db0d0]">Width (m)</span>
+                    <span className={`text-[11px] ${UI_SURFACES.textSoftMuted}`}>Width (m)</span>
                     <input
                       type="number"
                       min={1}
                       step={0.1}
                       value={session.widthM}
                       onChange={(event) => updateSession({ widthM: Math.max(1, Number(event.target.value) || 1) })}
-                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                      className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-sm ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                     />
                   </label>
                   <label className="block">
-                    <span className="text-[11px] text-[#9db0d0]">Depth (m)</span>
+                    <span className={`text-[11px] ${UI_SURFACES.textSoftMuted}`}>Depth (m)</span>
                     <input
                       type="number"
                       min={1}
                       step={0.1}
                       value={session.depthM}
                       onChange={(event) => updateSession({ depthM: Math.max(1, Number(event.target.value) || 1) })}
-                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                      className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-sm ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                     />
                   </label>
                   <label className="block">
-                    <span className="text-[11px] text-[#9db0d0]">Height (m)</span>
+                    <span className={`text-[11px] ${UI_SURFACES.textSoftMuted}`}>Height (m)</span>
                     <input
                       type="number"
                       min={2}
                       step={0.1}
                       value={session.heightM}
                       onChange={(event) => updateSession({ heightM: Math.max(2, Number(event.target.value) || 2) })}
-                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                      className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-sm ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                     />
                   </label>
                 </div>
 
                 <label className="block">
-                  <span className="text-[11px] text-[#9db0d0]">Known reference length (m)</span>
+                  <span className={`text-[11px] ${UI_SURFACES.textSoftMuted}`}>Known reference length (m)</span>
                   <input
                     type="number"
                     min={0.1}
                     step={0.1}
                     value={session.scaleReferenceM}
                     onChange={(event) => updateSession({ scaleReferenceM: Math.max(0.1, Number(event.target.value) || 0.1) })}
-                    className="mt-1 w-44 rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                    className={`mt-1 w-44 rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-sm ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                   />
                 </label>
 
                 <div className="grid gap-3 sm:grid-cols-3">
                   <label className="block">
-                    <span className="text-[11px] text-[#9db0d0]">Camera mount default</span>
+                    <span className={`text-[11px] ${UI_SURFACES.textSoftMuted}`}>Camera mount default</span>
                     <select
                       value={session.cameraMountType}
                       onChange={(event) => updateSession({ cameraMountType: event.target.value as ScanSession["cameraMountType"] })}
-                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                      className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-sm ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                     >
                       <option value="wall">Wall</option>
                       <option value="ceiling">Ceiling</option>
                     </select>
                   </label>
                   <label className="block">
-                    <span className="text-[11px] text-[#9db0d0]">Light mount default</span>
+                    <span className={`text-[11px] ${UI_SURFACES.textSoftMuted}`}>Light mount default</span>
                     <select
                       value={session.lightMountType}
                       onChange={(event) => updateSession({ lightMountType: event.target.value as ScanSession["lightMountType"] })}
-                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                      className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-sm ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                     >
                       <option value="ceiling">Ceiling</option>
                       <option value="wall">Wall</option>
                     </select>
                   </label>
                   <label className="block">
-                    <span className="text-[11px] text-[#9db0d0]">Critical zone night requirement</span>
+                    <span className={`text-[11px] ${UI_SURFACES.textSoftMuted}`}>Critical zone night requirement</span>
                     <select
                       value={session.criticalZoneNightRequired ? "yes" : "no"}
                       onChange={(event) => updateSession({ criticalZoneNightRequired: event.target.value === "yes" })}
-                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                      className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-sm ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                     >
                       <option value="yes">Yes</option>
                       <option value="no">No</option>
                     </select>
                   </label>
                   <label className="block">
-                    <span className="text-[11px] text-[#9db0d0]">Operational mode</span>
+                    <span className={`text-[11px] ${UI_SURFACES.textSoftMuted}`}>Operational mode</span>
                     <select
                       value={session.operationalMode}
                       onChange={(event) => updateSession({ operationalMode: event.target.value as ScanSession["operationalMode"] })}
-                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                      className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-sm ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                     >
                       <option value="permanent">Permanent controls</option>
                       <option value="temporary_event">Temporary / event controls</option>
@@ -1239,9 +1239,9 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                   </label>
                 </div>
 
-                <div className="rounded-xl border border-[#243049] bg-[#0a0f17] p-3 space-y-2">
+                <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-3 space-y-2`}>
                   <label className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-[#9db0d0]">Emergency response window</span>
+                    <span className={`text-[11px] ${UI_SURFACES.textSoftMuted}`}>Emergency response window</span>
                     <input
                       type="checkbox"
                       checked={Boolean(session.operationalContext?.isEmergencyWindow)}
@@ -1254,7 +1254,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                     />
                   </label>
                   <label className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-[#9db0d0]">Temporary perimeter lockdown required</span>
+                    <span className={`text-[11px] ${UI_SURFACES.textSoftMuted}`}>Temporary perimeter lockdown required</span>
                     <input
                       type="checkbox"
                       checked={Boolean(session.operationalContext?.requiresTemporaryPerimeterLockdown)}
@@ -1267,7 +1267,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                     />
                   </label>
                   <label className="block">
-                    <span className="text-[11px] text-[#9db0d0]">Operational notes</span>
+                    <span className={`text-[11px] ${UI_SURFACES.textSoftMuted}`}>Operational notes</span>
                     <textarea
                       value={session.operationalContext?.notes ?? ""}
                       onChange={(event) => updateSession({
@@ -1276,7 +1276,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                           notes: event.target.value,
                         },
                       })}
-                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#09111f] px-3 py-2 text-xs text-[#dce6f5] outline-none"
+                      className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} bg-[#09111f] px-3 py-2 text-xs text-[#dce6f5] outline-none`}
                       rows={3}
                       placeholder="Record access, staffing, perimeter, or timing assumptions for temporary control."
                     />
@@ -1299,39 +1299,39 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                     </ul>
                   </div>
                 ) : null}
-                <div className="rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-[11px] text-[#9db0d0]">
+                <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-[11px] ${UI_SURFACES.textSoftMuted}`}>
                   {isGuided ? "Auto-path hints are enabled for guided assistant runs." : "Manual marking remains the supported entry point."}
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
+            <div className={`rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
               <h3 className="text-sm font-semibold text-white">Session snapshot</h3>
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-[#243049] bg-[#0a0f17] p-3">
+                <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-3`}>
                   <div className="text-[11px] text-[#8192b1]">Candidates</div>
                   <div className="mt-1 text-2xl font-semibold text-white">{session.candidates.length}</div>
                 </div>
-                <div className="rounded-xl border border-[#243049] bg-[#0a0f17] p-3">
+                <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-3`}>
                   <div className="text-[11px] text-[#8192b1]">Cameras</div>
                   <div className="mt-1 text-2xl font-semibold text-white">{candidateStats.cameraCount}</div>
                 </div>
-                <div className="rounded-xl border border-[#243049] bg-[#0a0f17] p-3">
+                <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-3`}>
                   <div className="text-[11px] text-[#8192b1]">Obstructions</div>
                   <div className="mt-1 text-2xl font-semibold text-white">{candidateStats.obstructionCount}</div>
                 </div>
-                <div className="rounded-xl border border-[#243049] bg-[#0a0f17] p-3">
+                <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-3`}>
                   <div className="text-[11px] text-[#8192b1]">Source</div>
                   <div className="mt-1 text-sm font-medium text-cyan-200">Manual scan</div>
                 </div>
-                <div className="rounded-xl border border-[#243049] bg-[#0a0f17] p-3">
+                <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-3`}>
                   <div className="text-[11px] text-[#8192b1]">Operational mode</div>
                   <div className="mt-1 text-sm font-medium text-cyan-200">
                     {session.operationalMode === "permanent" ? "Permanent" : "Temporary / event"}
                   </div>
                 </div>
               </div>
-              <div className="mt-3 rounded-xl border border-[#243049] bg-[#0a0f17] p-3 text-[11px] text-[#9db0d0]">
+              <div className={`mt-3 rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-3 text-[11px] ${UI_SURFACES.textSoftMuted}`}>
                 <div className="flex items-center justify-between gap-2">
                   <span>Wall height</span>
                   <span className="text-white">{session.heightM} m</span>
@@ -1347,14 +1347,14 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
 
         {step === 1 ? (
           <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
-            <div className="rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
+            <div className={`rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
               <h3 className="text-sm font-semibold text-white">Choose one or more site images</h3>
-              <p className="mt-1 text-xs text-[#8292af]">
+              <p className={`mt-1 text-xs ${UI_SURFACES.textSoftBright}`}>
                 Upload one or more photos or use the bundled sample. Everything stays local in this browser session.
               </p>
 
               <div
-                className="mt-4 flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#263043] bg-[#09111b] px-4 py-10 text-center transition-colors hover:border-cyan-500/40"
+                className={`mt-4 flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#263043] ${UI_SURFACES.panelDeepAlt} px-4 py-10 text-center transition-colors hover:border-cyan-500/40`}
                 onClick={handleUploadClick}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => {
@@ -1374,7 +1374,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                   <>
                     <ImageUp className="h-10 w-10 text-[#5d6b84]" />
                     <p className="mt-4 text-sm font-medium text-[#d6dfef]">Drop photos here or click to upload</p>
-                    <p className="mt-1 text-xs text-[#73839f]">PNG, JPG, WEBP, or SVG. You can also use the built-in sample site.</p>
+                    <p className={`mt-1 text-xs ${UI_SURFACES.textSoftDim}`}>PNG, JPG, WEBP, or SVG. You can also use the built-in sample site.</p>
                     <div className="mt-5 flex gap-2">
                       <SurfaceButton type="button" onClick={(event) => {
                         event.stopPropagation();
@@ -1408,7 +1408,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                 }}
               />
               {session.imageDataUrl ? (
-                <div className="mt-3 rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2 text-[11px] text-[#9db0d0]">
+                <div className={`mt-3 rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[11px] ${UI_SURFACES.textSoftMuted}`}>
                   <div>File: <span className="text-white">{session.imageName ?? "unknown"}</span></div>
                   <div>Dimensions: <span className="text-white">{session.imageWidthPx ?? "?"} × {session.imageHeightPx ?? "?"}</span></div>
                   <div>Status: <span className="text-amber-200">Manual marking required</span></div>
@@ -1442,9 +1442,9 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               ) : null}
             </div>
 
-            <div className="rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
+            <div className={`rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
               <h3 className="text-sm font-semibold text-white">What happens next</h3>
-              <div className="mt-4 space-y-3 text-xs text-[#8292af]">
+              <div className={`mt-4 space-y-3 text-xs ${UI_SURFACES.textSoftBright}`}>
                 <p>1. You upload one or more photos of the site or use the sample retail layout.</p>
                 <p>2. You tap locations on the image and classify them as wall, door, camera, cupboard, counter, or another object type.</p>
                 <p>3. The scan candidates remain separate from the active site twin until you create a draft.</p>
@@ -1456,11 +1456,11 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
 
         {step === 2 ? (
           <div className="grid h-full gap-4 xl:grid-cols-[1.3fr_0.7fr]">
-            <div className="flex min-h-0 flex-col rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
+            <div className={`flex min-h-0 flex-col rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Annotate the active photo</h3>
-                  <p className="mt-1 text-xs text-[#8292af]">
+                  <p className={`mt-1 text-xs ${UI_SURFACES.textSoftBright}`}>
                     Click a point on the image to add a candidate. Classification is manual for now, so the flow is honest about what is real today.
                   </p>
                 </div>
@@ -1474,7 +1474,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                 <ScanTypeChips activeKind={activeKind} onChange={setActiveKind} />
               </div>
 
-              <div className="mt-4 min-h-0 flex-1 overflow-hidden rounded-2xl border border-[#243049] bg-[#09111b]">
+              <div className={`mt-4 min-h-0 flex-1 overflow-hidden rounded-2xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt}`}>
                 <div className="relative h-full min-h-[360px] w-full">
                   {session.imageDataUrl ? (
                     <div
@@ -1549,7 +1549,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                       <div>
                         <ScanSearch className="mx-auto h-10 w-10 text-[#5b6881]" />
                         <p className="mt-3 text-sm font-medium text-[#d7e0f0]">Upload a site image to begin</p>
-                        <p className="mt-1 text-xs text-[#73839f]">The image area will become the annotation canvas once a photo is loaded.</p>
+                        <p className={`mt-1 text-xs ${UI_SURFACES.textSoftDim}`}>The image area will become the annotation canvas once a photo is loaded.</p>
                       </div>
                     </div>
                   )}
@@ -1557,43 +1557,43 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-col rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
+            <div className={`flex min-h-0 flex-col rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Candidate review</h3>
-                  <p className="mt-1 text-xs text-[#8292af]">
+                  <p className={`mt-1 text-xs ${UI_SURFACES.textSoftBright}`}>
                     Confirm, relabel, or reject each annotation before compile.
                   </p>
                 </div>
-                <span className="rounded-full border border-[#243049] bg-[#09111b] px-2 py-1 text-[10px] text-[#8da0bf]">
+                <span className={`rounded-full border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-2 py-1 text-[10px] text-[#8da0bf]`}>
                   {session.candidates.length} total
                 </span>
               </div>
 
               <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
-                <div className="rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2 text-[10px] text-[#89a0c2]">
+                <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[10px] text-[#89a0c2]`}>
                   Drag markers to reposition. Use keyboard arrow keys for fine nudges when the canvas is focused.
                 </div>
-                <div className="grid grid-cols-4 gap-2 rounded-xl border border-[#22314b] bg-[#0b1220] px-3 py-2 text-[10px] text-[#9db0d0]">
+                <div className={`grid grid-cols-4 gap-2 rounded-xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panelDeep} px-3 py-2 text-[10px] ${UI_SURFACES.textSoftMuted}`}>
                   <div>
-                    <div className="text-[#6f82a4]">Accepted</div>
+                    <div className={`${UI_SURFACES.textSoftMid}`}>Accepted</div>
                     <div className="text-white">{candidateStats.accepted}</div>
                   </div>
                   <div>
-                    <div className="text-[#6f82a4]">Needs Review</div>
+                    <div className={`${UI_SURFACES.textSoftMid}`}>Needs Review</div>
                     <div className="text-amber-200">{candidateStats.needsReview}</div>
                   </div>
                   <div>
-                    <div className="text-[#6f82a4]">Pending</div>
+                    <div className={`${UI_SURFACES.textSoftMid}`}>Pending</div>
                     <div className="text-white">{candidateStats.pending}</div>
                   </div>
                   <div>
-                    <div className="text-[#6f82a4]">Rejected</div>
+                    <div className={`${UI_SURFACES.textSoftMid}`}>Rejected</div>
                     <div className="text-white">{candidateStats.rejected}</div>
                   </div>
                 </div>
                 {session.candidates.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-[#243049] bg-[#09111b] px-4 py-8 text-center text-xs text-[#73839f]">
+                  <div className={`rounded-2xl border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-4 py-8 text-center text-xs ${UI_SURFACES.textSoftDim}`}>
                     Tap the image to add the first candidate. Use the kind chips above to switch what you are placing.
                   </div>
                 ) : (
@@ -1605,7 +1605,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                         key={candidate.id}
                         className={[
                           "rounded-2xl border p-3 transition-colors",
-                          isSelected ? "border-cyan-500/40 bg-cyan-500/10" : "border-[#243049] bg-[#09111b]",
+                          isSelected ? "border-cyan-500/40 bg-cyan-500/10" : "${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt}",
                         ].join(" ")}
                       >
                         <div className="flex items-start gap-3">
@@ -1624,17 +1624,17 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">
                               <span className="truncate text-sm font-medium text-white">{candidate.label}</span>
-                              <span className="rounded-full border border-[#243049] bg-[#0c111b] px-2 py-0.5 text-[10px] text-[#89a0c2]">
+                              <span className={`rounded-full border ${UI_SURFACES.border} ${UI_SURFACES.panelDeep} px-2 py-0.5 text-[10px] text-[#89a0c2]`}>
                                 {candidate.status}
                               </span>
                             </div>
                             <div className="mt-1 grid gap-2 sm:grid-cols-2">
                               <label className="block">
-                                <span className="text-[10px] text-[#73839f]">Type</span>
+                                <span className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>Type</span>
                                 <select
                                   value={candidate.kind}
                                   onChange={(event) => updateCandidate(candidate.id, { kind: event.target.value as ScanCandidateKind })}
-                                  className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                  className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-xs ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                                 >
                                   {SCAN_CANDIDATE_TYPES.map((type) => (
                                     <option key={type.kind} value={type.kind}>
@@ -1644,11 +1644,11 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                                 </select>
                               </label>
                               <label className="block">
-                                <span className="text-[10px] text-[#73839f]">Status</span>
+                                <span className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>Status</span>
                                 <select
                                   value={candidate.status}
                                   onChange={(event) => updateCandidate(candidate.id, { status: event.target.value as ScanSession["candidates"][number]["status"] })}
-                                  className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                  className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-xs ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                                 >
                                   <option value="accepted">accepted</option>
                                   <option value="edited">edited</option>
@@ -1665,7 +1665,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                                   "rounded-full border px-2 py-1 text-[10px] transition-colors",
                                   candidate.status === "accepted"
                                     ? "border-emerald-400/30 bg-emerald-500/12 text-emerald-100"
-                                    : "border-[#243049] bg-[#0a0f17] text-[#93a5c7] hover:border-emerald-500/30 hover:text-white",
+                                    : "${UI_SURFACES.border} ${UI_SURFACES.panel} ${UI_SURFACES.textSoftMuted} hover:border-emerald-500/30 hover:text-white",
                                 ].join(" ")}
                               >
                                 Accept
@@ -1677,7 +1677,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                                   "rounded-full border px-2 py-1 text-[10px] transition-colors",
                                   candidate.status === "pending"
                                     ? "border-amber-400/30 bg-amber-500/12 text-amber-100"
-                                    : "border-[#243049] bg-[#0a0f17] text-[#93a5c7] hover:border-amber-500/30 hover:text-white",
+                                    : "${UI_SURFACES.border} ${UI_SURFACES.panel} ${UI_SURFACES.textSoftMuted} hover:border-amber-500/30 hover:text-white",
                                 ].join(" ")}
                               >
                                 Review
@@ -1689,7 +1689,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                                   "rounded-full border px-2 py-1 text-[10px] transition-colors",
                                   candidate.status === "rejected"
                                     ? "border-rose-400/30 bg-rose-500/12 text-rose-100"
-                                    : "border-[#243049] bg-[#0a0f17] text-[#93a5c7] hover:border-rose-500/30 hover:text-white",
+                                    : "${UI_SURFACES.border} ${UI_SURFACES.panel} ${UI_SURFACES.textSoftMuted} hover:border-rose-500/30 hover:text-white",
                                 ].join(" ")}
                               >
                                 Reject
@@ -1701,15 +1701,15 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                               ) : null}
                             </div>
                             <label className="mt-2 block">
-                              <span className="text-[10px] text-[#73839f]">Label</span>
+                              <span className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>Label</span>
                               <input
                                 value={candidate.label}
                                 onChange={(event) => updateCandidate(candidate.id, { label: event.target.value })}
-                                className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-xs ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                               />
                             </label>
                             <label className="mt-2 block">
-                              <span className="flex items-center justify-between text-[10px] text-[#73839f]">
+                              <span className={`flex items-center justify-between text-[10px] ${UI_SURFACES.textSoftDim}`}>
                                 <span>Confidence</span>
                                 <span>{Math.round(candidate.confidence * 100)}%</span>
                               </span>
@@ -1728,14 +1728,14 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                                 <button
                                   type="button"
                                   onClick={() => reorderPathCandidate(candidate.id, -1)}
-                                  className="rounded border border-[#2a354d] bg-[#0a0f17] px-2 py-1 text-[10px] text-[#c7d0e4]"
+                                  className={`rounded border border-[#2a354d] ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBody}`}
                                 >
                                   Path Order Up
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => reorderPathCandidate(candidate.id, 1)}
-                                  className="rounded border border-[#2a354d] bg-[#0a0f17] px-2 py-1 text-[10px] text-[#c7d0e4]"
+                                  className={`rounded border border-[#2a354d] ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBody}`}
                                 >
                                   Path Order Down
                                 </button>
@@ -1744,7 +1744,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                             {candidate.kind === "obstruction" || candidate.kind === "counter" || candidate.kind === "cupboard" || candidate.kind === "shelf" ? (
                               <div className="mt-2 grid grid-cols-3 gap-2">
                                 <label className="block">
-                                  <span className="text-[10px] text-[#73839f]">Width (m)</span>
+                                  <span className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>Width (m)</span>
                                   <input
                                     type="number"
                                     min={0.1}
@@ -1752,11 +1752,11 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                                     step={0.1}
                                     value={candidate.widthHintM ?? 1.2}
                                     onChange={(event) => updateCandidate(candidate.id, { widthHintM: Math.max(0.1, Number(event.target.value) || 0.1) })}
-                                    className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-2 py-1.5 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                    className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-2 py-1.5 text-xs ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                                   />
                                 </label>
                                 <label className="block">
-                                  <span className="text-[10px] text-[#73839f]">Depth (m)</span>
+                                  <span className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>Depth (m)</span>
                                   <input
                                     type="number"
                                     min={0.1}
@@ -1764,11 +1764,11 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                                     step={0.1}
                                     value={candidate.depthHintM ?? 0.7}
                                     onChange={(event) => updateCandidate(candidate.id, { depthHintM: Math.max(0.1, Number(event.target.value) || 0.1) })}
-                                    className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-2 py-1.5 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                    className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-2 py-1.5 text-xs ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                                   />
                                 </label>
                                 <label className="block">
-                                  <span className="text-[10px] text-[#73839f]">Height (m)</span>
+                                  <span className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>Height (m)</span>
                                   <input
                                     type="number"
                                     min={0.1}
@@ -1776,7 +1776,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                                     step={0.1}
                                     value={candidate.heightHintM ?? 1.2}
                                     onChange={(event) => updateCandidate(candidate.id, { heightHintM: Math.max(0.1, Number(event.target.value) || 0.1) })}
-                                    className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-2 py-1.5 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                    className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-2 py-1.5 text-xs ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                                   />
                                 </label>
                               </div>
@@ -1784,7 +1784,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                             {candidate.kind === "critical_zone" ? (
                               <div className="mt-2 grid grid-cols-2 gap-2">
                                 <label className="block">
-                                  <span className="text-[10px] text-[#73839f]">Zone width (m)</span>
+                                  <span className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>Zone width (m)</span>
                                   <input
                                     type="number"
                                     min={0.5}
@@ -1792,11 +1792,11 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                                     step={0.1}
                                     value={candidate.widthHintM ?? Math.max(1.6, session.widthM * 0.18)}
                                     onChange={(event) => updateCandidate(candidate.id, { widthHintM: Math.max(0.5, Number(event.target.value) || 0.5) })}
-                                    className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-2 py-1.5 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                    className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-2 py-1.5 text-xs ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                                   />
                                 </label>
                                 <label className="block">
-                                  <span className="text-[10px] text-[#73839f]">Zone depth (m)</span>
+                                  <span className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>Zone depth (m)</span>
                                   <input
                                     type="number"
                                     min={0.5}
@@ -1804,7 +1804,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                                     step={0.1}
                                     value={candidate.depthHintM ?? Math.max(1.2, session.depthM * 0.16)}
                                     onChange={(event) => updateCandidate(candidate.id, { depthHintM: Math.max(0.5, Number(event.target.value) || 0.5) })}
-                                    className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-2 py-1.5 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                    className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-2 py-1.5 text-xs ${UI_SURFACES.textBright} outline-none focus:border-cyan-500/50`}
                                   />
                                 </label>
                               </div>
@@ -1813,7 +1813,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                           <button
                             type="button"
                             onClick={() => removeCandidate(candidate.id)}
-                            className="rounded-xl border border-[#243049] bg-[#0a0f17] p-2 text-[#7890b2] transition-colors hover:border-rose-500/40 hover:text-rose-300"
+                            className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-2 text-[#7890b2] transition-colors hover:border-rose-500/40 hover:text-rose-300`}
                             title="Remove candidate"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1858,34 +1858,34 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
 
         {step === 3 ? (
           <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-            <div className="rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
+            <div className={`rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
               <h3 className="text-sm font-semibold text-white">Review summary</h3>
-              <p className="mt-1 text-xs text-[#8292af]">
+              <p className={`mt-1 text-xs ${UI_SURFACES.textSoftBright}`}>
                 The output is a real site twin draft. Wall annotations tune the shell, while objects become editable site elements.
               </p>
 
               <div className="mt-4 space-y-2">
-                <div className="flex items-center justify-between rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2">
-                  <span className="text-xs text-[#8292af]">Scene name</span>
+                <div className={`flex items-center justify-between rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2`}>
+                  <span className={`text-xs ${UI_SURFACES.textSoftBright}`}>Scene name</span>
                   <span className="text-xs font-medium text-white">{session.roomName}</span>
                 </div>
-                <div className="flex items-center justify-between rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2">
-                  <span className="text-xs text-[#8292af]">Dimensions</span>
+                <div className={`flex items-center justify-between rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2`}>
+                  <span className={`text-xs ${UI_SURFACES.textSoftBright}`}>Dimensions</span>
                   <span className="text-xs font-medium text-white">{session.widthM}m × {session.depthM}m × {session.heightM}m</span>
                 </div>
-                <div className="flex items-center justify-between rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2">
-                  <span className="text-xs text-[#8292af]">Accepted candidates</span>
+                <div className={`flex items-center justify-between rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2`}>
+                  <span className={`text-xs ${UI_SURFACES.textSoftBright}`}>Accepted candidates</span>
                   <span className="text-xs font-medium text-white">{candidateStats.accepted}</span>
                 </div>
-                <div className="flex items-center justify-between rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2">
-                  <span className="text-xs text-[#8292af]">Rejected candidates</span>
+                <div className={`flex items-center justify-between rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2`}>
+                  <span className={`text-xs ${UI_SURFACES.textSoftBright}`}>Rejected candidates</span>
                   <span className="text-xs font-medium text-white">{candidateStats.rejected}</span>
                 </div>
-                <div className="flex items-center justify-between rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2">
-                  <span className="text-xs text-[#8292af]">Source</span>
+                <div className={`flex items-center justify-between rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2`}>
+                  <span className={`text-xs ${UI_SURFACES.textSoftBright}`}>Source</span>
                   <span className="text-xs font-medium text-cyan-200">scan</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2 text-[11px] text-[#9db0d0]">
+                <div className={`grid grid-cols-2 gap-2 rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[11px] ${UI_SURFACES.textSoftMuted}`}>
                   <div>Cameras: <span className="text-white">{candidateStats.cameraCount}</span></div>
                   <div>Doors: <span className="text-white">{candidateStats.doorCount}</span></div>
                   <div>Windows: <span className="text-white">{candidateStats.windowCount}</span></div>
@@ -1895,7 +1895,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                   <div>Path points: <span className="text-white">{candidateStats.pathPointCount}</span></div>
                   <div>Image: <span className="text-white">{session.imageName ?? "none"}</span></div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2 text-[11px] text-[#9db0d0]">
+                <div className={`grid grid-cols-2 gap-2 rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[11px] ${UI_SURFACES.textSoftMuted}`}>
                   <div>Camera mount: <span className="text-white">{session.cameraMountType}</span></div>
                   <div>Light mount: <span className="text-white">{session.lightMountType}</span></div>
                   <div>Wall height: <span className="text-white">{session.heightM} m</span></div>
@@ -1909,7 +1909,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               <div className="mt-3 rounded-2xl border border-rose-500/20 bg-rose-500/8 p-3 text-xs text-rose-100/90">
                 <strong>Creating the draft opens review.</strong> The scan is not promoted to the active site twin until you approve it in Site Draft Review.
               </div>
-              <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
+              <div className={`mt-3 rounded-2xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} p-3`}>
                 <h4 className="text-xs font-semibold text-white">Compile preview</h4>
                 <p className="mt-1 text-[11px] text-[#8aa1c4]">What will be created in the site twin draft:</p>
                 <div className="mt-3 grid grid-cols-4 gap-2">
@@ -1940,7 +1940,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                   </div>
                 )}
               </div>
-              <label className="mt-3 flex items-start gap-2 rounded-2xl border border-[#243049] bg-[#09111b] px-3 py-2 text-[11px] text-[#c6d3ea]">
+              <label className={`mt-3 flex items-start gap-2 rounded-2xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[11px] text-[#c6d3ea]`}>
                 <input
                   type="checkbox"
                   checked={autoCreatePath}
@@ -1948,7 +1948,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                 />
                 <span>Auto-create entry-to-critical-zone path when path points are not marked.</span>
               </label>
-              <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
+              <div className={`mt-3 rounded-2xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} p-3`}>
                 <h4 className="text-xs font-semibold text-white">Structural auto-fix assist (explicit)</h4>
                 <p className="mt-1 text-[11px] text-[#8aa1c4]">
                   These actions are manual and visible. They do not run automatically and only update candidate annotations.
@@ -1962,7 +1962,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                   </SurfaceButton>
                 </div>
               </div>
-              <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
+              <div className={`mt-3 rounded-2xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} p-3`}>
                 <h4 className="text-xs font-semibold text-white">Geometry sanity checks</h4>
                 <div className="mt-2 space-y-1 text-[11px] text-[#8aa1c4]">
                   <p>• Duplicate groups (same type + close points): {duplicateCandidateGroups.length}</p>
@@ -1976,9 +1976,9 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                     ))
                   )}
                 </div>
-                <div className="mt-3 rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2">
+                <div className={`mt-3 rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2`}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] uppercase tracking-[0.16em] text-[#8292af]">Provenance</span>
+                    <span className={`text-[10px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftBright}`}>Provenance</span>
                     <span className={[
                       "rounded-full px-2 py-0.5 text-[9px] uppercase tracking-[0.18em]",
                       provenance.confidenceLevel === "high"
@@ -1991,7 +1991,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                     </span>
                   </div>
                   <p className="mt-1 text-[10px] text-[#8aa1c4]">{provenance.summary}</p>
-                  <p className="mt-1 text-[10px] text-[#73839f]">
+                  <p className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     {provenance.acceptedCandidates}/{provenance.totalCandidates} accepted · {(provenance.averageConfidence * 100).toFixed(0)}% avg confidence
                   </p>
                 </div>
@@ -2043,7 +2043,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                 ) : null}
               </div>
 
-              <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
+              <div className={`mt-3 rounded-2xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} p-3`}>
                 <h4 className="text-xs font-semibold text-white">What will be created</h4>
                 <div className="mt-2 space-y-1 text-[11px] text-[#8aa1c4]">
                   <p>• Validated site twin data with real walls, openings, obstructions, lights, cameras, zones, and optional path.</p>
@@ -2053,16 +2053,16 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
+            <div className={`rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4`}>
               <h3 className="text-sm font-semibold text-white">Compiled node preview</h3>
-              <p className="mt-1 text-xs text-[#8292af]">
+              <p className={`mt-1 text-xs ${UI_SURFACES.textSoftBright}`}>
                 Accepted scan candidates are staged as a draft and only become the live Studio scene after approval.
               </p>
               <div className="mt-4 max-h-[360px] space-y-2 overflow-y-auto pr-1">
                 {session.candidates.filter((candidate) => candidate.status !== "rejected").map((candidate, index) => {
                   const meta = kindMeta(candidate.kind);
                   return (
-                    <div key={candidate.id} className="flex items-center justify-between rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2">
+                    <div key={candidate.id} className={`flex items-center justify-between rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2`}>
                       <div className="flex items-center gap-3">
                         <div className={[
                           "flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-semibold",
@@ -2074,7 +2074,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                         </div>
                         <div>
                           <div className="text-xs font-medium text-white">{candidate.label}</div>
-                          <div className="text-[10px] text-[#73839f]">{meta.label} • {candidate.status}</div>
+                          <div className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>{meta.label} • {candidate.status}</div>
                         </div>
                       </div>
                       <div className="text-[10px] text-[#8093b4]">{Math.round(candidate.confidence * 100)}%</div>
@@ -2082,7 +2082,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                   );
                 })}
                 {session.candidates.filter((candidate) => candidate.status !== "rejected").length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-[#243049] bg-[#09111b] px-3 py-6 text-center text-xs text-[#73839f]">
+                  <div className={`rounded-xl border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-6 text-center text-xs ${UI_SURFACES.textSoftDim}`}>
                     There are no accepted candidates yet. Go back and add at least one object.
                   </div>
                 ) : null}
@@ -2094,7 +2094,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
         {error ? <p className="mt-3 text-xs text-rose-300">{error}</p> : null}
       </div>
 
-      <div className="`{flex items-center justify-between border-t ${UI_SURFACES.borderPanel} px-4 py-3}`">
+      <div className={`{flex items-center justify-between border-t ${UI_SURFACES.borderPanel} px-4 py-3}`}>
         <SurfaceButton
           type="button"
           onClick={() => {

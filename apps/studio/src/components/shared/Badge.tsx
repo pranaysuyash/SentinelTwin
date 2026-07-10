@@ -15,8 +15,8 @@ const variantClasses: Record<Variant, string> = {
   red:   "bg-red-950/60  text-red-400   border border-red-800/40",
   amber: "bg-amber-950/60 text-amber-400 border border-amber-800/40",
   blue:  "bg-blue-950/60  text-blue-400  border border-blue-800/40",
-  gray:  "bg-[#1a1d26] text-[#668] border ${UI_SURFACES.borderPanel}",
-  ghost: "text-[#dde2ef] border ${UI_SURFACES.borderPanel}",
+  gray:  "${UI_SURFACES.chip} text-[#668] border ${UI_SURFACES.borderPanel}",
+  ghost: "${UI_SURFACES.textBody3} border ${UI_SURFACES.borderPanel}",
 };
 
 export function Badge({ children, variant = "gray", className, dot }: BadgeProps) {

@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { useProductViewStore } from "@/store/product-view-store";
 import { useStudioStore } from "@/store/studio-store";
 import type { SecurityScene } from "@/schema/security-scene";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 function coverageTone(pct: number) {
   if (pct >= 80) return "text-emerald-300";
@@ -79,7 +80,7 @@ function SceneCard({
     <button
       type="button"
       onClick={() => onOpen(scene)}
-      className="group flex flex-col overflow-hidden rounded-[24px] border border-[#20273a] bg-[#0d121c] text-left transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-sky-400/25 hover:shadow-xl hover:shadow-black/30"
+      className={`group flex flex-col overflow-hidden rounded-[24px] border border-[#20273a] ${UI_SURFACES.panelDeep} text-left transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-sky-400/25 hover:shadow-xl hover:shadow-black/30`}
     >
       {/* Scene preview area */}
       <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-[#0f1623] to-[#060a12]">
@@ -209,7 +210,7 @@ export function ReferenceSitesView() {
   return (
     <div className="flex h-full w-full flex-col" style={{ background: "var(--bg)" }}>
       {/* Header */}
-      <header className="flex flex-wrap items-center gap-3 border-b border-[#1f2536] px-5 py-4">
+      <header className={`flex flex-wrap items-center gap-3 border-b ${UI_SURFACES.borderSubtle} px-5 py-4`}>
         <button
           type="button"
           onClick={() => navigate("product_home")}
@@ -230,7 +231,7 @@ export function ReferenceSitesView() {
       </header>
 
       {/* Category filter */}
-      <div className="flex gap-2 border-b border-[#1f2536] px-5 py-3">
+      <div className={`flex gap-2 border-b ${UI_SURFACES.borderSubtle} px-5 py-3`}>
         {categories.map((cat) => (
           <button
             key={cat.id}

@@ -140,7 +140,7 @@ export function GovernanceReviewPanel() {
     return (
       <div className={`flex flex-col h-full ${UI_SURFACES.panel} ${UI_SURFACES.textBody} p-4 text-sm`}>
         <div className="flex flex-col items-center justify-center h-full opacity-60">
-          <GitMerge className="w-12 h-12 mb-4 text-[#5d6880]" />
+          <GitMerge className={`w-12 h-12 mb-4 ${UI_SURFACES.textMuted7}`} />
           <p className="text-center">You are currently on the published <span className="font-mono text-white">main</span> branch.</p>
           <p className="text-center mt-2 text-xs">Switch to a draft branch to review changes.</p>
         </div>

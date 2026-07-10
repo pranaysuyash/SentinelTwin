@@ -218,7 +218,7 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
     return (
       <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
         <div className={`mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>Camera Visibility</div>
-        <p className="text-[10px] text-[#4d566b]">No visibility data available. Run simulation with a defined path.</p>
+        <p className={`text-[10px] ${UI_SURFACES.textDimMid}`}>No visibility data available. Run simulation with a defined path.</p>
       </div>
     );
   }
@@ -227,7 +227,7 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
     <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
         <div className="mb-2 flex items-center justify-between">
           <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Camera Visibility</span>
-          <div className="flex items-center gap-2 text-[8px] text-[#4d566b]">
+          <div className={`flex items-center gap-2 text-[8px] ${UI_SURFACES.textDimMid}`}>
             <span className="flex items-center gap-1">
             <span className={cn("h-2 w-2 rounded-sm", UI_TONES.success.dot)} />
             Visible
@@ -258,7 +258,7 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
             return (
               <div key={row.camId} className="flex items-center gap-2">
                 {/* Camera label */}
-                <div className="w-20 flex-shrink-0 truncate text-[8px] font-medium text-[#8b96ab]" title={row.camId}>
+                <div className={`w-20 flex-shrink-0 truncate text-[8px] font-medium ${UI_SURFACES.textSoftBright}`} title={row.camId}>
                   {row.camId.replace("cam_", "").replace(/_/g, " ")}
                 </div>
 
@@ -293,7 +293,7 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
                 </div>
 
                 {/* Stats */}
-                <div className="w-12 flex-shrink-0 text-right text-[8px] font-mono text-[#5b667c]">
+                <div className={`w-12 flex-shrink-0 text-right text-[8px] font-mono ${UI_SURFACES.textDimMid}`}>
                   {visiblePct.toFixed(0)}%
                 </div>
               </div>
@@ -304,7 +304,7 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
 
       {/* Summary bar */}
       {pathResult && (
-        <div className="mt-2 flex items-center gap-3 text-[8px] text-[#4d566b]">
+        <div className={`mt-2 flex items-center gap-3 text-[8px] ${UI_SURFACES.textDimMid}`}>
           <span>
             Visible: <span className="text-emerald-300 font-mono">{pathResult.visibleDurationS.toFixed(1)}s</span>
           </span>
@@ -312,7 +312,7 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
             Lost: <span className="text-red-300 font-mono">{pathResult.lostDurationS.toFixed(1)}s</span>
           </span>
           <span>
-            Events: <span className="text-[#8b96ab] font-mono">{pathResult.timeline.length}</span>
+            Events: <span className={`${UI_SURFACES.textSoftBright} font-mono`}>{pathResult.timeline.length}</span>
           </span>
           <span>
             t: <span className="text-[#8bc0ff] font-mono">{safeCurrentTime.toFixed(1)}s</span>

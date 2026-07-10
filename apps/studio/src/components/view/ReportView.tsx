@@ -61,9 +61,9 @@ function StatGroup({
   children: ReactNode;
 }) {
   return (
-    <div className={`rounded-2xl border ${UI_SURFACES.borderSubtle} bg-[#0f141f]/70 p-2`}>
+    <div className={`rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep}/70 p-2`}>
       <div className="mb-2 flex items-center justify-between px-1">
-        <div className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted1}`}>{title}</div>
+        <div className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textSoftDim}`}>{title}</div>
         {truthLabel ? <TruthBadge label={truthLabel} /> : null}
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -115,7 +115,7 @@ function pickFirstWords(input: string) {
 }
 
 function simulationFreshnessClass(hasResult: boolean, isFresh: boolean) {
-  if (!hasResult) return "${UI_SURFACES.borderDark} ${UI_SURFACES.card} text-[#8f9bb1]";
+  if (!hasResult) return "${UI_SURFACES.borderDark} ${UI_SURFACES.card} ${UI_SURFACES.textSoftBright}";
   return isFresh
     ? "border-emerald-400/20 bg-emerald-500/12 text-emerald-200"
     : "border-rose-400/20 bg-rose-500/12 text-rose-200";
@@ -265,17 +265,17 @@ export function ReportView() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <div className={`text-xs font-semibold uppercase tracking-[0.24em] ${UI_SURFACES.textMuted1}`}>Report Workspace</div>
+              <div className={`text-xs font-semibold uppercase tracking-[0.24em] ${UI_SURFACES.textSoftDim}`}>Report Workspace</div>
               <span className="rounded-full border border-sky-400/20 bg-sky-500/12 px-2 py-0.5 text-[10px] font-semibold text-sky-200">
                 {workspacePreset.replace(/_/g, " ")}
               </span>
-              <span className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[10px] font-semibold text-[#8f9bb1]`}>
+              <span className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[10px] font-semibold ${UI_SURFACES.textSoftBright}`}>
                 Outcome {outcome.summary.status.replace(/_/g, " ")}
               </span>
               <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-semibold", simulationFreshnessClass(Boolean(result), simulationIsFresh))}>
                 {simulationFreshnessLabel}
               </span>
-              <span className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[10px] font-semibold text-[#8f9bb1]`}>
+              <span className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[10px] font-semibold ${UI_SURFACES.textSoftBright}`}>
                 {scene.name}
               </span>
             </div>
@@ -323,8 +323,8 @@ export function ReportView() {
 
         <section className={`mt-4 rounded-[28px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/92 px-4 py-3 shadow-2xl shadow-black/20`}>
           <div className="flex items-center gap-2">
-            <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textMuted1}`}>Decision Priorities</div>
-            <span className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[10px] font-semibold text-[#8f9bb1]`}>
+            <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textSoftDim}`}>Decision Priorities</div>
+            <span className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[10px] font-semibold ${UI_SURFACES.textSoftBright}`}>
               {prioritizedActions.length} actions
             </span>
           </div>
@@ -337,7 +337,7 @@ export function ReportView() {
                     {action.source}
                   </span>
                 </div>
-                <div className="mt-1 text-[11px] text-[#8d98b0]">{pickFirstWords(action.detail)}</div>
+                <div className={`mt-1 text-[11px] ${UI_SURFACES.textSoftBright}`}>{pickFirstWords(action.detail)}</div>
               </div>
             ))}
           </div>
@@ -347,16 +347,16 @@ export function ReportView() {
           {summary.kCriticalSets.length > 0 ? (
             <section className={`mb-4 rounded-[28px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/92 px-4 py-3 shadow-2xl shadow-black/20 xl:col-span-2`}>
               <div className="flex items-center gap-2">
-                <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textMuted1}`}>Backup Coverage Critical Sets</div>
+                <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textSoftDim}`}>Backup Coverage Critical Sets</div>
                 <span className="rounded-full border border-sky-400/20 bg-sky-500/12 px-2 py-0.5 text-[10px] font-semibold text-sky-200">
                   {summary.kCriticalSets.length} sets
                 </span>
               </div>
               <div className="mt-3 grid gap-2 lg:grid-cols-3">
                 {summary.kCriticalSets.slice(0, 3).map((set) => (
-                  <div key={`${set.k}-${set.cameraIds.join("-")}`} className={`rounded-2xl border ${UI_SURFACES.borderSubtle} bg-[#0f141f] px-3 py-2`}>
+                  <div key={`${set.k}-${set.cameraIds.join("-")}`} className={`rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} px-3 py-2`}>
                     <div className="flex items-center justify-between gap-2">
-                      <div className={`text-[10px] uppercase tracking-[0.18em] ${UI_SURFACES.textMuted1}`}>K={set.k}</div>
+                      <div className={`text-[10px] uppercase tracking-[0.18em] ${UI_SURFACES.textSoftDim}`}>K={set.k}</div>
                       <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-semibold", set.exposureScore < 3 ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200" : "border-amber-400/20 bg-amber-500/10 text-amber-200")}>
                         {set.exposureScore.toFixed(1)}
                       </span>
@@ -364,7 +364,7 @@ export function ReportView() {
                     <div className="mt-1 text-sm font-medium text-white">
                       {set.cameraNames.join(", ")}
                     </div>
-                    <div className="mt-1 text-[11px] text-[#8d98b0]">
+                    <div className={`mt-1 text-[11px] ${UI_SURFACES.textSoftBright}`}>
                       {set.waypointCount} waypoints · {result?.kRobustness?.isRobust ? "robust" : "critical"}
                     </div>
                   </div>
@@ -376,8 +376,8 @@ export function ReportView() {
             <div className={`{flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-4 py-3}`}>
               <ShieldCheck className="h-4 w-4 text-emerald-300" />
               <div>
-                <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textMuted1}`}>Verified Outcome</div>
-                <div className="text-[11px] text-[#8d98b0]">Simulation-backed conclusions and risk summary</div>
+                <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textSoftDim}`}>Verified Outcome</div>
+                <div className={`text-[11px] ${UI_SURFACES.textSoftBright}`}>Simulation-backed conclusions and risk summary</div>
               </div>
             </div>
             <div className="min-h-0 overflow-y-auto">
@@ -389,8 +389,8 @@ export function ReportView() {
             <div className={`{flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-4 py-3}`}>
               <LayoutDashboard className="h-4 w-4 text-sky-300" />
               <div>
-                <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textMuted1}`}>Report Lite</div>
-                <div className="text-[11px] text-[#8d98b0]">Handoff-ready narrative, evidence, and recommendations</div>
+                <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textSoftDim}`}>Report Lite</div>
+                <div className={`text-[11px] ${UI_SURFACES.textSoftBright}`}>Handoff-ready narrative, evidence, and recommendations</div>
               </div>
               <span className="ml-auto rounded-full border border-sky-400/20 bg-sky-500/12 px-2 py-0.5 text-[10px] font-semibold text-sky-200">
                 {simulationIsFresh ? "Simulation verified" : result ? "Simulation stale" : "Run simulation to populate"}
@@ -402,7 +402,7 @@ export function ReportView() {
           </section>
         </div>
 
-        <div className={`mt-4 flex items-center gap-2 rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/85 px-4 py-3 text-[11px] text-[#8d98b0]`}>
+        <div className={`mt-4 flex items-center gap-2 rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/85 px-4 py-3 text-[11px] ${UI_SURFACES.textSoftBright}`}>
           <Sparkles className="h-4 w-4 text-amber-300" />
           Report view is a workspace destination, not just a drawer tab. You can still switch back to map, wall, replay, or compare without losing the current scene context.
         </div>

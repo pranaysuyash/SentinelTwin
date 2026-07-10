@@ -325,7 +325,7 @@ function BeforeAfterTabContent() {
         />
       </div>
       {outcomeDelta ? (
-        <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[9px] text-[#8ea0bf]}`}>
+        <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[9px] ${UI_SURFACES.textMuted3}}`}>
           Outcome Delta: Blindspot {Math.round((bSim?.blindspotPct ?? 0))}% {"->"} {Math.round((aSim?.blindspotPct ?? 0))}% ·
           Critical Zones {outcomeDelta.criticalZonesPassingBefore}/{outcomeDelta.criticalZonesTotal} {"->"} {outcomeDelta.criticalZonesPassingAfter}/{outcomeDelta.criticalZonesTotal}
         </div>
@@ -349,7 +349,7 @@ function BeforeAfterTabContent() {
               setViewMode("compare");
             }}
             disabled={!before || !after}
-            className={`ml-auto rounded border ${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} px-2 py-1 text-[8px] font-semibold ${UI_SURFACES.textNear} transition-colors hover:border-sky-400/30 hover:text-white`}
+            className={`ml-auto rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} px-2 py-1 text-[8px] font-semibold ${UI_SURFACES.textNear} transition-colors hover:border-sky-400/30 hover:text-white`}
           >
             Open Compare View
           </button>
@@ -365,7 +365,7 @@ function BeforeAfterTabContent() {
                 <img
                   src={entry.src}
                   alt={`${entry.accent} comparison evidence`}
-                  className="aspect-[4/3] w-full rounded-md border border-[#232a3d] object-cover"
+                  className={`aspect-[4/3] w-full rounded-md border ${UI_SURFACES.borderThin} object-cover`}
                 />
               </div>
             ))}

@@ -216,7 +216,7 @@ export function LensFovTradeoffSimulator({ camera, onClose }: LensFovTradeoffSim
               step="0.1"
               value={focalLength}
               onChange={(e) => setFocalLength(parseFloat(e.target.value))}
-              className="w-full h-1.5 rounded-full appearance-none bg-[#1e2130] accent-cyan-400 cursor-pointer"
+              className={`w-full h-1.5 rounded-full appearance-none ${UI_SURFACES.bgPanel} accent-cyan-400 cursor-pointer`}
             />
             <div className={`mt-1 flex justify-between text-[7px] ${UI_SURFACES.textMuted}`}>
               {FOCAL_LENGTH_PRESETS.map((fl) => (
@@ -275,7 +275,7 @@ export function LensFovTradeoffSimulator({ camera, onClose }: LensFovTradeoffSim
               step="1"
               value={resolutionMP}
               onChange={(e) => setResolutionMP(parseInt(e.target.value))}
-              className="w-full h-1.5 rounded-full appearance-none bg-[#1e2130] accent-cyan-400 cursor-pointer"
+              className={`w-full h-1.5 rounded-full appearance-none ${UI_SURFACES.bgPanel} accent-cyan-400 cursor-pointer`}
             />
             <div className={`mt-1 flex justify-between text-[7px] ${UI_SURFACES.textMuted}`}>
               {[1, 2, 4, 8, 12, 25, 50].map((mp) => (
@@ -297,7 +297,7 @@ export function LensFovTradeoffSimulator({ camera, onClose }: LensFovTradeoffSim
               step="1"
               value={targetDistance}
               onChange={(e) => setTargetDistance(parseInt(e.target.value))}
-              className="w-full h-1.5 rounded-full appearance-none bg-[#1e2130] accent-cyan-400 cursor-pointer"
+              className={`w-full h-1.5 rounded-full appearance-none ${UI_SURFACES.bgPanel} accent-cyan-400 cursor-pointer`}
             />
           </div>
 

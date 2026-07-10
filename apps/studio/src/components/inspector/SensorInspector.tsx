@@ -145,7 +145,7 @@ export function SensorInspector() {
           <Field label="Nearest Camera" value={nearestCamera?.name ?? "None"} />
           <Field label="Camera Distance" value={nearestCamera ? `${nearestDistance.toFixed(1)}m` : "—"} />
           <Field label="Coverage Mode" value={SENSOR_COVERAGE_LABELS[sensor.coverageMode]} />
-          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2 text-[10px] leading-relaxed text-[#8d98b0]`}>
+          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2 text-[10px] leading-relaxed ${UI_SURFACES.textSoftBright}`}>
             Sensors participate in the canonical scene graph and report summary. Live event binding records sensor triggers, heartbeats, faults, and restores into the evidence trail.
           </div>
         </SectionCard>
@@ -176,7 +176,7 @@ export function SensorInspector() {
                 details: `${sensor.label} sent a heartbeat.`,
                 resultingState: sensor.state,
               })}
-              className={`rounded-lg border border-[#24304a] ${UI_SURFACES.card} px-2 py-2 text-[10px] font-medium ${UI_SURFACES.textBody2} transition-colors hover:border-[#32506a] hover:bg-[#172235]`}
+              className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.card} px-2 py-2 text-[10px] font-medium ${UI_SURFACES.textBody2} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgDark}`}
             >
               Heartbeat
             </button>

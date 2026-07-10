@@ -136,7 +136,7 @@ function VulnerabilityCard({ window, label }: { window: VulnerabilityWindow; lab
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <Clock className={`w-2.5 h-2.5 ${UI_SURFACES.textMuted}`} />
-              <span className={`text-[9px] font-mono ${UI_SURFACES.textSoft}`}>
+              <span className={`text-[9px] font-mono ${UI_SURFACES.textSoftMid}`}>
                 {hourToTime(window.startHour, window.startMinute)} → {hourToTime(window.endHour, window.endMinute)}
               </span>
               <button type="button"
@@ -276,7 +276,7 @@ function ForecastStrip({
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <span className={`text-[11px] font-bold ${style.text}`}>{style.label}</span>
-          <span className={`text-[9px] font-mono ${UI_SURFACES.textSoft}`}>
+          <span className={`text-[9px] font-mono ${UI_SURFACES.textSoftMid}`}>
             {Math.round(currentCoverage)}% coverage at {hourToTime(currentHour, currentMinute)}
             {currentSnap?.crowdAgentCount != null && currentSnap.crowdAgentCount > 0 && (
               <> · {currentSnap.crowdAgentCount} people on site</>
@@ -440,7 +440,7 @@ export function TemporalProfileView() {
             title="Configure site schedule"
             className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] transition-colors ${
               showScheduleEditor
-                ? `bg-[#1e2235] border ${UI_SURFACES.borderDark} ${UI_SURFACES.textBody}`
+                ? `${UI_SURFACES.hoverBgDark} border ${UI_SURFACES.borderDark} ${UI_SURFACES.textBody}`
                 : "${UI_SURFACES.chip} ${UI_SURFACES.hoverBgDark} ${UI_SURFACES.textMuted5}"
             }`}
           >
@@ -527,7 +527,7 @@ export function TemporalProfileView() {
             <span className="text-[10px] font-bold font-mono text-white">
               {hourToTime(temporalScrubHour, temporalScrubMinute)}
             </span>
-            <span className={`text-[8px] ${UI_SURFACES.textSoft}`}>
+            <span className={`text-[8px] ${UI_SURFACES.textSoftMid}`}>
               {environmentMode === "night" ? "Night" : environmentMode === "dusk" ? "Dusk" : "Day"} mode
             </span>
             <div className="flex items-center gap-1 ml-1">

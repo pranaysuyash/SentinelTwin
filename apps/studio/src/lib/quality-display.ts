@@ -1,4 +1,5 @@
 import type { DoriQuality } from "@/schema/security-scene";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export type QualityStandard = "dori_2014" | "oodpcvs_2025";
 
@@ -73,7 +74,7 @@ export const QUALITY_COLOR: Record<DoriQuality, string> = {
 
 /** Tailwind text-color classes per quality level (used by CameraStatusSummaryPanel). */
 export const QUALITY_TEXT_COLOR: Record<DoriQuality, string> = {
-  none: "text-[#4a5568]",
+  none: "${UI_SURFACES.textMuted}",
   detection: "text-orange-300",
   overview: "text-orange-300",
   outline: "text-orange-300",

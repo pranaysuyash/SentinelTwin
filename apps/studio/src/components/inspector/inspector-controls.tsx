@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 export function Field({ label, value, unit }: { label: string; value: React.ReactNode; unit?: string }) {
   return (
-    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
+    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaint} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
       <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
       <span className={`flex items-center gap-1 text-right text-[11px] font-medium ${UI_SURFACES.textBody2}`}>
         {value}
@@ -73,7 +73,7 @@ export function SliderInput({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
+    <div className={`border-b ${UI_SURFACES.borderFaint} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
       <div className="mb-1.5 flex items-center justify-between gap-3">
         <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
         <span className={`text-[11px] font-mono ${UI_SURFACES.textBody2}`}>
@@ -108,7 +108,7 @@ export function ToggleField({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
+    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaint} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
       <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
       <div className={`inline-flex overflow-hidden rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card}`}>
         <button
@@ -116,7 +116,7 @@ export function ToggleField({
           onClick={() => onChange(true)}
           className={cn(
             "px-2 py-1 text-[10px] font-medium transition-colors",
-            value ? "bg-emerald-500/18 text-emerald-200" : "text-[#7f8aa3] ${UI_SURFACES.hoverText}",
+            value ? "bg-emerald-500/18 text-emerald-200" : "${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverText}",
           )}
         >
           {trueLabel}
@@ -126,7 +126,7 @@ export function ToggleField({
           onClick={() => onChange(false)}
           className={cn(
             "border-l ${UI_SURFACES.borderThin} px-2 py-1 text-[10px] font-medium transition-colors",
-            !value ? "bg-red-500/15 text-red-200" : "text-[#7f8aa3] ${UI_SURFACES.hoverText}",
+            !value ? "bg-red-500/15 text-red-200" : "${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverText}",
           )}
         >
           {falseLabel}
@@ -148,12 +148,12 @@ export function SelectInput({
   onChange: (v: string) => void;
 }) {
   return (
-    <label className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
+    <label className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaint} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
       <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+        className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -217,20 +217,20 @@ export function ColorInput({
   onClear?: () => void;
 }) {
   return (
-    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
+    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaint} py-2 last:border-b-0 last:pb-0 first:pt-0`}>
       <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
       <div className="flex items-center gap-1.5">
         {value !== undefined && onClear ? (
           <button
             type="button"
             onClick={onClear}
-            className={`rounded px-1 py-0.5 text-[9px] ${UI_SURFACES.textDimMid} transition-colors hover:text-[#a8b4cc]`}
+            className={`rounded px-1 py-0.5 text-[9px] ${UI_SURFACES.textDimMid} transition-colors ${UI_SURFACES.hoverTextSoft}`}
             title="Reset to default color"
           >
             Reset
           </button>
         ) : null}
-        <span className="font-mono text-[9px] text-[#7f8aa3]">{value ?? "default"}</span>
+        <span className={`font-mono text-[9px] ${UI_SURFACES.textSoftBright}`}>{value ?? "default"}</span>
         <input
           type="color"
           value={value ?? placeholder}
@@ -251,12 +251,12 @@ export function PropSelect({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-1.5 last:border-b-0`}>
+    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaint} py-1.5 last:border-b-0`}>
       <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+        className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>

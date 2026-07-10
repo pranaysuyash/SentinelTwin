@@ -130,7 +130,7 @@ export function WorkspacePresetSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className={`flex h-7 min-w-[126px] items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 text-[11px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
+        className={`flex h-7 min-w-[126px] items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 text-[11px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
       >
         {active.icon}
         <span>{active.label}</span>
@@ -139,15 +139,15 @@ export function WorkspacePresetSwitcher() {
             Modified
           </span>
         ) : null}
-        <ChevronDown className="h-3 w-3 text-[#546078]" />
+        <ChevronDown className={`h-3 w-3 ${UI_SURFACES.textDimMid}`} />
       </button>
 
       {open ? (
         <div
-          className="absolute right-0 top-full z-50 mt-1 w-72 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+          className={`absolute right-0 top-full z-50 mt-1 w-72 rounded-xl border border-[#202536] ${UI_SURFACES.bgDeep} p-1.5 shadow-2xl shadow-black/35`}
           onMouseLeave={() => setOpen(false)}
         >
-          <div className="px-2 py-1 text-[9px] uppercase tracking-[0.22em] text-[#4d566b]">
+          <div className={`px-2 py-1 text-[9px] uppercase tracking-[0.22em] ${UI_SURFACES.textDimMid}`}>
             Workspaces
           </div>
           <div className="grid gap-1">
@@ -179,7 +179,7 @@ export function WorkspacePresetSwitcher() {
           </div>
 
           <div className={`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-2}`}>
-            <div className="px-2 py-1 text-[9px] uppercase tracking-[0.22em] text-[#4d566b]">
+            <div className={`px-2 py-1 text-[9px] uppercase tracking-[0.22em] ${UI_SURFACES.textDimMid}`}>
               Layout actions
             </div>
             <div className="grid gap-1">
@@ -213,7 +213,7 @@ export function WorkspacePresetSwitcher() {
           </div>
 
           <div className={`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-2}`}>
-            <div className="px-2 py-1 text-[9px] uppercase tracking-[0.22em] text-[#4d566b]">
+            <div className={`px-2 py-1 text-[9px] uppercase tracking-[0.22em] ${UI_SURFACES.textDimMid}`}>
               Saved layouts
             </div>
             {savedLayouts.length > 0 ? (
@@ -236,7 +236,7 @@ export function WorkspacePresetSwitcher() {
                     <button
                       type="button"
                       onClick={() => deleteSavedLayout(layout.id)}
-                      className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[#7f8aa3] transition-colors hover:border-red-400/25 hover:text-red-200`}
+                      className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textSoftBright} transition-colors hover:border-red-400/25 hover:text-red-200`}
                       title={`Delete ${layout.name}`}
                     >
                       <Trash2 className="h-3 w-3" />

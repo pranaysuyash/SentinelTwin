@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const FIRST_RUN_DISMISSED_KEY = "sentineltwin:first-run-dismissed:v1";
 
@@ -76,22 +77,22 @@ export default function FirstRunGuide({ onClose, onOpenHelp }: { onClose: () => 
         <div className="mt-2 text-[12px] text-[#9fb0ce]">First run flow:</div>
         <ol className="mt-2 space-y-1 text-[12px] text-[#c6d3eb]">
           <li>1. Place/select cameras and assumptions.</li>
-          <li>2. Run simulation with <kbd className="rounded border border-[#2a3248] bg-[#11182a] px-1">Ctrl/Cmd + Enter</kbd>.</li>
+          <li>2. Run simulation with <kbd className={`rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-1`}>Ctrl/Cmd + Enter</kbd>.</li>
           <li>3. Open Security Outcome to review failures and causes.</li>
           <li>4. Preview Fix, compare before/after, then apply.</li>
         </ol>
-        <div className="mt-4 flex items-center justify-between border-t border-[#1e2538] pt-3">
+        <div className={`mt-4 flex items-center justify-between border-t ${UI_SURFACES.borderSubtle} pt-3`}>
           <label className="flex cursor-pointer items-center gap-2 text-[11px] text-[#9fb0ce] select-none">
             <input
               type="checkbox"
               checked={dontShowAgain}
               onChange={(e) => setDontShowAgain(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-[#2d3750] bg-[#11182a] text-emerald-500 focus:ring-0 focus:ring-offset-0"
+              className={`h-3.5 w-3.5 rounded ${UI_SURFACES.borderElevated} ${UI_SURFACES.card} text-emerald-500 focus:ring-0 focus:ring-offset-0`}
             />
             Don&apos;t show this guide again on startup
           </label>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={onOpenHelp} className="rounded border border-[#2d3750] px-3 py-1.5 text-[11px] text-[#cfe0ff] hover:bg-[#161f31]">Open Help</button>
+            <button type="button" onClick={onOpenHelp} className={`rounded border ${UI_SURFACES.borderElevated} px-3 py-1.5 text-[11px] text-[#cfe0ff] ${UI_SURFACES.hoverBgDark}`}>Open Help</button>
             <button
               type="button"
               onClick={handleStart}

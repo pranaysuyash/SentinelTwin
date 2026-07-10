@@ -27,6 +27,7 @@ import type {
 import { SITE_SOURCE_MATURITY } from "@/lib/site-compiler";
 import type { SiteDraftApprovalResult } from "@/lib/site-draft-approval";
 import { renderConfidence, CONFIDENCE_BAND_LABEL } from "@/lib/confidence-display";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export type CreationFlowStepIndex = 0 | 1 | 2 | 3;
 
@@ -145,7 +146,7 @@ export function CreationFlowShell({
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-[#050a12] text-white">
       {/* ── Top bar & Stepper ──────────────────────────────────────────────── */}
-      <header className="flex flex-none flex-col border-b border-[#1a2030] bg-[#080e18]">
+      <header className={`flex flex-none flex-col border-b ${UI_SURFACES.borderFaint} bg-[#080e18]`}>
         <div className="flex h-14 items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/10 ring-1 ring-sky-500/20">
@@ -158,7 +159,7 @@ export function CreationFlowShell({
                   Site Creation Shell
                 </span>
                 {activeSource && (
-                  <span className="inline-flex items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-[#c7d0e4]">
+                  <span className={`inline-flex items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-medium ${UI_SURFACES.textBody}`}>
                     {SOURCE_ICONS[activeSource]}
                     <span>{SITE_SOURCE_MATURITY[activeSource]?.label ?? activeSource}</span>
                   </span>
@@ -172,7 +173,7 @@ export function CreationFlowShell({
               <button
                 type="button"
                 onClick={onBack}
-                className="rounded-lg border border-[#1a2030] bg-white/[0.02] px-3 py-1.5 text-[12px] font-medium text-[#8ca3c8] transition-colors hover:border-[#2a3548] hover:text-white"
+                className={`rounded-lg border ${UI_SURFACES.borderFaint} bg-white/[0.02] px-3 py-1.5 text-[12px] font-medium ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 ← Back
               </button>
@@ -182,7 +183,7 @@ export function CreationFlowShell({
               <button
                 type="button"
                 onClick={onExit}
-                className="flex items-center gap-2 rounded-lg border border-[#1a2030] bg-[#0d1624] px-3.5 py-1.5 text-[12px] font-medium text-[#8ca3c8] transition-colors hover:border-[#2a3548] hover:text-white"
+                className={`flex items-center gap-2 rounded-lg border ${UI_SURFACES.borderFaint} bg-[#0d1624] px-3.5 py-1.5 text-[12px] font-medium ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 <span>Return to Studio</span>
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -206,14 +207,14 @@ export function CreationFlowShell({
                         ? "border border-sky-500/30 bg-sky-500/15 font-medium text-sky-300 shadow-[0_0_12px_rgba(14,165,233,0.15)]"
                         : isComplete
                           ? "bg-emerald-500/10 font-medium text-emerald-400"
-                          : "text-[#4a5568]",
+                          : "${UI_SURFACES.textMuted}",
                     ].join(" ")}
                   >
                     <span className="flex h-4 w-4 items-center justify-center rounded-full text-[10px]">
                       {isComplete ? (
                         <Check className="h-3 w-3 text-emerald-400" />
                       ) : (
-                        <span className={isActive ? "text-sky-300 font-bold" : "text-[#4a5568]"}>{idx + 1}</span>
+                        <span className={isActive ? "text-sky-300 font-bold" : "${UI_SURFACES.textMuted}"}>{idx + 1}</span>
                       )}
                     </span>
                     <span>{step.label.replace(/^\d+\.\s*/, "")}</span>
@@ -221,7 +222,7 @@ export function CreationFlowShell({
                   {idx < CREATION_FLOW_STEPS.length - 1 && (
                     <div className={[
                       "h-px w-6 transition-colors",
-                      idx < currentStep ? "bg-emerald-500/40" : "bg-[#1a2030]",
+                      idx < currentStep ? "bg-emerald-500/40" : "${UI_SURFACES.borderFaint}",
                     ].join(" ")} />
                   )}
                 </React.Fragment>
@@ -237,7 +238,7 @@ export function CreationFlowShell({
 
       {/* ── Canonical Intake & Provenance Banner ───────────────────────────── */}
       {(activeDraft || approvalResult) && (
-        <div className="border-b border-[#1a2030] bg-[#08111e]/80 px-6 py-3 backdrop-blur-md">
+        <div className={`border-b ${UI_SURFACES.borderFaint} bg-[#08111e]/80 px-6 py-3 backdrop-blur-md`}>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4 text-[12px]">
               <div className="flex items-center gap-2">
@@ -245,7 +246,7 @@ export function CreationFlowShell({
                 <span className="font-semibold text-white">
                   {activeDraft?.scene.name || "Untitled Site Twin"}
                 </span>
-                <span className="text-[#4a5568]">({activeDraft?.id ?? session?.id})</span>
+                <span className={`${UI_SURFACES.textMuted}`}>({activeDraft?.id ?? session?.id})</span>
               </div>
 
               <span className="text-[#2a3040]">·</span>
@@ -253,7 +254,7 @@ export function CreationFlowShell({
               {/* Confidence badge */}
               {confidenceData && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[#8ca3c8]">Confidence:</span>
+                  <span className={`${UI_SURFACES.textMuted3}`}>Confidence:</span>
                   <span className={[
                     "font-semibold",
                     confidenceData.band === "high"
@@ -271,7 +272,7 @@ export function CreationFlowShell({
               {activeDraft && (
                 <>
                   <span className="text-[#2a3040]">·</span>
-                  <div className="flex items-center gap-2 text-[#8ca3c8]">
+                  <div className={`flex items-center gap-2 ${UI_SURFACES.textMuted3}`}>
                     <span><strong className="text-white">{activeDraft.entityCounts.walls}</strong> walls</span>
                     <span><strong className="text-white">{activeDraft.entityCounts.cameras}</strong> cameras</span>
                     <span><strong className="text-white">{activeDraft.entityCounts.criticalZones}</strong> zones</span>
@@ -284,7 +285,7 @@ export function CreationFlowShell({
             <div className="flex items-center gap-3 text-[12px]">
               {activeDraft && (
                 <div className="flex items-center gap-2">
-                  <span className="text-[#8ca3c8]">Readiness:</span>
+                  <span className={`${UI_SURFACES.textMuted3}`}>Readiness:</span>
                   <span className={[
                     "inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider",
                     activeDraft.readiness.level === "deploy-ready"
@@ -333,7 +334,7 @@ export function CreationFlowShell({
       {/* ── Main Content Area ──────────────────────────────────────────────── */}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {subtitle && !activeDraft && (
-          <div className="border-b border-[#1a2030] bg-[#070d16] px-8 py-3 text-[13px] text-[#7a8baa]">
+          <div className={`border-b ${UI_SURFACES.borderFaint} bg-[#070d16] px-8 py-3 text-[13px] ${UI_SURFACES.textSoftBright}`}>
             {subtitle}
           </div>
         )}
@@ -344,7 +345,7 @@ export function CreationFlowShell({
 
       {/* ── Optional Footer ────────────────────────────────────────────────── */}
       {footer && (
-        <footer className="flex-none border-t border-[#1a2030] bg-[#080e18] px-6 py-3">
+        <footer className={`flex-none border-t ${UI_SURFACES.borderFaint} bg-[#080e18] px-6 py-3`}>
           {footer}
         </footer>
       )}

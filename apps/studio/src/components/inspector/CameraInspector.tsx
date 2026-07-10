@@ -878,7 +878,7 @@ export function CameraInspector() {
                 "-mb-px relative rounded-t-lg border-b-2 px-2 py-1.5 text-[10px] font-medium transition-colors",
                 inspectorTab === tab.id
                   ? "border-green-500 text-green-300"
-                  : "border-transparent text-[#5a647a] hover:text-[#a1abc1]",
+                  : "border-transparent text-[#5a647a] ${UI_SURFACES.hoverTextSoft}",
               )}
             >
               {tab.label}
@@ -921,7 +921,7 @@ export function CameraInspector() {
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2.5`}>
                   <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Keyboard</div>
-                  <div className="mt-2 space-y-2 text-[9px] leading-relaxed text-[#7b889f]">
+                  <div className={`mt-2 space-y-2 text-[9px] leading-relaxed ${UI_SURFACES.textSoftDim}`}>
                     <div>
                       <span className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-1.5 py-0.5 font-mono text-[8px] ${UI_SURFACES.textBody2}`}>Arrow keys</span>
                       <span className="ml-2">Nudge the selected camera or object in the plane.</span>
@@ -938,7 +938,7 @@ export function CameraInspector() {
                 </div>
                 <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2.5`}>
                   <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Mouse</div>
-                  <div className="mt-2 space-y-2 text-[9px] leading-relaxed text-[#7b889f]">
+                  <div className={`mt-2 space-y-2 text-[9px] leading-relaxed ${UI_SURFACES.textSoftDim}`}>
                     <div>Drag the blue handle to move, the orange handle to change height, the pitch nub to tilt, and the green ring to yaw.</div>
                     <div>Right-click the camera for snap, aim, open-view, duplicate, and delete actions.</div>
                   </div>
@@ -956,7 +956,7 @@ export function CameraInspector() {
                       value={liveConnectionUrl}
                       onChange={(event) => setLiveConnectionUrl(event.target.value)}
                       placeholder="rtsp://camera.example.com/live"
-                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                     />
                   </div>
                   <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
@@ -966,7 +966,7 @@ export function CameraInspector() {
                       value={liveConnectionLabel}
                       onChange={(event) => setLiveConnectionLabel(event.target.value)}
                       placeholder="Front entrance live stream"
-                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                     />
                   </div>
                   <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
@@ -976,7 +976,7 @@ export function CameraInspector() {
                       value={liveConnectionOnvifUsername}
                       onChange={(event) => setLiveConnectionOnvifUsername(event.target.value)}
                       placeholder="camera operator"
-                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                     />
                   </div>
                   <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
@@ -987,7 +987,7 @@ export function CameraInspector() {
                       value={liveConnectionOnvifPassword}
                       onChange={(event) => setLiveConnectionOnvifPassword(event.target.value)}
                       placeholder="••••••••"
-                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                     />
                   </div>
                   <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
@@ -996,7 +996,7 @@ export function CameraInspector() {
                       aria-label="Connection mode"
                       value={liveConnectionMode ?? "onvif"}
                       onChange={(event) => setLiveConnectionMode(event.target.value as CameraNode["liveConnectionMode"])}
-                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                     >
                       {LIVE_CONNECTION_MODE_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
@@ -1009,7 +1009,7 @@ export function CameraInspector() {
                       aria-label="Connection status"
                       value={liveConnectionStatus ?? "disconnected"}
                       onChange={(event) => setLiveConnectionStatus(event.target.value as CameraNode["liveConnectionStatus"])}
-                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                     >
                       {LIVE_CONNECTION_STATUS_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
@@ -1022,7 +1022,7 @@ export function CameraInspector() {
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Connection notes</div>
-                      <div className="mt-0.5 text-[9px] text-[#7b889f]">
+                      <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textSoftDim}`}>
                         Bind the live camera connection through the canonical store so the camera glass, Scene Intelligence, and evidence trail stay aligned.
                       </div>
                     </div>
@@ -1034,7 +1034,7 @@ export function CameraInspector() {
                     onChange={(event) => setLiveConnectionNotes(event.target.value)}
                     placeholder="Notes about the remote camera, relay, or ONVIF proxy."
                     rows={3}
-                    className={`mt-2 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                    className={`mt-2 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                   />
                 </div>
 
@@ -1088,7 +1088,7 @@ export function CameraInspector() {
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <div className="text-[8px] uppercase tracking-[0.16em] text-cyan-200">Current session lease</div>
-                      <div className="mt-0.5 text-[9px] text-[#7b889f]">
+                      <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textSoftDim}`}>
                         The active registry entry shows the current lease, its auth profile, its state, and when it expires.
                       </div>
                     </div>
@@ -1107,11 +1107,11 @@ export function CameraInspector() {
                                 {entry.status} · {entry.lastAction} · {entry.liveSessionState ?? "unknown"} · {entry.transportSessionState ?? "transport?"}{entry.transportResponseStatus == null ? "" : ` · ${entry.transportResponseStatus}${entry.transportResponseStatusText ? ` ${entry.transportResponseStatusText}` : ""}`}
                               </div>
                             </div>
-                            <div className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]`}>
+                            <div className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted5}`}>
                               {entry.sessionId.slice(-8)}
                             </div>
                           </div>
-                          <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">
+                          <div className={`mt-1 text-[9px] leading-relaxed ${UI_SURFACES.textSoftDim}`}>
                             Expires {entry.liveSessionExpiresAt == null ? "—" : new Date(entry.liveSessionExpiresAt).toLocaleTimeString()}
                           </div>
                           <div className={`mt-0.5 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
@@ -1138,7 +1138,7 @@ export function CameraInspector() {
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Connection archive</div>
-                      <div className="mt-0.5 text-[9px] text-[#7b889f]">
+                      <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textSoftDim}`}>
                         Backend archive records for live camera probe, refresh, heartbeat, and disconnect actions.
                       </div>
                     </div>
@@ -1157,11 +1157,11 @@ export function CameraInspector() {
                                 {entry.action === "bind" ? "Bind probe" : entry.action === "refresh" ? "Refresh session" : "Disconnect"} · {entry.protocol.toUpperCase()}
                               </div>
                             </div>
-                            <div className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]`}>
+                            <div className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted5}`}>
                               {entry.record.liveConnectionStatus}
                             </div>
                           </div>
-                          <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">
+                          <div className={`mt-1 text-[9px] leading-relaxed ${UI_SURFACES.textSoftDim}`}>
                             {entry.summary}
                           </div>
                           <div className={`mt-1 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
@@ -1200,11 +1200,11 @@ export function CameraInspector() {
                               {entry.liveConnectionStatus ?? "disconnected"} · {entry.liveConnectionMode ?? "unknown"} · {entry.ingestMode === "external" ? "External" : "Manual"} · {entry.transportSessionState ?? "transport?"}
                             </div>
                           </div>
-                          <div className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]`}>
+                          <div className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted5}`}>
                             {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </div>
                         </div>
-                        <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">
+                        <div className={`mt-1 text-[9px] leading-relaxed ${UI_SURFACES.textSoftDim}`}>
                           {entry.summary}
                         </div>
                         <div className={`mt-1 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>
@@ -1234,7 +1234,7 @@ export function CameraInspector() {
                       value={cameraMetadataUrl}
                       onChange={(event) => setCameraMetadataUrl(event.target.value)}
                       placeholder="https://camera-feed.example.com/metadata"
-                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                     />
                   </div>
                   <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
@@ -1243,7 +1243,7 @@ export function CameraInspector() {
                       value={cameraMetadataLabel}
                       onChange={(event) => setCameraMetadataLabel(event.target.value)}
                       placeholder="ONVIF relay"
-                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                      className={`mt-1 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                     />
                   </div>
                 </div>
@@ -1252,7 +1252,7 @@ export function CameraInspector() {
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Paste metadata</div>
-                      <div className="mt-0.5 text-[9px] text-[#7b889f]">
+                      <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textSoftDim}`}>
                         Paste JSON or NDJSON camera records. Matching scene cameras update through the canonical store.
                       </div>
                     </div>
@@ -1263,7 +1263,7 @@ export function CameraInspector() {
                     onChange={(event) => setCameraMetadataRaw(event.target.value)}
                     placeholder='[{"cameraName":"Front Entrance","status":"malfunctioning","clarity":"poor"}]'
                     rows={5}
-                    className={`mt-2 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                    className={`mt-2 w-full rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                   />
                 </div>
 
@@ -1280,7 +1280,7 @@ export function CameraInspector() {
                     type="button"
                     onClick={() => void ingestCameraMetadata("external")}
                     disabled={cameraMetadataLoading}
-                    className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-3 py-1.5 text-[10px] font-medium ${UI_SURFACES.textBody2} transition-colors hover:border-[#2d3750] hover:${UI_SURFACES.card} disabled:cursor-not-allowed disabled:opacity-50`}
+                    className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-3 py-1.5 text-[10px] font-medium ${UI_SURFACES.textBody2} transition-colors ${UI_SURFACES.hoverBorderBright} hover:${UI_SURFACES.card} disabled:cursor-not-allowed disabled:opacity-50`}
                   >
                     {cameraMetadataLoading ? "Pulling..." : "Pull External Feed"}
                   </button>
@@ -1316,11 +1316,11 @@ export function CameraInspector() {
                                 {entry.ingestMode === "external" ? "External feed" : "Pasted metadata"} · {entry.sceneName ?? "Scene"}
                               </div>
                             </div>
-                            <div className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]`}>
+                            <div className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted5}`}>
                               {entry.records.length} matched
                             </div>
                           </div>
-                          <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">
+                          <div className={`mt-1 text-[9px] leading-relaxed ${UI_SURFACES.textSoftDim}`}>
                             {entry.summary}
                           </div>
                         </div>
@@ -1379,13 +1379,13 @@ export function CameraInspector() {
                           "rounded-xl border px-2.5 py-2 text-left transition-colors",
                           isPlacementPreset
                             ? "border-blue-400/50 bg-blue-500/10"
-                            : "${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} hover:border-[#2d3750] hover:${UI_SURFACES.card}",
+                            : "${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} ${UI_SURFACES.hoverBorderBright} hover:${UI_SURFACES.card}",
                         )}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <div className={`truncate text-[11px] font-semibold ${UI_SURFACES.textBody4}`}>{preset.label}</div>
-                            <div className="mt-0.5 text-[9px] leading-relaxed text-[#7b889f]">{describeCameraPreset(preset)}</div>
+                            <div className={`mt-0.5 text-[9px] leading-relaxed ${UI_SURFACES.textSoftDim}`}>{describeCameraPreset(preset)}</div>
                           </div>
                           <div className="flex shrink-0 flex-col items-end gap-1">
                             {isPlacementPreset ? (
@@ -1401,13 +1401,13 @@ export function CameraInspector() {
                           </div>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-1">
-                          <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]`}>
+                          <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] ${UI_SURFACES.textMuted5}`}>
                             {preset.mountType}
                           </span>
-                          <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]`}>
+                          <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] ${UI_SURFACES.textMuted5}`}>
                             {preset.ptz ? "PTZ" : "Fixed"}
                           </span>
-                          <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]`}>
+                          <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] ${UI_SURFACES.textMuted5}`}>
                             {preset.nightMode === "ir" ? "IR" : preset.nightMode === "low_light" ? "Low light" : preset.nightMode}
                           </span>
                         </div>
@@ -1437,7 +1437,7 @@ export function CameraInspector() {
                   />
                 </div>
 
-                <div className={`flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderFaintAlt} pb-2`}>
+                <div className={`flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderFaint} pb-2`}>
                   <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Preset ID</span>
                   <select
                     value={camera.presetId ?? ""}
@@ -1451,7 +1451,7 @@ export function CameraInspector() {
                         updateNode(camera.id, { presetId: undefined });
                       }
                     }}
-                    className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                    className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                   >
                     <option value="">Custom / no preset</option>
                     {CAMERA_PRESETS.map((preset) => (
@@ -1463,7 +1463,7 @@ export function CameraInspector() {
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <div className={`border-b ${UI_SURFACES.borderFaintAlt} pb-2 last:border-b-0 last:pb-0`}>
+                  <div className={`border-b ${UI_SURFACES.borderFaint} pb-2 last:border-b-0 last:pb-0`}>
                     <label className="mb-1 flex items-center justify-between gap-3">
                       <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Patrol route ID</span>
                       <input
@@ -1506,7 +1506,7 @@ export function CameraInspector() {
                         {cameraViewMotion.waypoints.map((waypoint, index) => (
                           <div key={`${waypoint.yawDeg}-${waypoint.pitchDeg}-${index}`} className={`space-y-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2`}>
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-[9px] font-semibold text-[#7b889f]">Waypoint {index + 1}</span>
+                              <span className={`text-[9px] font-semibold ${UI_SURFACES.textSoftDim}`}>Waypoint {index + 1}</span>
                               <button
                                 type="button"
                                 onClick={() => removeWaypoint(index)}
@@ -1529,7 +1529,7 @@ export function CameraInspector() {
                                       easing: nextEasing === "" ? undefined : nextEasing,
                                     });
                                   }}
-                                  className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[9px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                                  className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[9px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                                 >
                                   {WAYPOINT_EASING_OPTIONS.map((option) => (
                                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -1548,7 +1548,7 @@ export function CameraInspector() {
               </div>
             </SectionCard>
 
-            <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+            <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaint} py-1.5`}>
               <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>Type</span>
               <select
                 value={typeKey}
@@ -1559,7 +1559,7 @@ export function CameraInspector() {
                     mountType: shape === "dome" ? "ceiling" : "wall",
                   });
                 }}
-                className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-medium ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
               >
                 <option value="4mp_dome">4MP Indoor Dome</option>
                 <option value="2mp_dome">2MP Indoor Dome</option>
@@ -1607,10 +1607,10 @@ export function CameraInspector() {
                       type="button"
                       onClick={() => snapToMount(item.mode)}
                       disabled={item.disabled}
-                      className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2 text-left transition-colors hover:border-[#2d3750] hover:${UI_SURFACES.card} disabled:cursor-not-allowed disabled:opacity-45`}
+                      className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2 text-left transition-colors ${UI_SURFACES.hoverBorderBright} hover:${UI_SURFACES.card} disabled:cursor-not-allowed disabled:opacity-45`}
                     >
                       <div className={`text-[11px] font-semibold ${UI_SURFACES.textBody4}`}>{item.label}</div>
-                      <div className="mt-0.5 text-[9px] text-[#7b889f]">{item.helper}</div>
+                      <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textSoftDim}`}>{item.helper}</div>
                     </button>
                   ))}
                 </div>
@@ -1620,7 +1620,7 @@ export function CameraInspector() {
               </div>
             </SectionCard>
 
-            <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+            <div className={`border-b ${UI_SURFACES.borderFaint} py-1.5`}>
               <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textSoftMid}`}>Position (m)</div>
               <div className="grid grid-cols-3 gap-1.5">
                 <NumberInput label="X" value={camera.position[0]} step={0.1} unit="m" onChange={(value) => updatePosition([value, camera.position[1], camera.position[2]])} />
@@ -1629,7 +1629,7 @@ export function CameraInspector() {
               </div>
             </div>
 
-            <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+            <div className={`border-b ${UI_SURFACES.borderFaint} py-1.5`}>
               <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textSoftMid}`}>Rotation (°)</div>
               <div className="grid grid-cols-3 gap-1.5">
                 <NumberInput label="Yaw"   value={camera.yawDeg}   min={-180} max={180} step={1} unit="°" onChange={(value) => updateNode(camera.id, { yawDeg: value })} />
@@ -1638,7 +1638,7 @@ export function CameraInspector() {
               </div>
             </div>
 
-            <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+            <div className={`border-b ${UI_SURFACES.borderFaint} py-1.5`}>
               <div className="mb-1.5 flex items-center justify-between gap-3">
                 <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>FOV (Horizontal)</span>
                 <span className={`font-mono text-[11px] ${UI_SURFACES.textBody2}`}>{camera.fovHorizontalDeg}°</span>
@@ -1681,7 +1681,7 @@ export function CameraInspector() {
               Lens / FOV Simulator
             </button>
 
-            <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+            <div className={`border-b ${UI_SURFACES.borderFaint} py-1.5`}>
               <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textSoftMid}`}>Height</div>
               <NumberInput label="Height" value={camera.mountHeightM} min={0.5} max={4} step={0.1} unit="m" onChange={updateHeight} />
             </div>
@@ -1704,7 +1704,7 @@ export function CameraInspector() {
             <Field label="PTZ" value={camera.ptz ? "Yes" : "No"} />
             <Field label="Thermal" value={camera.thermalCapable ? "Yes" : "No"} />
 
-            <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+            <div className={`border-b ${UI_SURFACES.borderFaint} py-1.5`}>
               <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textSoftMid}`}>LPR / ALPR</div>
               <div className="space-y-1.5">
                 <ToggleField
@@ -1733,7 +1733,7 @@ export function CameraInspector() {
               </div>
             </div>
 
-            <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-1.5`}>
+            <div className={`border-b ${UI_SURFACES.borderFaint} py-1.5`}>
               <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textSoftMid}`}>Compliance & Privacy</div>
               <div className="space-y-1.5">
                 <ToggleField
@@ -1862,7 +1862,7 @@ export function CameraInspector() {
                     <button
                       type="button"
                       onClick={() => setTab("view")}
-                      className={`flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
+                      className={`flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
                     >
                       Export Frame
                     </button>
@@ -1893,7 +1893,7 @@ export function CameraInspector() {
                         </span>
                         <div className="min-w-0">
                           <div className={`text-[9px] leading-tight ${UI_SURFACES.textBody}`}>{rec.description}</div>
-                          {rec.estimatedImpact && <div className="mt-0.5 text-[8px] text-[#5a6478]">{rec.estimatedImpact}</div>}
+                          {rec.estimatedImpact && <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textDimMid}`}>{rec.estimatedImpact}</div>}
                         </div>
                         {rec.verified && <span className="ml-auto flex-shrink-0 rounded bg-green-900/30 px-1 py-0.5 text-[7px] font-semibold text-green-400">✓</span>}
                       </div>
@@ -2166,7 +2166,7 @@ export function CameraInspector() {
                         {sortedZoneEntries.length > 0 ? (
                           <div className="space-y-1">
                             {sortedZoneEntries.slice(0, 2).map((entry) => (
-                              <div key={entry.name} className={`rounded-md border border-[#1f2b42] ${UI_SURFACES.cardAlt} px-2 py-1.5`}>
+                              <div key={entry.name} className={`rounded-md border border-[#1f2b42] ${UI_SURFACES.card} px-2 py-1.5`}>
                                 <div className="flex items-center justify-between gap-2 text-[10px]">
                                   <span className={`truncate ${UI_SURFACES.textBody}`}>{entry.name}</span>
                                   <span className="font-semibold text-[#93c5fd]">{QUALITY_LABEL[entry.quality]}</span>
@@ -2216,7 +2216,7 @@ export function CameraInspector() {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={openInCameraWall} className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-2 text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}>
+              <button type="button" onClick={openInCameraWall} className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-2 text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}>
                 Open in Camera Wall
               </button>
               <button
@@ -2226,7 +2226,7 @@ export function CameraInspector() {
                   store.setWorkspacePreset("coverage");
                   store.setViewMode("camera_view");
                 }}
-                className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-2 text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
+                className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-2 text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
               >
                 Enter Full Camera View
               </button>
@@ -2380,7 +2380,7 @@ export function CameraInspector() {
         <div className="flex gap-2">
           <button
             type="button" onClick={aimAtZone} disabled={!targetZone}
-            className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText} disabled:cursor-not-allowed disabled:opacity-50`}
+            className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             <Crosshair className="h-3 w-3" />
             Aim at Zone
@@ -2388,7 +2388,7 @@ export function CameraInspector() {
           <button
             type="button"
             onClick={() => { setTab("view"); const store = useStudioStore.getState(); store.setWorkspacePreset("coverage"); store.setViewMode("camera_view"); }}
-            className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
+            className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
           >
             <Eye className="h-3 w-3" />
             Go To Camera View
@@ -2401,7 +2401,7 @@ export function CameraInspector() {
           </button>
           <button
             type="button" onClick={() => duplicateNode(camera.id)}
-            className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
+            className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
           >
             <Copy className="h-3 w-3" />
             Duplicate

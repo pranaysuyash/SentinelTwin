@@ -3,6 +3,7 @@
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-outcome-selectors";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export function OutcomeEmptyState() {
   const scene = useStudioStore((s) => s.scene);
@@ -13,7 +14,7 @@ export function OutcomeEmptyState() {
   return (
     <div className="space-y-3 p-3">
       <RunSimulationPrompt
-        className="rounded-xl border border-dashed border-[#2a3246] bg-[#0b0f17] px-3 py-4"
+        className={`rounded-xl border border-dashed ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-3 py-4`}
         message="Simulation not run yet. Run the shared simulation to compute the security outcome."
       />
       {model.missingPrerequisites.length > 0 ? (

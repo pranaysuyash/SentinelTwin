@@ -125,7 +125,7 @@ function PostureScoreCard() {
       </div>
       <div className="flex-1 min-w-0">
         <div className={`text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted} mb-1`}>Security Posture (300–850)</div>
-        <div className="h-1.5 w-full rounded-full bg-[#1a2030] overflow-hidden">
+        <div className={`h-1.5 w-full rounded-full ${UI_SURFACES.borderFaint} overflow-hidden`}>
           <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: style.color }} />
         </div>
       </div>
@@ -313,7 +313,7 @@ export function MetricsTab() {
             <div className="text-[28px] font-bold text-white leading-none">
               {zonesPass}<span className={`text-[16px] ${UI_SURFACES.textMuted}`}>/{zonesTotal}</span>
             </div>
-            <div className={`text-[9px] ${UI_SURFACES.textSoft} mt-0.5`}>Zones Passing</div>
+            <div className={`text-[9px] ${UI_SURFACES.textSoftMid} mt-0.5`}>Zones Passing</div>
             {result.criticalZoneResults.map((z) => (
               <div key={z.zoneId} className="mt-2">
                 <div className={`text-[9px] ${UI_SURFACES.textMuted5} mb-0.5`}>{z.label}</div>
@@ -353,7 +353,7 @@ export function MetricsTab() {
             sublabel={qualityLabel}
           />
           {selectedCriticalZone ? (
-            <div className={`mt-1 space-y-0.5 text-[9px] ${UI_SURFACES.textSoft}`}>
+            <div className={`mt-1 space-y-0.5 text-[9px] ${UI_SURFACES.textSoftMid}`}>
               <div>
                 Target: <span className={`font-semibold ${UI_SURFACES.textNearAlt}`}>
                   {selectedCriticalZone.requiredQuality.toUpperCase()}
@@ -369,7 +369,7 @@ export function MetricsTab() {
               ) : null}
             </div>
           ) : (
-            <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoft}`}>
+            <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftMid}`}>
               Select a critical zone to show the target quality requirement.
             </div>
           )}
@@ -382,7 +382,7 @@ export function MetricsTab() {
             <div className="mt-1 text-[10px] font-bold tracking-wide" style={{ color: worstColor }}>
               {worstLabel}
             </div>
-            <div className={`text-[9px] ${UI_SURFACES.textSoft} mt-1`}>{blockageLabel}</div>
+            <div className={`text-[9px] ${UI_SURFACES.textSoftMid} mt-1`}>{blockageLabel}</div>
             {fragilityPct !== null ? (
               <div className={`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-1.5}`}>
                 <div className={`text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted}`}>Fragility</div>
@@ -406,14 +406,14 @@ export function MetricsTab() {
               <div className="text-[22px] font-bold text-[#22c55e] leading-none">
                 {Math.round(result.recognitionAreaPct)}%
               </div>
-              <div className={`text-[8px] ${UI_SURFACES.textSoft} mt-1`}>Recognition</div>
+              <div className={`text-[8px] ${UI_SURFACES.textSoftMid} mt-1`}>Recognition</div>
             </div>
             <div className={`h-8 w-px ${UI_SURFACES.bgPanel}`} />
             <div className="text-center">
               <div className="text-[22px] font-bold text-[#3b82f6] leading-none">
                 {Math.round(result.identificationAreaPct)}%
               </div>
-              <div className={`text-[8px] ${UI_SURFACES.textSoft} mt-1`}>Identification</div>
+              <div className={`text-[8px] ${UI_SURFACES.textSoftMid} mt-1`}>Identification</div>
             </div>
           </div>
         </MetricCard>

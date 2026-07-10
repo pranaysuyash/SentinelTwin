@@ -4,6 +4,7 @@ import { HelpCircle } from "lucide-react";
 import { useId, useState } from "react";
 
 import { cn } from "@/lib/cn";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 type ExplainBadgeProps = {
   text: string;
@@ -37,7 +38,7 @@ export function ExplainBadge({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "inline-flex items-center justify-center gap-1 rounded border border-[#2a3248] bg-[#121826] text-[#8ea2c8] transition-colors hover:border-[#3a4967] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50",
+          "inline-flex items-center justify-center gap-1 rounded border ${UI_SURFACES.borderDark} bg-[#121826] text-[#8ea2c8] transition-colors ${UI_SURFACES.hoverBorderBright} hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50",
           label ? "h-6 px-1.5 text-[9px] font-medium" : "h-4 w-4",
         )}
         aria-label={label ? `${label}: ${title}` : title}
@@ -51,7 +52,7 @@ export function ExplainBadge({
           id={id}
           role="tooltip"
           className={cn(
-            "absolute top-full z-50 mt-1 w-64 rounded-md border border-[#2a3248] bg-[#0d1220] p-2 text-[10px] leading-snug text-[#c9d7f0] shadow-xl shadow-black/35",
+            "absolute top-full z-50 mt-1 w-64 rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.panelDeep} p-2 text-[10px] leading-snug text-[#c9d7f0] shadow-xl shadow-black/35",
             side === "right" ? "left-0" : "right-0",
             panelClassName,
           )}

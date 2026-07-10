@@ -72,13 +72,13 @@ export function ObstructionPresetPicker() {
       <button
         type="button"
         onClick={() => setCollapsed(false)}
-        className={`flex items-center gap-2 rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0d1017]/96 px-3 py-2 shadow-2xl shadow-black/35 transition-colors hover:border-[#2d3750] hover:${UI_SURFACES.card}`}
+        className={`flex items-center gap-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep}/96 px-3 py-2 shadow-2xl shadow-black/35 transition-colors ${UI_SURFACES.hoverBorderBright} hover:${UI_SURFACES.card}`}
       >
         <div className="flex h-6 w-6 items-center justify-center rounded-md border border-[#24314a] bg-[#101622] text-amber-200">
           {PRESET_ICONS[selectedPreset.id] ?? <Box className="h-3 w-3" />}
         </div>
         <span className={`text-[10px] font-semibold ${UI_SURFACES.textBody2}`}>{selectedPreset.label}</span>
-        <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]`}>
+        <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] ${UI_SURFACES.textMuted5}`}>
           Open
         </span>
       </button>
@@ -86,20 +86,20 @@ export function ObstructionPresetPicker() {
   }
 
   return (
-    <div className={`w-[80vw] max-w-[560px] min-w-[340px] rounded-2xl border ${UI_SURFACES.borderSubtle} bg-[#0d1017]/96 p-2.5 shadow-2xl shadow-black/35`}>
+    <div className={`w-[80vw] max-w-[560px] min-w-[340px] rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep}/96 p-2.5 shadow-2xl shadow-black/35`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className={`text-[9px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textMuted}`}>
             Object library
           </div>
-          <div className="mt-1 text-[10px] leading-relaxed text-[#7b889f]">
+          <div className={`mt-1 text-[10px] leading-relaxed ${UI_SURFACES.textSoftDim}`}>
             Pick the object to place. The catalog keeps the scene graph split into structural primitives, security fixtures, and fit-out objects so the future marketplace can attach SKUs without changing the scene model.
           </div>
         </div>
         <button
           type="button"
           onClick={() => setCollapsed(true)}
-          className={`shrink-0 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-1.5 text-[#7b889f] transition-colors hover:border-[#2d3750] hover:${UI_SURFACES.textBody2}`}
+          className={`shrink-0 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-1.5 ${UI_SURFACES.textSoftDim} transition-colors ${UI_SURFACES.hoverBorderBright} hover:${UI_SURFACES.textBody2}`}
           aria-label="Close object library"
         >
           <X className="h-3.5 w-3.5" />
@@ -132,15 +132,15 @@ export function ObstructionPresetPicker() {
                   <div className={`text-[10px] font-semibold ${UI_SURFACES.textBody4}`}>{layer.label}</div>
                   <span className={cn(
                     "rounded-full border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em]",
-                    isFitOut ? "border-amber-400/30 bg-amber-500/10 text-amber-200" : "border-[#24314a] ${UI_SURFACES.panel} text-[#7d8aa4]",
+                    isFitOut ? "border-amber-400/30 bg-amber-500/10 text-amber-200" : "border-[#24314a] ${UI_SURFACES.panel} ${UI_SURFACES.textMuted5}",
                   )}>
                     {layer.marketplaceRole}
                   </span>
                 </div>
-                <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">{layer.description}</div>
+                <div className={`mt-1 text-[9px] leading-relaxed ${UI_SURFACES.textSoftDim}`}>{layer.description}</div>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {layer.liveExamples.slice(0, 3).map((example) => (
-                    <span key={example} className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#8b96ab]`}>
+                    <span key={example} className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] ${UI_SURFACES.textSoftBright}`}>
                       {example}
                     </span>
                   ))}
@@ -152,7 +152,7 @@ export function ObstructionPresetPicker() {
                 {layer.futureExamples?.length ? (
                   <div className={`mt-2 flex items-start gap-1.5 rounded-md border border-dashed border-[#2a3448] ${UI_SURFACES.panel} px-2 py-1`}>
                     <BadgeInfo className="mt-0.5 h-3 w-3 shrink-0 text-sky-200/80" />
-                    <div className="text-[8px] leading-relaxed text-[#7b889f]">
+                    <div className={`text-[8px] leading-relaxed ${UI_SURFACES.textSoftDim}`}>
                       Future catalog examples: {layer.futureExamples.join(", ")}.
                     </div>
                   </div>
@@ -177,7 +177,7 @@ export function ObstructionPresetPicker() {
                 "group rounded-xl border px-2 py-2 text-left transition-all",
                 isSelected
                   ? "border-amber-400/50 bg-amber-500/10 shadow-[0_0_0_1px_rgba(251,191,36,0.18)]"
-                  : "${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} hover:border-[#2d3750] hover:${UI_SURFACES.card}",
+                  : "${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} ${UI_SURFACES.hoverBorderBright} hover:${UI_SURFACES.card}",
               )}
             >
               <div className="flex items-center gap-2">
@@ -227,10 +227,10 @@ export function ObstructionPresetPicker() {
       ) : (
         <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-3 py-2`}>
           <div className="flex flex-wrap gap-1">
-            <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]`}>
+            <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] ${UI_SURFACES.textMuted5}`}>
               {selectedPreset.material}
             </span>
-            <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]`}>
+            <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] ${UI_SURFACES.textMuted5}`}>
               {selectedPreset.visionTransmission === 0
                 ? "Blocks vision"
                 : `${Math.round(selectedPreset.visionTransmission * 100)}% see-through`}
@@ -245,11 +245,11 @@ export function ObstructionPresetPicker() {
                 IR reflective
               </span>
             ) : null}
-            <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]`}>
+            <span className={`rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] ${UI_SURFACES.textMuted5}`}>
               {selectedPreset.movable ? "Movable" : "Fixed"}
             </span>
           </div>
-          <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">{selectedPreset.description}</div>
+          <div className={`mt-1 text-[9px] leading-relaxed ${UI_SURFACES.textSoftDim}`}>{selectedPreset.description}</div>
         </div>
       )}
     </div>

@@ -40,7 +40,7 @@ function CameraYawControl({
       <button
         type="button"
         onClick={() => onYawChange(normalizeAngle(yawDeg - PAN_STEP_DEG))}
-        className={`flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderStrongAlt} bg-[#111721] ${UI_SURFACES.textMuted3} transition-colors hover:border-[#3a4d70] ${UI_SURFACES.hoverText}`}
+        className={`flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText}`}
         title="Pan left"
       >
         <ArrowLeftFromLine className="h-3 w-3" />
@@ -52,7 +52,7 @@ function CameraYawControl({
       <button
         type="button"
         onClick={() => onYawChange(normalizeAngle(yawDeg + PAN_STEP_DEG))}
-        className={`flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderStrongAlt} bg-[#111721] ${UI_SURFACES.textMuted3} transition-colors hover:border-[#3a4d70] ${UI_SURFACES.hoverText}`}
+        className={`flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText}`}
         title="Pan right"
       >
         <ArrowRightFromLine className="h-3 w-3" />
@@ -73,7 +73,7 @@ function CameraTiltControl({
       <button
         type="button"
         onClick={() => onPitchChange(Math.min(0, pitchDeg + TILT_STEP_DEG))}
-        className={`flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderStrongAlt} bg-[#111721] ${UI_SURFACES.textMuted3} transition-colors hover:border-[#3a4d70] ${UI_SURFACES.hoverText}`}
+        className={`flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText}`}
         title="Tilt up"
       >
         <ChevronUp className="h-3 w-3" />
@@ -85,7 +85,7 @@ function CameraTiltControl({
       <button
         type="button"
         onClick={() => onPitchChange(Math.max(-90, pitchDeg - TILT_STEP_DEG))}
-        className={`flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderStrongAlt} bg-[#111721] ${UI_SURFACES.textMuted3} transition-colors hover:border-[#3a4d70] ${UI_SURFACES.hoverText}`}
+        className={`flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText}`}
         title="Tilt down"
       >
         <ChevronDown className="h-3 w-3" />
@@ -106,7 +106,7 @@ function CameraZoomControl({
       <button
         type="button"
         onClick={() => onFovChange(Math.max(20, fovDeg - ZOOM_STEP_DEG))}
-        className={`flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderStrongAlt} bg-[#111721] ${UI_SURFACES.textMuted3} transition-colors hover:border-[#3a4d70] ${UI_SURFACES.hoverText}`}
+        className={`flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText}`}
         title="Zoom in"
       >
         <ZoomIn className="h-3 w-3" />
@@ -118,7 +118,7 @@ function CameraZoomControl({
       <button
         type="button"
         onClick={() => onFovChange(Math.min(180, fovDeg + ZOOM_STEP_DEG))}
-        className={`flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderStrongAlt} bg-[#111721] ${UI_SURFACES.textMuted3} transition-colors hover:border-[#3a4d70] ${UI_SURFACES.hoverText}`}
+        className={`flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText}`}
         title="Zoom out"
       >
         <ZoomOut className="h-3 w-3" />
@@ -213,7 +213,7 @@ export function CameraControlStrip({
         <button
           type="button"
           onClick={resetAim}
-          className={`flex h-7 items-center gap-1 rounded-md border ${UI_SURFACES.borderStrongAlt} bg-[#111721] px-2 text-[8px] font-semibold uppercase tracking-[0.08em] ${UI_SURFACES.textMuted3} transition-colors hover:border-[#3a4d70] ${UI_SURFACES.hoverText} active:scale-[0.97]`}
+          className={`flex h-7 items-center gap-1 rounded-md border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} px-2 text-[8px] font-semibold uppercase tracking-[0.08em] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText} active:scale-[0.97]`}
           title="Reset aim"
         >
           <Target className="h-3 w-3" />
@@ -229,7 +229,7 @@ export function CameraControlStrip({
               e.target.value = "";
             }}
             defaultValue=""
-            className={`h-7 rounded-md border ${UI_SURFACES.borderStrongAlt} bg-[#111721] px-2 text-[8px] font-semibold uppercase tracking-[0.08em] ${UI_SURFACES.textMuted3} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
+            className={`h-7 rounded-md border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} px-2 text-[8px] font-semibold uppercase tracking-[0.08em] ${UI_SURFACES.textMuted3} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
           >
             <option value="" disabled>
               Aim at zone...
@@ -261,7 +261,7 @@ export function CameraControlStrip({
         <button
           type="button"
           onClick={cycleNightMode}
-          className={`flex h-7 items-center gap-1 rounded-md border ${UI_SURFACES.borderStrongAlt} bg-[#111721] px-2 text-[8px] font-semibold uppercase tracking-[0.08em] ${UI_SURFACES.textMuted3} transition-colors hover:border-[#3a4d70] ${UI_SURFACES.hoverText} active:scale-[0.97]`}
+          className={`flex h-7 items-center gap-1 rounded-md border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} px-2 text-[8px] font-semibold uppercase tracking-[0.08em] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText} active:scale-[0.97]`}
           title={`Night mode: ${camera.nightMode}`}
         >
           {camera.nightMode === "none" ? (

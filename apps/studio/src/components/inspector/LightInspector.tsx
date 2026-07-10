@@ -139,7 +139,7 @@ export function LightInspector() {
             label="Night Contribution"
             value={nightCoverageActive ? "Active" : "Inactive"}
           />
-          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2 text-[10px] leading-relaxed text-[#8d98b0]`}>
+          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2 text-[10px] leading-relaxed ${UI_SURFACES.textSoftBright}`}>
             {nightCoverageActive
               ? "This light reduces night-mode penalty in the simulation and can improve low-light camera quality."
               : "This light does not currently reduce night-mode penalty. Turn it on and enable night coverage to influence simulation results."}

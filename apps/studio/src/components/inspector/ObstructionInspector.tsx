@@ -236,19 +236,19 @@ export function ObstructionInspector() {
               If removed — delta vs current
             </div>
             <div className="grid grid-cols-3 gap-1.5">
-              <div className="flex flex-col items-center rounded bg-[#0d1017] p-1.5">
+              <div className={`flex flex-col items-center rounded ${UI_SURFACES.panelDeep} p-1.5`}>
                 <span className={`text-[13px] font-bold ${delta.coverage >= 0 ? "text-green-400" : "text-red-400"}`}>
                   {delta.coverage > 0 ? "+" : ""}{delta.coverage.toFixed(1)}%
                 </span>
                 <span className={`text-[8px] ${UI_SURFACES.textMuted} mt-0.5`}>coverage</span>
               </div>
-              <div className="flex flex-col items-center rounded bg-[#0d1017] p-1.5">
+              <div className={`flex flex-col items-center rounded ${UI_SURFACES.panelDeep} p-1.5`}>
                 <span className={`text-[13px] font-bold ${delta.blindspot >= 0 ? "text-green-400" : "text-red-400"}`}>
                   {delta.blindspot > 0 ? "-" : "+"}{Math.abs(delta.blindspot).toFixed(1)}%
                 </span>
                 <span className={`text-[8px] ${UI_SURFACES.textMuted} mt-0.5`}>blindspot</span>
               </div>
-              <div className="flex flex-col items-center rounded bg-[#0d1017] p-1.5">
+              <div className={`flex flex-col items-center rounded ${UI_SURFACES.panelDeep} p-1.5`}>
                 <span className={`text-[13px] font-bold ${delta.recognition >= 0 ? "text-green-400" : "text-red-400"}`}>
                   {delta.recognition > 0 ? "+" : ""}{delta.recognition.toFixed(1)}%
                 </span>

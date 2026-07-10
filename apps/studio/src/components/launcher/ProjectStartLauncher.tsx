@@ -32,6 +32,7 @@ import {
   X,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 type ProjectStartLauncherProps = {
   open: boolean;
@@ -63,7 +64,7 @@ function ProjectStartCard({ icon, badge, title, description, tone, status, onCli
     emerald: "border-emerald-400/20 bg-emerald-500/8 hover:border-emerald-300/35 hover:bg-emerald-500/12",
     amber: "border-amber-400/20 bg-amber-500/8 hover:border-amber-300/35 hover:bg-amber-500/12",
     violet: "border-violet-400/20 bg-violet-500/8 hover:border-violet-300/35 hover:bg-violet-500/12",
-    slate: "border-[#22314b] bg-[#0e1624] hover:border-[#345073] hover:bg-[#111c2d]",
+    slate: "${UI_SURFACES.borderStandard} bg-[#0e1624] hover:border-[#345073] hover:bg-[#111c2d]",
   };
 
   const statusTone: Record<ProjectStartOption["status"], string> = {

@@ -460,7 +460,7 @@ export function CameraFeedCanvas({
         </div>
       ) : null}
 
-      <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border border-[#24304a] bg-black/50 p-1">
+      <div className={`absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border ${UI_SURFACES.border} bg-black/50 p-1`}>
         {(Object.keys(FEED_MODE_LABELS) as FeedViewMode[]).map((mode) => (
           <button
             key={mode}
@@ -488,7 +488,7 @@ export function CameraFeedCanvas({
       )}
 
       {overlayFlags.doriLabels && targetZone ? (
-        <div className="absolute right-2 top-2 z-10 rounded-xl border border-[#24304a] bg-black/70 px-2.5 py-2">
+        <div className={`absolute right-2 top-2 z-10 rounded-xl border ${UI_SURFACES.border} bg-black/70 px-2.5 py-2`}>
           <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.18em] text-[#8ab4ff]">DORI Overlay</div>
           <div className="text-[11px] font-semibold text-white">
             {targetZone.label}
@@ -503,27 +503,27 @@ export function CameraFeedCanvas({
                   : "UNKNOWN"}
           </div>
           <div className="mt-1 text-[10px] font-semibold text-amber-300">
-            {targetQuality.toUpperCase()} <span className="text-[9px] font-normal text-[#8b96ab]">/ {qualityRangeLabel(targetQuality, scene.assumptions.doriStandard)}</span>
+            {targetQuality.toUpperCase()} <span className={`text-[9px] font-normal ${UI_SURFACES.textSoftBright}`}>/ {qualityRangeLabel(targetQuality, scene.assumptions.doriStandard)}</span>
           </div>
           <div className="mt-1 grid grid-cols-2 gap-2 text-[8px] text-[#94a3b8]">
             <div>
-              <div className="uppercase tracking-[0.16em] text-[#546078]">Target Type</div>
+              <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Target Type</div>
               <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{targetZone.targetType.replace(/_/g, " ")}</div>
             </div>
             <div>
-              <div className="uppercase tracking-[0.16em] text-[#546078]">Distance</div>
+              <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Distance</div>
               <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{targetDistanceM != null ? `${targetDistanceM.toFixed(1)}m` : "—"}</div>
             </div>
             <div>
-              <div className="uppercase tracking-[0.16em] text-[#546078]">Angle</div>
+              <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Angle</div>
               <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{angleFromCenterDeg != null ? `${angleFromCenterDeg.toFixed(1)}°` : "—"}</div>
             </div>
             <div>
-              <div className="uppercase tracking-[0.16em] text-[#546078]">Best Camera</div>
+              <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Best Camera</div>
               <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{bestCameraName}</div>
             </div>
           </div>
-          <div className="mt-2 text-[8px] uppercase tracking-[0.18em] text-[#546078]">
+          <div className={`mt-2 text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
             Lighting: {scene.assumptions.timeOfDay === "night" ? "Night" : scene.assumptions.timeOfDay === "custom" ? "Custom" : "Day"}
           </div>
         </div>

@@ -143,10 +143,10 @@ function StepStatusIcon({ completed, current }: { completed: boolean; current: b
 
 function DemoMetricCard({ label, value, delta, accent }: { label: string; value: string; delta?: string; accent?: string }) {
   return (
-    <div className="rounded-lg border border-[#1d2330] bg-[#0b1018] px-2.5 py-1.5">
-      <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#556076]">{label}</div>
+    <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2.5 py-1.5`}>
+      <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>{label}</div>
       <div className={cn("mt-0.5 font-mono text-[13px] font-semibold", accent ?? "text-white")}>{value}</div>
-      {delta ? <div className="mt-0.5 text-[8px] text-[#556076]">{delta}</div> : null}
+      {delta ? <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textDimMid}`}>{delta}</div> : null}
     </div>
   );
 }
@@ -310,15 +310,15 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
   }, [restoreFailureCase]);
 
   return (
-    <div         className="`{pointer-events-auto absolute inset-y-0 left-0 z-40 flex w-[340px] max-w-[90vw] flex-col border-r ${UI_SURFACES.borderPanel} bg-[#0b0f17]/95 shadow-[4px_0_24px_rgba(0,0,0,0.3)]}`">
-      <div className="`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-3 py-2}`">
+    <div         className={`{pointer-events-auto absolute inset-y-0 left-0 z-40 flex w-[340px] max-w-[90vw] flex-col border-r ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel}/95 shadow-[4px_0_24px_rgba(0,0,0,0.3)]}`}>
+      <div className={`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-3 py-2}`}>
         <div className="flex items-center gap-2">
           <Shield className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Judge Demo Walkthrough (4:15)</span>
+          <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>Judge Demo Walkthrough (4:15)</span>
         </div>
         <button type="button"
           onClick={handleSkip}
-          className="flex h-5 w-5 items-center justify-center rounded text-[#5b667c] hover:bg-[#1a2333] hover:text-white"
+          className={`flex h-5 w-5 items-center justify-center rounded ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverBg} hover:text-white`}
           title="Exit walkthrough"
         >
           <X className="h-3 w-3" />
@@ -344,7 +344,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
                     ? "bg-cyan-500/10 text-cyan-100"
                     : isCompleted
                       ? "text-[#7a8aa8]"
-                      : "text-[#5b667c] hover:bg-[#151b28]",
+                      : "${UI_SURFACES.textDimMid} hover:bg-[#151b28]",
                 )}
               >
                 <StepStatusIcon completed={isCompleted} current={isCurrent} />
@@ -359,16 +359,16 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
           })}
         </div>
 
-        <div className="rounded-xl border border-[#1f2536] bg-[#0d111a] p-3">
+        <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0d111a] p-3`}>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 mb-2">
             <Icon className="h-4 w-4 text-emerald-400" />
           </div>
 
-          <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">
+          <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>
             Step {demoStep + 1} of {DEMO_STEPS.length}
           </div>
-          <h3 className="mt-1 text-[13px] font-semibold text-[#d7deed]">{step?.timestamp ? `${step.timestamp} — ` : ""}{step?.title}</h3>
-          <p className="mt-1 text-[10px] leading-relaxed text-[#8b96ab]">{step?.description}</p>
+          <h3 className={`mt-1 text-[13px] font-semibold ${UI_SURFACES.textNear}`}>{step?.timestamp ? `${step.timestamp} — ` : ""}{step?.title}</h3>
+          <p className={`mt-1 text-[10px] leading-relaxed ${UI_SURFACES.textSoftBright}`}>{step?.description}</p>
 
           {showRerunWarning ? (
             <div className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/10 px-2.5 py-2 text-[10px] text-amber-200">
@@ -382,29 +382,29 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
 
           {demoStep === 4 && simulationStepComplete ? (
             <div className="mt-3">
-              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">Simulation metrics</div>
+              <div className={`mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted}`}>Simulation metrics</div>
               <CoverageMetricsPanel />
             </div>
           ) : null}
 
           {demoStep === 6 && failureStepComplete ? (
             <div className="mt-3">
-              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">Failure metrics</div>
+              <div className={`mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted}`}>Failure metrics</div>
               <CoverageMetricsPanel />
             </div>
           ) : null}
 
           {demoStep === 7 ? (
             <div className="mt-3">
-              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">Judge focus areas</div>
+              <div className={`mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted}`}>Judge focus areas</div>
               <CoverageMetricsPanel />
               {hasSnapshotToCompare ? (
-                <div className="mt-2 rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-2 text-[9px] text-[#8b96ab]">
+                <div className={`mt-2 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2.5 py-2 text-[9px] ${UI_SURFACES.textSoftBright}`}>
                   <div className={cn("font-semibold uppercase tracking-[0.14em]", UI_TONES.info.text)}>Comparison ready</div>
                   <div className="mt-0.5">Two or more snapshots are available for compare and report surfaces.</div>
                 </div>
               ) : null}
-              <div className="mt-2 rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-2 text-[10px] text-[#8b96ab]">
+              <div className={`mt-2 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2.5 py-2 text-[10px] ${UI_SURFACES.textSoftBright}`}>
                 <div className="flex items-center gap-1.5 text-emerald-300 font-semibold mb-1">
                   <Sparkles className="h-3 w-3" />
                   Evaluation priorities
@@ -412,7 +412,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
                 <div className="text-[9px]">
                   Deterministic simulation · DORI-style scoring · SecurityScene schema · counterfactual deltas · temporal/profile/report/provenance
                 </div>
-                <div className="mt-1 text-[9px] text-[#556076]">
+                <div className={`mt-1 text-[9px] ${UI_SURFACES.textDimMid}`}>
                   Emphasize verified outputs over AI narration claims.
                 </div>
               </div>
@@ -421,9 +421,9 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
 
           {demoStep === 8 ? (
             <div className="mt-3">
-              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">Close line</div>
+              <div className={`mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted}`}>Close line</div>
               <CoverageMetricsPanel />
-              <div className="mt-2 text-[9px] text-[#556076]">
+              <div className={`mt-2 text-[9px] ${UI_SURFACES.textDimMid}`}>
                 SentinelTwin is a security audit workspace, not a static cone viewer.
               </div>
             </div>
@@ -431,7 +431,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
         </div>
       </div>
 
-      <div className="`{border-t ${UI_SURFACES.borderPanel} px-3 py-2}`">
+      <div className={`{border-t ${UI_SURFACES.borderPanel} px-3 py-2}`}>
         <div className="mb-2 h-1 w-full overflow-hidden rounded-full bg-[#1a2333]">
           <div className="h-full rounded-full bg-emerald-400 transition-[width] duration-300" style={{ width: `${progress}%` }} />
         </div>
@@ -440,7 +440,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
           <button type="button"
             onClick={handlePrev}
             disabled={isFirst}
-            className="flex h-7 items-center gap-1 rounded-lg border border-[#24283a] bg-[#111521] px-2 text-[9px] font-medium text-[#9da8c0] transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className={`flex h-7 items-center gap-1 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 text-[9px] font-medium ${UI_SURFACES.textSoftMuted} transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white disabled:cursor-not-allowed disabled:opacity-50`}
           >
             <ArrowLeft className="h-3 w-3" />
             Back

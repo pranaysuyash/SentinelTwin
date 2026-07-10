@@ -64,7 +64,7 @@ export function EntryPointInspector() {
           {nearbyPaths.length > 0 ? (
             <div className="space-y-1">
               {nearbyPaths.map((p) => (
-                <div key={p.id} className={`flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderFaintAlt} py-1.5 last:border-0`}>
+                <div key={p.id} className={`flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderFaint} py-1.5 last:border-0`}>
                   <span className={`text-[10px] ${UI_SURFACES.textBody}`}>{p.label}</span>
                   <span className={`text-[9px] capitalize ${UI_SURFACES.textDimMid}`}>{p.intent}</span>
                 </div>

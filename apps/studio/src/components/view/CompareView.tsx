@@ -333,7 +333,7 @@ function MetricCard({
             {formatDelta(delta)}
           </div>
         ) : delta === 0 ? (
-          <div className={`rounded-md border ${UI_SURFACES.borderDark} bg-[#141b2a] px-1.5 py-0.5 font-mono text-[10px] font-medium text-[#74809a]`}>
+          <div className={`rounded-md border ${UI_SURFACES.borderDark} bg-[#141b2a] px-1.5 py-0.5 font-mono text-[10px] font-medium ${UI_SURFACES.textSoftDim}`}>
             NO CHANGE
           </div>
         ) : null}
@@ -341,7 +341,7 @@ function MetricCard({
       <div className="mt-2.5 flex items-baseline justify-between gap-2 border-t border-[#1a2234] pt-2">
         <div className="flex flex-col">
           <span className="text-[9px] font-semibold uppercase tracking-wider text-rose-300/80">Baseline</span>
-          <span className="font-mono text-[13px] font-medium text-[#9aa6bf]">{beforeValue == null ? "--" : `${beforeValue.toFixed(1)}${suffix}`}</span>
+          <span className={`font-mono text-[13px] font-medium ${UI_SURFACES.textSoftMuted}`}>{beforeValue == null ? "--" : `${beforeValue.toFixed(1)}${suffix}`}</span>
         </div>
         <span className="text-[#3a4660]">→</span>
         <div className="flex flex-col text-right">
@@ -363,7 +363,7 @@ function ToolbarGroup({
   children: ReactNode;
 }) {
   return (
-    <div className={`flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-1.5 py-1`}>
+    <div className={`flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-1.5 py-1`}>
       <span className="px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#65718a]">{label}</span>
       <div className="flex flex-wrap items-center gap-1">{children}</div>
     </div>
@@ -419,17 +419,17 @@ function QualityTrend({
   const pathB = buildTrendPath(trendPoints(seriesB));
 
   return (
-    <div className={`flex h-full flex-col rounded-xl border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelAlt} p-3`}>
+    <div className={`flex h-full flex-col rounded-xl border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} p-3`}>
       <div className="mb-2 flex items-center justify-between">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Quality Over Time</div>
+          <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted5}`}>Quality Over Time</div>
           <div className={`text-[10px] ${UI_SURFACES.textDimMid}`}>
             {activePathId ? "Camera quality along the selected replay path" : "Select a path in Scenario Path to show route quality"}
           </div>
         </div>
         <div className="flex items-center gap-3 text-[10px]">
-          <span className="flex items-center gap-1 text-[#9aa6bf]"><span className="h-1.5 w-1.5 rounded-full bg-red-400" />Baseline</span>
-          <span className="flex items-center gap-1 text-[#9aa6bf]"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Proposed / Hardened</span>
+          <span className={`flex items-center gap-1 ${UI_SURFACES.textSoftMuted}`}><span className="h-1.5 w-1.5 rounded-full bg-red-400" />Baseline</span>
+          <span className={`flex items-center gap-1 ${UI_SURFACES.textSoftMuted}`}><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Proposed / Hardened</span>
         </div>
       </div>
       {activePathId ? (
@@ -478,22 +478,22 @@ function QualityTrend({
         <div className={`flex h-[160px] items-center justify-center rounded-lg border border-dashed border-[#1f2737] ${UI_SURFACES.panelDeepAlt} px-4 text-center`}>
           <div>
             <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>No path selected</div>
-            <div className="mt-1 text-[10px] text-[#7f8ca6]">
+            <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftBright}`}>
               Pick a scenario path in the Path panel to compare route quality over time.
             </div>
           </div>
         </div>
       )}
         <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] text-[#91a0bc]">
-        <div className={`rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5`}>
+        <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5`}>
           <div className={`${UI_SURFACES.textDimMid}`}>Baseline quality</div>
           <div className="mt-0.5 font-semibold text-red-300">{qualityLabel(qualityForScore(seriesA.at(-1)?.score ?? 0))}</div>
         </div>
-        <div className={`rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5`}>
+        <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5`}>
           <div className={`${UI_SURFACES.textDimMid}`}>Proposed / Hardened quality</div>
           <div className="mt-0.5 font-semibold text-emerald-300">{qualityLabel(qualityForScore(seriesB.at(-1)?.score ?? 0))}</div>
         </div>
-        <div className={`rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5`}>
+        <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5`}>
           <div className={`${UI_SURFACES.textDimMid}`}>Path visibility</div>
           <div className="mt-0.5 font-semibold text-[#d9e6ff]">
             {formatPct(((resultB?.visibleDurationS ?? resultA?.visibleDurationS ?? 0) / Math.max(
@@ -523,10 +523,10 @@ function NotesPanel({
   const recommendations = snapshotB?.simulation?.recommendations ?? [];
 
   return (
-    <div className={`flex h-full flex-col rounded-xl border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelAlt} p-3`}>
+    <div className={`flex h-full flex-col rounded-xl border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} p-3`}>
       <div className="mb-2 flex items-center justify-between">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changes in Proposed / Hardened</div>
+          <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted5}`}>Changes in Proposed / Hardened</div>
           <div className={`text-[10px] ${UI_SURFACES.textDimMid}`}>What changed, what failed, and what got better.</div>
         </div>
         <ArrowLeftRight className={`h-3.5 w-3.5 ${UI_SURFACES.textMuted}`} />
@@ -540,7 +540,7 @@ function NotesPanel({
         ].map((entry) => {
           const Icon = entry.icon;
           return (
-            <div key={entry.label} className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-2.5 py-2`}>
+            <div key={entry.label} className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2.5 py-2`}>
               <div className="flex items-center gap-2">
                 <Icon className={cn("h-3 w-3", entry.tone)} />
                 <span className="text-[#b8c3d9]">{entry.label}</span>
@@ -554,7 +554,7 @@ function NotesPanel({
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className={`rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} p-2`}>
+        <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} p-2`}>
           <div className={`text-[10px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Issues</div>
           <div className="mt-1 space-y-1">
             {(issues.length ? issues : [{ severity: "low", description: "No issues reported", category: "blindspot" }]).slice(0, 4).map((issue) => (
@@ -565,7 +565,7 @@ function NotesPanel({
             ))}
           </div>
         </div>
-        <div className={`rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} p-2`}>
+        <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} p-2`}>
           <div className={`text-[10px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Recommended next steps</div>
           <div className="mt-1 space-y-1">
             {(recommendations.length ? recommendations : [{ description: "Open report lite for the full hardening summary." }]).slice(0, 4).map((rec) => (
@@ -646,8 +646,8 @@ function diffNodeCollection<T extends SceneNodeLike>(baseline: T[], proposed: T[
 function ChangedObjectsPanel({ snapshotA, snapshotB }: { snapshotA: SceneSnapshot | null; snapshotB: SceneSnapshot | null }) {
   if (!snapshotA || !snapshotB) {
     return (
-      <div className={`flex h-full flex-col rounded-xl border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelAlt} p-3`}>
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changed Objects</div>
+      <div className={`flex h-full flex-col rounded-xl border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} p-3`}>
+        <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted5}`}>Changed Objects</div>
         <div className={`mt-2 text-[10px] ${UI_SURFACES.textDimMid}`}>Select two snapshots to compare object-level changes.</div>
       </div>
     );
@@ -661,14 +661,14 @@ function ChangedObjectsPanel({ snapshotA, snapshotB }: { snapshotA: SceneSnapsho
   ];
 
   return (
-    <div className={`flex h-full flex-col rounded-xl border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelAlt} p-3`}>
+    <div className={`flex h-full flex-col rounded-xl border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} p-3`}>
       <div className="mb-2">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changed Objects</div>
+        <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted5}`}>Changed Objects</div>
         <div className={`text-[10px] ${UI_SURFACES.textDimMid}`}>Proposed deltas vs Baseline by object class and IDs.</div>
       </div>
       <div className="space-y-2">
         {diffRows.map(({ label, diff }) => (
-          <div key={label} className={`rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-2.5 py-2`}>
+          <div key={label} className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2.5 py-2`}>
             <div className="flex items-center justify-between text-[10px]">
               <span className={`font-semibold ${UI_SURFACES.textBody}`}>{label}</span>
               <span className="font-mono text-[#91a0bc]">{diff.before} → {diff.after}</span>
@@ -678,7 +678,7 @@ function ChangedObjectsPanel({ snapshotA, snapshotB }: { snapshotA: SceneSnapsho
               <span className="rounded border border-rose-400/25 bg-rose-500/10 px-1.5 py-0.5 text-rose-300">-{diff.removed.length}</span>
               <span className="rounded border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-amber-300">~{diff.changed.length}</span>
             </div>
-            <div className="mt-1.5 space-y-0.5 text-[10px] text-[#9aa6bf]">
+            <div className={`mt-1.5 space-y-0.5 text-[10px] ${UI_SURFACES.textSoftMuted}`}>
               <div className="truncate">Added IDs: {diff.added.length > 0 ? diff.added.join(", ") : "--"}</div>
               <div className="truncate">Removed IDs: {diff.removed.length > 0 ? diff.removed.join(", ") : "--"}</div>
               <div className="truncate">Changed IDs: {diff.changed.length > 0 ? diff.changed.join(", ") : "--"}</div>
@@ -700,7 +700,7 @@ function SnapshotPlaceholder({
   return (
     <div className={`flex h-full min-h-[360px] flex-col items-center justify-center rounded-xl border border-dashed border-[#1f2737] ${UI_SURFACES.panelDeepAlt} px-4 text-center`}>
       <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>{title}</div>
-      <div className="mt-2 max-w-[280px] text-[10px] text-[#7f8ca6]">{description}</div>
+      <div className={`mt-2 max-w-[280px] text-[10px] ${UI_SURFACES.textSoftBright}`}>{description}</div>
     </div>
   );
 }
@@ -1018,7 +1018,7 @@ export function CompareView() {
     return (
       <div className={`flex h-full flex-col items-center justify-center gap-4 ${UI_SURFACES.page}`}>
         <div className={`flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed ${UI_SURFACES.borderSubtle}`}>
-          <GitCompare className="h-6 w-6 text-[#2a3246]" />
+          <GitCompare className={`h-6 w-6 ${UI_SURFACES.textDim}`} />
         </div>
         <div className="text-center">
           <div className={`text-[12px] font-medium ${UI_SURFACES.textMuted}`}>No snapshots to compare</div>
@@ -1168,7 +1168,7 @@ export function CompareView() {
           </ToolbarGroup>
         </div>
       </div>
-      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[10px] text-[#74809a]}`}>
+      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[10px] ${UI_SURFACES.textSoftDim}}`}>
         {compareSelectionProvenanceNote ? (
           <span>Compare provenance: {compareSelectionProvenanceNote}</span>
         ) : (
@@ -1176,7 +1176,7 @@ export function CompareView() {
         )}
       </div>
       {(outcomeA || outcomeB) ? (
-        <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[10px] text-[#8ea0bf]}`}>
+        <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[10px] ${UI_SURFACES.textMuted3}}`}>
           <span>
             Baseline outcome: {outcomeA?.summary.status.replace(/_/g, " ") ?? "not_run"}
             {outcomeA?.summary.primaryRisk ? ` · risk: ${outcomeA.summary.primaryRisk}` : ""}
@@ -1312,17 +1312,17 @@ export function CompareView() {
           ))}
         </div>
         {snapshotA && snapshotB ? (
-          <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelAlt} p-2.5`}>
+          <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} p-2.5`}>
             <div className="flex items-center justify-between gap-2">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">What Changed</div>
+              <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted5}`}>What Changed</div>
               <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-200">
                 Verified by simulation
               </span>
             </div>
             <div className="mt-1.5 grid gap-1.5 md:grid-cols-2">
               {comparisonCards.filter((card) => card.delta != null && card.delta !== 0).map((card) => (
-                <div key={card.label} className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-2.5 py-1.5 text-[10px] text-[#b7c5de]`}>
-                  <span className={`${UI_SURFACES.textMuted1}`}>{card.label}</span>
+                <div key={card.label} className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2.5 py-1.5 text-[10px] text-[#b7c5de]`}>
+                  <span className={`${UI_SURFACES.textSoftDim}`}>{card.label}</span>
                   <span className="font-semibold" style={{ color: card.tone }}>
                     {card.beforeValue != null ? `${Math.round(card.beforeValue)}%` : "—"} → {card.afterValue != null ? `${Math.round(card.afterValue)}%` : "—"}
                     <span className={`ml-1 ${UI_SURFACES.textDimMid}`}>({card.delta != null ? `${card.delta >= 0 ? "+" : ""}${Math.round(card.delta)}%` : "—"})</span>
@@ -1330,7 +1330,7 @@ export function CompareView() {
                 </div>
               ))}
               {comparisonCards.every((card) => card.delta == null || card.delta === 0) ? (
-                <div className={`col-span-2 rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-2.5 py-1.5 text-[10px] ${UI_SURFACES.textDimMid}`}>
+                <div className={`col-span-2 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2.5 py-1.5 text-[10px] ${UI_SURFACES.textDimMid}`}>
                   No measurable changes between scenarios. Run simulation on both sides to surface deltas.
                 </div>
               ) : null}
@@ -1338,11 +1338,11 @@ export function CompareView() {
           </div>
         ) : null}
 
-        <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelAlt} p-2.5`}>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Actionable Next Move</div>
+        <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} p-2.5`}>
+          <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted5}`}>Actionable Next Move</div>
           <div className="mt-1.5 grid gap-1.5 md:grid-cols-3">
             {prioritizedActions.map((action, i) => (
-              <div key={action} className={`rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5 text-[10px] text-[#b7c5de]`}>
+              <div key={action} className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5 text-[10px] text-[#b7c5de]`}>
                 <span className={`mr-1 ${UI_SURFACES.textAccent}`}>{i + 1}.</span>
                 {action}
               </div>
@@ -1365,15 +1365,15 @@ export function CompareView() {
       </div>
 
       <div className="px-2 pb-2">
-        <div className={`rounded-xl border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelAlt} p-3`}>
+        <div className={`rounded-xl border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} p-3`}>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Camera Comparison</div>
+              <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted5}`}>Camera Comparison</div>
               <div className={`text-[10px] ${UI_SURFACES.textDimMid}`}>Compare two cameras from the current scene using live simulation results.</div>
             </div>
             <div className={`flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>
-              <label className={`flex items-center gap-1.5 rounded-md border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-2 py-1`}>
-                <span className="text-[#9aa6bf]">Camera A</span>
+              <label className={`flex items-center gap-1.5 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2 py-1`}>
+                <span className={`${UI_SURFACES.textSoftMuted}`}>Camera A</span>
                 <select
                   value={validCameraAId ?? ""}
                   onChange={(event) => setCameraComparisonAId(event.target.value)}
@@ -1387,7 +1387,7 @@ export function CompareView() {
                   ))}
                 </select>
               </label>
-              <label className={`flex items-center gap-1.5 rounded-md border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-2 py-1`}>
+              <label className={`flex items-center gap-1.5 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2 py-1`}>
                 <span className="text-[#d2f5db]">Camera B</span>
                 <select
                   value={validCameraBId ?? ""}
@@ -1406,7 +1406,7 @@ export function CompareView() {
           </div>
 
           {!cameraA || !cameraB || !cameraResultA || !cameraResultB || !cameraDeltas ? (
-            <div className={`rounded-lg border border-dashed ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-3 py-4 text-[10px] ${UI_SURFACES.textDimMid}`}>
+            <div className={`rounded-lg border border-dashed ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-3 py-4 text-[10px] ${UI_SURFACES.textDimMid}`}>
               Select two cameras and run simulation to compare their coverage, zone performance, and DORI reach side by side.
             </div>
           ) : (
@@ -1415,7 +1415,7 @@ export function CompareView() {
                 { camera: cameraA, result: cameraResultA, dori: cameraDeltas.doriA, tone: "baseline" as const },
                 { camera: cameraB, result: cameraResultB, dori: cameraDeltas.doriB, tone: "proposed" as const },
               ].map(({ camera, result, dori, tone }) => (
-                <div key={camera.id} className={`rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} p-2.5`}>
+                <div key={camera.id} className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} p-2.5`}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <div className={cn("text-[10px] font-semibold uppercase tracking-[0.18em]", tone === "baseline" ? "text-red-300" : "text-emerald-300")}>
@@ -1433,7 +1433,7 @@ export function CompareView() {
                   </div>
 
                   <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
-                    <div className={`rounded border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelAlt} px-2 py-1.5`}>
+                    <div className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5`}>
                       <div className={`${UI_SURFACES.textDimMid}`}>Best zone quality</div>
                       <div className={cn("mt-0.5 font-semibold", tone === "baseline" ? "text-red-300" : "text-emerald-300")}>
                         {Object.values(result.qualityByZone).reduce((best, quality) => (
@@ -1441,26 +1441,26 @@ export function CompareView() {
                         ), "none" as keyof typeof QUALITY_RANK)}
                       </div>
                     </div>
-                    <div className={`rounded border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelAlt} px-2 py-1.5`}>
+                    <div className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5`}>
                       <div className={`${UI_SURFACES.textDimMid}`}>Critical zones failed</div>
                       <div className="mt-0.5 font-semibold text-rose-300">{result.criticalZonesFailed.length}</div>
                     </div>
-                    <div className={`rounded border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelAlt} px-2 py-1.5`}>
+                    <div className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5`}>
                       <div className={`${UI_SURFACES.textDimMid}`}>Critical zones passed</div>
                       <div className="mt-0.5 font-semibold text-emerald-300">{result.criticalZonesCovered.length}</div>
                     </div>
-                    <div className={`rounded border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelAlt} px-2 py-1.5`}>
+                    <div className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5`}>
                       <div className={`${UI_SURFACES.textDimMid}`}>Detection range</div>
                       <div className={"mt-0.5 font-mono font-semibold " + QUALITY_TEXT_COLOR.detection}>{dori.detection.toFixed(1)}m</div>
                     </div>
                   </div>
 
-                  <div className={`mt-2 rounded border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelAlt} px-2 py-1.5 text-[10px] text-[#9aa6bf]`}>
+                  <div className={`mt-2 rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] ${UI_SURFACES.textSoftMuted}`}>
                     {result.offlineImpact.length > 0 ? result.offlineImpact[0] : "No offline impact warnings for this camera."}
                   </div>
                 </div>
               ))}
-              <div className={`lg:col-span-2 rounded-lg border ${UI_SURFACES.borderThinAlt} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[10px] text-[#91a0bc]`}>
+              <div className={`lg:col-span-2 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[10px] text-[#91a0bc]`}>
                 Camera delta: coverage {cameraDeltas.coverage >= 0 ? "+" : ""}{cameraDeltas.coverage.toFixed(1)}%, passed zones {cameraDeltas.passedZones >= 0 ? "+" : ""}{cameraDeltas.passedZones}, failed zones {cameraDeltas.failedZones >= 0 ? "+" : ""}{cameraDeltas.failedZones}.
               </div>
             </div>

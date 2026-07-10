@@ -71,7 +71,7 @@ export function CameraStatusSummaryPanel() {
                     key={cam.id}
                     onClick={() => selectNode(cam.id)}
                     className={cn(
-                      "cursor-pointer border-b ${UI_SURFACES.borderFaintAlt} transition-colors",
+                      "cursor-pointer border-b ${UI_SURFACES.borderFaint} transition-colors",
                       isSelected
                         ? "bg-blue-500/8"
                         : "${UI_SURFACES.hoverBgMuted}",

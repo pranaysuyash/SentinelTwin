@@ -232,7 +232,7 @@ export function TimelineTab() {
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className={`{flex flex-wrap items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-2}`}>
         <div className="flex items-center gap-1.5">
-          <Route className="h-3.5 w-3.5 text-[#60a5fa]" />
+          <Route className={`h-3.5 w-3.5 ${UI_SURFACES.textAccent}`} />
           <TruthBadge label="simulated" className="mr-1" />
           <select
             value={activePath.id}
@@ -252,7 +252,7 @@ export function TimelineTab() {
             className={`flex h-6 w-6 items-center justify-center rounded ${UI_SURFACES.chip} transition-colors ${UI_SURFACES.hoverBgDark}`}
             title="Reset"
           >
-            <ListRestart className={`h-3 w-3 ${UI_SURFACES.textSoft}`} />
+            <ListRestart className={`h-3 w-3 ${UI_SURFACES.textSoftMid}`} />
           </button>
           <button
             type="button"
@@ -260,7 +260,7 @@ export function TimelineTab() {
             className={`flex h-6 w-6 items-center justify-center rounded ${UI_SURFACES.chip} transition-colors ${UI_SURFACES.hoverBgDark}`}
             title="Skip back 2s"
           >
-            <SkipBack className={`h-3 w-3 ${UI_SURFACES.textSoft}`} />
+            <SkipBack className={`h-3 w-3 ${UI_SURFACES.textSoftMid}`} />
           </button>
           <button
             type="button"
@@ -279,7 +279,7 @@ export function TimelineTab() {
             className={`flex h-6 w-6 items-center justify-center rounded ${UI_SURFACES.chip} transition-colors ${UI_SURFACES.hoverBgDark}`}
             title="Skip forward 2s"
           >
-            <SkipForward className={`h-3 w-3 ${UI_SURFACES.textSoft}`} />
+            <SkipForward className={`h-3 w-3 ${UI_SURFACES.textSoftMid}`} />
           </button>
         </div>
 
@@ -353,7 +353,7 @@ export function TimelineTab() {
         </div>
       </div>
 
-        <div className={`{flex items-center gap-3 border-b ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeepAlt} px-3 py-1.5 text-[8px] text-[#4d566b]}`}>
+        <div className={`{flex items-center gap-3 border-b ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeepAlt} px-3 py-1.5 text-[8px] ${UI_SURFACES.textDimMid}}`}>
           <span>
             Path: <span className={`${UI_SURFACES.textBody}`}>{activePath.label}</span>
           </span>
@@ -363,7 +363,7 @@ export function TimelineTab() {
           <span>
             Events: <span className={`font-mono ${UI_SURFACES.textSoftBright}`}>{activePathResult?.timeline.length ?? 0}</span>
           </span>
-          <span className={cn("rounded border px-1.5 py-0.5 font-medium", pathReplayFollowActor ? "border-sky-500/25 bg-sky-500/10 text-sky-300" : `${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3}`)}>
+          <span className={cn("rounded border px-1.5 py-0.5 font-medium", pathReplayFollowActor ? "border-sky-500/25 bg-sky-500/10 text-sky-300" : `${UI_SURFACES.borderStrong} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3}`)}>
             {pathReplayFollowActor ? "Follow Actor" : "Free Scrub"}
           </span>
           <span className={`${UI_SURFACES.textSoftMid}`}>
@@ -408,7 +408,7 @@ export function TimelineTab() {
             <div className={`{grid gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-2 sm:grid-cols-2 xl:grid-cols-4}`}>
               <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2`}>
                 <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textAccent}`}>Replay Focus</div>
-                <div className={`mt-1 text-[10px] font-medium ${UI_SURFACES.textNearBright}`}>
+                <div className={`mt-1 text-[10px] font-medium ${UI_SURFACES.textBody3}`}>
                   {pathReplayFollowActor ? "Follow Actor enabled" : "Manual scrub enabled"}
                 </div>
                 <div className={`mt-1 text-[9px] ${UI_SURFACES.textDimMid}`}>
@@ -419,7 +419,7 @@ export function TimelineTab() {
               </div>
               <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2`}>
                 <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textAccent}`}>Lead Camera</div>
-                <div className={`mt-1 text-[10px] font-medium ${UI_SURFACES.textNearBright}`}>{leadCameraName ?? "No lead camera"}</div>
+                <div className={`mt-1 text-[10px] font-medium ${UI_SURFACES.textBody3}`}>{leadCameraName ?? "No lead camera"}</div>
                 <div className={`mt-1 text-[9px] ${UI_SURFACES.textDimMid}`}>
                   {bestCamera
                     ? `${bestCamera.visibleS.toFixed(1)}s visible · best quality ${bestCamera.maxQuality.toUpperCase()}`
@@ -428,7 +428,7 @@ export function TimelineTab() {
               </div>
               <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2`}>
                 <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textAccent}`}>Coverage Reach</div>
-                <div className={`mt-1 text-[10px] font-medium ${UI_SURFACES.textNearBright}`}>
+                <div className={`mt-1 text-[10px] font-medium ${UI_SURFACES.textBody3}`}>
                   {visibleCameraSummary.length} camera{visibleCameraSummary.length === 1 ? "" : "s"} with visibility
                 </div>
                 <div className={`mt-1 text-[9px] ${UI_SURFACES.textDimMid}`}>
@@ -437,7 +437,7 @@ export function TimelineTab() {
               </div>
               <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2`}>
                 <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textAccent}`}>Replay Status</div>
-                <div className={`mt-1 text-[10px] font-medium ${UI_SURFACES.textNearBright}`}>{pathReplay.playing ? "Playing" : "Paused"}</div>
+                <div className={`mt-1 text-[10px] font-medium ${UI_SURFACES.textBody3}`}>{pathReplay.playing ? "Playing" : "Paused"}</div>
                 <div className={`mt-1 text-[9px] ${UI_SURFACES.textDimMid}`}>
                   {formatTime(currentTime)} / {formatTime(totalDurationS)} · {pathReplay.speed.toFixed(1)}x
                 </div>
@@ -445,7 +445,7 @@ export function TimelineTab() {
               <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2.5 py-2 sm:col-span-2 xl:col-span-4`}>
                 <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textAccent}`}>Current Event</div>
                 {currentEvent ? (
-                  <div className={`mt-1 flex flex-wrap items-center gap-1.5 text-[10px] ${UI_SURFACES.textNearBright}`}>
+                  <div className={`mt-1 flex flex-wrap items-center gap-1.5 text-[10px] ${UI_SURFACES.textBody3}`}>
                     <span className="font-mono text-[#93c5fd]">{currentEvent.timeS.toFixed(1)}s</span>
                     <span>•</span>
                     <span>{currentEvent.cameraId ? camerasById[currentEvent.cameraId] ?? currentEvent.cameraId : "No camera"}</span>
@@ -606,7 +606,7 @@ export function TimelineTab() {
                         {QUALITY_SHORT_LABEL[quality]}
                       </span>
                     </div>
-                    <div className={`mt-1 text-[10px] font-medium ${UI_SURFACES.textNearBright}`}>{QUALITY_LABEL[quality]}</div>
+                    <div className={`mt-1 text-[10px] font-medium ${UI_SURFACES.textBody3}`}>{QUALITY_LABEL[quality]}</div>
                     <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textDimMid}`}>Rank {QUALITY_RANK[quality]}</div>
                   </div>
                 ))}
@@ -641,8 +641,8 @@ export function TimelineTab() {
               {editDeltas.length === 0 ? <div className="text-[10px] text-[#7a89a8]">Save snapshots with simulation to populate edit deltas.</div> : null}
               {editDeltas.map((delta) => (
                 <div key={delta.label} className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 text-[10px]`}>
-                  <div className={`font-medium ${UI_SURFACES.textNearBright}`}>{delta.label}</div>
-                  <div className="mt-1 text-[#8ea0bf]">
+                  <div className={`font-medium ${UI_SURFACES.textBody3}`}>{delta.label}</div>
+                  <div className={`mt-1 ${UI_SURFACES.textMuted3}`}>
                     Coverage: <span className={delta.coverageDelta >= 0 ? "text-emerald-300" : "text-red-300"}>{delta.coverageDelta >= 0 ? "+" : ""}{delta.coverageDelta.toFixed(1)}%</span> ·
                     Blindspot: <span className={delta.blindspotDelta <= 0 ? "text-emerald-300" : "text-red-300"}>{delta.blindspotDelta >= 0 ? "+" : ""}{delta.blindspotDelta.toFixed(1)}%</span> ·
                     Issues: <span className={delta.issuesDelta <= 0 ? "text-emerald-300" : "text-red-300"}>{delta.issuesDelta >= 0 ? "+" : ""}{delta.issuesDelta}</span>

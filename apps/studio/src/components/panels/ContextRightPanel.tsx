@@ -28,7 +28,7 @@ function SectionToggle({
   onToggle: () => void;
 }) {
   return (
-    <div className={`flex w-full items-center gap-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-1 transition-colors hover:border-[#31405a]`}>
+    <div className={`flex w-full items-center gap-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-1 transition-colors ${UI_SURFACES.hoverBorderBright}`}>
       <button
         type="button"
         onClick={onToggle}
@@ -106,7 +106,7 @@ export function ContextRightPanel() {
             type="button"
             onClick={() => setRightPanelMode(mode)}
             title={label}
-            className={cn("flex-shrink-0 whitespace-nowrap rounded px-2 py-1 text-[10px]", rightPanelMode === mode ? "bg-[#1a2233] text-white" : `${UI_SURFACES.textMuted3} ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`)}
+            className={cn("flex-shrink-0 whitespace-nowrap rounded px-2 py-1 text-[10px]", rightPanelMode === mode ? "${UI_SURFACES.hoverBg} text-white" : `${UI_SURFACES.textMuted3} ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`)}
           >
             {label}
           </button>

@@ -92,7 +92,7 @@ const REPLAY_SURFACES = {
   accentText: UI_SURFACES.textAccent,
   accentBg: "bg-sky-500/20",
   hoverBg: UI_SURFACES.hoverBg,
-  hoverBgAlt: UI_SURFACES.hoverBgAlt,
+  hoverBgAlt: UI_SURFACES.hoverBgDark,
   hoverText: UI_SURFACES.hoverText,
 };
 
@@ -672,7 +672,7 @@ function PlaybackControls({
               className={`rounded px-1.5 py-0.5 ${TYPE_SCALE.micro.class} font-medium transition-colors ${
                 speed === s
                   ? `${UI_TONES.info.bg} ${UI_TONES.info.text}`
-                : `${UI_TONES.neutral.text} hover:bg-[#131a28] ${REPLAY_SURFACES.mutedText2}`
+                : `${UI_TONES.neutral.text} ${UI_SURFACES.hoverBgMuted} ${REPLAY_SURFACES.mutedText2}`
               }`}
             >
               {s}×
@@ -781,7 +781,7 @@ function CoverageMiniLegend() {
             className="h-1.5 w-1.5 rounded-full"
             style={{ backgroundColor: QUALITY_COLOR[q] }}
           />
-          <span className="text-[7px] uppercase tracking-[0.08em] text-[#5b667c]">
+          <span className={`text-[7px] uppercase tracking-[0.08em] ${UI_SURFACES.textDimMid}`}>
             {QUALITY_ABBR[q]}
           </span>
         </div>
@@ -1400,7 +1400,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <select
-                className={`min-w-55 rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-2.5 py-1.5 text-[11px] font-medium ${UI_SURFACES.textNear} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]`}
+                className={`min-w-55 rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-2.5 py-1.5 text-[11px] font-medium ${UI_SURFACES.textNear} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
                 value={activePathId ?? ""}
                 onChange={(event) => handlePathChange(event.target.value || null)}
                 aria-label="Select active replay path"
@@ -1416,7 +1416,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
                 type="button"
                 onClick={handleEditPath}
                 disabled={!activePath}
-                className={`rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-3 py-1.5 text-[10px] font-medium ${REPLAY_SURFACES.bodyText} transition-colors hover:border-[#32384d] ${REPLAY_SURFACES.hoverText} disabled:cursor-not-allowed disabled:opacity-40`}
+                className={`rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-3 py-1.5 text-[10px] font-medium ${REPLAY_SURFACES.bodyText} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${REPLAY_SURFACES.hoverText} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 Edit Path
               </button>
@@ -1455,7 +1455,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
       <button
         type="button"
         onClick={toggleImmersiveMode}
-        className={`absolute right-3 top-3 z-30 rounded-lg border ${UI_SURFACES.borderDark} bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium ${REPLAY_SURFACES.bodyText} transition-colors hover:border-[#3a4a66] ${REPLAY_SURFACES.hoverText}`}
+        className={`absolute right-3 top-3 z-30 rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 px-3 py-1.5 text-[10px] font-medium ${REPLAY_SURFACES.bodyText} transition-colors ${UI_SURFACES.hoverBorderBright} ${REPLAY_SURFACES.hoverText}`}
       >
         {immersiveMode ? "Exit Focus" : "Focus"}
       </button>

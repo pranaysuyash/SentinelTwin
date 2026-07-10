@@ -93,7 +93,7 @@ export function ScenarioComparisonPanel() {
             type="button"
             onClick={handleRunScenarios}
             disabled={scenarioRunning}
-            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftBright} transition-colors hover:border-[#3a4158] hover:text-white disabled:opacity-50`}
+            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftBright} transition-colors hover:${UI_SURFACES.textDim} hover:text-white disabled:opacity-50`}
           >
             {scenarioRunning ? <Loader2 className="size-3 animate-spin" /> : <Zap className="size-3" />}
             {scenarioBatchResults ? "Re-run" : "Run Scenarios"}
@@ -209,7 +209,7 @@ export function ScenarioComparisonPanel() {
             type="button"
             onClick={handleRunSensitivity}
             disabled={sensitivityRunning}
-            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftBright} transition-colors hover:border-[#3a4158] hover:text-white disabled:opacity-50`}
+            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftBright} transition-colors hover:${UI_SURFACES.textDim} hover:text-white disabled:opacity-50`}
           >
             {sensitivityRunning ? <Loader2 className="size-3 animate-spin" /> : <Zap className="size-3" />}
             {assumptionSensitivityResults ? "Re-run" : "Run Analysis"}

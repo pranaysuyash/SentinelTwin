@@ -10,6 +10,7 @@ import type { SavedProjectRecord } from "@/store/studio-store";
 import type { SecurityIssue } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 import type { OrganizationList } from "@/schema/organization";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 const SOURCE_LABELS: Record<string, string> = {
   manual: "Draft",
@@ -299,12 +300,12 @@ export function ProjectMetadataEditor({
               >
                 {organizations?.length > 0 ? (
                   organizations.map((org) => (
-                    <option key={org.id} value={org.name} className="bg-[#0b0f17] text-white">
+                    <option key={org.id} value={org.name} className={`${UI_SURFACES.panel} text-white`}>
                       {org.name}
                     </option>
                   ))
                 ) : (
-                  <option value="Personal Workspace" className="bg-[#0b0f17] text-white">Personal Workspace</option>
+                  <option value="Personal Workspace" className={`${UI_SURFACES.panel} text-white`}>Personal Workspace</option>
                 )}
               </select>
               <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--st-muted)]" />

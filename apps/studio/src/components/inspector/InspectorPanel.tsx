@@ -50,7 +50,7 @@ export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } =
   const groupedSelection = selectedCount > 1;
 
   return (
-    <aside className={`{flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l ${UI_SURFACES.borderPanel} bg-[#0d1017]}`}>
+    <aside className={`{flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeep}}`}>
       {showHeader ? (
         <div className={`{flex h-8 items-center border-b ${UI_SURFACES.borderPanel} px-3 text-[9px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textMuted}}`}>
           Inspector
@@ -72,7 +72,7 @@ export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } =
             <button
               type="button"
               onClick={() => duplicateNode(selectedId ?? selectedNodeIds[0] ?? "")}
-              className={`flex h-8 items-center justify-center gap-1.5 rounded-lg border border-[#24304a] ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#3b4a69] hover:bg-[#172235]`}
+              className={`flex h-8 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgDark}`}
             >
               <Copy className="h-3 w-3" />
               Duplicate
@@ -88,7 +88,7 @@ export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } =
             <button
               type="button"
               onClick={() => clearSelection()}
-              className={`flex h-8 items-center justify-center gap-1.5 rounded-lg border border-[#24304a] ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#3b4a69] hover:bg-[#172235]`}
+              className={`flex h-8 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgDark}`}
             >
               Clear
             </button>

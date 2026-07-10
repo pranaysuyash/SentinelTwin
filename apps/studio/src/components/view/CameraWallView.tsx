@@ -935,7 +935,7 @@ export function CameraWallView() {
                     Route {activePath.label}
                   </span>
                 ) : (
-                  <span className="rounded-md border border-[#334155] bg-[#0f172a]/50 px-2 py-0.5 text-[#9ca3af]">
+                  <span className={`rounded-md border border-[#334155] bg-[#0f172a]/50 px-2 py-0.5 ${UI_SURFACES.textSoftMuted}`}>
                     Route unavailable
                   </span>
                 )}
@@ -974,7 +974,7 @@ export function CameraWallView() {
                   Route Context {activePath.label}
                 </span>
               ) : (
-                <span className="rounded-md border border-[#334155] bg-[#0f172a]/50 px-2 py-0.5 text-[#9ca3af]">
+                <span className={`rounded-md border border-[#334155] bg-[#0f172a]/50 px-2 py-0.5 ${UI_SURFACES.textSoftMuted}`}>
                   Route Context unavailable
                 </span>
               )}
@@ -999,7 +999,7 @@ export function CameraWallView() {
                 className={`rounded-md border px-2 py-0.5 transition-colors ${
                   syncTime
                     ? "border-sky-400/20 bg-sky-500/10 text-sky-200"
-                    : "${UI_SURFACES.borderStrong} bg-black/30 text-[#9ca3af]"
+                    : "${UI_SURFACES.borderStrong} bg-black/30 ${UI_SURFACES.textSoftMuted}"
                 }`}
               >
                 {syncTime ? "Synchronized Time" : "Free Running Time"}
@@ -1012,21 +1012,21 @@ export function CameraWallView() {
               <button
                 type="button"
                 onClick={() => setLayoutMode("quad")}
-                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "quad" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
+                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "quad" ? "bg-[#1d2b40] text-white" : "${UI_SURFACES.textSoftMuted}"}`}
               >
                 4 Views
               </button>
               <button
                 type="button"
                 onClick={() => setLayoutMode("overview")}
-                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "overview" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
+                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "overview" ? "bg-[#1d2b40] text-white" : "${UI_SURFACES.textSoftMuted}"}`}
               >
                 6 Views
               </button>
               <button
                 type="button"
                 onClick={() => setLayoutMode("dense")}
-                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "dense" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
+                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "dense" ? "bg-[#1d2b40] text-white" : "${UI_SURFACES.textSoftMuted}"}`}
                 data-testid="wall-layout-dense"
               >
                 16 Views
@@ -1037,14 +1037,14 @@ export function CameraWallView() {
               <button
                 type="button"
                 onClick={() => setLayoutMode("auto")}
-                className={`rounded-md px-2 py-1 transition-colors ${layoutMode === "auto" ? "bg-emerald-500/20 text-emerald-200" : "text-[#9ca3af]"}`}
+                className={`rounded-md px-2 py-1 transition-colors ${layoutMode === "auto" ? "bg-emerald-500/20 text-emerald-200" : "${UI_SURFACES.textSoftMuted}"}`}
               >
                 Auto Layout
               </button>
               <button
                 type="button"
                 onClick={() => setShowMapPreview((prev) => !prev)}
-                className={`rounded-md px-2 py-1 transition-colors ${showMapPreview ? "bg-sky-500/20 text-sky-200" : "text-[#9ca3af]"}`}
+                className={`rounded-md px-2 py-1 transition-colors ${showMapPreview ? "bg-sky-500/20 text-sky-200" : "${UI_SURFACES.textSoftMuted}"}`}
               >
                 3D Map
               </button>
@@ -1059,7 +1059,7 @@ export function CameraWallView() {
       <button
         type="button"
         onClick={toggleImmersiveMode}
-        className={`absolute right-3 top-[calc(var(--st-full-canvas-safe-top,4.25rem)+0.5rem)] z-30 rounded-lg border ${UI_SURFACES.borderDark} bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium ${CAMERA_WALL_SURFACES.body} transition-colors hover:border-[#3a4a66] ${UI_SURFACES.hoverText}`}
+        className={`absolute right-3 top-[calc(var(--st-full-canvas-safe-top,4.25rem)+0.5rem)] z-30 rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 px-3 py-1.5 text-[10px] font-medium ${CAMERA_WALL_SURFACES.body} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText}`}
       >
         {immersiveMode ? "Exit Focus" : "Focus"}
       </button>

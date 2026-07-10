@@ -57,7 +57,7 @@ function ZonePicker({
         className={`rounded px-1.5 py-0.5 text-[9px] transition-colors ${
           selected.length === 0
             ? "bg-sky-500/20 text-sky-200 ring-1 ring-sky-400/40"
-            : "${UI_SURFACES.card} ${UI_SURFACES.textDimMid} hover:text-[#9fb1cf]"
+            : "${UI_SURFACES.card} ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverTextSoft}"
         }`}
       >
         All zones
@@ -73,7 +73,7 @@ function ZonePicker({
             className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] transition-colors ${
               active
                 ? "bg-sky-500/20 text-sky-200 ring-1 ring-sky-400/40"
-                : "${UI_SURFACES.card} ${UI_SURFACES.textDimMid} hover:text-[#9fb1cf]"
+                : "${UI_SURFACES.card} ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverTextSoft}"
             }`}
           >
             <MapPin className="h-2.5 w-2.5" />
@@ -190,21 +190,21 @@ export function CrowdProfileEditor() {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <Users className="h-3.5 w-3.5 text-[#60a5fa]" />
+          <Users className={`h-3.5 w-3.5 ${UI_SURFACES.textAccent}`} />
           <span className={`text-[11px] font-semibold ${UI_SURFACES.textBody3}`}>Crowd Profiles</span>
         </div>
         <div className="flex gap-1">
           <button
             type="button"
             onClick={addRetailDefault}
-            className={`rounded border ${UI_SURFACES.borderMid} px-2 py-0.5 text-[10px] text-[#9fb1cf] hover:bg-white/5`}
+            className={`rounded border ${UI_SURFACES.border} px-2 py-0.5 text-[10px] ${UI_SURFACES.textSoftMuted} hover:bg-white/5`}
           >
             + Retail Preset
           </button>
           <button
             type="button"
             onClick={addProfile}
-            className={`rounded border ${UI_SURFACES.borderMid} px-2 py-0.5 text-[10px] text-[#9fb1cf] hover:bg-white/5`}
+            className={`rounded border ${UI_SURFACES.border} px-2 py-0.5 text-[10px] ${UI_SURFACES.textSoftMuted} hover:bg-white/5`}
           >
             <Plus className="inline h-2.5 w-2.5" /> Add
           </button>
@@ -212,8 +212,8 @@ export function CrowdProfileEditor() {
       </div>
 
       {profiles.length === 0 && (
-        <div className={`rounded-xl border border-dashed ${UI_SURFACES.borderMid} px-3 py-4 text-center`}>
-          <p className={`text-[11px] ${UI_SURFACES.textMuted1}`}>
+        <div className={`rounded-xl border border-dashed ${UI_SURFACES.border} px-3 py-4 text-center`}>
+          <p className={`text-[11px] ${UI_SURFACES.textSoftDim}`}>
             No crowd profiles. Add one to model dynamic occlusion from people moving through the scene.
           </p>
         </div>
@@ -222,7 +222,7 @@ export function CrowdProfileEditor() {
       {profiles.map((profile) => (
         <div
           key={profile.id}
-          className={`rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0d1220] p-3`}
+          className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-3`}
         >
           <div className="flex items-center gap-2">
             <input
@@ -231,7 +231,7 @@ export function CrowdProfileEditor() {
               onChange={(e) => patchProfile(profile.id, { label: e.target.value })}
               className={`min-w-0 flex-1 rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-0.5 font-mono text-[11px] ${UI_SURFACES.textBody3} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
             />
-            <label className="flex items-center gap-1 text-[10px] text-[#9fb1cf]">
+            <label className={`flex items-center gap-1 text-[10px] ${UI_SURFACES.textSoftMuted}`}>
               <input
                 type="checkbox"
                 checked={profile.enabled}
@@ -303,7 +303,7 @@ export function CrowdProfileEditor() {
             <button
               type="button"
               onClick={() => addArchetype(profile.id)}
-              className={`mt-1 w-full rounded border border-dashed ${UI_SURFACES.borderMid} py-1 text-[10px] ${UI_SURFACES.textMuted1} hover:border-[#60a5fa]/40 hover:text-[#9fb1cf]`}
+              className={`mt-1 w-full rounded border border-dashed ${UI_SURFACES.border} py-1 text-[10px] ${UI_SURFACES.textSoftDim} hover:border-[#60a5fa]/40 ${UI_SURFACES.hoverTextSoft}`}
             >
               + Add archetype
             </button>

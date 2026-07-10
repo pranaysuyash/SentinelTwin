@@ -19,6 +19,7 @@ import { pathLengthM, pointOnPathAtProgress, samplePathQuality } from "@/compone
 import { QUALITY_LABEL, QUALITY_RANK } from "@/lib/quality-display";
 import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 type PathMapProps = {
   width?: number;
@@ -126,11 +127,11 @@ export function PathMap({
   const currentQualityColor = detailSample ? qualityColor(detailSample.quality) : MAP_COLORS.quality.none;
 
   return (
-    <div className="w-[194px] flex-shrink-0 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+    <div className={`w-[194px] flex-shrink-0 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Path Map - Scenario / Path</span>
+        <span className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Path Map - Scenario / Path</span>
         {activePath ? (
-          <span className="max-w-[104px] truncate rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#9ea8bf]">
+          <span className={`max-w-[104px] truncate rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] ${UI_SURFACES.textSoftMuted}`}>
             {activePath.label}
           </span>
         ) : null}
@@ -138,7 +139,7 @@ export function PathMap({
 
       <div className="flex items-center justify-between gap-1 text-[10px]">
         <select
-          className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[11px] text-[#c7d0e4]"
+          className={`min-w-0 flex-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1 text-[11px] ${UI_SURFACES.textBody}`}
           value={activePath?.id ?? ""}
           onChange={(event) => {
             const id = event.target.value;
@@ -161,7 +162,7 @@ export function PathMap({
         </select>
 
         <button type="button"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#24283a] bg-[#111521] text-[#c7d0e4]"
+          className={`inline-flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textBody}`}
           onClick={() => {
             if (!activePath) return;
             fitMap("pathMap");
@@ -230,18 +231,18 @@ export function PathMap({
       />
 
       <div className="mt-2 grid grid-cols-3 gap-2">
-        <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-          <div className="text-[13px] font-semibold text-[#d7deed]">{pathLength.toFixed(1)} m</div>
-          <div className="mt-0.5 text-[8px] uppercase tracking-[0.18em] text-[#556076]">Path Length</div>
+        <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+          <div className={`text-[13px] font-semibold ${UI_SURFACES.textNear}`}>{pathLength.toFixed(1)} m</div>
+          <div className={`mt-0.5 text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Path Length</div>
         </div>
-        <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-          <div className="text-[13px] font-semibold text-[#d7deed]">{estSeconds.toFixed(1)} sec</div>
-          <div className="mt-0.5 text-[8px] uppercase tracking-[0.18em] text-[#556076]">Est. Time</div>
+        <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+          <div className={`text-[13px] font-semibold ${UI_SURFACES.textNear}`}>{estSeconds.toFixed(1)} sec</div>
+          <div className={`mt-0.5 text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Est. Time</div>
         </div>
-        <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+        <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
           <div className={`text-[13px] font-semibold ${
             visiblePct === null
-              ? "text-[#d7deed]"
+              ? "${UI_SURFACES.textNear}"
               : visiblePct >= 80
                 ? "text-emerald-300"
                 : visiblePct >= 50
@@ -250,14 +251,14 @@ export function PathMap({
           }`}>
             {visiblePct === null ? "--" : `${visiblePct}%`}
           </div>
-          <div className="mt-0.5 text-[8px] uppercase tracking-[0.18em] text-[#556076]">Route Visibility</div>
+          <div className={`mt-0.5 text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Route Visibility</div>
         </div>
       </div>
 
-      <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+      <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
         <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Coverage Ribbon</span>
-          <span className="text-[9px] text-[#8f9bb1]">{timelineEvents.length} events</span>
+          <span className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Coverage Ribbon</span>
+          <span className={`text-[9px] ${UI_SURFACES.textSoftBright}`}>{timelineEvents.length} events</span>
         </div>
 
         <CoverageRibbon path={activePath} coverageCells={result?.coverageCells ?? []} stepM={0.25} />
@@ -280,7 +281,7 @@ export function PathMap({
 
       <div className="mt-2 flex gap-1.5">
         <button type="button"
-          className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-[#24283a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+          className={`flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white`}
         >
           <Edit3 className="h-3 w-3" />
           Edit Path
@@ -351,11 +352,11 @@ function CurrentPathStatePanel({
   const upcomingRiskEvent = timelineEvents.find((event) => event.timeS > currentTime && event.event === "lost") ?? nextEvent;
 
   return (
-    <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+    <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Now</div>
-          <div className="mt-0.5 text-[10px] text-[#9aa6bf]">
+          <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Now</div>
+          <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textSoftMuted}`}>
             {activePath ? activePath.label : "No path selected"}
           </div>
         </div>
@@ -365,41 +366,41 @@ function CurrentPathStatePanel({
       </div>
 
       <div className="mt-2 grid grid-cols-2 gap-2 text-[9px]">
-        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Time</div>
-          <div className="text-[11px] font-semibold text-[#dfe5f2]">{currentTime.toFixed(1)}s</div>
+        <div className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+          <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Time</div>
+          <div className={`text-[11px] font-semibold ${UI_SURFACES.textBody3}`}>{currentTime.toFixed(1)}s</div>
         </div>
-        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Visibility State</div>
-          <div className="text-[11px] font-semibold text-[#dfe5f2]">
+        <div className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+          <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Visibility State</div>
+          <div className={`text-[11px] font-semibold ${UI_SURFACES.textBody3}`}>
             {visibilityState}
           </div>
         </div>
-        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Best Camera</div>
-          <div className="text-[11px] font-semibold text-[#dfe5f2]">
+        <div className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+          <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Best Camera</div>
+          <div className={`text-[11px] font-semibold ${UI_SURFACES.textBody3}`}>
             {bestCameraNow ?? "None"}
           </div>
         </div>
-        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Actor Position</div>
-          <div className="text-[11px] font-semibold text-[#dfe5f2]">
+        <div className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+          <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Actor Position</div>
+          <div className={`text-[11px] font-semibold ${UI_SURFACES.textBody3}`}>
             {replayActor ? `${replayActor[0].toFixed(1)}, ${replayActor[1].toFixed(1)}` : "--"}
           </div>
         </div>
       </div>
 
-      <div className="mt-2 rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-        <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Event</div>
-        <div className="text-[10px] font-semibold text-[#dfe5f2]">
+      <div className={`mt-2 rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+        <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Event</div>
+        <div className={`text-[10px] font-semibold ${UI_SURFACES.textBody3}`}>
           {currentEvent ? `${currentEvent.event}${currentEvent.reason ? ` · ${currentEvent.reason}` : ""}` : "Awaiting replay"}
         </div>
       </div>
 
       {upcomingRiskEvent ? (
-        <div className="mt-2 rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Upcoming Lost / Zone Event</div>
-          <div className="text-[10px] font-semibold text-[#dfe5f2]">
+        <div className={`mt-2 rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+          <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Upcoming Lost / Zone Event</div>
+          <div className={`text-[10px] font-semibold ${UI_SURFACES.textBody3}`}>
             {upcomingRiskEvent.event}
             {upcomingRiskEvent.reason ? ` · ${upcomingRiskEvent.reason}` : ""}
             {" @ "}
@@ -409,11 +410,11 @@ function CurrentPathStatePanel({
       ) : null}
 
       {currentSample ? (
-        <div className="mt-2 flex flex-wrap gap-1.5 text-[8px] text-[#7f8ca6]">
-          <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[#9ea8bf]">
+        <div className={`mt-2 flex flex-wrap gap-1.5 text-[8px] ${UI_SURFACES.textSoftBright}`}>
+          <span className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1 ${UI_SURFACES.textSoftMuted}`}>
             {currentSample.quality}
           </span>
-          <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[#9ea8bf]">
+          <span className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1 ${UI_SURFACES.textSoftMuted}`}>
             {currentSample.coveringCameras.length > 0 ? currentSample.coveringCameras.length : 0} cams
           </span>
         </div>
@@ -447,17 +448,17 @@ function PathEventsList({
 
   if (timeline.length === 0) {
     return (
-      <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 text-[9px] text-[#6f7b94]">
+      <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 text-[9px] ${UI_SURFACES.textSoftMid}`}>
         No replay events yet.
       </div>
     );
   }
 
   return (
-    <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+    <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Path Events</span>
-        <span className="text-[8px] text-[#8f9bb1]">click to seek</span>
+        <span className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Path Events</span>
+        <span className={`text-[8px] ${UI_SURFACES.textSoftBright}`}>click to seek</span>
       </div>
       <div className="max-h-28 space-y-1 overflow-auto pr-1">
         {timeline.map((event, index) => {
@@ -471,12 +472,12 @@ function PathEventsList({
               className={`flex w-full items-center justify-between rounded-lg border px-2 py-1 text-left transition-colors ${
                 active
                   ? "border-sky-500/40 bg-sky-500/10"
-                  : "border-[#243146] bg-[#0c1320] hover:border-[#2f3c53]"
+                  : "${UI_SURFACES.border} ${UI_SURFACES.bgDeep} hover:border-[#2f3c53]"
               }`}
             >
               <div className="min-w-0">
-                <div className="text-[9px] font-medium text-[#dfe5f2]">{event.event}</div>
-                <div className="text-[8px] text-[#7f8ca6]">
+                <div className={`text-[9px] font-medium ${UI_SURFACES.textBody3}`}>{event.event}</div>
+                <div className={`text-[8px] ${UI_SURFACES.textSoftBright}`}>
                   {event.reason ?? event.cameraId ?? "No detail"}
                 </div>
                 <div className={cn(
@@ -489,9 +490,9 @@ function PathEventsList({
                 )}>
                   {severity}
                 </div>
-                <div className="mt-1 text-[8px] text-[#9ea8bf]">Action: {actionFor(event)}</div>
+                <div className={`mt-1 text-[8px] ${UI_SURFACES.textSoftMuted}`}>Action: {actionFor(event)}</div>
               </div>
-              <div className="flex flex-col items-end gap-0.5 text-[8px] text-[#9ea8bf]">
+              <div className={`flex flex-col items-end gap-0.5 text-[8px] ${UI_SURFACES.textSoftMuted}`}>
                 <span>{event.timeS.toFixed(1)}s</span>
                 {event.quality ? (
                   <span className="rounded border border-[#2c3347] px-1 py-0.5" style={{ color: qualityColor(event.quality) }}>
@@ -518,7 +519,7 @@ function PathSegmentDetails({
 }) {
   if (!path || samples.length < 2 || selectedIndex < 0) {
     return (
-      <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 text-[9px] text-[#6f7b94]">
+      <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 text-[9px] ${UI_SURFACES.textSoftMid}`}>
         No segment selected.
       </div>
     );
@@ -532,29 +533,29 @@ function PathSegmentDetails({
   }
 
   return (
-    <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+    <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Segment Details</span>
-        <span className="text-[8px] text-[#8f9bb1]">
+        <span className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Segment Details</span>
+        <span className={`text-[8px] ${UI_SURFACES.textSoftBright}`}>
           {selectedIndex + 1}/{Math.max(1, samples.length - 1)}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-2 text-[9px]">
-        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">From</div>
-          <div className="font-semibold text-[#dfe5f2]">{start.distanceM.toFixed(1)}m</div>
+        <div className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+          <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>From</div>
+          <div className={`font-semibold ${UI_SURFACES.textBody3}`}>{start.distanceM.toFixed(1)}m</div>
         </div>
-        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">To</div>
-          <div className="font-semibold text-[#dfe5f2]">{end.distanceM.toFixed(1)}m</div>
+        <div className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+          <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>To</div>
+          <div className={`font-semibold ${UI_SURFACES.textBody3}`}>{end.distanceM.toFixed(1)}m</div>
         </div>
-        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Quality</div>
+        <div className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+          <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Quality</div>
           <div className="font-semibold" style={{ color: qualityColor(start.quality) }}>{start.quality}</div>
         </div>
-        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Cameras</div>
-          <div className="font-semibold text-[#dfe5f2]">{start.coveringCameras.length > 0 ? start.coveringCameras.join(", ") : "None"}</div>
+        <div className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+          <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Cameras</div>
+          <div className={`font-semibold ${UI_SURFACES.textBody3}`}>{start.coveringCameras.length > 0 ? start.coveringCameras.join(", ") : "None"}</div>
         </div>
       </div>
     </div>

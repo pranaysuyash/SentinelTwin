@@ -45,7 +45,7 @@ export function NodeAppearanceSection({
           <button
             type="button"
             onClick={() => onChange(undefined)}
-            className={`rounded px-1.5 py-0.5 text-[9px] ${UI_SURFACES.textDimMid} transition-colors hover:text-[#a8b4cc]`}
+            className={`rounded px-1.5 py-0.5 text-[9px] ${UI_SURFACES.textDimMid} transition-colors ${UI_SURFACES.hoverTextSoft}`}
             title="Reset appearance to the built-in look"
           >
             Reset

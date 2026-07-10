@@ -117,7 +117,7 @@ export function RedundancyTab() {
             </div>
           ))}
           <div className="flex items-center gap-1">
-            <span className="h-2.5 w-2.5 flex-shrink-0 rounded-sm bg-[#1f2536]" />
+            <span className={`h-2.5 w-2.5 flex-shrink-0 rounded-sm ${UI_SURFACES.borderSubtle}`} />
             <span className={`text-[7px] ${UI_SURFACES.textMuted}`}>None</span>
           </div>
         </div>
@@ -202,7 +202,7 @@ export function RedundancyTab() {
                   return (
                     <tr
                       key={camera.id}
-                      className={`border-t ${UI_SURFACES.borderFaintAlt} transition-colors ${UI_SURFACES.hoverBgSubtle}`}
+                      className={`border-t ${UI_SURFACES.borderFaint} transition-colors ${UI_SURFACES.hoverBgSubtle}`}
                     >
                       {/* Camera name cell */}
                       <td className="border-r border-[#1a1d26] px-2 py-1.5">
@@ -367,7 +367,7 @@ export function RedundancyTab() {
                     const zr = zoneResultMap[zone.id];
                     return (
                       <div key={zone.id} className="flex items-center justify-between gap-1 py-0.5">
-                        <span className={`truncate text-[8px] ${UI_SURFACES.textSoft}`}>{zone.label}</span>
+                        <span className={`truncate text-[8px] ${UI_SURFACES.textSoftMid}`}>{zone.label}</span>
                         <span className="flex-shrink-0 text-[7px] font-semibold text-green-500">
                           ×{zr?.redundancyCameraCount ?? 0}
                         </span>

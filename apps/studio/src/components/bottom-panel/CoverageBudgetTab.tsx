@@ -137,7 +137,7 @@ export function CoverageBudgetTab() {
           <button
             type="button"
             onClick={exportSummary}
-            className={`ml-auto rounded border ${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-semibold ${UI_SURFACES.textNear} transition-colors hover:border-sky-400/30 hover:text-white`}
+            className={`ml-auto rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-semibold ${UI_SURFACES.textNear} transition-colors hover:border-sky-400/30 hover:text-white`}
           >
             Export Summary
           </button>
@@ -200,13 +200,13 @@ export function CoverageBudgetTab() {
                     </thead>
                     <tbody>
                       {budget.breakdownByCamera.map((c) => (
-                        <tr key={c.cameraId} className={`border-b ${UI_SURFACES.borderFaintAlt} transition-colors ${UI_SURFACES.hoverBgSubtle}`}>
+                        <tr key={c.cameraId} className={`border-b ${UI_SURFACES.borderFaint} transition-colors ${UI_SURFACES.hoverBgSubtle}`}>
                           <td className={`px-2 py-1 text-left ${UI_SURFACES.textBody}`}>{c.name}</td>
                           <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textMuted5}`}>{fmt(c.cost)}</td>
                           <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textMuted5}`}>{fmt(c.installation)}</td>
                           <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textMuted5}`}>{fmt(c.cabling)}</td>
                           <td className={`px-2 py-1 text-right font-mono font-semibold ${UI_SURFACES.textBody}`}>{fmt(c.total)}</td>
-                          <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textSoft}`}>{c.laborHours.toFixed(1)}</td>
+                          <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textSoftMid}`}>{c.laborHours.toFixed(1)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -232,12 +232,12 @@ export function CoverageBudgetTab() {
                     </thead>
                     <tbody>
                       {budget.breakdownByLight.map((l) => (
-                        <tr key={l.lightId} className={`border-b ${UI_SURFACES.borderFaintAlt} transition-colors ${UI_SURFACES.hoverBgSubtle}`}>
+                        <tr key={l.lightId} className={`border-b ${UI_SURFACES.borderFaint} transition-colors ${UI_SURFACES.hoverBgSubtle}`}>
                           <td className={`px-2 py-1 text-left ${UI_SURFACES.textBody}`}>{l.name}</td>
                           <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textMuted5}`}>{fmt(l.cost)}</td>
                           <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textMuted5}`}>{fmt(l.installation)}</td>
                           <td className={`px-2 py-1 text-right font-mono font-semibold ${UI_SURFACES.textBody}`}>{fmt(l.total)}</td>
-                          <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textSoft}`}>{l.laborHours.toFixed(1)}</td>
+                          <td className={`px-2 py-1 text-right font-mono ${UI_SURFACES.textSoftMid}`}>{l.laborHours.toFixed(1)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -275,14 +275,14 @@ export function CoverageBudgetTab() {
                 <button
                   type="button"
                   onClick={runBudget}
-                  className={`rounded border ${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} px-2.5 py-1 text-[9px] font-semibold ${UI_SURFACES.textNear} transition-colors hover:border-green-400/30 hover:text-white`}
+                  className={`rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} px-2.5 py-1 text-[9px] font-semibold ${UI_SURFACES.textNear} transition-colors hover:border-green-400/30 hover:text-white`}
                 >
                   Re-run Budget
                 </button>
                 <button
                   type="button"
                   onClick={exportSummary}
-                  className={`rounded border ${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} px-2.5 py-1 text-[9px] font-semibold ${UI_SURFACES.textNear} transition-colors hover:border-sky-400/30 hover:text-white`}
+                  className={`rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} px-2.5 py-1 text-[9px] font-semibold ${UI_SURFACES.textNear} transition-colors hover:border-sky-400/30 hover:text-white`}
                 >
                   Copy Summary
                 </button>
@@ -297,11 +297,11 @@ export function CoverageBudgetTab() {
               <div className="space-y-0.5">
                 <div className="flex justify-between text-[8px]">
                   <span className={`${UI_SURFACES.textMuted}`}>Cable / m</span>
-                  <span className={`font-mono ${UI_SURFACES.textSoft}`}>{fmt(CABLE_COST_PER_METER)}</span>
+                  <span className={`font-mono ${UI_SURFACES.textSoftMid}`}>{fmt(CABLE_COST_PER_METER)}</span>
                 </div>
                 <div className="flex justify-between text-[8px]">
                   <span className={`${UI_SURFACES.textMuted}`}>Labor / hr</span>
-                  <span className={`font-mono ${UI_SURFACES.textSoft}`}>{fmt(LABOR_RATE_PER_HOUR)}</span>
+                  <span className={`font-mono ${UI_SURFACES.textSoftMid}`}>{fmt(LABOR_RATE_PER_HOUR)}</span>
                 </div>
               </div>
 
@@ -318,7 +318,7 @@ export function CoverageBudgetTab() {
                   return (
                     <div key={type} className="flex justify-between text-[8px]">
                       <span className={`${UI_SURFACES.textMuted} capitalize`}>{type}</span>
-                      <span className={`font-mono ${UI_SURFACES.textSoft}`}>{fmt(rate)}</span>
+                      <span className={`font-mono ${UI_SURFACES.textSoftMid}`}>{fmt(rate)}</span>
                     </div>
                   );
                 })}

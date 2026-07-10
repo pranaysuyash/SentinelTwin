@@ -185,7 +185,7 @@ export function ReplayStatusOverlay({
       {segmentLabel ? (
         <>
           <div className="h-3 w-px bg-[#243146]" />
-          <div className="max-w-44 truncate text-[9px] text-[#8ea6cc]">
+          <div className={`max-w-44 truncate text-[9px] ${UI_SURFACES.textMuted3}`}>
             {segmentLabel}
           </div>
         </>
@@ -299,10 +299,10 @@ export function DoriInsightCard({
           </div>
         ) : null}
       </div>
-      <div className={`mt-2 rounded-lg border border-[#1f2b42] ${UI_SURFACES.card} px-2 py-1.5 text-[9px] text-[#8b96ab]`}>
+      <div className={`mt-2 rounded-lg border border-[#1f2b42] ${UI_SURFACES.card} px-2 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
         Why this quality: {reasonLine}
       </div>
-      <div className={`mt-2 rounded-lg border border-[#1f2b42] ${UI_SURFACES.card} px-2 py-1.5 text-[9px] text-[#8b96ab]`}>
+      <div className={`mt-2 rounded-lg border border-[#1f2b42] ${UI_SURFACES.card} px-2 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
         {camera.name} is being used to inspect the current coverage scenario.
       </div>
     </div>
@@ -461,7 +461,7 @@ export function BottomControlStrip({
                   });
                   setMoreOpen(false);
                 }}
-                className={`w-full rounded-md px-2 py-1.5 text-left text-[9px] font-medium ${UI_SURFACES.textBody} transition-colors hover:bg-[#1a2233]`}
+                className={`w-full rounded-md px-2 py-1.5 text-left text-[9px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBg}`}
               >
                 Show replay essentials
               </button>
@@ -478,7 +478,7 @@ export function BottomControlStrip({
                   });
                   setMoreOpen(false);
                 }}
-                className={`w-full rounded-md px-2 py-1.5 text-left text-[9px] font-medium ${UI_SURFACES.textBody} transition-colors hover:bg-[#1a2233]`}
+                className={`w-full rounded-md px-2 py-1.5 text-left text-[9px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBg}`}
               >
                 Minimal camera feed
               </button>
@@ -495,7 +495,7 @@ export function BottomControlStrip({
                   });
                   setMoreOpen(false);
                 }}
-                className={`w-full rounded-md px-2 py-1.5 text-left text-[9px] font-medium ${UI_SURFACES.textBody} transition-colors hover:bg-[#1a2233]`}
+                className={`w-full rounded-md px-2 py-1.5 text-left text-[9px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBg}`}
               >
                 Inspection preset
               </button>
@@ -520,10 +520,10 @@ export function BottomControlStrip({
       <div className={`rounded-md border ${UI_SURFACES.borderStrong} bg-black/55 px-2 py-1.5 text-[8px] uppercase tracking-[0.08em] ${UI_SURFACES.textMuted3}`}>
         <div className={`font-semibold ${UI_SURFACES.textBody}`}>Timeline / Path Replay</div>
         <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[7px]">
-          <span className={`rounded border border-[#2f3d57] ${UI_SURFACES.cardAlt} px-1 py-0.5`}>Events</span>
-          <span className={`rounded border border-[#2f3d57] ${UI_SURFACES.cardAlt} px-1 py-0.5`}>Quality Over Time</span>
-          <span className={`rounded border border-[#2f3d57] ${UI_SURFACES.cardAlt} px-1 py-0.5`}>Camera Wall Preview</span>
-          <span className={`rounded border border-[#2f3d57] ${UI_SURFACES.cardAlt} px-1 py-0.5`}>Scenario / Path</span>
+          <span className={`rounded border border-[#2f3d57] ${UI_SURFACES.card} px-1 py-0.5`}>Events</span>
+          <span className={`rounded border border-[#2f3d57] ${UI_SURFACES.card} px-1 py-0.5`}>Quality Over Time</span>
+          <span className={`rounded border border-[#2f3d57] ${UI_SURFACES.card} px-1 py-0.5`}>Camera Wall Preview</span>
+          <span className={`rounded border border-[#2f3d57] ${UI_SURFACES.card} px-1 py-0.5`}>Scenario / Path</span>
         </div>
       </div>
     </div>

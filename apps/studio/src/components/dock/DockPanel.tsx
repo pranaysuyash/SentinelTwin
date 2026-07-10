@@ -116,7 +116,7 @@ export function DockPanel({
         type="button"
         onClick={onToggle}
         className={cn(
-          `absolute z-30 inline-flex h-6 w-6 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`,
+          `absolute z-30 inline-flex h-6 w-6 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`,
           isBottom ? "right-2 top-2" : side === "left" ? "right-2 top-2" : "left-2 top-2",
         )}
         title={`Collapse ${title}`}

@@ -20,6 +20,7 @@ import { useStudioStore } from "@/store/studio-store";
 import type { SiteIntakeSource } from "@/lib/site-compiler";
 import { useProductViewStore } from "@/store/product-view-store";
 import { writeClipboardText } from "@/lib/share-link";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 function countSceneEntities(scene: SecurityScene) {
   return {
@@ -350,12 +351,12 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
         </div>
 
         {/* Provider status */}
-        <div className="mt-4 rounded-lg border border-[#22314b] bg-[#101a2b] px-3 py-2 text-[10px] text-[#97a8c9]">
+        <div className={`mt-4 rounded-lg border ${UI_SURFACES.borderStandard} bg-[#101a2b] px-3 py-2 text-[10px] text-[#97a8c9]`}>
           <div className="flex flex-wrap items-center gap-2">
             <span className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${aiDraftModelAvailable ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200" : "border-amber-400/20 bg-amber-500/10 text-amber-200"}`}>
               {aiDraftModeLabel}
             </span>
-            <span className="rounded-full border border-[#2a3347] bg-[#0d1421] px-2 py-0.5 text-[9px] text-[#c4d5ff]">
+            <span className={`rounded-full border ${UI_SURFACES.borderDark} bg-[#0d1421] px-2 py-0.5 text-[9px] text-[#c4d5ff]`}>
               {currentAiProvider.providerLabel}
             </span>
             <span
@@ -370,8 +371,8 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
               {currentAiProviderHealth.overallStatus === "healthy" ? "Assistant ready" : currentAiProviderHealth.overallStatus === "partial" ? "Assistant limited" : "Assistant blocked"}
             </span>
           </div>
-          <p className="mt-2 text-[10px] leading-snug text-[#7c8ba8]">{aiDraftModeDescription}</p>
-          <details className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
+          <p className={`mt-2 text-[10px] leading-snug ${UI_SURFACES.textSoftBright}`}>{aiDraftModeDescription}</p>
+          <details className={`mt-1 text-[10px] leading-snug ${UI_SURFACES.textSoftBright}`}>
             <summary className="cursor-pointer text-[#9fb0ce]">Advanced assistant diagnostics</summary>
             <p className="mt-1">
               Provider readiness: {currentAiProviderHealth.healthyProviders} ready / {currentAiProviderHealth.partialProviders} limited / {currentAiProviderHealth.blockedProviders} blocked.
@@ -393,17 +394,17 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
             resetAiDraftPreview();
           }}
           placeholder="Describe the site layout, rooms, cameras, and security zones..."
-          className="mt-4 h-36 w-full rounded-lg border border-[#2a3347] bg-[#101827] p-3 text-xs text-[#d7e1f2] outline-none focus:border-blue-500/50"
+          className={`mt-4 h-36 w-full rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} p-3 text-xs text-[#d7e1f2] outline-none focus:border-blue-500/50`}
         />
 
         {aiWarning ? <p className="mt-2 text-xs text-amber-300">{aiWarning}</p> : null}
 
         {/* Draft preview */}
         {aiDraftSummary ? (
-          <div className="mt-3 rounded-2xl border border-[#22314b] bg-[#0e1726] p-3">
+          <div className={`mt-3 rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.hoverBgDark} p-3`}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7e8fb0]">Draft Preview</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textSoftBright}`}>Draft Preview</div>
                 <div className="mt-1 text-sm font-semibold text-white">{aiDraftSummary.sceneName}</div>
                 <div className="mt-1 text-[10px] text-[#93a7c6]">
                   {aiDraftSummary.sourceLabel} · {aiDraftSummary.modeLabel} · {aiDraftSummary.confidenceLabel} · {aiDraftSummary.sizeLabel}
@@ -424,8 +425,8 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                 ["Paths", "paths"],
                 ["Entries", "entryPoints"],
               ].map(([label, key]) => (
-                <div key={key} className="rounded-lg border border-[#22314b] bg-[#101827] px-2 py-1.5 text-[#b6c6e6]">
-                  <div className="text-[#7e8fb0]">{label}</div>
+                <div key={key} className={`rounded-lg border ${UI_SURFACES.borderStandard} ${UI_SURFACES.card} px-2 py-1.5 text-[#b6c6e6]`}>
+                  <div className={`${UI_SURFACES.textSoftBright}`}>{label}</div>
                   <div className="text-sm font-semibold text-white">
                     {aiDraftDisplayCounts?.[key as keyof typeof aiDraftDisplayCounts] ?? 0}
                   </div>
@@ -435,13 +436,13 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
 
             {/* Comparison */}
             {aiDraftComparison ? (
-              <div className="mt-3 rounded-2xl border border-[#22314b] bg-[#0b1220] p-3">
+              <div className={`mt-3 rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panelDeep} p-3`}>
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7e8fb0]">Workspace comparison</div>
+                    <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textSoftBright}`}>Workspace comparison</div>
                     <div className="mt-0.5 text-[10px] text-[#93a7c6]">What changes if you apply this draft?</div>
                   </div>
-                  <span className="rounded-full border border-[#2a3347] bg-[#101827] px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-[#c4d5ff]">
+                  <span className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-[#c4d5ff]`}>
                     Current vs Draft
                   </span>
                 </div>
@@ -460,8 +461,8 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                     const deltaLabel = delta === 0 ? "No change" : delta > 0 ? `+${delta}` : `${delta}`;
                     const deltaTone = delta > 0 ? "text-emerald-300" : delta < 0 ? "text-red-300" : "text-[#8ea2c5]";
                     return (
-                      <div key={key} className="rounded-lg border border-[#22314b] bg-[#101827] px-2 py-1.5">
-                        <div className="text-[#7e8fb0]">{label}</div>
+                      <div key={key} className={`rounded-lg border ${UI_SURFACES.borderStandard} ${UI_SURFACES.card} px-2 py-1.5`}>
+                        <div className={`${UI_SURFACES.textSoftBright}`}>{label}</div>
                         <div className="mt-0.5 flex items-baseline justify-between gap-2">
                           <span className="text-[10px] text-[#8ea2c5]">{currentValue} → {draftValue}</span>
                           <span className={`text-[10px] font-semibold ${deltaTone}`}>{deltaLabel}</span>
@@ -476,14 +477,14 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
             {/* JSON */}
             <div className="mt-3 flex items-center justify-between gap-2">
               <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7e8fb0]">Advanced Data View</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textSoftBright}`}>Advanced Data View</div>
                 <div className="mt-0.5 text-[10px] text-[#93a7c6]">Optional site twin data review before applying the draft.</div>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setAiDraftJsonVisible((v) => !v)}
-                  className="rounded-full border border-[#2a3347] bg-[#101827] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff]"
+                  className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff]`}
                 >
                   {aiDraftJsonVisible ? "Hide Data" : "Show Data"}
                 </button>
@@ -494,7 +495,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                     setAiDraftJsonEditable((e) => !e);
                     setAiDraftJsonError(null);
                   }}
-                  className="rounded-full border border-[#2a3347] bg-[#101827] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff]"
+                  className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff]`}
                 >
                   {aiDraftJsonEditable ? "Lock Data" : "Edit Data"}
                 </button>
@@ -506,7 +507,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                     setAiDraftCopyNotice(copied ? "Draft JSON copied to clipboard." : "Clipboard unavailable.");
                   }}
                   disabled={!aiDraftSceneJson}
-                  className="rounded-full border border-[#2a3347] bg-[#101827] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff] disabled:cursor-not-allowed disabled:opacity-60"
+                  className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff] disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   Copy Data
                 </button>
@@ -542,7 +543,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
               </div>
             ) : null}
 
-            <div className="mt-3 rounded-xl border border-[#1e2a42] bg-[#0b1220] px-3 py-2 text-[10px] text-[#a8b8d5]">
+            <div className={`mt-3 rounded-xl border border-[#1e2a42] ${UI_SURFACES.panelDeep} px-3 py-2 text-[10px] text-[#a8b8d5]`}>
               {aiDraftSummary.summary}
             </div>
             {aiDraftSummary.warnings.length > 0 ? (
@@ -555,7 +556,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
             ) : null}
           </div>
         ) : (
-          <div className="mt-3 rounded-lg border border-dashed border-[#22314b] bg-[#101827]/60 px-3 py-2 text-[10px] text-[#89a0c4]">
+          <div className={`mt-3 rounded-lg border border-dashed ${UI_SURFACES.borderStandard} ${UI_SURFACES.card}/60 px-3 py-2 text-[10px] text-[#89a0c4]`}>
             Generate a preview to review the site summary, counts, and notes before applying it to the workspace.
           </div>
         )}
@@ -565,7 +566,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
           <button
             type="button"
             onClick={handleCancel}
-            className="rounded-lg border border-[#2a3347] px-3 py-1.5 text-xs text-[#9bb0cf] hover:bg-white/[0.03]"
+            className={`rounded-lg border ${UI_SURFACES.borderDark} px-3 py-1.5 text-xs ${UI_SURFACES.textMuted4} hover:bg-white/[0.03]`}
           >
             Cancel
           </button>
@@ -588,7 +589,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
         </div>
 
         {aiDraftNotice ? (
-          <div className="mt-3 rounded-lg border border-[#22314b] bg-[#101827] px-3 py-2 text-[10px] text-[#b6c6e6]">
+          <div className={`mt-3 rounded-lg border ${UI_SURFACES.borderStandard} ${UI_SURFACES.card} px-3 py-2 text-[10px] text-[#b6c6e6]`}>
             <span className="font-semibold text-cyan-200">Draft status:</span> {aiDraftNotice}
           </div>
         ) : null}

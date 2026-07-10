@@ -99,7 +99,7 @@ export function SceneAppearancePanel() {
               <button
                 type="button"
                 onClick={() => updateSceneAppearance({ lighting: { [envMode]: undefined } })}
-                className={`rounded px-1.5 py-0.5 text-[9px] ${UI_SURFACES.textDimMid} transition-colors hover:text-[#a8b4cc]`}
+                className={`rounded px-1.5 py-0.5 text-[9px] ${UI_SURFACES.textDimMid} transition-colors ${UI_SURFACES.hoverTextSoft}`}
                 title={`Reset ${ENV_MODE_LABEL[envMode] ?? envMode} lighting to defaults`}
               >
                 Reset
@@ -275,7 +275,7 @@ export function SceneAppearancePanel() {
                 surfaces: undefined,
               })
             }
-            className={`flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-[#24304a] ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#3b4a69] hover:bg-[#172235]`}
+            className={`flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgDark}`}
           >
             Reset All Appearance Customization
           </button>

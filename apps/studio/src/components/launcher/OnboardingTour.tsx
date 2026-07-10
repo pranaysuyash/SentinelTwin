@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export type TourStep = {
   targetSelector: string;
@@ -120,13 +121,13 @@ export function OnboardingTourOverlay({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative max-w-md rounded-2xl border border-[#2a3246] bg-[#0b0f17] p-6 shadow-2xl"
+        className={`relative max-w-md rounded-2xl border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} p-6 shadow-2xl`}
         style={{ animation: "tourFadeIn 0.2s ease-out" }}
       >
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-lg p-1 text-[#68738a] hover:bg-white/8 hover:text-white transition-colors"
+          className={`absolute right-3 top-3 rounded-lg p-1 ${UI_SURFACES.textSoftMid} hover:bg-white/8 hover:text-white transition-colors`}
         >
           <X className="h-4 w-4" />
         </button>
@@ -157,7 +158,7 @@ export function OnboardingTourOverlay({
               <button
                 type="button"
                 onClick={onPrev}
-                className="flex items-center gap-1 rounded-lg border border-[#2a3246] px-3 py-1.5 text-[11px] text-[#b9c2d8] hover:bg-white/8 transition-colors"
+                className={`flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderDark} px-3 py-1.5 text-[11px] text-[#b9c2d8] hover:bg-white/8 transition-colors`}
               >
                 <ChevronLeft className="h-3 w-3" />
                 Back

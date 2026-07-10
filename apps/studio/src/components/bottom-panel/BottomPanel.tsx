@@ -89,7 +89,7 @@ function getTabLabel(tab: BottomTab) {
 
 function TabBadge({ children, tone = "slate" }: { children: React.ReactNode; tone?: "slate" | "green" | "blue" | "amber" | "red" }) {
   const toneClass = {
-    slate: `${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3}`,
+    slate: `${UI_SURFACES.borderStrong} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3}`,
     green: "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
     blue: "border-blue-500/20 bg-blue-500/10 text-blue-300",
     amber: "border-amber-500/20 bg-amber-500/10 text-amber-300",
@@ -215,7 +215,7 @@ export function BottomPanel() {
             {workspacePreset.replace(/_/g, " ")} · {enabledTabs.length > 0 ? `${enabledTabs.length} modules available` : "No modules enabled"}
           </div>
           <div className="ml-auto flex items-center gap-1">
-            <span className={`rounded border ${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-semibold ${UI_SURFACES.textMuted3}`}>
+            <span className={`rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-semibold ${UI_SURFACES.textMuted3}`}>
               {getTabLabel(singleModuleTab)}
             </span>
             <button
@@ -224,7 +224,7 @@ export function BottomPanel() {
                 setBottomDrawerMode("single_module");
                 setTab(singleModuleTab);
               }}
-              className={`rounded border ${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-semibold ${UI_SURFACES.textBody} transition-colors hover:border-sky-400/30 hover:text-white`}
+              className={`rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-semibold ${UI_SURFACES.textBody} transition-colors hover:border-sky-400/30 hover:text-white`}
             >
               Show Current Module
             </button>
@@ -244,14 +244,14 @@ export function BottomPanel() {
             <button
               type="button"
               onClick={() => setBottomDrawerMode("tabs")}
-              className={`rounded border ${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-semibold ${UI_SURFACES.textBody} transition-colors hover:border-sky-400/30 hover:text-white`}
+              className={`rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-semibold ${UI_SURFACES.textBody} transition-colors hover:border-sky-400/30 hover:text-white`}
             >
               Show Tabs
             </button>
             <button
               type="button"
               onClick={() => setBottomDrawerMode("hidden")}
-              className={`rounded border ${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-semibold ${UI_SURFACES.textBody} transition-colors hover:border-amber-400/30 hover:text-white`}
+              className={`rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} px-2 py-1 text-[10px] font-semibold ${UI_SURFACES.textBody} transition-colors hover:border-amber-400/30 hover:text-white`}
             >
               Hide Drawer
             </button>
@@ -320,7 +320,7 @@ export function BottomPanel() {
           <button
             type="button"
             onClick={() => setShowPanelExplain((state) => !state)}
-            className={`rounded border ${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} px-2 py-1 text-[10px] ${UI_SURFACES.textMuted4} transition-colors hover:border-sky-400/30 hover:text-white`}
+            className={`rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.card} px-2 py-1 text-[10px] ${UI_SURFACES.textMuted4} transition-colors hover:border-sky-400/30 hover:text-white`}
           >
             Explain this panel
           </button>

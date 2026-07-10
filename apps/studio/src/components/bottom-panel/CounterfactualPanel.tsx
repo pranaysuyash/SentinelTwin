@@ -72,7 +72,7 @@ function DeltaBadge({
 
   return (
     <div className="flex items-center gap-1 text-[9px]">
-      <span className={`${UI_SURFACES.textSoft}`}>{label}</span>
+      <span className={`${UI_SURFACES.textSoftMid}`}>{label}</span>
       <span
         className={cn(
           "font-mono font-medium",
@@ -144,7 +144,7 @@ function SimPlanCard({ plan, isActive, onPreview, onApply, onRevert }: SimPlanCa
           <DeltaBadge value={Number(improvementPct.toFixed(1))} label="Coverage" positive="up" />
           {plan.simulatedCoveragePct !== undefined && (
             <div className="flex items-center gap-1 text-[9px]">
-              <span className={`${UI_SURFACES.textSoft}`}>→ total</span>
+              <span className={`${UI_SURFACES.textSoftMid}`}>→ total</span>
               <span className={`font-mono font-medium ${UI_SURFACES.textSoftMuted}`}>
                 {Math.round(plan.simulatedCoveragePct)}%
               </span>
@@ -248,7 +248,7 @@ function AiCandidateCard({ candidate, onApply }: AiCandidateCardProps) {
             <span
               className={cn(
                 "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border text-[9px] font-bold",
-                COST_COLORS[candidate.costCategory] ?? `${UI_SURFACES.textSoft} ${UI_SURFACES.borderThin}`,
+                COST_COLORS[candidate.costCategory] ?? `${UI_SURFACES.textSoftMid} ${UI_SURFACES.borderThin}`,
               )}
             >
               {candidate.rank}
@@ -258,7 +258,7 @@ function AiCandidateCard({ candidate, onApply }: AiCandidateCardProps) {
           <span
             className={cn(
               "shrink-0 rounded-md border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wider",
-              COST_COLORS[candidate.costCategory] ?? `${UI_SURFACES.textSoft} ${UI_SURFACES.borderThin}`,
+              COST_COLORS[candidate.costCategory] ?? `${UI_SURFACES.textSoftMid} ${UI_SURFACES.borderThin}`,
             )}
           >
             {candidate.costCategory}
@@ -463,7 +463,7 @@ export function CounterfactualPanel() {
               ? "Constraints: budget $500, no new wiring, privacy…"
               : "Describe constraints (e.g., Camera 1 cannot move)"
           }
-          className={`min-w-0 flex-1 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 py-1.5 text-[10px] text-white placeholder-[#4d566b] outline-none transition-colors focus:border-[#3a4158]`}
+          className={`min-w-0 flex-1 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 py-1.5 text-[10px] text-white placeholder-[#4d566b] outline-none transition-colors focus:${UI_SURFACES.textDim}`}
         />
         <button
           type="button"
@@ -519,7 +519,7 @@ export function CounterfactualPanel() {
               </div>
             )}
             {!scanning && counterfactualPlans.length === 0 && (
-              <p className="py-4 text-center text-[10px] text-[#4d566b]">
+              <p className={`py-4 text-center text-[10px] ${UI_SURFACES.textDimMid}`}>
                 Click scan to find simulation-backed fixes.
               </p>
             )}
@@ -561,14 +561,14 @@ export function CounterfactualPanel() {
                 <button
                   type="button"
                   onClick={() => setShowBatchCompare((v) => !v)}
-                  className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-medium ${UI_SURFACES.textSoftMuted} transition-colors hover:border-[#3a4158] hover:text-white`}
+                  className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] font-medium ${UI_SURFACES.textSoftMuted} transition-colors hover:${UI_SURFACES.textDim} hover:text-white`}
                 >
                   {showBatchCompare ? "Card View" : "Batch Compare"}
                 </button>
               </div>
             )}
             {aiCandidates.length === 0 && aiStatus.state !== "parsing" && (
-              <p className="py-4 text-center text-[10px] text-[#4d566b]">
+              <p className={`py-4 text-center text-[10px] ${UI_SURFACES.textDimMid}`}>
                 Click the arrow to ask AI for fix suggestions.
               </p>
             )}

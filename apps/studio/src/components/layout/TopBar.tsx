@@ -322,7 +322,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 type="button"
                 onClick={() => setImportOpen((o) => !o)}
                 title="More import options"
-                className={`inline-flex h-7 items-center justify-center rounded-r-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 ${UI_SURFACES.textMuted2} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
+                className={`inline-flex h-7 items-center justify-center rounded-r-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 ${UI_SURFACES.textMuted2} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
               >
                 <ChevronDown className="h-3 w-3" />
               </button>
@@ -394,14 +394,14 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
         <div className="relative hidden min-w-0 md:block">
           <button type="button"
             onClick={() => setSceneOpen((open) => !open)}
-            className={`flex h-7 min-w-[128px] max-w-[18vw] items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 text-[11px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText} xl:min-w-[170px] xl:max-w-[190px]`}
+            className={`flex h-7 min-w-[128px] max-w-[18vw] items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 text-[11px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText} xl:min-w-[170px] xl:max-w-[190px]`}
           >
             <span className="truncate">{scene.name || "Untitled Site"}</span>
             <ChevronDown className={`h-3 w-3 flex-shrink-0 ${UI_SURFACES.textMuted}`} />
           </button>
           {sceneOpen && (
             <div
-              className={`absolute left-0 top-full z-[420] mt-1 w-64 rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35`}
+              className={`absolute left-0 top-full z-[420] mt-1 w-64 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-1.5 shadow-2xl shadow-black/35`}
               onMouseLeave={() => setSceneOpen(false)}
             >
               {/* User workspaces from localStorage */}
@@ -571,7 +571,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
         <div className="relative hidden min-w-0 2xl:block">
           <button type="button"
             onClick={() => setTargetOpen((open) => !open)}
-            className={`flex h-7 max-w-[190px] items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 text-[11px] font-medium ${UI_SURFACES.textBody} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
+            className={`flex h-7 max-w-[190px] items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 text-[11px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
           >
             <Shield className={`h-3 w-3 ${UI_TONES.info.text}`} />
             <span className="truncate">
@@ -583,7 +583,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           </button>
           {targetOpen && (
             <div
-              className={`absolute left-0 top-full z-[420] mt-1 w-64 rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35`}
+              className={`absolute left-0 top-full z-[420] mt-1 w-64 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-1.5 shadow-2xl shadow-black/35`}
               onMouseLeave={() => setTargetOpen(false)}
             >
               {TARGET_TYPE_OPTIONS.map((entry) => (
@@ -629,7 +629,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           type="button"
           aria-label="Open keyboard shortcuts"
           onClick={() => {}}
-          className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
+          className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
         >
           <Keyboard className="h-3.5 w-3.5" />
         </button>
@@ -670,14 +670,14 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
             aria-haspopup="menu"
             aria-expanded={moreOpen}
             aria-controls="topbar-more-menu"
-            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted} transition-colors hover:border-[#32384d] ${UI_SURFACES.hoverText}`}
+            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
           >
             <MoreHorizontal className="h-4 w-4" />
           </button>
           {moreOpen && (
             <div
               id="topbar-more-menu"
-              className={`absolute right-0 top-full z-[420] mt-1 w-52 rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35`}
+              className={`absolute right-0 top-full z-[420] mt-1 w-52 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-1.5 shadow-2xl shadow-black/35`}
               onMouseLeave={() => setMoreOpen(false)}
             >
               {/* Simulation tools */}

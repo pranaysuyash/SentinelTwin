@@ -192,7 +192,7 @@ export function LiveFeedHUD({
                 {sensorEvent.nearestDistanceM == null ? "—" : `${sensorEvent.nearestDistanceM.toFixed(1)}m`}
               </div>
             </div>
-            <div className="mt-1 text-[8px] text-[#8ea6cc]">{sensorEvent.details}</div>
+            <div className={`mt-1 text-[8px] ${UI_SURFACES.textMuted3}`}>{sensorEvent.details}</div>
           </div>
         ) : null}
 
@@ -210,7 +210,7 @@ export function LiveFeedHUD({
         ) : null}
 
         {flags.path || flags.zones || flags.overlays || flags.grid ? (
-          <div className={`pointer-events-auto flex flex-col gap-1 rounded-xl border border-[#2d3d56] ${UI_SURFACES.panel}/90 px-3 py-2 text-[8px] text-[#8ea6cc] shadow-sm`}>
+          <div className={`pointer-events-auto flex flex-col gap-1 rounded-xl border border-[#2d3d56] ${UI_SURFACES.panel}/90 px-3 py-2 text-[8px] ${UI_SURFACES.textMuted3} shadow-sm`}>
             <div className={`font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textAccent}`}>Active Overlays</div>
             {flags.overlays ? <span>• Overlays: enabled</span> : null}
             {flags.path ? <span>• Path overlays</span> : null}
@@ -270,7 +270,7 @@ export function LiveFeedHUD({
               <div><span className={`${UI_SURFACES.textSoftMid}`}>Night:</span> {cameraMetadataEvent.nightMode ?? "—"}</div>
               <div><span className={`${UI_SURFACES.textSoftMid}`}>Mode:</span> {cameraMetadataEvent.feedMode ?? cameraMetadataEvent.ingestMode}</div>
             </div>
-            <div className="mt-1 text-[8px] text-[#8ea6cc]">
+            <div className={`mt-1 text-[8px] ${UI_SURFACES.textMuted3}`}>
               {cameraMetadataEvent.feedLabel ? `${cameraMetadataEvent.feedLabel} · ` : ""}
               {cameraMetadataEvent.summary}
             </div>
@@ -292,7 +292,7 @@ export function LiveFeedHUD({
               <div><span className={`${UI_SURFACES.textSoftMid}`}>Auth session:</span> {cameraLiveConnectionEvent.authSessionId ?? "—"}</div>
               <div className="col-span-2"><span className={`${UI_SURFACES.textSoftMid}`}>Feed:</span> {cameraLiveConnectionEvent.liveFeedLabel ?? cameraLiveConnectionEvent.liveFeedUrl ?? "—"}</div>
             </div>
-            <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[8px] text-[#8ea6cc]">
+            <div className={`mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[8px] ${UI_SURFACES.textMuted3}`}>
               <div><span className={`${UI_SURFACES.textSoftMid}`}>Started:</span> {cameraLiveConnectionEvent.liveSessionStartedAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionStartedAt).toLocaleTimeString()}</div>
               <div><span className={`${UI_SURFACES.textSoftMid}`}>Confirmed:</span> {cameraLiveConnectionEvent.liveSessionConfirmedAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionConfirmedAt).toLocaleTimeString()}</div>
               <div className="col-span-2"><span className={`${UI_SURFACES.textSoftMid}`}>Expires:</span> {cameraLiveConnectionEvent.liveSessionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionExpiresAt).toLocaleTimeString()}</div>
@@ -305,7 +305,7 @@ export function LiveFeedHUD({
               <div className="col-span-2"><span className={`${UI_SURFACES.textSoftMid}`}>Event expiry:</span> {cameraLiveConnectionEvent.eventSubscriptionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.eventSubscriptionExpiresAt).toLocaleTimeString()}</div>
               <div className="col-span-2"><span className={`${UI_SURFACES.textSoftMid}`}>Heartbeat:</span> {cameraLiveConnectionEvent.lastHeartbeatAt == null ? "—" : new Date(cameraLiveConnectionEvent.lastHeartbeatAt).toLocaleTimeString()} · probes {cameraLiveConnectionEvent.probeCount}</div>
             </div>
-            <div className="mt-1 text-[8px] text-[#8ea6cc]">
+            <div className={`mt-1 text-[8px] ${UI_SURFACES.textMuted3}`}>
               {cameraLiveConnectionEvent.ingestMode === "external" ? "External bind" : "Manual bind"} · {cameraLiveConnectionEvent.summary}
             </div>
           </div>
@@ -313,7 +313,7 @@ export function LiveFeedHUD({
 
         <CameraNoise />
         {operationalFusion && (operationalFusion.operationalHealth !== "unknown" || operationalFusion.sensorFusion.totalCount > 0 || operationalFusion.cameraMetadataEvent || operationalFusion.cameraLiveConnectionEvent) ? (
-          <div className={`pointer-events-auto rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel}/92 px-3 py-2 text-[8px] text-[#8ea6cc] shadow-sm`}>
+          <div className={`pointer-events-auto rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel}/92 px-3 py-2 text-[8px] ${UI_SURFACES.textMuted3} shadow-sm`}>
             <div className={`text-[8px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textAccent}`}>Operational Evidence</div>
             <div className="mt-1 text-[9px] font-semibold text-white">{operationalFusion.operationalHealthLabel}</div>
             <div className={`mt-1 text-[8px] ${UI_SURFACES.textMuted4}`}>{operationalFusion.operationalHealthDetail}</div>

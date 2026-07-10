@@ -47,6 +47,7 @@ import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality } from
 import { QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 
 import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-outcome-selectors";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 type ProjectSort = "recent" | "name" | "coverage";
 type ProjectSourceFilter = "All" | SecurityScene["source"];
@@ -1146,12 +1147,12 @@ export function StudioDashboardHome({
                       aria-current={isActive ? "page" : undefined}
                       disabled={!navActionByKey[item.key]}
                     >
-                      {item.key === "home" ? <MapIcon className={cn("h-4 w-4", isActive ? "text-emerald-300" : "text-[#aab7d1]")} /> : null}
-                      {item.key === "projects" ? <FolderOpen className={cn("h-4 w-4", isActive ? "text-emerald-300" : "text-[#aab7d1]")} /> : null}
-                      {item.key === "reference_sites" ? <LayoutDashboard className={cn("h-4 w-4", isActive ? "text-emerald-300" : "text-[#aab7d1]")} /> : null}
-                      {item.key === "report" ? <FileText className={cn("h-4 w-4", isActive ? "text-emerald-300" : "text-[#aab7d1]")} /> : null}
-                      {item.key === "docs" ? <FileText className={cn("h-4 w-4", isActive ? "text-emerald-300" : "text-[#aab7d1]")} /> : null}
-                      {item.key === "settings" ? <Settings2 className={cn("h-4 w-4", isActive ? "text-emerald-300" : "text-[#aab7d1]")} /> : null}
+                      {item.key === "home" ? <MapIcon className={cn("h-4 w-4", isActive ? "text-emerald-300" : "${UI_SURFACES.textNearAlt}")} /> : null}
+                      {item.key === "projects" ? <FolderOpen className={cn("h-4 w-4", isActive ? "text-emerald-300" : "${UI_SURFACES.textNearAlt}")} /> : null}
+                      {item.key === "reference_sites" ? <LayoutDashboard className={cn("h-4 w-4", isActive ? "text-emerald-300" : "${UI_SURFACES.textNearAlt}")} /> : null}
+                      {item.key === "report" ? <FileText className={cn("h-4 w-4", isActive ? "text-emerald-300" : "${UI_SURFACES.textNearAlt}")} /> : null}
+                      {item.key === "docs" ? <FileText className={cn("h-4 w-4", isActive ? "text-emerald-300" : "${UI_SURFACES.textNearAlt}")} /> : null}
+                      {item.key === "settings" ? <Settings2 className={cn("h-4 w-4", isActive ? "text-emerald-300" : "${UI_SURFACES.textNearAlt}")} /> : null}
                       <span className="flex-1">
                         <span className="block">{item.label}</span>
                         {item.key === "projects" && isActive ? <span className="block text-[10px] font-normal text-emerald-100/70">Workspace library open</span> : null}
@@ -1172,14 +1173,14 @@ export function StudioDashboardHome({
                     key={item.key}
                     type="button"
                     onClick={modeActionByKey[item.key]}
-                    className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-sm text-[#c5cde0] transition-all duration-150 ease-out hover:bg-white/[0.04] hover:text-white"
+                    className={`flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-sm ${UI_SURFACES.textBody} transition-all duration-150 ease-out hover:bg-white/[0.04] hover:text-white`}
                   >
                     {item.key === "coverage" ? <MapIcon className="h-4 w-4 text-emerald-300" /> : null}
-                    {item.key === "camera_view" ? <Camera className="h-4 w-4 text-[#aab7d1]" /> : null}
-                    {item.key === "camera_wall" ? <LayoutDashboard className="h-4 w-4 text-[#aab7d1]" /> : null}
-                    {item.key === "path_replay" ? <Play className="h-4 w-4 text-[#aab7d1]" /> : null}
-                    {item.key === "compare" ? <Layers3 className="h-4 w-4 text-[#aab7d1]" /> : null}
-                    {item.key === "report_lite" ? <FileText className="h-4 w-4 text-[#aab7d1]" /> : null}
+                    {item.key === "camera_view" ? <Camera className={`h-4 w-4 ${UI_SURFACES.textNearAlt}`} /> : null}
+                    {item.key === "camera_wall" ? <LayoutDashboard className={`h-4 w-4 ${UI_SURFACES.textNearAlt}`} /> : null}
+                    {item.key === "path_replay" ? <Play className={`h-4 w-4 ${UI_SURFACES.textNearAlt}`} /> : null}
+                    {item.key === "compare" ? <Layers3 className={`h-4 w-4 ${UI_SURFACES.textNearAlt}`} /> : null}
+                    {item.key === "report_lite" ? <FileText className={`h-4 w-4 ${UI_SURFACES.textNearAlt}`} /> : null}
                     <span>
                       <span className="block">{item.label}</span>
                       <span className="block text-[11px] text-[color:var(--st-muted)]">{item.detail}</span>
@@ -1284,10 +1285,10 @@ export function StudioDashboardHome({
                   previewMode === "3d" ? "[transform:perspective(1800px)_rotateX(8deg)] [transform-origin:center_top]" : "",
                 )}>
                   <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} activePathId={outcomeActivePathId} hydrated={hydrated} />
-                  <div className="pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2 rounded-xl border border-[#2a334a] bg-[#0b111e]/88 px-3 py-1.5 text-[10px] text-[#c7d0e4]">
+                  <div className={`pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2 rounded-xl border border-[#2a334a] bg-[#0b111e]/88 px-3 py-1.5 text-[10px] ${UI_SURFACES.textBody}`}>
                     <Compass className="h-3.5 w-3.5 text-cyan-300" />
                     <span className="font-semibold">N</span>
-                    <span className="text-[#8ea0bf]">Top view</span>
+                    <span className={`${UI_SURFACES.textMuted3}`}>Top view</span>
                   </div>
                   <div className="absolute left-3 top-3 z-20 inline-flex rounded-xl border border-[#2a334a] bg-[#0b111e]/88 p-1">
                     <button
@@ -1312,7 +1313,7 @@ export function StudioDashboardHome({
                     </button>
                   </div>
                   <div className="absolute bottom-3 left-3 z-20 w-[220px] rounded-xl border border-[#2a334a] bg-[#0a111d]/90 px-3 py-2 text-[10px] text-[#c8d3ea]">
-                    <div className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8ea5cc]">Coverage (PPM)</div>
+                    <div className={`text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted3}`}>Coverage (PPM)</div>
                     <div className="mt-1 grid grid-cols-[12px_1fr] items-center gap-x-2 gap-y-1">
                       <span className="h-2.5 w-2.5 rounded-sm bg-[#38bdf8]" />
                       <span>250+ Identification</span>

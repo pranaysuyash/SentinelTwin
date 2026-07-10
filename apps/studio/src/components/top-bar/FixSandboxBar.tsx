@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useStudioStore } from "@/store/studio-store";
 import { cn } from "@/lib/cn";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export function FixSandboxBar() {
   const fixSandboxActive = useStudioStore((s) => s.fixSandboxActive);
@@ -69,10 +70,10 @@ export function FixSandboxBar() {
 
       <div className="flex items-center gap-3 text-[11px] text-[#b0b9ce]">
         <span>
-          <span className="font-medium text-[#c7d0e4]">{fixSandboxDiff.camerasChanged}</span> camera{fixSandboxDiff.camerasChanged === 1 ? "" : "s"} changed
+          <span className={`font-medium ${UI_SURFACES.textBody}`}>{fixSandboxDiff.camerasChanged}</span> camera{fixSandboxDiff.camerasChanged === 1 ? "" : "s"} changed
         </span>
         <span>
-          <span className="font-medium text-[#c7d0e4]">{fixSandboxDiff.zonesAffected}</span> zone{fixSandboxDiff.zonesAffected === 1 ? "" : "s"} affected
+          <span className={`font-medium ${UI_SURFACES.textBody}`}>{fixSandboxDiff.zonesAffected}</span> zone{fixSandboxDiff.zonesAffected === 1 ? "" : "s"} affected
         </span>
       </div>
 

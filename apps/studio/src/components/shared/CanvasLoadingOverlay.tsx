@@ -1,14 +1,15 @@
 "use client";
 
 import { Html } from "@react-three/drei";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 export function CanvasLoadingOverlay({ label = "Loading scene" }: { label?: string }) {
   return (
     <Html center>
-      <div className="rounded-xl border border-[#2a3248] bg-[#0c0f16]/90 px-4 py-3 shadow-[0_8px_28px_rgba(0,0,0,0.42)]">
+      <div className={`rounded-xl border ${UI_SURFACES.borderDark} bg-[#0c0f16]/90 px-4 py-3 shadow-[0_8px_28px_rgba(0,0,0,0.42)]`}>
         <div className="flex flex-col items-center gap-2.5">
           {/* Animated scanline pattern */}
-          <div className="relative h-8 w-16 overflow-hidden rounded-md border border-[#2a3248] bg-[#0b0f17]">
+          <div className={`relative h-8 w-16 overflow-hidden rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel}`}>
             <div
               className="absolute inset-0 opacity-30"
               style={{

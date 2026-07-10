@@ -10,7 +10,7 @@ import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 
 const TONE_CLASSES: Record<NonNullable<OperatorWorkflow["tone"]>, string> = {
-  slate: `${UI_SURFACES.borderStrongAlt2} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} ${UI_SURFACES.hoverBorderBright}`,
+  slate: `${UI_SURFACES.borderStrong} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} ${UI_SURFACES.hoverBorderBright}`,
   green: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:border-emerald-400/60",
   blue: "border-blue-500/30 bg-blue-500/10 text-blue-200 hover:border-blue-400/60",
   amber: "border-amber-500/30 bg-amber-500/10 text-amber-200 hover:border-amber-400/60",
@@ -65,7 +65,7 @@ export function WorkflowChips({ activeTab }: { activeTab: BottomTab }) {
         <button
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
-          className={`rounded-md border ${UI_SURFACES.borderStrongAlt2} bg-[#0e1320] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright}`}
+          className={`rounded-md border ${UI_SURFACES.borderStrong} ${UI_SURFACES.bgDeep} px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright}`}
         >
           {expanded ? "Hide" : `+${hiddenCount} more`}
         </button>
@@ -73,7 +73,7 @@ export function WorkflowChips({ activeTab }: { activeTab: BottomTab }) {
         <button
           type="button"
           onClick={() => setExpanded(false)}
-          className={`rounded-md border ${UI_SURFACES.borderStrongAlt2} bg-[#0e1320] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright}`}
+          className={`rounded-md border ${UI_SURFACES.borderStrong} ${UI_SURFACES.bgDeep} px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright}`}
         >
           Hide
         </button>

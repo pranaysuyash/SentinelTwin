@@ -81,7 +81,7 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
           <button
             type="button"
             onClick={handleAttachedNodeClick}
-            className={`flex items-center gap-1 rounded ${UI_SURFACES.chip} px-1.5 py-0.5 text-[8px] text-blue-300 hover:bg-[#222635] transition-colors`}
+            className={`flex items-center gap-1 rounded ${UI_SURFACES.chip} px-1.5 py-0.5 text-[8px] text-blue-300 ${UI_SURFACES.hoverBgDark} transition-colors`}
           >
             <span className={`${UI_SURFACES.textMuted}`}>Attached to:</span> {getNodeLabel(attachedNode)}
           </button>

@@ -84,7 +84,7 @@ export function LevelSwitcher() {
           onClick={() => setIsOpen(!isOpen)}
           aria-expanded={isOpen}
           aria-label="Switch building floor / level"
-          className={`flex h-8 items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderDark} bg-[#0e1320]/90 px-2.5 text-[11px] font-semibold text-[#c3d0e8] shadow-md backdrop-blur-md transition-colors hover:bg-[#171e30] ${UI_SURFACES.hoverText}`}
+          className={`flex h-8 items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 px-2.5 text-[11px] font-semibold text-[#c3d0e8] shadow-md backdrop-blur-md transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
         >
           <Layers className="h-3.5 w-3.5 text-sky-400" />
           <span>{activeLabel}</span>
@@ -105,7 +105,7 @@ export function LevelSwitcher() {
             className={`flex h-8 items-center gap-1 rounded-lg border px-2 text-[10px] font-bold transition-colors ${
               levelDisplayMode === "solo"
                 ? "border-amber-500/60 bg-amber-500/15 text-amber-200"
-                : "${UI_SURFACES.borderDark} bg-[#0e1320]/90 text-[#8b98b4] hover:bg-[#171e30] ${UI_SURFACES.hoverText}"
+                : "${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 text-[#8b98b4] ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}"
             }`}
           >
             {levelDisplayMode === "solo" ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
@@ -133,7 +133,7 @@ export function LevelSwitcher() {
               className={`flex items-center justify-between rounded-lg px-2 py-1.5 text-left text-[11px] font-medium transition-colors ${
                 activeLevelId === null
                   ? "bg-sky-500/20 text-sky-200 border border-sky-500/40"
-                  : "text-[#9aa8c4] hover:bg-[#151c2c] ${UI_SURFACES.hoverText}"
+                  : "text-[#9aa8c4] ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -173,7 +173,7 @@ export function LevelSwitcher() {
                       <button
                         type="button"
                         onClick={() => setEditingId(null)}
-                        className={`flex h-5 w-5 items-center justify-center rounded bg-[#1f2536] text-[#9aa8c4] ${UI_SURFACES.hoverText}`}
+                        className={`flex h-5 w-5 items-center justify-center rounded ${UI_SURFACES.borderSubtle} text-[#9aa8c4] ${UI_SURFACES.hoverText}`}
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -199,7 +199,7 @@ export function LevelSwitcher() {
                   className={`group flex items-center justify-between rounded-lg px-2 py-1.5 cursor-pointer text-[11px] font-medium transition-colors ${
                     isSelected
                       ? "bg-sky-500/20 text-sky-200 border border-sky-500/40"
-                      : "text-[#c3d0e8] hover:bg-[#151c2c] ${UI_SURFACES.hoverText}"
+                      : "text-[#c3d0e8] ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}"
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
@@ -262,7 +262,7 @@ export function LevelSwitcher() {
                   <button
                     type="button"
                     onClick={() => setIsAdding(false)}
-                    className={`flex h-5 w-5 items-center justify-center rounded bg-[#1f2536] text-[#9aa8c4] ${UI_SURFACES.hoverText}`}
+                    className={`flex h-5 w-5 items-center justify-center rounded ${UI_SURFACES.borderSubtle} text-[#9aa8c4] ${UI_SURFACES.hoverText}`}
                   >
                     <X className="h-3 w-3" />
                   </button>

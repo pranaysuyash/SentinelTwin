@@ -150,7 +150,7 @@ export function IssuesTab() {
           <span className={`text-[9px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Issues</span>
           <TruthBadge label="simulated" />
         </div>
-        <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelAlt} px-2.5 py-2 text-[10px] ${UI_SURFACES.textNearAlt}}`}>
+        <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] ${UI_SURFACES.textNearAlt}}`}>
           Outcome status: {outcome.summary.status.replace(/_/g, " ")}
           {outcome.summary.primaryRisk ? ` · Primary risk: ${outcome.summary.primaryRisk}` : ""}
         </div>
@@ -160,7 +160,7 @@ export function IssuesTab() {
           <div
             key={`${issue.category}-${issue.description}`}
             className={
-              "flex gap-2.5 p-2.5 ${UI_SURFACES.panelDeep} border rounded-lg ${UI_SURFACES.hoverBorderMid} transition-colors group " +
+              "flex gap-2.5 p-2.5 ${UI_SURFACES.panelDeep} border rounded-lg ${UI_SURFACES.hoverBorder} transition-colors group " +
               (isRecentlyChanged ? "border-amber-500/40 shadow-[0_0_0_1px_rgba(251,191,36,0.15)]" : `${UI_SURFACES.borderPanel}`)
             }
           >
@@ -178,7 +178,7 @@ export function IssuesTab() {
                   </span>
                 ) : null}
               </div>
-              <div className={`text-[9px] ${UI_SURFACES.textSoft} capitalize`}>{issue.category.replace(/_/g, " ")}</div>
+              <div className={`text-[9px] ${UI_SURFACES.textSoftMid} capitalize`}>{issue.category.replace(/_/g, " ")}</div>
               {issue.affectedZones.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1">
                   <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Zones:</span>
@@ -233,7 +233,7 @@ export function IssuesTab() {
                     <ShieldAlert className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-rose-400" />
                     <div className="min-w-0 flex-1">
                       <div className="text-[10px] font-semibold text-[#dce5f7]">{issue.description}</div>
-                      <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textSoft}`}>
+                      <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textSoftMid}`}>
                         Zones: {issue.affectedZones.length > 0 ? issue.affectedZones.join(", ") : "None"} · Cameras: {issue.affectedCameras.length > 0 ? issue.affectedCameras.join(", ") : "None"}
                       </div>
                       <div className="mt-1 flex flex-wrap gap-1">
@@ -287,7 +287,7 @@ export function IssuesTab() {
                       ? "bg-red-950/20 border-red-800/30 hover:border-red-600/40"
                       : region.severity === "high"
                       ? "bg-amber-950/20 border-amber-800/30 hover:border-amber-600/40"
-                      : `${UI_SURFACES.panelDeep} ${UI_SURFACES.borderPanel} ${UI_SURFACES.hoverBorderMid}`
+                      : `${UI_SURFACES.panelDeep} ${UI_SURFACES.borderPanel} ${UI_SURFACES.hoverBorder}`
                   }`}
                 >
                   <BlindRegionIcon severity={region.severity} />
@@ -299,7 +299,7 @@ export function IssuesTab() {
                       <BlindRegionBadge region={region} />
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
-                      <span className={`text-[9px] ${UI_SURFACES.textSoft} capitalize`}>
+                      <span className={`text-[9px] ${UI_SURFACES.textSoftMid} capitalize`}>
                         {region.classification.replace(/_/g, " ")}
                       </span>
                       <span className={`text-[9px] ${UI_SURFACES.textMuted}`}>{region.areaSqM.toFixed(1)} m²</span>
@@ -371,7 +371,7 @@ export function IssuesTab() {
                 });
               };
               return (
-                <div key={`${rec.type}-${rec.description}`} className={`flex items-start gap-2 py-2 border-b ${UI_SURFACES.borderFaintAlt}`}>
+                <div key={`${rec.type}-${rec.description}`} className={`flex items-start gap-2 py-2 border-b ${UI_SURFACES.borderFaint}`}>
                   <ChevronRight className="w-3 h-3 text-blue-400 mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <span className={`text-[10px] ${UI_SURFACES.textMuted5}`}>{rec.description}</span>
@@ -381,7 +381,7 @@ export function IssuesTab() {
                       </div>
                     ) : null}
                     {rec.affectedNodeId ? (
-                      <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoft}`}>
+                      <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoftMid}`}>
                         Evidence: affects <span className={`${UI_SURFACES.textBody}`}>{rec.affectedNodeId}</span>
                       </div>
                     ) : null}

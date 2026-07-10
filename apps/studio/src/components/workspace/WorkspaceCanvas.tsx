@@ -2211,7 +2211,7 @@ export function WorkspaceCanvas() {
           <div className="pointer-events-auto flex flex-col items-center gap-4">
             <button
               type="button"
-              className="flex flex-col items-center gap-3 rounded-2xl border border-[#1e2536] bg-[#0b0f1a]/85 px-7 py-5 text-center backdrop-blur-sm transition-colors hover:border-[#2d3a54] hover:bg-[#0f1422]/95"
+              className={`flex flex-col items-center gap-3 rounded-2xl border border-[#1e2536] bg-[#0b0f1a]/85 px-7 py-5 text-center backdrop-blur-sm transition-colors ${UI_SURFACES.hoverBorderBright} hover:bg-[#0f1422]/95`}
               onClick={(e) => { e.stopPropagation(); setActiveTool("camera"); }}
             >
               <div className="flex size-11 items-center justify-center rounded-xl border border-[#1e2840] bg-[#111828]">
@@ -2239,7 +2239,7 @@ export function WorkspaceCanvas() {
                       key={ref.id}
                       type="button"
                       onClick={() => setScene(ref)}
-                      className="rounded-lg border border-[#1e2536] bg-[#0b0f1a]/80 px-3 py-1.5 text-[9px] text-[#7a8fac] backdrop-blur-sm transition-colors hover:border-[#2d3a54] hover:text-[#b0c0d8]"
+                      className={`rounded-lg border border-[#1e2536] bg-[#0b0f1a]/80 px-3 py-1.5 text-[9px] text-[#7a8fac] backdrop-blur-sm transition-colors ${UI_SURFACES.hoverBorderBright} hover:text-[#b0c0d8]`}
                     >
                       {ref.name}
                     </button>

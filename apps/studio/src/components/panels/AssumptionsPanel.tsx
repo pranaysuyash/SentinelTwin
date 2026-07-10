@@ -9,7 +9,7 @@ import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0`}>
+    <div className={`flex items-center justify-between gap-3 border-b ${UI_SURFACES.borderFaint} py-2 last:border-b-0`}>
       <span className={`text-[10px] ${UI_SURFACES.textMuted2}`}>{label}</span>
       <span className={`flex items-center gap-1 text-right text-[11px] font-medium ${UI_SURFACES.textBody}`}>
         {children}
@@ -198,7 +198,7 @@ export function AssumptionsPanel() {
           </Field>
 
           {/* Pixels Per Meter thresholds */}
-          <div className={`border-b ${UI_SURFACES.borderFaintAlt} py-2 last:border-b-0`}>
+          <div className={`border-b ${UI_SURFACES.borderFaint} py-2 last:border-b-0`}>
             <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textMuted2}`}>PPM Thresholds (px/m)</div>
             <div className="grid grid-cols-2 gap-1">
               {([

@@ -323,18 +323,18 @@ export function ImportReview({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-[#22314b] bg-[#0b1220] p-3">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9bb0cf]">Plan Source Understanding</div>
-        <div className="mt-1 text-[12px] leading-5 text-[#9aaed0]">
+      <div className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panelDeep} p-3`}>
+        <div className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted4}`}>Plan Source Understanding</div>
+        <div className={`mt-1 text-[12px] leading-5 ${UI_SURFACES.textMuted4}`}>
           The detector is currently tuned for <span className="font-semibold text-[#d6e2f4]">{sourceProfile}</span>.
           {sourceHint ? <span> {sourceHint}</span> : null}
         </div>
       </div>
-      <div className="rounded-2xl border border-[#22314b] bg-[#0b1220] p-4">
+      <div className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panelDeep} p-4`}>
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9bb0cf]">Floor Plan Review</div>
-            <div className="mt-1 max-w-[720px] text-[12px] leading-5 text-[#9aaed0]">Review the extracted shell before creating a draft. This screen is for calibration, false-positive cleanup, and opening placement checks.</div>
+            <div className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted4}`}>Floor Plan Review</div>
+            <div className={`mt-1 max-w-[720px] text-[12px] leading-5 ${UI_SURFACES.textMuted4}`}>Review the extracted shell before creating a draft. This screen is for calibration, false-positive cleanup, and opening placement checks.</div>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-1">
             {hasManualCalibration ? (
@@ -360,16 +360,16 @@ export function ImportReview({
           </div>
         ) : null}
         <div className="mt-4 grid gap-2 text-[10px] md:grid-cols-3">
-          <div className="rounded-xl border border-[#1f2a3e] bg-[#0a101d] px-3 py-2 text-[#9fb2d1]">
-            <div className="text-[#6f82a4]">Warnings</div>
+          <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0a101d] px-3 py-2 text-[#9fb2d1]`}>
+            <div className={`${UI_SURFACES.textSoftMid}`}>Warnings</div>
             <div className={unresolvedCount > 0 ? "text-amber-200" : "text-emerald-200"}>{unresolvedCount} unresolved</div>
           </div>
-          <div className="rounded-xl border border-[#1f2a3e] bg-[#0a101d] px-3 py-2 text-[#9fb2d1]">
-            <div className="text-[#6f82a4]">Openings</div>
+          <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0a101d] px-3 py-2 text-[#9fb2d1]`}>
+            <div className={`${UI_SURFACES.textSoftMid}`}>Openings</div>
             <div>{result.doors.length + result.windows.length} total</div>
           </div>
-            <div className="rounded-xl border border-[#1f2a3e] bg-[#0a101d] px-3 py-2 text-[#9fb2d1]">
-              <div className="text-[#6f82a4]">Detected walls</div>
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0a101d] px-3 py-2 text-[#9fb2d1]`}>
+              <div className={`${UI_SURFACES.textSoftMid}`}>Detected walls</div>
               <div>{rawWallSegmentCount} raw candidates · {keptWallCount} kept</div>
               <div className="text-[9px] text-[#6d819f]">
               {rawWallSegmentCount > keptWallCount
@@ -380,33 +380,33 @@ export function ImportReview({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[#22314b] bg-[#0f1828] p-4">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9bb0cf]">Plan-understanding notes</div>
-        <div className="mt-2 space-y-1 text-[12px] leading-5 text-[#9aaed0]">
+      <div className={`rounded-2xl border ${UI_SURFACES.borderStandard} bg-[#0f1828] p-4`}>
+        <div className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted4}`}>Plan-understanding notes</div>
+        <div className={`mt-2 space-y-1 text-[12px] leading-5 ${UI_SURFACES.textMuted4}`}>
           <p>{interpretationCopy.wallCounts}</p>
           <p>{interpretationCopy.sourceProfile}</p>
         </div>
       </div>
 
       {gateDecision ? (
-        <div className="rounded-2xl border border-[#22314b] bg-[#0a111d] p-4">
+        <div className={`rounded-2xl border ${UI_SURFACES.borderStandard} bg-[#0a111d] p-4`}>
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9bb0cf]">Tier 1 Gate</div>
+              <div className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted4}`}>Tier 1 Gate</div>
               <div className="mt-1 text-[14px] font-medium text-[#d5deed]">{formatGateAction(gateDecision.action)}</div>
             </div>
             {qualityPct != null ? (
-              <span className="rounded border border-[#2a3045] bg-[#0f1727] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[#b2c4de]">
+              <span className={`rounded border ${UI_SURFACES.borderHover} bg-[#0f1727] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[#b2c4de]`}>
                 Quality {qualityPct}%
               </span>
             ) : null}
           </div>
-          <div className="mt-2 text-[12px] leading-5 text-[#9aaed0]">{gateDecision.reason}</div>
+          <div className={`mt-2 text-[12px] leading-5 ${UI_SURFACES.textMuted4}`}>{gateDecision.reason}</div>
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-[#1f2a3e] bg-[#0a111d] p-4">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9bb0cf]">What to check before continuing</div>
+      <div className={`rounded-2xl border ${UI_SURFACES.borderSubtle} bg-[#0a111d] p-4`}>
+        <div className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted4}`}>What to check before continuing</div>
         <ul className="mt-3 space-y-2">
           {nextStepGuidance.map((item) => (
             <li key={item} className="flex items-start gap-2 text-[13px] leading-5 text-[#d2ddf0]">
@@ -418,14 +418,14 @@ export function ImportReview({
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-          <div className="`{rounded-2xl border ${UI_SURFACES.borderPanel} bg-[#070a12] p-4 text-center}`">
-            <div className="text-[22px] font-bold text-[#c5ccdb]">
+          <div className={`{rounded-2xl border ${UI_SURFACES.borderPanel} ${UI_SURFACES.page} p-4 text-center}`}>
+            <div className={`text-[22px] font-bold ${UI_SURFACES.textBody}`}>
               {keptWallCount}
             </div>
-            <div className="text-[11px] text-[#59637a]">Kept Walls</div>
+            <div className={`text-[11px] ${UI_SURFACES.textDimMid}`}>Kept Walls</div>
           </div>
         <div
-          className={`rounded-2xl border bg-[#070a12] p-4 text-center ${
+          className={`rounded-2xl border ${UI_SURFACES.page} p-4 text-center ${
             renderedConfidence.gated ? "border-amber-500/40" : "${UI_SURFACES.borderPanel}"
           }`}
           title={renderedConfidence.source}
@@ -437,17 +437,17 @@ export function ImportReview({
           }`}>
             {confidencePct}%
           </div>
-          <div className="text-[11px] text-[#59637a]">
+          <div className={`text-[11px] ${UI_SURFACES.textDimMid}`}>
             Import Trust
             {unresolvedCount > 0 ? (
               <span className="ml-1 text-amber-300">· {unresolvedCount} warning{unresolvedCount === 1 ? "" : "s"}</span>
             ) : null}
           </div>
-          <div className="mt-0.5 text-[9px] leading-tight text-[#4a5568]">{renderedConfidence.source}</div>
+          <div className={`mt-0.5 text-[9px] leading-tight ${UI_SURFACES.textMuted}`}>{renderedConfidence.source}</div>
         </div>
         <div
           className={
-            "rounded-2xl border bg-[#070a12] p-4 text-center transition-colors " +
+            "rounded-2xl border ${UI_SURFACES.page} p-4 text-center transition-colors " +
             // Trust Pass T2 — distinct visual grammar for user-authoritative
             // (locked) values vs system-derived values. A locked dimension
             // carries an emerald border + value color + lock icon so the buyer
@@ -462,65 +462,65 @@ export function ImportReview({
           }
           title={hasManualCalibration ? "User-authoritative dimensions — these define the scene footprint and scale. The detector cannot overwrite them." : "System-derived dimensions from detector output — not yet locked."}
         >
-          <div className={"flex items-center justify-center gap-1.5 text-[22px] font-bold " + (hasManualCalibration ? "text-emerald-300" : "text-[#c5ccdb]")}>
+          <div className={"flex items-center justify-center gap-1.5 text-[22px] font-bold " + (hasManualCalibration ? "text-emerald-300" : "${UI_SURFACES.textBody}")}>
             {hasManualCalibration ? <Lock className="h-3.5 w-3.5 text-emerald-400" /> : null}
             <span>{result.roomDimensions.widthM}×{result.roomDimensions.depthM}</span>
           </div>
-          <div className={"text-[11px] " + (hasManualCalibration ? "text-emerald-400/80 font-medium" : "text-[#59637a]")}>
+          <div className={"text-[11px] " + (hasManualCalibration ? "text-emerald-400/80 font-medium" : "${UI_SURFACES.textDimMid}")}>
             {hasManualCalibration ? "User-locked footprint" : "Scene Footprint (m)"}
           </div>
         </div>
       </div>
 
-          <div className="`{rounded-2xl border ${UI_SURFACES.borderPanel} bg-[#070a12] p-4}`">
+          <div className={`{rounded-2xl border ${UI_SURFACES.borderPanel} ${UI_SURFACES.page} p-4}`}>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[#9bb0cf]">Detection Details</span>
+          <span className={`text-[11px] font-medium ${UI_SURFACES.textMuted4}`}>Detection Details</span>
         </div>
         <div className="mt-3 grid gap-x-6 gap-y-2 md:grid-cols-2">
           <div className="flex justify-between gap-3 text-[11px]">
-            <span className="text-[#3a4158]">Image Size</span>
-            <span className="text-[#68738a]">{result.imageWidth}×{result.imageHeight}px</span>
+            <span className={`${UI_SURFACES.textDim}`}>Image Size</span>
+            <span className={`${UI_SURFACES.textSoftMid}`}>{result.imageWidth}×{result.imageHeight}px</span>
           </div>
           <div className="flex justify-between gap-3 text-[11px]">
-            <span className="text-[#3a4158]">Scale</span>
-            <span className="text-[#68738a]">{result.scalePixelsPerMeter} px/m</span>
+            <span className={`${UI_SURFACES.textDim}`}>Scale</span>
+            <span className={`${UI_SURFACES.textSoftMid}`}>{result.scalePixelsPerMeter} px/m</span>
           </div>
           <div className="flex justify-between gap-3 text-[11px]">
-            <span className="text-[#3a4158]">Wall Segments</span>
-            <span className="text-[#68738a]">
+            <span className={`${UI_SURFACES.textDim}`}>Wall Segments</span>
+            <span className={`${UI_SURFACES.textSoftMid}`}>
               {rawWallSegmentCount} candidate{rawWallSegmentCount === 1 ? "" : "s"} · {keptWallCount} kept
             </span>
           </div>
           <div className="flex justify-between gap-3 text-[11px]">
-            <span className="text-[#3a4158]">Short wall cutoff</span>
-            <span className="text-[#68738a]">&lt; {shortWallThresholdPx}px {shortWallIndexes.length} pending</span>
+            <span className={`${UI_SURFACES.textDim}`}>Short wall cutoff</span>
+            <span className={`${UI_SURFACES.textSoftMid}`}>&lt; {shortWallThresholdPx}px {shortWallIndexes.length} pending</span>
           </div>
           <div className="flex justify-between gap-3 text-[11px]">
-            <span className="text-[#3a4158]">Doors Detected</span>
-            <span className="text-[#68738a]">{result.doors.length}</span>
+            <span className={`${UI_SURFACES.textDim}`}>Doors Detected</span>
+            <span className={`${UI_SURFACES.textSoftMid}`}>{result.doors.length}</span>
           </div>
           <div className="flex justify-between gap-3 text-[11px]">
-            <span className="text-[#3a4158]">Windows Detected</span>
-            <span className="text-[#68738a]">{result.windows.length}</span>
+            <span className={`${UI_SURFACES.textDim}`}>Windows Detected</span>
+            <span className={`${UI_SURFACES.textSoftMid}`}>{result.windows.length}</span>
           </div>
           <div className="flex justify-between gap-3 text-[11px]">
-            <span className="text-[#3a4158]">Wall Orientation</span>
-            <span className="text-[#68738a]">H {diagnostics.horizontalWallCount} / V {diagnostics.verticalWallCount} / D {diagnostics.diagonalWallCount}</span>
+            <span className={`${UI_SURFACES.textDim}`}>Wall Orientation</span>
+            <span className={`${UI_SURFACES.textSoftMid}`}>H {diagnostics.horizontalWallCount} / V {diagnostics.verticalWallCount} / D {diagnostics.diagonalWallCount}</span>
           </div>
           <div className="flex justify-between gap-3 text-[11px]">
-            <span className="text-[#3a4158]">Review Flags</span>
-            <span className="text-[#68738a]">{diagnostics.duplicateWallPairs} dup · {diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount} off-wall · {diagnostics.shortWallCount} short</span>
+            <span className={`${UI_SURFACES.textDim}`}>Review Flags</span>
+            <span className={`${UI_SURFACES.textSoftMid}`}>{diagnostics.duplicateWallPairs} dup · {diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount} off-wall · {diagnostics.shortWallCount} short</span>
           </div>
           <div className="flex justify-between gap-3 text-[11px] md:col-span-2">
-            <span className="text-[#3a4158]">Plan Coverage</span>
-            <span className="text-[#68738a]">{Math.round(diagnostics.boundsCoverageRatio * 100)}% of image bounds</span>
+            <span className={`${UI_SURFACES.textDim}`}>Plan Coverage</span>
+            <span className={`${UI_SURFACES.textSoftMid}`}>{Math.round(diagnostics.boundsCoverageRatio * 100)}% of image bounds</span>
           </div>
         </div>
       </div>
 
-      <div className="`{rounded-2xl border ${UI_SURFACES.borderPanel} bg-[#070a12] p-4}`">
+      <div className={`{rounded-2xl border ${UI_SURFACES.borderPanel} ${UI_SURFACES.page} p-4}`}>
         <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[#9bb0cf]">Detection Corrections</span>
+          <span className={`text-[11px] font-medium ${UI_SURFACES.textMuted4}`}>Detection Corrections</span>
           <button type="button"
             onClick={() => {
               setWallMask(result.walls.map(() => true));
@@ -538,10 +538,10 @@ export function ImportReview({
           </button>
         </div>
 
-        <div className="mb-4 rounded-xl border border-[#1b2233] bg-[#0b1220] p-3">
-          <div className="mb-1 text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Spatial Preview</div>
-          <div className="mb-2 text-[12px] leading-5 text-[#9aaed0]">Preview is zoomed to the extracted geometry so you can inspect the actual draft shell instead of the full uploaded sheet.</div>
-          <div className="mb-2 text-[10px] text-[#7f93b3]">
+        <div className={`mb-4 rounded-xl border border-[#1b2233] ${UI_SURFACES.panelDeep} p-3`}>
+          <div className={`mb-1 text-[10px] uppercase tracking-[0.14em] ${UI_SURFACES.textSoftBright}`}>Spatial Preview</div>
+          <div className={`mb-2 text-[12px] leading-5 ${UI_SURFACES.textMuted4}`}>Preview is zoomed to the extracted geometry so you can inspect the actual draft shell instead of the full uploaded sheet.</div>
+          <div className={`mb-2 text-[10px] ${UI_SURFACES.textSoftBright}`}>
             Blue/cyan/green items are kept in the draft. Red items are excluded from the draft shell.
           </div>
           <svg
@@ -613,7 +613,7 @@ export function ImportReview({
               />
             ))}
           </svg>
-          <div className="mt-2 text-[11px] leading-5 text-[#7f93b3]">Blue, cyan, and green items stay in the draft. Red items are excluded. Drag wall endpoints and opening markers to correct placement.</div>
+          <div className={`mt-2 text-[11px] leading-5 ${UI_SURFACES.textSoftBright}`}>Blue, cyan, and green items stay in the draft. Red items are excluded. Drag wall endpoints and opening markers to correct placement.</div>
         </div>
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -629,7 +629,7 @@ export function ImportReview({
               setWallMask(next);
               setLastActionMessage(`Auto-cleaned ${autoCleanupWallIndexes.length} short/duplicate wall fragments.`);
             }}
-            className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40"
+            className={`rounded-lg border ${UI_SURFACES.borderHover} px-3 py-1.5 text-[11px] ${UI_SURFACES.textSoftMuted} transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40`}
           >
             Auto-clean short + duplicate walls
           </button>
@@ -645,7 +645,7 @@ export function ImportReview({
               setWallMask(next);
               setLastActionMessage(`Auto-filtered ${shortWallIndexes.length} short wall fragments shorter than ${shortWallThresholdPx}px.`);
             }}
-            className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40"
+            className={`rounded-lg border ${UI_SURFACES.borderHover} px-3 py-1.5 text-[11px] ${UI_SURFACES.textSoftMuted} transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40`}
           >
             Auto-filter short walls
           </button>
@@ -668,7 +668,7 @@ export function ImportReview({
                 return copy;
               });
             }}
-            className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+            className={`rounded-lg border ${UI_SURFACES.borderHover} px-3 py-1.5 text-[11px] ${UI_SURFACES.textSoftMuted} hover:border-blue-500/40 hover:text-white`}
           >
             Split First Kept Wall
           </button>
@@ -688,7 +688,7 @@ export function ImportReview({
               setDraftWalls(next);
               setWallMask(new Array(next.length).fill(true));
             }}
-            className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+            className={`rounded-lg border ${UI_SURFACES.borderHover} px-3 py-1.5 text-[11px] ${UI_SURFACES.textSoftMuted} hover:border-blue-500/40 hover:text-white`}
           >
             Merge First Two Kept Walls
           </button>
@@ -704,19 +704,19 @@ export function ImportReview({
                 return { ...wall, end: { x: wall.start.x, y: wall.end.y } };
               }));
             }}
-            className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+            className={`rounded-lg border ${UI_SURFACES.borderHover} px-3 py-1.5 text-[11px] ${UI_SURFACES.textSoftMuted} hover:border-blue-500/40 hover:text-white`}
           >
             Snap Kept Walls Orthogonal
           </button>
         </div>
 
         <div className="space-y-3">
-          <div className="rounded-lg border border-[#1f2a3e] bg-[#0a0f18] px-2 py-1.5 text-[10px] text-[#a5b8da]">
+          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-1.5 text-[10px] text-[#a5b8da]`}>
             Wall picker is canvas-first: click a wall segment to toggle keep/exclude. Kept segments are blue/cyan/green; excluded segments are red dashed.
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <div className="text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Walls</div>
+              <div className={`text-[10px] uppercase tracking-[0.14em] ${UI_SURFACES.textSoftBright}`}>Walls</div>
               <div className="text-[10px] text-[#6d819f]">Click a segment on the canvas to keep / exclude</div>
             </div>
             {/* Intake Pass I3 — buyer-grade wall correction. The checkbox list
@@ -739,13 +739,13 @@ export function ImportReview({
               }}
             />
             {draftWalls.length > wallListLimit ? (
-              <div className="pt-1 text-[10px] text-[#6f82a4]">
+              <div className={`pt-1 text-[10px] ${UI_SURFACES.textSoftMid}`}>
                 {showAllWallRows
                   ? "Showing all wall segments on the canvas."
                   : `${draftWalls.length - wallListLimit} additional walls are off-canvas.`}
                 <button
                   type="button"
-                  className="ml-1 inline text-[#9bb0cf] underline decoration-dotted underline-offset-2 hover:text-white"
+                  className={`ml-1 inline ${UI_SURFACES.textMuted4} underline decoration-dotted underline-offset-2 hover:text-white`}
                   onClick={() => setShowAllWallRows((prev) => !prev)}
                 >
                   {showAllWallRows ? "Show first segments only" : "Show all on canvas"}
@@ -756,19 +756,19 @@ export function ImportReview({
 
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <div className="mb-2 text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Doors</div>
+              <div className={`mb-2 text-[10px] uppercase tracking-[0.14em] ${UI_SURFACES.textSoftBright}`}>Doors</div>
               <div className="mb-2 flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => setDoorMask((prev) => prev.map(() => true))}
-                  className="rounded border border-[#2a3045] px-2 py-1 text-[10px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+                  className={`rounded border ${UI_SURFACES.borderHover} px-2 py-1 text-[10px] ${UI_SURFACES.textSoftMuted} hover:border-blue-500/40 hover:text-white`}
                 >
                   Keep all
                 </button>
                 <button
                   type="button"
                   onClick={() => setDoorMask((prev) => prev.map(() => false))}
-                  className="rounded border border-[#2a3045] px-2 py-1 text-[10px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+                  className={`rounded border ${UI_SURFACES.borderHover} px-2 py-1 text-[10px] ${UI_SURFACES.textSoftMuted} hover:border-blue-500/40 hover:text-white`}
                 >
                   Exclude all
                 </button>
@@ -777,7 +777,7 @@ export function ImportReview({
                 {visibleDoorRows.length === 0 ? (
                   <div className="text-[11px] text-[#4f5a72]">None detected</div>
                 ) : visibleDoorRows.map(({ opening, index: globalIndex }, visibleIndex) => (
-                  <label key={`door-${globalIndex}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
+                  <label key={`door-${globalIndex}`} className={`flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] ${UI_SURFACES.textMuted4}`}>
                     <span>D{visibleIndex + 1}: {opening.widthM}m @ ({opening.position.x},{opening.position.y})</span>
                     <input
                       type="checkbox"
@@ -792,11 +792,11 @@ export function ImportReview({
                   </label>
                 ))}
                 {draftDoors.length > doorWindowListLimit ? (
-                  <div className="pt-1 text-[10px] text-[#6f82a4]">
+                  <div className={`pt-1 text-[10px] ${UI_SURFACES.textSoftMid}`}>
                     {showAllDoorRows ? "Showing all door rows." : `${draftDoors.length - doorWindowListLimit} additional doors are hidden.`}
                     <button
                       type="button"
-                      className="ml-1 inline text-[#9bb0cf] underline decoration-dotted underline-offset-2 hover:text-white"
+                      className={`ml-1 inline ${UI_SURFACES.textMuted4} underline decoration-dotted underline-offset-2 hover:text-white`}
                       onClick={() => setShowAllDoorRows((prev) => !prev)}
                     >
                       {showAllDoorRows ? "Show first rows only" : "Show all"}
@@ -807,19 +807,19 @@ export function ImportReview({
             </div>
 
             <div>
-              <div className="mb-2 text-[10px] uppercase tracking-[0.14em] text-[#7f93b3]">Windows</div>
+              <div className={`mb-2 text-[10px] uppercase tracking-[0.14em] ${UI_SURFACES.textSoftBright}`}>Windows</div>
               <div className="mb-2 flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => setWindowMask((prev) => prev.map(() => true))}
-                  className="rounded border border-[#2a3045] px-2 py-1 text-[10px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+                  className={`rounded border ${UI_SURFACES.borderHover} px-2 py-1 text-[10px] ${UI_SURFACES.textSoftMuted} hover:border-blue-500/40 hover:text-white`}
                 >
                   Keep all
                 </button>
                 <button
                   type="button"
                   onClick={() => setWindowMask((prev) => prev.map(() => false))}
-                  className="rounded border border-[#2a3045] px-2 py-1 text-[10px] text-[#93a5c7] hover:border-blue-500/40 hover:text-white"
+                  className={`rounded border ${UI_SURFACES.borderHover} px-2 py-1 text-[10px] ${UI_SURFACES.textSoftMuted} hover:border-blue-500/40 hover:text-white`}
                 >
                   Exclude all
                 </button>
@@ -828,7 +828,7 @@ export function ImportReview({
                 {visibleWindowRows.length === 0 ? (
                   <div className="text-[11px] text-[#4f5a72]">None detected</div>
                 ) : visibleWindowRows.map(({ opening, index: globalIndex }, visibleIndex) => (
-                  <label key={`window-${globalIndex}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] text-[#9bb0ce]">
+                  <label key={`window-${globalIndex}`} className={`flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] ${UI_SURFACES.textMuted4}`}>
                     <span>Wn{visibleIndex + 1}: {opening.widthM}m @ ({opening.position.x},{opening.position.y})</span>
                     <input
                       type="checkbox"
@@ -843,11 +843,11 @@ export function ImportReview({
                   </label>
                 ))}
                 {draftWindows.length > doorWindowListLimit ? (
-                  <div className="pt-1 text-[10px] text-[#6f82a4]">
+                  <div className={`pt-1 text-[10px] ${UI_SURFACES.textSoftMid}`}>
                     {showAllWindowRows ? "Showing all window rows." : `${draftWindows.length - doorWindowListLimit} additional windows are hidden.`}
                     <button
                       type="button"
-                      className="ml-1 inline text-[#9bb0cf] underline decoration-dotted underline-offset-2 hover:text-white"
+                      className={`ml-1 inline ${UI_SURFACES.textMuted4} underline decoration-dotted underline-offset-2 hover:text-white`}
                       onClick={() => setShowAllWindowRows((prev) => !prev)}
                     >
                       {showAllWindowRows ? "Show first rows only" : "Show all"}
@@ -860,7 +860,7 @@ export function ImportReview({
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="text-[11px] leading-5 text-[#7f93b3]">Use checkboxes to keep/exclude detections, then apply the cleaned draft.</span>
+          <span className={`text-[11px] leading-5 ${UI_SURFACES.textSoftBright}`}>Use checkboxes to keep/exclude detections, then apply the cleaned draft.</span>
           <button type="button"
             disabled={!hasFilteredEdits}
             onClick={() => {
@@ -875,17 +875,17 @@ export function ImportReview({
               );
               onUpdateResult(normalizeFloorPlanResult(filtered));
             }}
-            className="rounded-lg border border-[#2a3045] px-3 py-1.5 text-[11px] text-[#93a5c7] transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40"
+            className={`rounded-lg border ${UI_SURFACES.borderHover} px-3 py-1.5 text-[11px] ${UI_SURFACES.textSoftMuted} transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40`}
           >
             Apply Corrections
           </button>
         </div>
       </div>
 
-      <div className="`{rounded-2xl border ${UI_SURFACES.borderPanel} bg-[#070a12] p-4}`">
-        <div className="mb-1.5 text-[11px] font-medium text-[#9bb0cf]">Known Footprint (meters)</div>
-        <p className="mb-2 text-[11px] leading-5 text-[#7f93b3]">{calibrationGuidance}</p>
-        <p className="mb-2 text-[11px] leading-5 text-[#9aaed0]">{calibrationSourceCopy}</p>
+      <div className={`{rounded-2xl border ${UI_SURFACES.borderPanel} ${UI_SURFACES.page} p-4}`}>
+        <div className={`mb-1.5 text-[11px] font-medium ${UI_SURFACES.textMuted4}`}>Known Footprint (meters)</div>
+        <p className={`mb-2 text-[11px] leading-5 ${UI_SURFACES.textSoftBright}`}>{calibrationGuidance}</p>
+        <p className={`mb-2 text-[11px] leading-5 ${UI_SURFACES.textMuted4}`}>{calibrationSourceCopy}</p>
         {hasManualCalibration ? (
           <div className="mb-3 flex items-start gap-1.5 rounded border border-emerald-500/30 bg-emerald-500/8 px-2 py-1.5 text-[10px] leading-5 text-emerald-100">
             <Lock className="mt-0.5 h-3 w-3 flex-shrink-0 text-emerald-400" />
@@ -912,33 +912,33 @@ export function ImportReview({
           </div>
         ) : null}
         <div className="grid gap-3 md:grid-cols-3">
-          <label className="text-[11px] text-[#59637a]">
+          <label className={`text-[11px] ${UI_SURFACES.textDimMid}`}>
             Width
             <input
               value={widthM}
               onChange={(event) => setWidthM(event.target.value)}
-              className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0f18] px-2 py-2 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
+              className={`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-2 py-2 text-[12px] ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40}`}
             />
           </label>
-          <label className="text-[11px] text-[#59637a]">
+          <label className={`text-[11px] ${UI_SURFACES.textDimMid}`}>
             Depth
             <input
               value={depthM}
               onChange={(event) => setDepthM(event.target.value)}
-              className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0f18] px-2 py-2 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
+              className={`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-2 py-2 text-[12px] ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40}`}
             />
           </label>
-          <label className="text-[11px] text-[#59637a]">
+          <label className={`text-[11px] ${UI_SURFACES.textDimMid}`}>
             Height
             <input
               value={heightM}
               onChange={(event) => setHeightM(event.target.value)}
-              className="`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0f18] px-2 py-2 text-[12px] text-[#c5ccdb] outline-none focus:border-blue-500/40}`"
+              className={`{mt-1 w-full rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-2 py-2 text-[12px] ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40}`}
             />
           </label>
         </div>
         <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="text-[11px] leading-5 text-[#7f93b3]">
+          <span className={`text-[11px] leading-5 ${UI_SURFACES.textSoftBright}`}>
             {hasManualCalibration
               ? "Manual calibration is active. Re-applying updates locked values and refreshes wall normalization."
               : "Use known room dimensions to lock the scene footprint and refine scale."}
@@ -992,7 +992,7 @@ export function ImportReview({
       {/* Re-upload button */}
       <button type="button"
         onClick={onImageChange}
-        className="`{flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed ${UI_SURFACES.borderPanel} px-3 py-3 text-[11px] text-[#59637a] transition-colors hover:border-[#2a3045] hover:text-[#68738a]}`"
+        className={`{flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed ${UI_SURFACES.borderPanel} px-3 py-3 text-[11px] ${UI_SURFACES.textDimMid} transition-colors ${UI_SURFACES.hoverBorder} ${UI_SURFACES.hoverTextSoft}}`}
       >
         <RotateCcw className="h-3 w-3" />
         Choose different image

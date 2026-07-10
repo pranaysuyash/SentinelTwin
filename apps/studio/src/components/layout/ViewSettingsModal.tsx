@@ -213,7 +213,7 @@ export function ViewSettingsModal() {
         aria-labelledby="view-settings-title"
         aria-describedby="view-settings-description"
         tabIndex={-1}
-        className={`w-full max-w-5xl overflow-hidden rounded-[28px] border border-[#20273a] ${UI_SURFACES.panel} shadow-2xl shadow-black/40`}
+        className={`w-full max-w-5xl overflow-hidden rounded-[28px] border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} shadow-2xl shadow-black/40`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className={`flex items-start gap-3 border-b ${UI_SURFACES.borderSubtle} px-5 py-4`}>
@@ -231,7 +231,7 @@ export function ViewSettingsModal() {
             type="button"
             onClick={() => setOpen(false)}
             aria-label="Close view settings"
-            className={`ml-auto rounded-full border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} p-2 text-[#93a1bd] transition-colors hover:border-[#39445d] ${UI_SURFACES.hoverText}`}
+            className={`ml-auto rounded-full border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} p-2 text-[#93a1bd] transition-colors ${UI_SURFACES.textDim} ${UI_SURFACES.hoverText}`}
           >
             <X className="h-4 w-4" />
           </button>
@@ -385,7 +385,7 @@ export function ViewSettingsModal() {
                       )}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full border border-[#26314a] bg-[#121829] p-1 text-cyan-300">
+                        <span className="rounded-full border ${UI_SURFACES.borderStandard} ${UI_SURFACES.hoverBgSubtle} p-1 text-cyan-300">
                           {cameraPresetIcon(preset.id)}
                         </span>
                         <div className="min-w-0">
@@ -399,7 +399,7 @@ export function ViewSettingsModal() {
                 <div className={`mt-3 text-[11px] ${UI_SURFACES.textMuted5}`}>
                   Current preset: <span className={`${UI_SURFACES.textNear}`}>{cameraPresetId ?? "none selected"}</span>
                 </div>
-                <div className={`mt-3 rounded-xl border border-dashed border-[#24324c] bg-[#0a0e17] px-3 py-2 text-[11px] ${UI_SURFACES.textSoftBright}`}>
+                <div className={`mt-3 rounded-xl border border-dashed ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-3 py-2 text-[11px] ${UI_SURFACES.textSoftBright}`}>
                   The canvas picker appears automatically when the camera tool is active, but these presets are now visible here too so the library is discoverable before placement.
                 </div>
               </div>
@@ -487,7 +487,7 @@ export function ViewSettingsModal() {
                       "rounded-xl border px-3 py-2 text-left text-[11px] transition-colors",
                       layerVisibility[layer.key]
                         ? "border-violet-400/25 bg-violet-500/12 text-violet-100"
-                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} text-[#9aa6bd] ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText}",
+                        : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.hoverTextSoft} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText}",
                     )}
                   >
                     {layer.label}
@@ -763,7 +763,7 @@ export function ViewSettingsModal() {
                     value={layoutName}
                     onChange={(event) => setLayoutName(event.target.value)}
                     placeholder="Custom layout name"
-                    className={`min-w-0 flex-1 rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[#607089] focus:border-sky-400/35 focus:${UI_SURFACES.hoverBgSubtle}`}
+                    className={`min-w-0 flex-1 rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-3 py-2 text-sm text-white outline-none transition-colors placeholder:${UI_SURFACES.textMuted7} focus:border-sky-400/35 focus:${UI_SURFACES.hoverBgSubtle}`}
                   />
                   <button
                     type="button"
@@ -793,14 +793,14 @@ export function ViewSettingsModal() {
                           <button
                             type="button"
                             onClick={() => applySavedLayout(layout.id)}
-                            className={`rounded-full border border-[#2c374c] ${UI_SURFACES.hoverBgSubtle} px-3 py-1.5 text-[11px] ${UI_SURFACES.textNear} transition-colors hover:border-sky-400/30 ${UI_SURFACES.hoverText}`}
+                            className={`rounded-full border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} px-3 py-1.5 text-[11px] ${UI_SURFACES.textNear} transition-colors hover:border-sky-400/30 ${UI_SURFACES.hoverText}`}
                           >
                             Apply
                           </button>
                           <button
                             type="button"
                             onClick={() => deleteSavedLayout(layout.id)}
-                            className={`rounded-full border border-[#2c374c] ${UI_SURFACES.hoverBgSubtle} px-2.5 py-1.5 text-[11px] ${UI_SURFACES.textNear} transition-colors hover:border-red-400/25 hover:text-red-200`}
+                            className={`rounded-full border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} px-2.5 py-1.5 text-[11px] ${UI_SURFACES.textNear} transition-colors hover:border-red-400/25 hover:text-red-200`}
                           >
                             Delete
                           </button>

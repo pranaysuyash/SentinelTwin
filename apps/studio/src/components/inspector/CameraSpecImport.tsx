@@ -71,7 +71,7 @@ export function CameraSpecImport({
           value={rawText}
           onChange={(e) => setRawText(e.target.value)}
           placeholder="Paste JSON or raw spec sheet text (e.g. '4MP Lens: 2.8mm FOV: 110 IR: 30m')"
-          className={`h-16 w-full resize-none rounded-md border ${UI_SURFACES.borderThin} bg-[#131722] p-2 text-[10px] ${UI_SURFACES.textBody4} placeholder:${UI_SURFACES.textMuted} focus:border-blue-500/50 focus:outline-none`}
+          className={`h-16 w-full resize-none rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} p-2 text-[10px] ${UI_SURFACES.textBody4} placeholder:${UI_SURFACES.textMuted} focus:border-blue-500/50 focus:outline-none`}
         />
         <div className="flex items-center justify-between">
           <span className={`text-[9px] ${UI_SURFACES.textDimMid}`}>

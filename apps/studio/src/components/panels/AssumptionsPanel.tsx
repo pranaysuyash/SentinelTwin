@@ -193,7 +193,7 @@ export function AssumptionsPanel() {
                 onChange={(event) => updateAssumptions({ overexposedZones: event.target.checked })}
                 className="peer sr-only"
               />
-              <div className={`h-4 w-7 rounded-full border ${UI_SURFACES.borderPanel} ${UI_SURFACES.card} after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-[#5a6882] after:transition-all peer-checked:bg-blue-500/20 peer-checked:after:translate-x-full peer-checked:after:bg-blue-400`} />
+              <div className={`h-4 w-7 rounded-full border ${UI_SURFACES.borderPanel} ${UI_SURFACES.card} after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:${UI_SURFACES.textMuted7} after:transition-all peer-checked:bg-blue-500/20 peer-checked:after:translate-x-full peer-checked:after:bg-blue-400`} />
             </label>
           </Field>
 

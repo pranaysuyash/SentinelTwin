@@ -878,7 +878,7 @@ export function CameraInspector() {
                 "-mb-px relative rounded-t-lg border-b-2 px-2 py-1.5 text-[10px] font-medium transition-colors",
                 inspectorTab === tab.id
                   ? "border-green-500 text-green-300"
-                  : "border-transparent text-[#5a647a] ${UI_SURFACES.hoverTextSoft}",
+                  : "border-transparent ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverTextSoft}",
               )}
             >
               {tab.label}
@@ -1067,7 +1067,7 @@ export function CameraInspector() {
                     type="button"
                     onClick={disconnectLiveConnection}
                     disabled={liveConnectionLoading}
-                    className={`rounded-xl border border-[#2a2f40] ${UI_SURFACES.panel} px-3 py-1.5 text-[10px] font-medium text-[#c9d2e5] transition-colors hover:border-[#39425a] hover:${UI_SURFACES.card} disabled:cursor-not-allowed disabled:opacity-50`}
+                    className={`rounded-xl border ${UI_SURFACES.hoverBorder} ${UI_SURFACES.panel} px-3 py-1.5 text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.textDim} hover:${UI_SURFACES.card} disabled:cursor-not-allowed disabled:opacity-50`}
                   >
                     {liveConnectionLoading ? "Clearing..." : "Clear Binding"}
                   </button>
@@ -1857,7 +1857,7 @@ export function CameraInspector() {
                   <div className={`mt-2 flex items-center justify-between border-t ${UI_SURFACES.borderSubtle} pt-2`}>
                     <div className="flex items-center gap-1.5">
                       <span className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>Target</span>
-                      <span className={`rounded bg-[#131a28] px-1.5 py-0.5 text-[9px] font-medium ${UI_SURFACES.textBody}`}>Face</span>
+                      <span className={`rounded ${UI_SURFACES.hoverBgSubtle} px-1.5 py-0.5 text-[9px] font-medium ${UI_SURFACES.textBody}`}>Face</span>
                     </div>
                     <button
                       type="button"
@@ -2031,7 +2031,7 @@ export function CameraInspector() {
                           "rounded-md border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors",
                           viewMode === entry.value
                             ? "border-cyan-500/80 bg-cyan-500/10 text-cyan-200"
-                            : "border-[#293145] text-[#74829d] hover:text-[#c2cde3]",
+                            : "${UI_SURFACES.hoverBorder} ${UI_SURFACES.textSoftDim} ${UI_SURFACES.textBody}",
                         )}
                       >
                         {entry.label}
@@ -2102,7 +2102,7 @@ export function CameraInspector() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-[9px] font-semibold text-[#87a5cf]">Range checkpoints</div>
+                  <div className="text-[9px] font-semibold ${UI_SURFACES.textMuted3}">Range checkpoints</div>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     <SummaryStat label="Detect" value={`${targetDoriRanges!.det.toFixed(1)}m`} accent="text-orange-300" />
                     <SummaryStat label="Recog" value={`${targetDoriRanges!.recog.toFixed(1)}m`} accent="text-yellow-300" />
@@ -2162,11 +2162,11 @@ export function CameraInspector() {
                   return (
                     <div className="space-y-2">
                       <div className="space-y-1">
-                        <div className="text-[9px] font-semibold text-[#87a5cf]">Zone quality checkpoints</div>
+                        <div className="text-[9px] font-semibold ${UI_SURFACES.textMuted3}">Zone quality checkpoints</div>
                         {sortedZoneEntries.length > 0 ? (
                           <div className="space-y-1">
                             {sortedZoneEntries.slice(0, 2).map((entry) => (
-                              <div key={entry.name} className={`rounded-md border border-[#1f2b42] ${UI_SURFACES.card} px-2 py-1.5`}>
+                              <div key={entry.name} className={`rounded-md border ${UI_SURFACES.borderDeep} ${UI_SURFACES.card} px-2 py-1.5`}>
                                 <div className="flex items-center justify-between gap-2 text-[10px]">
                                   <span className={`truncate ${UI_SURFACES.textBody}`}>{entry.name}</span>
                                   <span className="font-semibold text-[#93c5fd]">{QUALITY_LABEL[entry.quality]}</span>
@@ -2291,7 +2291,7 @@ export function CameraInspector() {
                       </div>
                       <button
                         type="button" onClick={onToggle}
-                        className={cn("flex h-5 w-9 flex-shrink-0 items-center rounded-full px-0.5 transition-colors", isActive ? activeColor : "bg-[#2a3246]")}
+                        className={cn("flex h-5 w-9 flex-shrink-0 items-center rounded-full px-0.5 transition-colors", isActive ? activeColor : "${UI_SURFACES.borderDark}")}
                       >
                         <span className={cn("block h-4 w-4 rounded-full bg-white shadow transition-transform", isActive ? "translate-x-4" : "translate-x-0")} />
                       </button>
@@ -2412,7 +2412,7 @@ export function CameraInspector() {
       {/* Lens/FOV Tradeoff Simulator Modal */}
       {showLensFovSimulator && camera && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className={`relative max-h-[90vh] w-[820px] overflow-y-auto rounded-2xl border border-[#202536] ${UI_SURFACES.panel} shadow-2xl shadow-black/50`}>
+          <div className={`relative max-h-[90vh] w-[820px] overflow-y-auto rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} shadow-2xl shadow-black/50`}>
             <LensFovTradeoffSimulator camera={camera} onClose={() => setShowLensFovSimulator(false)} />
           </div>
         </div>

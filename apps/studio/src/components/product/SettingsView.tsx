@@ -75,7 +75,7 @@ export function SettingsView() {
                   <LayoutDashboard className="h-3.5 w-3.5" />
                   Workspace View Settings
                 </div>
-                <p className="mt-2 max-w-2xl text-sm text-[#c8d4ea]">
+                <p className="mt-2 max-w-2xl text-sm ${UI_SURFACES.textBody}">
                   Open the live Studio layout panel for component visibility, saved layouts, analysis modules, and workspace presets.
                 </p>
               </div>
@@ -250,7 +250,7 @@ export function SettingsView() {
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="rounded-full border border-[#26314a] bg-[#121829] p-1 text-cyan-300">
+                      <span className="rounded-full border ${UI_SURFACES.borderStandard} ${UI_SURFACES.hoverBgSubtle} p-1 text-cyan-300">
                         {cameraPresetIcon(preset.id)}
                       </span>
                       <div className="min-w-0">
@@ -310,7 +310,7 @@ export function SettingsView() {
               <LayoutDashboard className="h-3.5 w-3.5 text-amber-300" />
               Other Settings Surfaces
             </div>
-            <p className="mt-3 max-w-2xl text-sm text-[#c8d4ea]">
+            <p className="mt-3 max-w-2xl text-sm ${UI_SURFACES.textBody}">
               The settings below live in the workspace dock, the right rail, and the bottom panel
               because they're tied to the active scene or analysis flow. Open them from the place
               they're most useful — this page is the discovery entry point, not the only path.

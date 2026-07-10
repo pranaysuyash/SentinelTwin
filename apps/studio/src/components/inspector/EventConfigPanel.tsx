@@ -77,7 +77,7 @@ export function EventConfigPanel() {
   if (!config) {
     return (
       <SectionCard title="Event / Temporary Site" icon={<CalendarDays className="h-3.5 w-3.5" />}>
-        <div className="text-[10px] text-[#6b7891]">
+        <div className="text-[10px] ${UI_SURFACES.textMuted2}">
           No event configured. Enable this to model time-bounded deployments with lifecycle phases (setup → live → teardown).
         </div>
         <button
@@ -177,7 +177,7 @@ export function EventConfigPanel() {
         {phaseTimeline && phaseTimeline.length > 0 ? (
           <div className="space-y-2">
             {phaseTimeline.map((phase) => (
-              <div key={phase.id} className="rounded border border-[#1e2536] bg-[#0a0e18] p-2">
+              <div key={phase.id} className="rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2">
                 <div className="mb-1.5 flex items-center justify-between">
                   <div className={`text-[10px] font-semibold ${UI_SURFACES.textBody}`}>{phase.label}</div>
                   <button

@@ -113,7 +113,7 @@ export function WallCanvasPicker({
       {/* The mini-canvas. SVG scales to container width via viewBox; height
           caps at maxCanvasHeight to keep the layout bounded on huge plans. */}
       <div
-        className={`relative overflow-hidden rounded-lg border border-[#1b2233] ${UI_SURFACES.page}`}
+        className={`relative overflow-hidden rounded-lg border ${UI_SURFACES.hoverBg} ${UI_SURFACES.page}`}
         style={{ maxHeight: maxCanvasHeight }}
       >
         <svg

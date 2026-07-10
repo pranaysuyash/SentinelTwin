@@ -43,7 +43,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 text-[11px] font-semibold text-white">Keyboard Shortcuts</div>
-        <div className={`mb-3 rounded-lg border border-[#222a3e] ${UI_SURFACES.panel} px-3 py-2 text-[9px] leading-relaxed ${UI_SURFACES.textMuted5}`}>
+        <div className={`mb-3 rounded-lg border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panel} px-3 py-2 text-[9px] leading-relaxed ${UI_SURFACES.textMuted5}`}>
           Selected cameras also expose drag handles on the canvas and the same actions in the right-click menu.
         </div>
         <div className="space-y-2">

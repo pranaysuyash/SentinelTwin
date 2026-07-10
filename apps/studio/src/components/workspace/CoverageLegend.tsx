@@ -254,8 +254,8 @@ export function CoverageLegend() {
                   aria-pressed={overlayDensity === opt.value}
                   className={`flex-1 py-0.5 text-[8px] font-medium rounded transition-colors ${
                     overlayDensity === opt.value
-                      ? "bg-[#1e2d4a] text-sky-300"
-                      : "${UI_SURFACES.textDim} ${UI_SURFACES.hoverTextSoft} hover:bg-[#1a1f2e]"
+                      ? "${UI_SURFACES.borderStandard} text-sky-300"
+                      : "${UI_SURFACES.textDim} ${UI_SURFACES.hoverTextSoft} ${UI_SURFACES.borderFaint}"
                   }`}
                   style={overlayDensity === opt.value ? { backgroundColor: MAP_COLORS.panelFillAlt, color: MAP_COLORS.viewport } : undefined}
                 >
@@ -281,7 +281,7 @@ export function CoverageLegend() {
                     type="checkbox"
                     checked={overlayFilters[opt.id]}
                     onChange={(e) => setOverlayFilter(opt.id, e.target.checked)}
-                    className={`h-2.5 w-2.5 rounded ${UI_SURFACES.borderDark} bg-[#151a28] accent-[#3b82f6] cursor-pointer`}
+                    className={`h-2.5 w-2.5 rounded ${UI_SURFACES.borderDark} ${UI_SURFACES.hoverBgMuted} accent-[#3b82f6] cursor-pointer`}
                   />
                   <span className={`text-[9px] transition-colors ${
                     overlayFilters[opt.id] ? `${UI_SURFACES.textBody}` : "${UI_SURFACES.textDim}"

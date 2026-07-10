@@ -299,7 +299,7 @@ function SelectionHighlights() {
     <>
       {selectedNodeIds.length > 1 && firstSelectionAnchor ? (
         <SceneHtml position={[firstSelectionAnchor[0], firstSelectionAnchor[1] + 0.55, firstSelectionAnchor[2]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-          <div className="rounded-full border border-sky-300/35 bg-[#08111e]/92 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-sky-200 shadow-[0_10px_24px_rgba(0,0,0,0.25)]">
+          <div className="rounded-full border border-sky-300/35 ${UI_SURFACES.bgDeep}/92 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-sky-200 shadow-[0_10px_24px_rgba(0,0,0,0.25)]">
             {selectedNodeIds.length} selected
           </div>
         </SceneHtml>
@@ -318,7 +318,7 @@ function SelectionHighlights() {
             </mesh>
             {selectedNodeIds.length > 1 ? (
               <SceneHtml position={[anchor[0], anchor[1] + 0.2, anchor[2]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-                <div className={`rounded border border-[#2b3a58] ${UI_SURFACES.panel}/90 px-1.5 py-0.5 text-[8px] font-semibold ${UI_SURFACES.textBody2}`}>
+                <div className={`rounded border ${UI_SURFACES.borderElevated} ${UI_SURFACES.panel}/90 px-1.5 py-0.5 text-[8px] font-semibold ${UI_SURFACES.textBody2}`}>
                   {isPrimary ? "Primary" : `+${index}`}
                 </div>
               </SceneHtml>
@@ -1934,29 +1934,29 @@ function HeatmapCellExplainabilityCard() {
 
   return (
     <div
-      className={`pointer-events-none absolute z-20 w-85 rounded-xl border border-[#25304a] bg-[#0a0f1a]/95 p-3 text-[10px] ${UI_SURFACES.textBody2} shadow-[0_16px_40px_rgba(0,0,0,0.38)]`}
+      className={`pointer-events-none absolute z-20 w-85 rounded-xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel}/95 p-3 text-[10px] ${UI_SURFACES.textBody2} shadow-[0_16px_40px_rgba(0,0,0,0.38)]`}
       style={{ left, top }}
     >
       <div className="mb-1 flex items-center justify-between">
         <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-300">Cell explainability</span>
-        <span className="font-mono text-[9px] text-[#8ea2c4]">x:{hover.cell.x.toFixed(2)} z:{hover.cell.z.toFixed(2)}</span>
+        <span className="font-mono text-[9px] ${UI_SURFACES.textMuted3}">x:{hover.cell.x.toFixed(2)} z:{hover.cell.z.toFixed(2)}</span>
       </div>
-      <div className="grid grid-cols-3 gap-2 rounded-lg border border-[#1f2a40] bg-[#0d1421] p-2 text-[9px]">
+      <div className="grid grid-cols-3 gap-2 rounded-lg border ${UI_SURFACES.borderDeep} ${UI_SURFACES.bgDeep} p-2 text-[9px]">
         <div>
-          <div className="text-[#6c7e9f]">{heatmapMode === "lighting" ? "Light level" : "Quality"}</div>
-          <div className="font-semibold text-[#e3ebfb]">
+          <div className="${UI_SURFACES.textSoftDim}">{heatmapMode === "lighting" ? "Light level" : "Quality"}</div>
+          <div className="font-semibold ${UI_SURFACES.textBody4}">
             {heatmapMode === "lighting" ? `${(lightingSummary.maxLightLevel * 100).toFixed(0)}%` : getTrustQualityLabel(hover.cell.quality, scene.assumptions.doriStandard)}
           </div>
         </div>
         <div>
-          <div className="text-[#6c7e9f]">{heatmapMode === "lighting" ? "Lit by" : "PPM"}</div>
-          <div className="truncate font-semibold text-[#e3ebfb]">
+          <div className="${UI_SURFACES.textSoftDim}">{heatmapMode === "lighting" ? "Lit by" : "PPM"}</div>
+          <div className="truncate font-semibold ${UI_SURFACES.textBody4}">
             {heatmapMode === "lighting" ? ([...lightingSummary.illuminatedBy].join(", ") || "—") : hover.cell.ppm.toFixed(1)}
           </div>
         </div>
         <div>
-          <div className="text-[#6c7e9f]">{heatmapMode === "lighting" ? "Light shadow" : "Covering cams"}</div>
-          <div className="truncate font-semibold text-[#e3ebfb]">
+          <div className="${UI_SURFACES.textSoftDim}">{heatmapMode === "lighting" ? "Light shadow" : "Covering cams"}</div>
+          <div className="truncate font-semibold ${UI_SURFACES.textBody4}">
             {heatmapMode === "lighting" ? ([...lightingSummary.shadowedBy].join(", ") || "—") : hover.cell.coveringCameras.length}
           </div>
         </div>
@@ -1964,19 +1964,19 @@ function HeatmapCellExplainabilityCard() {
 
       <div className="mt-2 space-y-1.5">
         {topEvaluations.length === 0 ? (
-          <div className="rounded-md border border-[#1f2a40] bg-[#0d1421] px-2 py-1 text-[9px] text-[#7f91b3]">
+          <div className="rounded-md border ${UI_SURFACES.borderDeep} ${UI_SURFACES.bgDeep} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5}">
             No per-camera evaluations available for this cell.
           </div>
         ) : (
           topEvaluations.map(([cameraId, evaluation]) => (
-            <div key={cameraId} className="rounded-md border border-[#1f2a40] bg-[#0d1421] px-2 py-1.5">
+            <div key={cameraId} className="rounded-md border ${UI_SURFACES.borderDeep} ${UI_SURFACES.bgDeep} px-2 py-1.5">
               <div className="flex items-center justify-between text-[9px]">
                 <span className="font-semibold text-[#dbe7ff]">{cameraId}</span>
-                <span className="text-[#8ea2c4]">
+                <span className="${UI_SURFACES.textMuted3}">
                   {getTrustQualityLabel(evaluation.quality, scene.assumptions.doriStandard)} · {evaluation.ppm.toFixed(1)} PPM
                 </span>
               </div>
-              <div className="mt-1 grid grid-cols-3 gap-x-2 gap-y-1 text-[8px] text-[#8ea2c4]">
+              <div className="mt-1 grid grid-cols-3 gap-x-2 gap-y-1 text-[8px] ${UI_SURFACES.textMuted3}">
                 <span>FOV: {evaluation.inFov ? "yes" : "no"}</span>
                 <span>Range: {evaluation.withinRange ? "yes" : "no"}</span>
                 <span>Dist: {evaluation.distanceM.toFixed(1)}m</span>
@@ -1989,7 +1989,7 @@ function HeatmapCellExplainabilityCard() {
                 <span>Final factor: {formatMultiplier(evaluation.finalPpmMultiplier)}</span>
               </div>
               {evaluation.illuminatedBy?.length || evaluation.shadowedBy?.length ? (
-                <div className="mt-1 text-[8px] text-[#8ea2c4]">
+                <div className="mt-1 text-[8px] ${UI_SURFACES.textMuted3}">
                   {evaluation.illuminatedBy?.length ? <span>Lit by {evaluation.illuminatedBy.join(", ")}</span> : null}
                   {evaluation.illuminatedBy?.length && evaluation.shadowedBy?.length ? <span> · </span> : null}
                   {evaluation.shadowedBy?.length ? <span>Light shadow: {evaluation.shadowedBy.join(", ")}</span> : null}
@@ -1998,7 +1998,7 @@ function HeatmapCellExplainabilityCard() {
               {evaluation.reasonCodes.length > 0 ? (
                 <div className="mt-1 flex flex-wrap gap-1">
                   {evaluation.reasonCodes.slice(0, 4).map((reasonCode) => (
-                    <span key={reasonCode} className="rounded border border-[#314267] bg-[#13203a] px-1 py-0.5 text-[8px] text-[#9dc3ff]">
+                    <span key={reasonCode} className="rounded border border-[#314267] ${UI_SURFACES.hoverBg} px-1 py-0.5 text-[8px] text-[#9dc3ff]">
                       {formatReasonCode(reasonCode)}
                     </span>
                   ))}
@@ -2211,19 +2211,19 @@ export function WorkspaceCanvas() {
           <div className="pointer-events-auto flex flex-col items-center gap-4">
             <button
               type="button"
-              className={`flex flex-col items-center gap-3 rounded-2xl border border-[#1e2536] bg-[#0b0f1a]/85 px-7 py-5 text-center backdrop-blur-sm transition-colors ${UI_SURFACES.hoverBorderBright} hover:bg-[#0f1422]/95`}
+              className={`flex flex-col items-center gap-3 rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/85 px-7 py-5 text-center backdrop-blur-sm transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.card}/95`}
               onClick={(e) => { e.stopPropagation(); setActiveTool("camera"); }}
             >
-              <div className="flex size-11 items-center justify-center rounded-xl border border-[#1e2840] bg-[#111828]">
+              <div className="flex size-11 items-center justify-center rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.hoverBgSubtle}">
                 <Camera className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-[12px] font-semibold text-[#c8d5ee]">Add your first camera</p>
-                <p className="mt-1 text-[9px] leading-relaxed text-[#4d5c7a]">
+                <p className="text-[12px] font-semibold ${UI_SURFACES.textBody}">Add your first camera</p>
+                <p className="mt-1 text-[9px] leading-relaxed ${UI_SURFACES.textDimMid}">
                   Click here to activate the camera tool
                   <br />
                   or press{" "}
-                  <kbd className="rounded border border-[#2a3652] bg-[#0e1525] px-1 py-0.5 font-mono text-[8px] text-[#7a9bcc]">
+                  <kbd className="rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} px-1 py-0.5 font-mono text-[8px] text-[#7a9bcc]">
                     C
                   </kbd>
                 </p>
@@ -2232,14 +2232,14 @@ export function WorkspaceCanvas() {
 
             {referenceScenes.length > 0 && (
               <div className="flex flex-col items-center gap-2">
-                <p className="text-[9px] text-[#3a4560]">or try a demo scene</p>
+                <p className="text-[9px] ${UI_SURFACES.textDim}">or try a demo scene</p>
                 <div className="flex items-center gap-2">
                   {referenceScenes.slice(0, 3).map((ref) => (
                     <button
                       key={ref.id}
                       type="button"
                       onClick={() => setScene(ref)}
-                      className={`rounded-lg border border-[#1e2536] bg-[#0b0f1a]/80 px-3 py-1.5 text-[9px] text-[#7a8fac] backdrop-blur-sm transition-colors ${UI_SURFACES.hoverBorderBright} hover:text-[#b0c0d8]`}
+                      className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/80 px-3 py-1.5 text-[9px] ${UI_SURFACES.textMuted5} backdrop-blur-sm transition-colors ${UI_SURFACES.hoverBorderBright} hover:text-[#b0c0d8]`}
                     >
                       {ref.name}
                     </button>

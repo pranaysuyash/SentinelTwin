@@ -766,7 +766,7 @@ export function GovernanceTab() {
             </div>
           </div>
           <div className="mt-2 flex items-center justify-between">
-            <div className="text-[9px] leading-4 text-[#6f7c96]">
+            <div className="text-[9px] leading-4 ${UI_SURFACES.textMuted2}">
               SentinelTwin treats publish as an auditable control action. If approval is required, publish will convert into a review request until a reviewer or admin approves it.
             </div>
             <TruthBadge label="configured" />
@@ -957,13 +957,13 @@ export function GovernanceTab() {
               onChange={(event) => setAnnotation(event.target.value)}
               rows={3}
               placeholder="Write a review note or approval comment..."
-              className={`w-full rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[10px] ${UI_SURFACES.textNear} outline-none transition-colors placeholder:text-[#58647a] focus:border-sky-400/40`}
+              className={`w-full rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[10px] ${UI_SURFACES.textNear} outline-none transition-colors placeholder:${UI_SURFACES.textDimMid} focus:border-sky-400/40`}
             />
             <div className="flex items-center gap-1.5">
               <PillButton active={false} onClick={submitAnnotation}>
                 Add note
               </PillButton>
-              <div className="text-[9px] text-[#6f7c96]">
+              <div className="text-[9px] ${UI_SURFACES.textMuted2}">
                 Notes become evidence events and stay in the audit trail.
               </div>
             </div>

@@ -97,7 +97,7 @@ export function ScenarioPathPanel() {
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
             {!activePath ? (
-              <div className={`rounded-lg border border-dashed border-[#26324a] ${UI_SURFACES.panelDeepAlt} px-2.5 py-2 text-[9px] text-[#72809a]`}>
+              <div className={`rounded-lg border border-dashed ${UI_SURFACES.borderStandard} ${UI_SURFACES.panelDeepAlt} px-2.5 py-2 text-[9px] ${UI_SURFACES.textSoftDim}`}>
                 No path selected. Use the map picker to choose a route, then replay or edit it here.
               </div>
             ) : (
@@ -112,7 +112,7 @@ export function ScenarioPathPanel() {
                   <div className="min-w-0">
                     <div className={`text-[8px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Active Path</div>
                     <div className={`truncate text-[12px] font-semibold ${UI_SURFACES.textNear}`}>{activePath.label}</div>
-                    <div className="mt-0.5 text-[9px] text-[#8c9bb4]">
+                    <div className="mt-0.5 text-[9px] ${UI_SURFACES.textSoftBright}">
                       {activePath.labelDetail ?? `${activeActor} · ${activeIntent}`}
                     </div>
                   </div>

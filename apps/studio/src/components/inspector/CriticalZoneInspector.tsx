@@ -148,7 +148,7 @@ export function CriticalZoneInspector() {
               <button
                 type="button"
                 onClick={() => updateNode(zone.id, { [key]: !value })}
-                className={cn("flex h-5 w-9 flex-shrink-0 items-center rounded-full px-0.5 transition-colors", value ? "bg-blue-600/50" : "bg-[#2a3246]")}
+                className={cn("flex h-5 w-9 flex-shrink-0 items-center rounded-full px-0.5 transition-colors", value ? "bg-blue-600/50" : "${UI_SURFACES.borderDark}")}
               >
                 <span className={cn("block h-4 w-4 rounded-full bg-white shadow transition-transform", value ? "translate-x-4" : "")} />
               </button>

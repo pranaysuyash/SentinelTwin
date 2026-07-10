@@ -933,7 +933,7 @@ function InfoOverlay({
                   </span>
                 </div>
                 {/* Mini bar */}
-                <div className="mt-0.5 h-0.5 w-full overflow-hidden rounded-full bg-[#1a2333]">
+                <div className="mt-0.5 h-0.5 w-full overflow-hidden rounded-full ${UI_SURFACES.hoverBg}">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{

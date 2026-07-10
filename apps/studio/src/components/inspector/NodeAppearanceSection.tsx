@@ -97,7 +97,7 @@ export function NodeAppearanceSection({
           onChange={(value) => patch({ textureScale: value / 100 })}
         />
       ) : null}
-      <div className="pt-1 text-[8px] leading-relaxed text-[#495468]">
+      <div className="pt-1 text-[8px] leading-relaxed ${UI_SURFACES.textMuted}">
         Visual only — coverage simulation is unaffected. Occlusion behavior is
         controlled by the Material section.
       </div>

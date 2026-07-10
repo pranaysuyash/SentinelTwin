@@ -70,7 +70,7 @@ export function CameraHeader({
 }) {
   const isActive = camera.status === "on";
   return (
-    <div className={`absolute left-3 top-3 z-30 flex items-center gap-3 rounded-xl border border-[#263246] ${UI_SURFACES.panel}/90 px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.4)]`}>
+    <div className={`absolute left-3 top-3 z-30 flex items-center gap-3 rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel}/90 px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.4)]`}>
       <div className="flex items-center gap-2">
         <span className={`h-2 w-2 rounded-full ${isActive ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]" : "bg-red-400"}`} />
         <div className="flex items-center gap-1.5">
@@ -86,7 +86,7 @@ export function CameraHeader({
         </div>
       </div>
 
-      <div className="h-4 w-px bg-[#263246]" />
+      <div className="h-4 w-px ${UI_SURFACES.border}" />
 
       <div className="flex items-center gap-1">
         <button
@@ -154,11 +154,11 @@ export function ReplayStatusOverlay({
         <span className="h-2 w-2 rounded-full bg-sky-400 animate-pulse" />
         <span className={`text-[9px] font-bold uppercase tracking-[0.16em] ${UI_SURFACES.textAccent}`}>LIVE REPLAY</span>
       </div>
-      <div className="h-3 w-px bg-[#243146]" />
+      <div className="h-3 w-px ${UI_SURFACES.border}" />
       <div className="max-w-48 truncate">
         <span className={`${UI_SURFACES.textSoftMid}`}>Path:</span> <span className="font-medium text-white">{pathLabel}</span>
       </div>
-      <div className="h-3 w-px bg-[#243146]" />
+      <div className="h-3 w-px ${UI_SURFACES.border}" />
       <div>
         <span className={`${UI_SURFACES.textSoftMid}`}>Time:</span> <span className="font-mono text-white">{timeS.toFixed(1)}s</span>
       </div>
@@ -172,19 +172,19 @@ export function ReplayStatusOverlay({
       ) : null}
       {qualityLabel ? (
         <>
-          <div className="h-3 w-px bg-[#243146]" />
+          <div className="h-3 w-px ${UI_SURFACES.border}" />
           <div>
             <span className={`${UI_SURFACES.textSoftMid}`}>Quality:</span> <span className="font-semibold text-white">{qualityLabel}</span>
           </div>
         </>
       ) : null}
-      <div className="h-3 w-px bg-[#243146]" />
+      <div className="h-3 w-px ${UI_SURFACES.border}" />
       <div>
         <span className={`${UI_SURFACES.textSoftMid}`}>Risk:</span> <span className={`font-semibold ${risk.className}`}>{risk.label}</span>
       </div>
       {segmentLabel ? (
         <>
-          <div className="h-3 w-px bg-[#243146]" />
+          <div className="h-3 w-px ${UI_SURFACES.border}" />
           <div className={`max-w-44 truncate text-[9px] ${UI_SURFACES.textMuted3}`}>
             {segmentLabel}
           </div>
@@ -260,19 +260,19 @@ export function DoriInsightCard({
       <div className={`mt-1 text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textMuted3}`}>
         {requiredQuality.toUpperCase()} REQUIRED · {statusLabel}
       </div>
-      <div className="mt-1 border-t border-[#334563] pt-1 text-[8px] uppercase tracking-wide text-[#7a94c7]">
+      <div className="mt-1 border-t ${UI_SURFACES.borderElevated} pt-1 text-[8px] uppercase tracking-wide text-[#7a94c7]">
         Target: {formatTargetTypeLabel(targetType)}
       </div>
       <div className={`mt-2 space-y-1.5 text-[10px] ${UI_SURFACES.textBody2}`}>
         <div className="flex items-center justify-between gap-2">
           <span className={`${UI_SURFACES.textSoftMid}`}>Current Quality</span>
-          <span className="rounded bg-[#152034] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#93c5fd]">
+          <span className="rounded ${UI_SURFACES.hoverBg} px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#93c5fd]">
             {currentQuality}
           </span>
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className={`${UI_SURFACES.textSoftMid}`}>Required</span>
-          <span className={`rounded bg-[#152034] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${UI_SURFACES.textBody}`}>
+          <span className={`rounded ${UI_SURFACES.hoverBg} px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${UI_SURFACES.textBody}`}>
             {requiredQuality}
           </span>
         </div>
@@ -299,10 +299,10 @@ export function DoriInsightCard({
           </div>
         ) : null}
       </div>
-      <div className={`mt-2 rounded-lg border border-[#1f2b42] ${UI_SURFACES.card} px-2 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
+      <div className={`mt-2 rounded-lg border ${UI_SURFACES.borderDeep} ${UI_SURFACES.card} px-2 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
         Why this quality: {reasonLine}
       </div>
-      <div className={`mt-2 rounded-lg border border-[#1f2b42] ${UI_SURFACES.card} px-2 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
+      <div className={`mt-2 rounded-lg border ${UI_SURFACES.borderDeep} ${UI_SURFACES.card} px-2 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
         {camera.name} is being used to inspect the current coverage scenario.
       </div>
     </div>
@@ -520,10 +520,10 @@ export function BottomControlStrip({
       <div className={`rounded-md border ${UI_SURFACES.borderStrong} bg-black/55 px-2 py-1.5 text-[8px] uppercase tracking-[0.08em] ${UI_SURFACES.textMuted3}`}>
         <div className={`font-semibold ${UI_SURFACES.textBody}`}>Timeline / Path Replay</div>
         <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[7px]">
-          <span className={`rounded border border-[#2f3d57] ${UI_SURFACES.card} px-1 py-0.5`}>Events</span>
-          <span className={`rounded border border-[#2f3d57] ${UI_SURFACES.card} px-1 py-0.5`}>Quality Over Time</span>
-          <span className={`rounded border border-[#2f3d57] ${UI_SURFACES.card} px-1 py-0.5`}>Camera Wall Preview</span>
-          <span className={`rounded border border-[#2f3d57] ${UI_SURFACES.card} px-1 py-0.5`}>Scenario / Path</span>
+          <span className={`rounded border ${UI_SURFACES.borderElevated} ${UI_SURFACES.card} px-1 py-0.5`}>Events</span>
+          <span className={`rounded border ${UI_SURFACES.borderElevated} ${UI_SURFACES.card} px-1 py-0.5`}>Quality Over Time</span>
+          <span className={`rounded border ${UI_SURFACES.borderElevated} ${UI_SURFACES.card} px-1 py-0.5`}>Camera Wall Preview</span>
+          <span className={`rounded border ${UI_SURFACES.borderElevated} ${UI_SURFACES.card} px-1 py-0.5`}>Scenario / Path</span>
         </div>
       </div>
     </div>

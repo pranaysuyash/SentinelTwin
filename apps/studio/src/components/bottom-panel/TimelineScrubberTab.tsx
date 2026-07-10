@@ -72,7 +72,7 @@ export function TimelineScrubberTab() {
             <div>
               <div className={`text-[9px] uppercase tracking-wider ${UI_SURFACES.textSoftMid} mb-1`}>Scrubbed Event</div>
               <div className="text-[12px] font-medium text-white">{currentEvent?.title || "Unknown Event"}</div>
-              <div className="text-[10px] text-[#8192b0] mt-1 flex items-center gap-1">
+              <div className="text-[10px] ${UI_SURFACES.textMuted5} mt-1 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {currentEvent ? new Date(currentEvent.timestamp).toLocaleString() : ""}
               </div>

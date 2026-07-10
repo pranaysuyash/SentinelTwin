@@ -174,11 +174,11 @@ function SimPlanCard({ plan, isActive, onPreview, onApply, onRevert }: SimPlanCa
           <div className={`mt-1.5 space-y-0.5 rounded-lg border ${UI_SURFACES.borderFaint} ${UI_SURFACES.page}/50 px-2 py-1.5`}>
             {plan.zoneDeltas.map((z) => (
               <div key={z.zoneId} className="flex items-center justify-between gap-2 text-[9px]">
-                <span className="truncate text-[#7b89a5]">{z.zoneId}</span>
+                <span className="truncate ${UI_SURFACES.textMuted5}">{z.zoneId}</span>
                 <span
                   className={cn(
                     "shrink-0 font-mono",
-                    z.improved ? "text-emerald-400" : "text-[#7b89a5]",
+                    z.improved ? "text-emerald-400" : "${UI_SURFACES.textMuted5}",
                   )}
                 >
                   {z.baselineStatus} <ArrowRight className="inline size-2.5" /> {z.proposedStatus}
@@ -382,7 +382,7 @@ export function CounterfactualPanel() {
       {!hasBaseline && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-amber-500/15 bg-amber-500/5 px-2.5 py-1.5">
           <BookmarkPlus className="size-3 shrink-0 text-amber-400/70" />
-          <p className="flex-1 text-[9px] text-[#7a8090]">
+          <p className="flex-1 text-[9px] ${UI_SURFACES.textSoftDim}">
             Save a baseline snapshot before applying fixes to enable Before/After comparison.
           </p>
           <button
@@ -575,7 +575,7 @@ export function CounterfactualPanel() {
             {showBatchCompare && aiCandidates.length > 0 ? (
               <div className={`overflow-x-auto rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}`}>
                 <table className="min-w-full text-[10px]">
-                  <thead className={`border-b ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} text-[#7a859d]`}>
+                  <thead className={`border-b ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} ${UI_SURFACES.textSoftDim}`}>
                     <tr>
                       <th className="px-2 py-1.5 text-left">#</th>
                       <th className="px-2 py-1.5 text-left">Candidate</th>
@@ -589,7 +589,7 @@ export function CounterfactualPanel() {
                   </thead>
                   <tbody>
                     {aiCandidates.map((c) => (
-                      <tr key={c.id} className={`border-b border-[#131a28] ${UI_SURFACES.textBody}`}>
+                      <tr key={c.id} className={`border-b ${UI_SURFACES.hoverBgSubtle} ${UI_SURFACES.textBody}`}>
                         <td className={`px-2 py-1.5 font-mono ${UI_SURFACES.textSoftMuted}`}>#{c.rank ?? "—"}</td>
                         <td className="max-w-[220px] px-2 py-1.5 text-[9px] leading-snug">{c.description}</td>
                         <td className={`px-2 py-1.5 uppercase ${UI_SURFACES.textSoftMuted}`}>{c.costCategory}</td>
@@ -607,7 +607,7 @@ export function CounterfactualPanel() {
                           <button
                             type="button"
                             onClick={() => handleApplyAi(c.operations)}
-                            className="rounded-md border border-[#2a3550] bg-[#131a28] px-1.5 py-1 text-[9px] text-emerald-300 hover:border-emerald-500/30 hover:bg-emerald-500/10"
+                            className="rounded-md border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} px-1.5 py-1 text-[9px] text-emerald-300 hover:border-emerald-500/30 hover:bg-emerald-500/10"
                           >
                             Apply
                           </button>

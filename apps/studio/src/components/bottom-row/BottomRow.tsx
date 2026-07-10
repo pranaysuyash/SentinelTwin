@@ -82,7 +82,7 @@ function SnapshotsPanel() {
           <div key={snap.id} className={`w-[84px] flex-shrink-0 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
             <SnapshotThumb coverage={snap.simulation?.totalCoveragePct} index={i} />
             <div className={`mt-1 text-[10px] font-medium ${UI_SURFACES.textNear} truncate`}>{snap.label}</div>
-            <div className="mt-0.5 text-[8px] text-[#5e6980]">{panelTimeLabel(snap.createdAt)}</div>
+            <div className="mt-0.5 text-[8px] ${UI_SURFACES.textMuted7}">{panelTimeLabel(snap.createdAt)}</div>
           </div>
         ))}
 
@@ -102,7 +102,7 @@ function AssumptionRow({ label, sublabel, value }: { label: string; sublabel?: s
         {label}
         {sublabel ? <span className={`ml-1 hidden text-[8px] ${UI_SURFACES.textDim} sm:inline`}>({sublabel})</span> : null}
       </span>
-      <span className="flex-shrink-0 text-right text-[#d3dbea]">{value}</span>
+      <span className="flex-shrink-0 text-right ${UI_SURFACES.textBody2}">{value}</span>
     </div>
   );
 }
@@ -173,7 +173,7 @@ function AssumptionsPanel() {
             </button>
             <button type="button"
               onClick={cancelEdit}
-              className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[8px] text-[#6a7490] transition-colors hover:text-white`}
+              className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[8px] ${UI_SURFACES.textSoftMid} transition-colors hover:text-white`}
             >
               <X className="h-3 w-3" />
             </button>
@@ -303,7 +303,7 @@ function ReportBullet({ color, label, text }: { color: string; label: string; te
   return (
     <div className="flex items-start gap-2 text-[9px] leading-relaxed">
       <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
-      <span className="text-[#9eabc1]">
+      <span className="${UI_SURFACES.hoverTextSoft}">
         <span style={{ color }} className="font-semibold">{label}: </span>
         {text}
       </span>
@@ -370,7 +370,7 @@ function EnvironmentPanel() {
             <div key={row.label} className="flex items-center gap-2 text-[9px]">
               {row.label === "Mode" ? <Lightbulb className="h-3.5 w-3.5 text-yellow-400" /> : null}
               <span className={`${UI_SURFACES.textSoftMid}`}>{row.label}</span>
-              <span className="ml-auto text-right text-[#d3dbea]">{row.value}</span>
+              <span className="ml-auto text-right ${UI_SURFACES.textBody2}">{row.value}</span>
             </div>
           ))}
         </div>
@@ -382,7 +382,7 @@ function EnvironmentPanel() {
 export function BottomRow() {
   return (
     <div
-      className={`{grid flex-shrink-0 grid-cols-4 divide-x divide-[#1e2130] border-t ${UI_SURFACES.borderPanel} bg-[#0c0f16]}`}
+      className={`{grid flex-shrink-0 grid-cols-4 divide-x divide-[#1e2130] border-t ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel}}`}
       style={{ height: 148 }}
     >
       <div className="flex overflow-hidden px-3 py-2"><SnapshotsPanel /></div>

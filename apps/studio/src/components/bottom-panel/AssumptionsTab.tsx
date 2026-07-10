@@ -120,7 +120,7 @@ export function AssumptionsTab() {
         {/* PPM Thresholds */}
         <div>
           <div className={`text-[9px] font-semibold ${UI_SURFACES.textDim} uppercase tracking-widest mb-1.5`}>
-            Resolution thresholds <span className="font-normal normal-case text-[7px] text-[#2d3750]">(px/m)</span>
+            Resolution thresholds <span className="font-normal normal-case text-[7px] ${UI_SURFACES.hoverBorderSubtle}">(px/m)</span>
           </div>
           {assumptions.doriStandard === "oodpcvs_2025" ? (
             <div className="grid grid-cols-4 gap-1">

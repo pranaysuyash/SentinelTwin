@@ -147,7 +147,7 @@ export function LiveFeedHUD({
 
       {/* Top-Right Spec Badge */}
       <div className="absolute right-3 top-3 z-30 flex flex-col items-end gap-0.5 pointer-events-auto">
-        <span className={`rounded border border-[#263246] ${UI_SURFACES.panel}/90 px-2 py-0.5 text-[9px] font-semibold text-[#93c5fd] shadow-sm`}>
+        <span className={`rounded border ${UI_SURFACES.border} ${UI_SURFACES.panel}/90 px-2 py-0.5 text-[9px] font-semibold text-[#93c5fd] shadow-sm`}>
           {cam.resolutionMP}MP · {cam.fovHorizontalDeg}°
         </span>
         <span className="font-mono text-[8px] text-white/70 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
@@ -163,10 +163,10 @@ export function LiveFeedHUD({
       {/* Left Sidebar Stack */}
       <div className="absolute left-3 top-16 z-30 flex w-64 max-h-[calc(100vh-13rem)] flex-col gap-2.5 overflow-y-auto pointer-events-none pr-1 scrollbar-none">
         <div className="flex flex-wrap gap-1.5 pointer-events-auto">
-          <span className={`rounded-md border border-[#2d3d56] ${UI_SURFACES.panel}/90 px-2 py-1 text-[8px] font-semibold text-[#95a9cf] shadow-sm`}>
+          <span className={`rounded-md border ${UI_SURFACES.borderElevated} ${UI_SURFACES.panel}/90 px-2 py-1 text-[8px] font-semibold ${UI_SURFACES.textMuted3} shadow-sm`}>
             Mode: {modeLabel(mode)}
           </span>
-          <span className={`rounded-md border border-[#2d3d56] ${UI_SURFACES.panel}/90 px-2 py-1 text-[8px] font-semibold text-[#95a9cf] shadow-sm`}>
+          <span className={`rounded-md border ${UI_SURFACES.borderElevated} ${UI_SURFACES.panel}/90 px-2 py-1 text-[8px] font-semibold ${UI_SURFACES.textMuted3} shadow-sm`}>
             LIVE (SIMULATED)
           </span>
         </div>
@@ -210,7 +210,7 @@ export function LiveFeedHUD({
         ) : null}
 
         {flags.path || flags.zones || flags.overlays || flags.grid ? (
-          <div className={`pointer-events-auto flex flex-col gap-1 rounded-xl border border-[#2d3d56] ${UI_SURFACES.panel}/90 px-3 py-2 text-[8px] ${UI_SURFACES.textMuted3} shadow-sm`}>
+          <div className={`pointer-events-auto flex flex-col gap-1 rounded-xl border ${UI_SURFACES.borderElevated} ${UI_SURFACES.panel}/90 px-3 py-2 text-[8px] ${UI_SURFACES.textMuted3} shadow-sm`}>
             <div className={`font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textAccent}`}>Active Overlays</div>
             {flags.overlays ? <span>• Overlays: enabled</span> : null}
             {flags.path ? <span>• Path overlays</span> : null}
@@ -223,16 +223,16 @@ export function LiveFeedHUD({
       {/* Right Sidebar Stack */}
       <div className="absolute right-3 top-16 z-30 flex w-72 max-h-[calc(100vh-13rem)] flex-col gap-2.5 overflow-y-auto pointer-events-none pl-1 scrollbar-none">
         {flags.dori ? (
-          <div className={`pointer-events-auto flex flex-col gap-1 rounded-xl border border-[#2d3d56] ${UI_SURFACES.panel}/92 px-3 py-2.5 text-[9px] text-[#cdd6ef] shadow-sm`}>
-            <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#87a5cf]">DORI RANGES AT TARGET</div>
+          <div className={`pointer-events-auto flex flex-col gap-1 rounded-xl border ${UI_SURFACES.borderElevated} ${UI_SURFACES.panel}/92 px-3 py-2.5 text-[9px] ${UI_SURFACES.textBody2} shadow-sm`}>
+            <div className="text-[8px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted3}">DORI RANGES AT TARGET</div>
             <div className="space-y-0.5 mt-1">
               <div className="flex justify-between"><span>Detection</span><span className={"font-mono " + QUALITY_TEXT_COLOR.detection}>{ranges.detection.toFixed(1)}m</span></div>
               <div className="flex justify-between"><span>Observation</span><span className={"font-mono " + QUALITY_TEXT_COLOR.observation}>{ranges.observation.toFixed(1)}m</span></div>
               <div className="flex justify-between"><span>Recognition</span><span className={"font-mono " + QUALITY_TEXT_COLOR.recognition}>{ranges.recognition.toFixed(1)}m</span></div>
               <div className="flex justify-between"><span>Identification</span><span className={"font-mono " + QUALITY_TEXT_COLOR.identification}>{ranges.identification.toFixed(1)}m</span></div>
             </div>
-            {targetType ? <div className="mt-1 border-t border-[#334563] pt-1 text-[8px] uppercase tracking-wide text-[#7a94c7]">Target: {formatTargetTypeLabel(targetType)}</div> : null}
-            <div className="text-[8px] text-[#95a9cf]">Mode: {modeLabel(mode)}</div>
+            {targetType ? <div className="mt-1 border-t ${UI_SURFACES.borderElevated} pt-1 text-[8px] uppercase tracking-wide text-[#7a94c7]">Target: {formatTargetTypeLabel(targetType)}</div> : null}
+            <div className="text-[8px] ${UI_SURFACES.textMuted3}">Mode: {modeLabel(mode)}</div>
           </div>
         ) : null}
 

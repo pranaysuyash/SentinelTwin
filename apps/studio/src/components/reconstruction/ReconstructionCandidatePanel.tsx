@@ -435,7 +435,7 @@ export function ReconstructionCandidatePanel({
       </div>
 
       {/* Compile footer */}
-      <div className={`mt-auto border-t ${UI_SURFACES.borderSubtle} bg-[#0b1322] px-4 py-3`}>
+      <div className={`mt-auto border-t ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} px-4 py-3`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-[10px] text-[color:var(--text-muted)]">
             {runLabel ? (

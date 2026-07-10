@@ -43,7 +43,7 @@ export function NodeHistoryTab({ nodeId }: { nodeId: string }) {
       {nodeEvents.map((event, i) => (
         <SectionCard key={event.id} title={event.title}>
           <div className="flex justify-between items-start mb-2">
-            <div className="text-[10px] text-[#8192b0] flex items-center gap-1">
+            <div className="text-[10px] ${UI_SURFACES.textMuted5} flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {new Date(event.timestamp).toLocaleString()}
             </div>

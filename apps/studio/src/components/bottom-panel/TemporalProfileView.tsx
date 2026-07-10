@@ -211,7 +211,7 @@ function AnomalyCard({ anomaly }: { anomaly: TemporalAnomalyWindow }) {
       <div className={`mt-1.5 text-[9px] leading-relaxed ${UI_SURFACES.textSoftMuted}`}>{anomaly.description}</div>
       <div className="mt-1.5 flex flex-wrap gap-1">
         {anomaly.affectedZones.slice(0, 3).map((zone) => (
-          <span key={zone} className={`rounded ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] text-[#b7c1d8]`}>
+          <span key={zone} className={`rounded ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] ${UI_SURFACES.textNearAlt}`}>
             {zone}
           </span>
         ))}

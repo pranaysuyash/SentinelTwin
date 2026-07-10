@@ -212,7 +212,7 @@ export function IfcImportModal() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="ifc-import-title"
-        className={`flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-[#20273a] ${UI_SURFACES.panel} shadow-2xl shadow-black/50`}
+        className={`flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} shadow-2xl shadow-black/50`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -243,7 +243,7 @@ export function IfcImportModal() {
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* File Upload OR Paste Area */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-[22px] border border-dashed border-[#28334e] bg-[#0e1422] p-5 flex flex-col items-center justify-center text-center">
+            <div className="rounded-[22px] border border-dashed ${UI_SURFACES.borderStrong} ${UI_SURFACES.bgDeep} p-5 flex flex-col items-center justify-center text-center">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -305,7 +305,7 @@ export function IfcImportModal() {
           )}
 
           {/* Material & Elevation Configuration */}
-          <div className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} bg-[#0e1422] p-5 space-y-4`}>
+          <div className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-5 space-y-4`}>
             <div className="flex items-center justify-between">
               <div className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textSoftDim}`}>
                 <Radio className="h-4 w-4 text-emerald-400" />
@@ -378,23 +378,23 @@ export function IfcImportModal() {
               Parsing failed: {parseResult.error}
             </div>
           ) : parsedScene ? (
-            <div className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} bg-[#0e1422] p-5 space-y-4`}>
+            <div className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-5 space-y-4`}>
               <div className={`flex items-center justify-between border-b ${UI_SURFACES.borderSubtle} pb-3`}>
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
                   <Layers className="h-4 w-4" />
                   Extracted Geometry Summary
                 </div>
-                <div className="flex items-center gap-3 font-mono text-xs text-[#a3b1cc]">
-                  <span className="rounded-lg bg-[#151c2c] px-2 py-1">
+                <div className="flex items-center gap-3 font-mono text-xs ${UI_SURFACES.textMuted4}">
+                  <span className="rounded-lg ${UI_SURFACES.hoverBgMuted} px-2 py-1">
                     Storeys: <strong className="text-white">{levels.length}</strong>
                   </span>
-                  <span className="rounded-lg bg-[#151c2c] px-2 py-1">
+                  <span className="rounded-lg ${UI_SURFACES.hoverBgMuted} px-2 py-1">
                     Walls: <strong className="text-white">{parsedScene.walls.length}</strong>
                   </span>
-                  <span className="rounded-lg bg-[#151c2c] px-2 py-1">
+                  <span className="rounded-lg ${UI_SURFACES.hoverBgMuted} px-2 py-1">
                     Doors: <strong className="text-white">{parsedScene.doors?.length || 0}</strong>
                   </span>
-                  <span className="rounded-lg bg-[#151c2c] px-2 py-1">
+                  <span className="rounded-lg ${UI_SURFACES.hoverBgMuted} px-2 py-1">
                     Windows: <strong className="text-white">{parsedScene.windows?.length || 0}</strong>
                   </span>
                 </div>
@@ -433,7 +433,7 @@ export function IfcImportModal() {
                             {isSelected ? (
                               <CheckSquare className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                             ) : (
-                              <Square className="h-4 w-4 text-[#47536d] flex-shrink-0" />
+                              <Square className="h-4 w-4 ${UI_SURFACES.textMuted} flex-shrink-0" />
                             )}
                             <div>
                               <div className="text-xs font-semibold text-white">{lvl.name}</div>
@@ -442,7 +442,7 @@ export function IfcImportModal() {
                               </div>
                             </div>
                           </div>
-                          <span className="text-[10px] font-mono rounded bg-black/30 px-2 py-0.5 text-[#a3b1cc]">
+                          <span className="text-[10px] font-mono rounded bg-black/30 px-2 py-0.5 ${UI_SURFACES.textMuted4}">
                             {wallCount} walls
                           </span>
                         </button>
@@ -487,7 +487,7 @@ export function IfcImportModal() {
                 "rounded-xl border px-4 py-2 text-xs font-semibold transition-colors",
                 filteredScene
                   ? "border-cyan-400/30 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25"
-                  : "${UI_SURFACES.borderStandard} bg-[#111622] text-[#4d5973] cursor-not-allowed"
+                  : "${UI_SURFACES.borderStandard} ${UI_SURFACES.card} ${UI_SURFACES.textDimMid} cursor-not-allowed"
               )}
             >
               Merge into Current Scene
@@ -500,7 +500,7 @@ export function IfcImportModal() {
                 "rounded-xl border px-4 py-2 text-xs font-semibold transition-colors",
                 filteredScene
                   ? "border-emerald-400/30 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30 shadow-lg shadow-emerald-950/50"
-                  : "${UI_SURFACES.borderStandard} bg-[#111622] text-[#4d5973] cursor-not-allowed"
+                  : "${UI_SURFACES.borderStandard} ${UI_SURFACES.card} ${UI_SURFACES.textDimMid} cursor-not-allowed"
               )}
             >
               Import as New Scene

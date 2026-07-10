@@ -202,7 +202,7 @@ function ModeButton({
           {label}
         </span>
       </span>
-      <span className={`relative z-10 hidden rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-1 py-0.5 text-[9px] text-[#6b7280] sm:inline-flex`}>
+      <span className={`relative z-10 hidden rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-1 py-0.5 text-[9px] ${UI_SURFACES.textSoftMid} sm:inline-flex`}>
         {shortcut}
       </span>
     </motion.button>

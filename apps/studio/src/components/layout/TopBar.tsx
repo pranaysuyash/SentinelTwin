@@ -263,7 +263,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
 
   return (
     <div className="flex flex-col">
-      <header className={`relative z-[320] isolate flex h-12 items-center gap-2 overflow-visible border-b ${UI_SURFACES.borderThin} bg-[#0c0f16]/96 px-2.5`}>
+      <header className={`relative z-[320] isolate flex h-12 items-center gap-2 overflow-visible border-b ${UI_SURFACES.borderThin} ${UI_SURFACES.panel}/96 px-2.5`}>
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <div className="flex min-w-0 items-center gap-2 pr-2.5">
           <div className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border ${UI_TONES.success.borderStrong} ${UI_TONES.success.bg} shadow-[0_0_18px_rgba(16,185,129,0.18)]`}>

@@ -78,7 +78,7 @@ function PresetGroup({
                   <div
                     className={cn(
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
-                      isSelected ? "border-blue-400/30 bg-blue-500/12 text-blue-200" : "border-[#24314a] bg-[#101622] text-[#93a4bf]",
+                      isSelected ? "border-blue-400/30 bg-blue-500/12 text-blue-200" : "${UI_SURFACES.borderStandard} ${UI_SURFACES.card} ${UI_SURFACES.hoverTextSoft}",
                     )}
                   >
                     {PRESET_ICONS[preset.id] ?? null}
@@ -92,7 +92,7 @@ function PresetGroup({
                         </span>
                       ) : null}
                     </div>
-                    <div className="mt-0.5 text-[9px] leading-relaxed text-[#74829d]">
+                    <div className="mt-0.5 text-[9px] leading-relaxed ${UI_SURFACES.textSoftDim}">
                       {preset.description}
                     </div>
                     {preset.manufacturer && (
@@ -140,8 +140,8 @@ export function CameraPresetPicker() {
       >
         <div
           className={cn(
-            "flex h-6 w-6 items-center justify-center rounded-md border border-[#24314a] bg-[#101622]",
-            selectedPreset ? "text-blue-200" : "text-[#93a4bf]",
+            "flex h-6 w-6 items-center justify-center rounded-md border ${UI_SURFACES.borderStandard} ${UI_SURFACES.card}",
+            selectedPreset ? "text-blue-200" : "${UI_SURFACES.hoverTextSoft}",
           )}
         >
           {selectedPreset ? PRESET_ICONS[selectedPreset.id] ?? <Maximize className="h-3 w-3" /> : <Maximize className="h-3 w-3" />}

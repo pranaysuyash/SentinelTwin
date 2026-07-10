@@ -252,7 +252,7 @@ export function CrowdProfileEditor() {
 
           <div className="mt-3 flex flex-col gap-2">
             {profile.archetypes.map((arch) => (
-              <div key={arch.archetypeId} className={`rounded-lg border ${UI_SURFACES.borderSubtle} bg-[#0a0f1c] p-2`}>
+              <div key={arch.archetypeId} className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2`}>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"

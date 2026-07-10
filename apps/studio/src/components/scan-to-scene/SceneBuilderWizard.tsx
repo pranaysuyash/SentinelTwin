@@ -324,7 +324,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
           <RotateCcw className="h-3 w-3" /> Reset
         </button>
       </div>
-      {navigationHint ? <div className="border-b border-[#121a29] px-4 py-2 text-[9px] text-[#667390]">{navigationHint}</div> : null}
+      {navigationHint ? <div className="border-b ${UI_SURFACES.hoverBgSubtle} px-4 py-2 text-[9px] ${UI_SURFACES.textSoftMid}">{navigationHint}</div> : null}
 
       {/* Step content */}
       <div className="flex-1 overflow-y-auto p-4">
@@ -597,8 +597,8 @@ function ConfigureStep({
                   key={entry.profile}
                   className={`rounded-lg border px-2 py-1.5 text-left transition-colors ${
                     isActive
-                      ? "border-emerald-500/40 bg-emerald-500/10 text-[#dbe7f8]"
-                      : `${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} text-[#8ea5c6] ${UI_SURFACES.hoverBorder}`
+                      ? "border-emerald-500/40 bg-emerald-500/10 ${UI_SURFACES.textBody3}"
+                      : `${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} ${UI_SURFACES.textMuted3} ${UI_SURFACES.hoverBorder}`
                   }`}
                   onClick={() => {
                     onChange({
@@ -623,8 +623,8 @@ function ConfigureStep({
         </div>
 
         {value.floorPlanResult == null ? (
-          <div className={`rounded-lg border ${UI_SURFACES.borderStandard} bg-[#0f1828] p-2 text-[9px] ${UI_SURFACES.textMuted4}`}>
-            You are in the floor-plan review lane. Complete trust checks here, then click <span className="font-semibold text-[#cdd9ee]">Next: Review</span> when ready for final summary.
+          <div className={`rounded-lg border ${UI_SURFACES.borderStandard} ${UI_SURFACES.hoverBgSubtle} p-2 text-[9px] ${UI_SURFACES.textMuted4}`}>
+            You are in the floor-plan review lane. Complete trust checks here, then click <span className="font-semibold ${UI_SURFACES.textBody2}">Next: Review</span> when ready for final summary.
           </div>
         ) : null}
 

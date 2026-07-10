@@ -72,17 +72,17 @@ export default function FirstRunGuide({ onClose, onOpenHelp }: { onClose: () => 
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/55 backdrop-blur-sm" onClick={handleStart}>
-      <div className="w-[560px] max-w-[92vw] rounded-xl border border-[#26304a] bg-[#0d111a] p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-[560px] max-w-[92vw] rounded-xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panelDeep} p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="text-[13px] font-semibold text-white">Welcome to SentinelTwin Studio</div>
-        <div className="mt-2 text-[12px] text-[#9fb0ce]">First run flow:</div>
-        <ol className="mt-2 space-y-1 text-[12px] text-[#c6d3eb]">
+        <div className="mt-2 text-[12px] ${UI_SURFACES.textMuted4}">First run flow:</div>
+        <ol className="mt-2 space-y-1 text-[12px] ${UI_SURFACES.textBody}">
           <li>1. Place/select cameras and assumptions.</li>
           <li>2. Run simulation with <kbd className={`rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-1`}>Ctrl/Cmd + Enter</kbd>.</li>
           <li>3. Open Security Outcome to review failures and causes.</li>
           <li>4. Preview Fix, compare before/after, then apply.</li>
         </ol>
         <div className={`mt-4 flex items-center justify-between border-t ${UI_SURFACES.borderSubtle} pt-3`}>
-          <label className="flex cursor-pointer items-center gap-2 text-[11px] text-[#9fb0ce] select-none">
+          <label className="flex cursor-pointer items-center gap-2 text-[11px] ${UI_SURFACES.textMuted4} select-none">
             <input
               type="checkbox"
               checked={dontShowAgain}

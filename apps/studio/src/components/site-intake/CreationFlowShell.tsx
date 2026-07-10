@@ -144,9 +144,9 @@ export function CreationFlowShell({
     : null;
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-[#050a12] text-white">
+    <div className="flex h-full w-full flex-col overflow-hidden ${UI_SURFACES.panelDeepAlt} text-white">
       {/* ── Top bar & Stepper ──────────────────────────────────────────────── */}
-      <header className={`flex flex-none flex-col border-b ${UI_SURFACES.borderFaint} bg-[#080e18]`}>
+      <header className={`flex flex-none flex-col border-b ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel}`}>
         <div className="flex h-14 items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/10 ring-1 ring-sky-500/20">
@@ -183,7 +183,7 @@ export function CreationFlowShell({
               <button
                 type="button"
                 onClick={onExit}
-                className={`flex items-center gap-2 rounded-lg border ${UI_SURFACES.borderFaint} bg-[#0d1624] px-3.5 py-1.5 text-[12px] font-medium ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white`}
+                className={`flex items-center gap-2 rounded-lg border ${UI_SURFACES.borderFaint} ${UI_SURFACES.hoverBgSubtle} px-3.5 py-1.5 text-[12px] font-medium ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white`}
               >
                 <span>Return to Studio</span>
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -193,7 +193,7 @@ export function CreationFlowShell({
         </div>
 
         {/* Stepper bar */}
-        <div className="flex items-center justify-between border-t border-[#141a28] bg-[#060c14] px-6 py-2.5">
+        <div className="flex items-center justify-between border-t ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.panelDeepAlt} px-6 py-2.5">
           <div className="flex items-center gap-2 text-[12px]">
             {CREATION_FLOW_STEPS.map((step, idx) => {
               const isComplete = idx < currentStep;
@@ -230,7 +230,7 @@ export function CreationFlowShell({
             })}
           </div>
 
-          <div className="text-[11px] text-[#6b7a99]">
+          <div className="text-[11px] ${UI_SURFACES.textMuted2}">
             {CREATION_FLOW_STEPS[currentStep]?.description}
           </div>
         </div>
@@ -238,7 +238,7 @@ export function CreationFlowShell({
 
       {/* ── Canonical Intake & Provenance Banner ───────────────────────────── */}
       {(activeDraft || approvalResult) && (
-        <div className={`border-b ${UI_SURFACES.borderFaint} bg-[#08111e]/80 px-6 py-3 backdrop-blur-md`}>
+        <div className={`border-b ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep}/80 px-6 py-3 backdrop-blur-md`}>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4 text-[12px]">
               <div className="flex items-center gap-2">
@@ -249,7 +249,7 @@ export function CreationFlowShell({
                 <span className={`${UI_SURFACES.textMuted}`}>({activeDraft?.id ?? session?.id})</span>
               </div>
 
-              <span className="text-[#2a3040]">·</span>
+              <span className="${UI_SURFACES.hoverBorder}">·</span>
 
               {/* Confidence badge */}
               {confidenceData && (
@@ -271,7 +271,7 @@ export function CreationFlowShell({
               {/* Entity counts summary */}
               {activeDraft && (
                 <>
-                  <span className="text-[#2a3040]">·</span>
+                  <span className="${UI_SURFACES.hoverBorder}">·</span>
                   <div className={`flex items-center gap-2 ${UI_SURFACES.textMuted3}`}>
                     <span><strong className="text-white">{activeDraft.entityCounts.walls}</strong> walls</span>
                     <span><strong className="text-white">{activeDraft.entityCounts.cameras}</strong> cameras</span>
@@ -334,7 +334,7 @@ export function CreationFlowShell({
       {/* ── Main Content Area ──────────────────────────────────────────────── */}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {subtitle && !activeDraft && (
-          <div className={`border-b ${UI_SURFACES.borderFaint} bg-[#070d16] px-8 py-3 text-[13px] ${UI_SURFACES.textSoftBright}`}>
+          <div className={`border-b ${UI_SURFACES.borderFaint} ${UI_SURFACES.panelDeepAlt} px-8 py-3 text-[13px] ${UI_SURFACES.textSoftBright}`}>
             {subtitle}
           </div>
         )}
@@ -345,7 +345,7 @@ export function CreationFlowShell({
 
       {/* ── Optional Footer ────────────────────────────────────────────────── */}
       {footer && (
-        <footer className={`flex-none border-t ${UI_SURFACES.borderFaint} bg-[#080e18] px-6 py-3`}>
+        <footer className={`flex-none border-t ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-6 py-3`}>
           {footer}
         </footer>
       )}

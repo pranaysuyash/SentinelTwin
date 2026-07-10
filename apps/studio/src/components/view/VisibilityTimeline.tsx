@@ -264,7 +264,7 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
 
                 {/* Timeline bar (clickable for seeking) */}
                 <div
-                  className={`relative h-4 flex-1 cursor-pointer overflow-hidden rounded-md border border-[#202536] ${UI_SURFACES.card} outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#93c5fd]/70`}
+                  className={`relative h-4 flex-1 cursor-pointer overflow-hidden rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#93c5fd]/70`}
                   onClick={handleSeek}
                   onKeyDown={handleSeekKeys}
                   role="slider"

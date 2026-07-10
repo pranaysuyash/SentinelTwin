@@ -84,11 +84,11 @@ export function LevelSwitcher() {
           onClick={() => setIsOpen(!isOpen)}
           aria-expanded={isOpen}
           aria-label="Switch building floor / level"
-          className={`flex h-8 items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 px-2.5 text-[11px] font-semibold text-[#c3d0e8] shadow-md backdrop-blur-md transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+          className={`flex h-8 items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 px-2.5 text-[11px] font-semibold ${UI_SURFACES.textBody} shadow-md backdrop-blur-md transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
         >
           <Layers className="h-3.5 w-3.5 text-sky-400" />
           <span>{activeLabel}</span>
-          {isOpen ? <ChevronUp className="h-3 w-3 text-[#6b7280]" /> : <ChevronDown className="h-3 w-3 text-[#6b7280]" />}
+          {isOpen ? <ChevronUp className="h-3 w-3 ${UI_SURFACES.textSoftMid}" /> : <ChevronDown className="h-3 w-3 ${UI_SURFACES.textSoftMid}" />}
         </button>
 
         {/* Display mode toggle (Stacked vs Solo) when a floor is active or multi-floor exists */}
@@ -105,7 +105,7 @@ export function LevelSwitcher() {
             className={`flex h-8 items-center gap-1 rounded-lg border px-2 text-[10px] font-bold transition-colors ${
               levelDisplayMode === "solo"
                 ? "border-amber-500/60 bg-amber-500/15 text-amber-200"
-                : "${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 text-[#8b98b4] ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}"
+                : "${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}"
             }`}
           >
             {levelDisplayMode === "solo" ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
@@ -118,8 +118,8 @@ export function LevelSwitcher() {
       {isOpen && (
         <div className={`w-[260px] rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/95 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur-md`}>
           <div className={`mb-1.5 flex items-center justify-between border-b ${UI_SURFACES.borderSubtle} pb-1.5 px-1`}>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#6b7280]">Building Levels</span>
-            <span className="text-[10px] text-[#4b5563]">{levels.length} floor{levels.length === 1 ? "" : "s"}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider ${UI_SURFACES.textSoftMid}">Building Levels</span>
+            <span className="text-[10px] ${UI_SURFACES.textMuted}">{levels.length} floor{levels.length === 1 ? "" : "s"}</span>
           </div>
 
           <div className="flex flex-col gap-1 max-h-[220px] overflow-y-auto pr-0.5">
@@ -133,14 +133,14 @@ export function LevelSwitcher() {
               className={`flex items-center justify-between rounded-lg px-2 py-1.5 text-left text-[11px] font-medium transition-colors ${
                 activeLevelId === null
                   ? "bg-sky-500/20 text-sky-200 border border-sky-500/40"
-                  : "text-[#9aa8c4] ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}"
+                  : "${UI_SURFACES.hoverTextSoft} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}"
               }`}
             >
               <div className="flex items-center gap-2">
                 <Layers className="h-3.5 w-3.5 text-sky-400" />
                 <span>All Floors (Stacked)</span>
               </div>
-              <span className="text-[10px] text-[#6b7280]">Full View</span>
+              <span className="text-[10px] ${UI_SURFACES.textSoftMid}">Full View</span>
             </button>
 
             {/* List of floors */}
@@ -150,7 +150,7 @@ export function LevelSwitcher() {
 
               if (isEditingThis) {
                 return (
-                  <div key={level.id} className={`flex flex-col gap-1.5 rounded-lg border ${UI_SURFACES.borderDark} bg-[#121926] p-2 text-[11px]`}>
+                  <div key={level.id} className={`flex flex-col gap-1.5 rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.hoverBgSubtle} p-2 text-[11px]`}>
                     <div className="flex items-center gap-1">
                       <input
                         type="text"
@@ -167,13 +167,13 @@ export function LevelSwitcher() {
                         placeholder="0.0"
                         className={`w-16 rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-1.5 py-0.5 text-right text-white focus:border-sky-500 focus:outline-none`}
                       />
-                      <span className="text-[#6b7280]">m</span>
+                      <span className="${UI_SURFACES.textSoftMid}">m</span>
                     </div>
                     <div className="flex justify-end gap-1">
                       <button
                         type="button"
                         onClick={() => setEditingId(null)}
-                        className={`flex h-5 w-5 items-center justify-center rounded ${UI_SURFACES.borderSubtle} text-[#9aa8c4] ${UI_SURFACES.hoverText}`}
+                        className={`flex h-5 w-5 items-center justify-center rounded ${UI_SURFACES.borderSubtle} ${UI_SURFACES.hoverTextSoft} ${UI_SURFACES.hoverText}`}
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -199,7 +199,7 @@ export function LevelSwitcher() {
                   className={`group flex items-center justify-between rounded-lg px-2 py-1.5 cursor-pointer text-[11px] font-medium transition-colors ${
                     isSelected
                       ? "bg-sky-500/20 text-sky-200 border border-sky-500/40"
-                      : "text-[#c3d0e8] ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}"
+                      : "${UI_SURFACES.textBody} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}"
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
@@ -207,7 +207,7 @@ export function LevelSwitcher() {
                     <span className="truncate">{level.name}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="rounded bg-[#1a2234] px-1.5 py-0.5 text-[10px] font-mono text-[#8b98b4]">
+                    <span className="rounded ${UI_SURFACES.hoverBg} px-1.5 py-0.5 text-[10px] font-mono ${UI_SURFACES.textSoftBright}">
                       {level.elevation >= 0 ? `+${level.elevation}m` : `${level.elevation}m`}
                     </span>
                     <button
@@ -217,7 +217,7 @@ export function LevelSwitcher() {
                         handleStartEdit(level);
                       }}
                       title="Edit level name & elevation"
-                      className={`opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded hover:bg-[#2a3246] text-[#8b98b4] ${UI_SURFACES.hoverText} transition-opacity`}
+                      className={`opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded ${UI_SURFACES.borderDark} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverText} transition-opacity`}
                     >
                       <Edit2 className="h-3 w-3" />
                     </button>
@@ -225,7 +225,7 @@ export function LevelSwitcher() {
                       type="button"
                       onClick={(e) => handleDelete(level.id, e)}
                       title="Delete level"
-                      className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded hover:bg-red-500/20 text-[#8b98b4] hover:text-red-400 transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded hover:bg-red-500/20 ${UI_SURFACES.textSoftBright} hover:text-red-400 transition-opacity"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -238,7 +238,7 @@ export function LevelSwitcher() {
           {/* Add Floor Section */}
           <div className={`mt-1.5 border-t ${UI_SURFACES.borderSubtle} pt-1.5`}>
             {isAdding ? (
-              <div className={`flex flex-col gap-1.5 rounded-lg border ${UI_SURFACES.borderDark} bg-[#121926] p-2 text-[11px]`}>
+              <div className={`flex flex-col gap-1.5 rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.hoverBgSubtle} p-2 text-[11px]`}>
                 <div className="flex items-center gap-1">
                   <input
                     type="text"
@@ -256,13 +256,13 @@ export function LevelSwitcher() {
                     placeholder="3.5"
                     className={`w-16 rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-1.5 py-0.5 text-right text-white focus:border-sky-500 focus:outline-none`}
                   />
-                  <span className="text-[#6b7280]">m</span>
+                  <span className="${UI_SURFACES.textSoftMid}">m</span>
                 </div>
                 <div className="flex justify-end gap-1">
                   <button
                     type="button"
                     onClick={() => setIsAdding(false)}
-                    className={`flex h-5 w-5 items-center justify-center rounded ${UI_SURFACES.borderSubtle} text-[#9aa8c4] ${UI_SURFACES.hoverText}`}
+                    className={`flex h-5 w-5 items-center justify-center rounded ${UI_SURFACES.borderSubtle} ${UI_SURFACES.hoverTextSoft} ${UI_SURFACES.hoverText}`}
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -279,7 +279,7 @@ export function LevelSwitcher() {
               <button
                 type="button"
                 onClick={handleStartAdd}
-                className={`flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed ${UI_SURFACES.borderDark} py-1.5 text-[11px] font-medium text-[#9aa8c4] transition-colors hover:border-sky-500/50 hover:bg-sky-500/10 hover:text-sky-200`}
+                className={`flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed ${UI_SURFACES.borderDark} py-1.5 text-[11px] font-medium ${UI_SURFACES.hoverTextSoft} transition-colors hover:border-sky-500/50 hover:bg-sky-500/10 hover:text-sky-200`}
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Add Building Floor</span>

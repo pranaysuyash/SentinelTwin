@@ -197,7 +197,7 @@ function FeedArtifacts({
       ) : null}
 
       {overlayOptions.timestamp ? (
-        <div className={`pointer-events-none absolute left-3 bottom-3 z-10 rounded-lg border border-[#2d3d56] bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.12em] ${UI_SURFACES.textBody}`}>
+        <div className={`pointer-events-none absolute left-3 bottom-3 z-10 rounded-lg border ${UI_SURFACES.borderElevated} bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.12em] ${UI_SURFACES.textBody}`}>
           {timestamp}
         </div>
       ) : null}
@@ -468,7 +468,7 @@ export function CameraFeedCanvas({
             onClick={() => setViewMode(mode)}
             className={cn(
               "rounded-md px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] transition-colors",
-              viewMode === mode ? "bg-blue-500/25 text-blue-200" : "text-[#8592a9] ${UI_SURFACES.hoverText}",
+              viewMode === mode ? "bg-blue-500/25 text-blue-200" : "${UI_SURFACES.textMuted5} ${UI_SURFACES.hoverText}",
             )}
           >
             {FEED_MODE_LABELS[mode]}
@@ -533,7 +533,7 @@ export function CameraFeedCanvas({
         <div className="text-[8px] font-mono text-green-400">
           {camera.name} • {camera.resolutionMP}MP
         </div>
-        <div className="text-[7px] font-mono text-[#6b7280]">
+        <div className="text-[7px] font-mono ${UI_SURFACES.textSoftMid}">
           FOV {camera.fovHorizontalDeg}° • {isNight ? "NIGHT" : "DAY"}
         </div>
       </div>

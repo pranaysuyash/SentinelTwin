@@ -135,13 +135,13 @@ export function SelectionContextBar() {
           transition={{ duration: 0.18, ease: "easeOut" }}
           className="pointer-events-auto absolute bottom-14 left-1/2 z-20 -translate-x-1/2"
         >
-          <div className={`flex items-center gap-1 rounded-xl border border-[#222a3e] ${UI_SURFACES.panel}/95 px-1.5 py-1 shadow-[0_14px_36px_rgba(0,0,0,0.45)] backdrop-blur`}>
+          <div className={`flex items-center gap-1 rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panel}/95 px-1.5 py-1 shadow-[0_14px_36px_rgba(0,0,0,0.45)] backdrop-blur`}>
             <div className="flex items-center gap-1.5 rounded-lg px-2 py-1">
               <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: model.accent }} aria-hidden="true" />
               <span className={`max-w-[120px] truncate text-[10px] font-semibold ${UI_SURFACES.textBody3}`}>{model.title}</span>
-              <span className="text-[8px] uppercase tracking-[0.14em] text-[#5d6a85]">{model.subtitle}</span>
+              <span className="text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}">{model.subtitle}</span>
             </div>
-            <div className="h-4 w-px bg-[#222a3e]" aria-hidden="true" />
+            <div className="h-4 w-px ${UI_SURFACES.borderDeep}" aria-hidden="true" />
             {quickActions.map((action) => (
               <button
                 key={action.id}
@@ -152,14 +152,14 @@ export function SelectionContextBar() {
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-lg transition-colors",
                   action.id === "delete"
-                    ? "text-[#8b93a8] hover:bg-rose-500/15 hover:text-rose-300"
-                    : "text-[#9aa6c0] hover:bg-white/8 ${UI_SURFACES.hoverText}",
+                    ? "${UI_SURFACES.textSoftBright} hover:bg-rose-500/15 hover:text-rose-300"
+                    : "${UI_SURFACES.hoverTextSoft} hover:bg-white/8 ${UI_SURFACES.hoverText}",
                 )}
               >
                 {ACTION_ICONS[action.id]}
               </button>
             ))}
-            <div className="h-4 w-px bg-[#222a3e]" aria-hidden="true" />
+            <div className="h-4 w-px ${UI_SURFACES.borderDeep}" aria-hidden="true" />
             <button
               type="button"
               onClick={() => {
@@ -168,7 +168,7 @@ export function SelectionContextBar() {
               }}
               title="Open Inspector"
               aria-label="Open Inspector"
-              className={`flex h-7 items-center gap-1 rounded-lg px-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#9aa6c0] transition-colors hover:bg-white/8 ${UI_SURFACES.hoverText}`}
+              className={`flex h-7 items-center gap-1 rounded-lg px-2 text-[9px] font-semibold uppercase tracking-[0.1em] ${UI_SURFACES.hoverTextSoft} transition-colors hover:bg-white/8 ${UI_SURFACES.hoverText}`}
             >
               <PanelRight className="h-3.5 w-3.5" />
               Inspect

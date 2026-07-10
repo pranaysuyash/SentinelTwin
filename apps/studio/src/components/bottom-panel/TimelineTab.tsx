@@ -267,7 +267,7 @@ export function TimelineTab() {
             onClick={handlePlayPause}
             className={cn(
               "flex h-7 w-7 items-center justify-center rounded-full transition-colors",
-              pathReplay.playing ? "bg-[#60a5fa] text-white" : "bg-[#1a2333] text-[#93c5fd]",
+              pathReplay.playing ? "bg-[#60a5fa] text-white" : "${UI_SURFACES.hoverBg} text-[#93c5fd]",
             )}
             title={pathReplay.playing ? "Pause" : "Play"}
           >
@@ -332,7 +332,7 @@ export function TimelineTab() {
               onClick={() => setPathReplaySpeed(speed)}
               className={cn(
                 "rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors",
-                pathReplay.speed === speed ? "bg-[#1a2333] text-[#93c5fd]" : `${UI_SURFACES.textMuted} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverTextSoft}`,
+                pathReplay.speed === speed ? "${UI_SURFACES.hoverBg} text-[#93c5fd]" : `${UI_SURFACES.textMuted} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverTextSoft}`,
               )}
             >
               {speed}x
@@ -343,7 +343,7 @@ export function TimelineTab() {
             onClick={() => setPathReplayFollowActor(!pathReplayFollowActor)}
             className={cn(
               "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors",
-              pathReplayFollowActor ? "bg-[#1a2333] text-[#93c5fd]" : `${UI_SURFACES.textMuted} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverTextSoft}`,
+              pathReplayFollowActor ? "${UI_SURFACES.hoverBg} text-[#93c5fd]" : `${UI_SURFACES.textMuted} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverTextSoft}`,
             )}
             title="Follow actor"
           >
@@ -390,7 +390,7 @@ export function TimelineTab() {
               "-mb-px rounded-t-lg border-b-2 px-3 py-1.5 text-[10px] font-medium tracking-[0.06em] transition-colors",
               subTab === tab.id
                 ? "border-green-500 text-green-300"
-                : "border-transparent text-[#5a647a] ${UI_SURFACES.hoverTextSoft}",
+                : "border-transparent ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverTextSoft}",
             )}
           >
             {tab.label}
@@ -509,7 +509,7 @@ export function TimelineTab() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={`${row.timeS}-${row.cameraId ?? "nocam"}`} className={`border-t border-[#141925] hover:${UI_SURFACES.card}`}>
+                    <tr key={`${row.timeS}-${row.cameraId ?? "nocam"}`} className={`border-t ${UI_SURFACES.hoverBgSubtle} hover:${UI_SURFACES.card}`}>
                       <td className={`px-3 py-2 font-mono ${UI_SURFACES.textBody}`}>{row.timeS.toFixed(1)}s</td>
                       <td className={`px-3 py-2 font-mono ${UI_SURFACES.textSoftBright}`}>{formatPoint(row.position)}</td>
                       <td className={`px-3 py-2 ${UI_SURFACES.textBody}`}>
@@ -531,7 +531,7 @@ export function TimelineTab() {
                         </span>
                       </td>
                       <td className={`px-3 py-2 ${UI_SURFACES.textBody}`}>{row.event}</td>
-                      <td className="px-3 py-2 text-[#9bb2d8]">{row.action}</td>
+                      <td className="px-3 py-2 ${UI_SURFACES.textMuted4}">{row.action}</td>
                       <td className={`px-3 py-2 ${UI_SURFACES.textDimMid}`}>{row.reason ?? "—"}</td>
                     </tr>
                   ))}
@@ -566,7 +566,7 @@ export function TimelineTab() {
                   <div className={`mt-1.5 text-[9px] ${UI_SURFACES.textDimMid}`}>
                     Actor @ {formatPoint(row.position)}
                   </div>
-                  <div className="mt-1 text-[8px] text-[#9bb2d8]">Action: {row.action}</div>
+                  <div className="mt-1 text-[8px] ${UI_SURFACES.textMuted4}">Action: {row.action}</div>
                   {row.reason ? (
                     <div className={`mt-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5 text-[9px] ${UI_SURFACES.textBody}`}>
                       {row.reason}
@@ -638,7 +638,7 @@ export function TimelineTab() {
               <ExplainBadge text="Shows coverage impact between consecutive saved snapshots so you can trace which edits helped or hurt." />
             </div>
             <div className="space-y-2">
-              {editDeltas.length === 0 ? <div className="text-[10px] text-[#7a89a8]">Save snapshots with simulation to populate edit deltas.</div> : null}
+              {editDeltas.length === 0 ? <div className="text-[10px] ${UI_SURFACES.textMuted5}">Save snapshots with simulation to populate edit deltas.</div> : null}
               {editDeltas.map((delta) => (
                 <div key={delta.label} className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 text-[10px]`}>
                   <div className={`font-medium ${UI_SURFACES.textBody3}`}>{delta.label}</div>

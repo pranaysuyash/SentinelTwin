@@ -99,7 +99,7 @@ export function SiteTwinSearchBar({
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
-          className="rounded-md border border-[color:var(--st-border)] bg-white/[0.03] px-2 py-1 text-[10px] text-[#c9d5eb] hover:border-sky-400/35 hover:text-white"
+          className="rounded-md border border-[color:var(--st-border)] bg-white/[0.03] px-2 py-1 text-[10px] ${UI_SURFACES.textBody} hover:border-sky-400/35 hover:text-white"
         >
           {expanded || hasQuery ? "Hide" : "Search"}
         </button>
@@ -128,7 +128,7 @@ export function SiteTwinSearchBar({
                 <span className="truncate text-xs font-semibold text-white">{hit.title}</span>
               </div>
               <div className="mt-1 text-[10px] text-[color:var(--st-muted)]">{hit.summary}</div>
-              <div className="mt-1 text-[10px] text-[#9db0cf]">{hit.targetSummary}</div>
+              <div className="mt-1 text-[10px] ${UI_SURFACES.textMuted4}">{hit.targetSummary}</div>
             </button>
           )) : hasQuery ? (
             <div className="rounded-xl border border-dashed border-[color:var(--st-border)] px-3 py-2 text-[10px] text-[color:var(--st-muted)] space-y-1">

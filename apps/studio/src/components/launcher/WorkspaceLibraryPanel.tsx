@@ -125,7 +125,7 @@ export function WorkspaceLibraryPanel({
             return (
               <div key={projectScene.id} className="rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] p-2">
                 <button type="button" onClick={() => openScene(projectScene)} className="w-full text-left">
-                  <div className="relative h-24 overflow-hidden rounded-lg border border-white/10 bg-[#0b1322]">
+                  <div className="relative h-24 overflow-hidden rounded-lg border border-white/10 ${UI_SURFACES.bgDeep}">
                     <ScenePreview
                       scene={projectScene}
                       result={projectScene.simulation ?? (projectScene.id === scene.id ? result : null)}

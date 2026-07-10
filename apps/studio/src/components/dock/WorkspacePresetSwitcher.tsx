@@ -144,7 +144,7 @@ export function WorkspacePresetSwitcher() {
 
       {open ? (
         <div
-          className={`absolute right-0 top-full z-50 mt-1 w-72 rounded-xl border border-[#202536] ${UI_SURFACES.bgDeep} p-1.5 shadow-2xl shadow-black/35`}
+          className={`absolute right-0 top-full z-50 mt-1 w-72 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-1.5 shadow-2xl shadow-black/35`}
           onMouseLeave={() => setOpen(false)}
         >
           <div className={`px-2 py-1 text-[9px] uppercase tracking-[0.22em] ${UI_SURFACES.textDimMid}`}>
@@ -166,13 +166,13 @@ export function WorkspacePresetSwitcher() {
                 }}
                 className={cn(
                   "flex items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${UI_SURFACES.hoverBgMuted}",
-                  current.workspacePreset === entry.id ? "bg-[#171c2b] text-emerald-300" : "${UI_SURFACES.textBody}",
+                  current.workspacePreset === entry.id ? "${UI_SURFACES.hoverBgMuted} text-emerald-300" : "${UI_SURFACES.textBody}",
                 )}
               >
-                <span className="mt-0.5 text-[#8da0c5]">{entry.icon}</span>
+                <span className="mt-0.5 ${UI_SURFACES.textMuted3}">{entry.icon}</span>
                 <span className="min-w-0">
                   <span className="block text-[11px] font-medium">{entry.label}</span>
-                  <span className="block text-[9px] leading-snug text-[#6c768f]">{entry.hint}</span>
+                  <span className="block text-[9px] leading-snug ${UI_SURFACES.textSoftMid}">{entry.hint}</span>
                 </span>
               </button>
             ))}
@@ -229,7 +229,7 @@ export function WorkspacePresetSwitcher() {
                       className={`min-w-0 flex-1 text-left text-[11px] ${UI_SURFACES.textNear} transition-colors ${UI_SURFACES.hoverText}`}
                     >
                       <span className="block truncate font-medium">{layout.name}</span>
-                      <span className="block truncate text-[9px] text-[#6c768f]">
+                      <span className="block truncate text-[9px] ${UI_SURFACES.textSoftMid}">
                         {layout.workspacePreset.replace(/_/g, " ")} · {layout.viewMode.replace(/_/g, " ")}
                       </span>
                     </button>
@@ -245,7 +245,7 @@ export function WorkspacePresetSwitcher() {
                 ))}
               </div>
             ) : (
-              <div className={`rounded-lg border border-dashed ${UI_SURFACES.borderStandard} px-2.5 py-2 text-[10px] text-[#72809a]`}>
+              <div className={`rounded-lg border border-dashed ${UI_SURFACES.borderStandard} px-2.5 py-2 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                 No custom layouts saved yet.
               </div>
             )}

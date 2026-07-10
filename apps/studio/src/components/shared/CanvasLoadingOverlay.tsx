@@ -6,7 +6,7 @@ import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 export function CanvasLoadingOverlay({ label = "Loading scene" }: { label?: string }) {
   return (
     <Html center>
-      <div className={`rounded-xl border ${UI_SURFACES.borderDark} bg-[#0c0f16]/90 px-4 py-3 shadow-[0_8px_28px_rgba(0,0,0,0.42)]`}>
+      <div className={`rounded-xl border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel}/90 px-4 py-3 shadow-[0_8px_28px_rgba(0,0,0,0.42)]`}>
         <div className="flex flex-col items-center gap-2.5">
           {/* Animated scanline pattern */}
           <div className={`relative h-8 w-16 overflow-hidden rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.panel}`}>
@@ -21,7 +21,7 @@ export function CanvasLoadingOverlay({ label = "Loading scene" }: { label?: stri
             {/* Pulsing dot */}
             <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-300 shadow-[0_0_6px_rgba(125,211,252,0.5)]" />
           </div>
-          <span className="text-[10px] font-medium tracking-[0.06em] text-[#cbd7ee]">{label}</span>
+          <span className="text-[10px] font-medium tracking-[0.06em] ${UI_SURFACES.textBody2}">{label}</span>
         </div>
       </div>
       <style>{`

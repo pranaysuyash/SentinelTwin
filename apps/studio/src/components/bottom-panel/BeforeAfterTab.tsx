@@ -200,7 +200,7 @@ function BeforeAfterTabContent() {
         </span>
         <div className="flex gap-2 ml-auto">
           <span className={`text-[8px] ${UI_SURFACES.textMuted7} flex items-center gap-1`}>
-            <span className="w-2 h-0.5 bg-[#4a5568] rounded inline-block" />
+            <span className="w-2 h-0.5 ${UI_SURFACES.textMuted} rounded inline-block" />
             {before?.label ?? "Before"}
           </span>
           <span className="text-[8px] text-blue-400 flex items-center gap-1">
@@ -371,7 +371,7 @@ function BeforeAfterTabContent() {
             ))}
           </div>
         ) : (
-          <div className={`rounded-lg border border-dashed border-[#263048] ${UI_SURFACES.panel} px-3 py-2 text-[9px] ${UI_SURFACES.textSoftMid}`}>
+          <div className={`rounded-lg border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-[9px] ${UI_SURFACES.textSoftMid}`}>
             Capture visual evidence in Compare View to show side-by-side scene thumbnails here. The metric diff is always available, and the visual diff reuses the same compare evidence pipeline.
           </div>
         )}

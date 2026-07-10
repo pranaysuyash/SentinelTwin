@@ -97,7 +97,7 @@ export function ProviderConfigPanel({
       {/* Header */}
       <div className={`{flex items-center gap-1.5 border-b ${UI_SURFACES.borderPanel} pb-2}`}>
         <Settings2 className="h-3.5 w-3.5 text-blue-400/70" />
-        <span className="text-[11px] font-medium text-[#e8edf5]">Provider Configuration</span>
+        <span className="text-[11px] font-medium ${UI_SURFACES.textBody4}">Provider Configuration</span>
       </div>
 
       {/* Provider Selection */}

@@ -46,7 +46,7 @@ function CameraYawControl({
         <ArrowLeftFromLine className="h-3 w-3" />
       </button>
       <div className="flex flex-col items-center px-1.5">
-        <span className="text-[8px] uppercase tracking-[0.12em] text-[#5a6a85]">Yaw</span>
+        <span className="text-[8px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted7}">Yaw</span>
         <span className={`font-mono text-[10px] ${UI_SURFACES.textBody2}`}>{Math.round(yawDeg)}°</span>
       </div>
       <button
@@ -79,7 +79,7 @@ function CameraTiltControl({
         <ChevronUp className="h-3 w-3" />
       </button>
       <div className="flex flex-col items-center px-1.5">
-        <span className="text-[8px] uppercase tracking-[0.12em] text-[#5a6a85]">Tilt</span>
+        <span className="text-[8px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted7}">Tilt</span>
         <span className={`font-mono text-[10px] ${UI_SURFACES.textBody2}`}>{Math.round(pitchDeg)}°</span>
       </div>
       <button
@@ -112,7 +112,7 @@ function CameraZoomControl({
         <ZoomIn className="h-3 w-3" />
       </button>
       <div className="flex flex-col items-center px-1.5">
-        <span className="text-[8px] uppercase tracking-[0.12em] text-[#5a6a85]">FOV</span>
+        <span className="text-[8px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted7}">FOV</span>
         <span className={`font-mono text-[10px] ${UI_SURFACES.textBody2}`}>{Math.round(fovDeg)}°</span>
       </div>
       <button
@@ -204,11 +204,11 @@ export function CameraControlStrip({
   return (
     <div className={`absolute left-1/2 -translate-x-1/2 bottom-14 z-30 flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1.5 rounded-xl border ${UI_SURFACES.borderStrong} ${UI_SURFACES.panel}/95 px-3 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.4)] backdrop-blur`}>
       <CameraYawControl yawDeg={camera.yawDeg} onYawChange={updateYaw} />
-      <div className="h-7 w-px bg-[#27364e]" />
+      <div className="h-7 w-px ${UI_SURFACES.borderStrong}" />
       <CameraTiltControl pitchDeg={camera.pitchDeg} onPitchChange={updatePitch} />
-      <div className="h-7 w-px bg-[#27364e]" />
+      <div className="h-7 w-px ${UI_SURFACES.borderStrong}" />
       <CameraZoomControl fovDeg={camera.fovHorizontalDeg} onFovChange={updateFov} />
-      <div className="h-7 w-px bg-[#27364e]" />
+      <div className="h-7 w-px ${UI_SURFACES.borderStrong}" />
       <div className="flex items-center gap-1">
         <button
           type="button"
@@ -242,7 +242,7 @@ export function CameraControlStrip({
           </select>
         </div>
       )}
-      <div className="h-7 w-px bg-[#27364e]" />
+      <div className="h-7 w-px ${UI_SURFACES.borderStrong}" />
       <div className="flex items-center gap-1">
         <button
           type="button"

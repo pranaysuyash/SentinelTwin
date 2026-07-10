@@ -208,10 +208,10 @@ export function CommandBar() {
                   {status.message}
                 </div>
                 {status.descriptions.length > 0 ? (
-                  <ul className="space-y-1 rounded-md border border-[#1f2d45] bg-[#08101b] px-2.5 py-2 text-[10px] text-[#b8c9e8]">
+                  <ul className="space-y-1 rounded-md border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] text-[#b8c9e8]">
                     {status.descriptions.map((description, index) => (
                       <li key={`desc-${index}`} /* stable order */ className="flex items-center gap-2">
-                        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded bg-[#14233a] px-1 text-[8px] text-cyan-200">{index + 1}</span>
+                        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded ${UI_SURFACES.hoverBg} px-1 text-[8px] text-cyan-200">{index + 1}</span>
                         <span>{description}</span>
                       </li>
                     ))}
@@ -327,7 +327,7 @@ export function CommandBar() {
                 setInput(hint);
                 inputRef.current?.focus();
               }}
-              className={`rounded-md border border-[#1e2536] bg-[#0d111a] px-2 py-1 text-[9px] ${UI_SURFACES.textDimMid} transition-colors hover:border-[#2a3146] ${UI_SURFACES.hoverTextSoft}`}
+              className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} px-2 py-1 text-[9px] ${UI_SURFACES.textDimMid} transition-colors ${UI_SURFACES.borderDark} ${UI_SURFACES.hoverTextSoft}`}
               data-testid="command-bar-sample-hint"
             >
               {hint}
@@ -346,7 +346,7 @@ export function CommandBar() {
                 setInput(cmd);
                 inputRef.current?.focus();
               }}
-              className="rounded-md border border-[#1a2533] bg-[#0d141a] px-2 py-1 font-mono text-[9px] text-emerald-400/70 transition-colors hover:border-[#1a3540] hover:text-emerald-300"
+              className="rounded-md border ${UI_SURFACES.hoverBg} ${UI_SURFACES.bgDeep} px-2 py-1 font-mono text-[9px] text-emerald-400/70 transition-colors hover:border-[#1a3540] hover:text-emerald-300"
             >
               {cmd}
             </button>
@@ -381,7 +381,7 @@ function CandidateCard({ candidate, onApply }: { candidate: CounterfactualCandid
         </span>
       </div>
       {candidate.verifiedDelta && (
-        <div className="mt-1 flex flex-wrap gap-3 rounded bg-[#0a0d15] px-2 py-1 text-[8px]">
+        <div className="mt-1 flex flex-wrap gap-3 rounded ${UI_SURFACES.panelDeepAlt} px-2 py-1 text-[8px]">
           <span className={candidate.verifiedDelta.totalCoveragePctDelta >= 0 ? "text-emerald-400" : "text-red-400"}>
             {candidate.verifiedDelta.totalCoveragePctDelta >= 0 ? "+" : ""}{candidate.verifiedDelta.totalCoveragePctDelta}% coverage
           </span>

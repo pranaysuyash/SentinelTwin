@@ -38,7 +38,7 @@ export function ExplainBadge({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "inline-flex items-center justify-center gap-1 rounded border ${UI_SURFACES.borderDark} bg-[#121826] text-[#8ea2c8] transition-colors ${UI_SURFACES.hoverBorderBright} hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50",
+          "inline-flex items-center justify-center gap-1 rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.hoverBgSubtle} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright} hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50",
           label ? "h-6 px-1.5 text-[9px] font-medium" : "h-4 w-4",
         )}
         aria-label={label ? `${label}: ${title}` : title}

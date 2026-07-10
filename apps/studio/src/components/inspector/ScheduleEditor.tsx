@@ -337,7 +337,7 @@ export function ScheduleEditor() {
             type="button"
             onClick={applyLocation}
             disabled={latVal === "" || lngVal === ""}
-            className={`flex-1 rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} py-1 text-[9px] ${UI_SURFACES.textMuted5} hover:border-[#3a4560] hover:${UI_SURFACES.textBody} disabled:opacity-40`}
+            className={`flex-1 rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} py-1 text-[9px] ${UI_SURFACES.textMuted5} ${UI_SURFACES.textDim} hover:${UI_SURFACES.textBody} disabled:opacity-40`}
           >
             Apply
           </button>

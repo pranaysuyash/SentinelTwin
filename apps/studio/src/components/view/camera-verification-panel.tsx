@@ -100,7 +100,7 @@ export function VerificationPanel({
     <div className={`pointer-events-auto w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel}/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]`}>
       <div className="flex items-center justify-between gap-2">
         <div className={`text-[8px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textAccent}`}>Footage Verification</div>
-        <label className="inline-flex cursor-pointer items-center gap-1 text-[9px] text-[#c5d4ef]">
+        <label className="inline-flex cursor-pointer items-center gap-1 text-[9px] ${UI_SURFACES.textBody}">
           <input type="checkbox" checked={enabled} onChange={(event) => onToggle(event.target.checked)} />
           Enable
         </label>
@@ -108,26 +108,26 @@ export function VerificationPanel({
       <p className={`mt-1 text-[9px] leading-4 ${UI_SURFACES.textSoftBright}`}>
         Planning aid only. This compares a reference frame with simulated view and does not prove forensic identification.
       </p>
-      <div className="mt-2 space-y-2 text-[9px] text-[#b8c5df]">
+      <div className="mt-2 space-y-2 text-[9px] ${UI_SURFACES.textNearAlt}">
         <label className="block">
           <span className={`${UI_SURFACES.textSoftBright}`}>Reference frame</span>
           <input
             type="file"
             accept="image/*,video/*"
-            className={`mt-1 block w-full rounded border ${UI_SURFACES.borderStrong} bg-[#0f1624] px-2 py-1 text-[9px] text-[#cdd8ee]`}
+            className={`mt-1 block w-full rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} px-2 py-1 text-[9px] ${UI_SURFACES.textBody2}`}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) onUpload(file);
               event.currentTarget.value = "";
             }}
           />
-          {fileName ? <span className="mt-1 block truncate text-[8px] text-[#8aa0c8]">{fileName}</span> : null}
+          {fileName ? <span className="mt-1 block truncate text-[8px] ${UI_SURFACES.textMuted3}">{fileName}</span> : null}
           {sourceType === "video" && videoDurationS !== null ? (
-            <div className={`mt-1 space-y-1.5 rounded border ${UI_SURFACES.borderStrong} bg-[#0d1523] p-1.5`}>
+            <div className={`mt-1 space-y-1.5 rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} p-1.5`}>
               <span className={`block text-[8px] ${UI_SURFACES.textMuted4}`}>
                 Video frame sampled at {sampleTimeS !== null ? formatSecondsShort(sampleTimeS) : "0:00"} / {formatSecondsShort(videoDurationS)}
               </span>
-              <label className="block text-[8px] text-[#8aa0c8]">
+              <label className="block text-[8px] ${UI_SURFACES.textMuted3}">
                 <div className="flex justify-between"><span>Sample time</span><span>{formatSecondsShort(sampleTimeS ?? 0)}</span></div>
                 <input
                   type="range"
@@ -185,13 +185,13 @@ export function VerificationPanel({
                           key={candidate.id}
                           type="button"
                           onClick={() => onSelectVideoCandidate(candidate.id)}
-                          className={`flex items-center justify-between gap-2 rounded border px-1.5 py-1 text-left text-[8px] ${selected ? "border-cyan-300 bg-cyan-500/20 text-cyan-100" : "${UI_SURFACES.borderStrong} bg-[#111b2c] ${UI_SURFACES.textMuted4}"}`}
+                          className={`flex items-center justify-between gap-2 rounded border px-1.5 py-1 text-left text-[8px] ${selected ? "border-cyan-300 bg-cyan-500/20 text-cyan-100" : "${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.textMuted4}"}`}
                           title={`Sharpness score ${candidate.qualityScore.toFixed(1)}`}
                         >
                           <span className="min-w-0 truncate">
                             {formatSecondsShort(candidate.timeS)}{isBest ? " · Best" : ""}
                           </span>
-                          <span className="flex-none font-mono text-[7px] uppercase tracking-[0.12em] text-[#8aa0c8]">
+                          <span className="flex-none font-mono text-[7px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted3}">
                             {candidate.qualityScore.toFixed(1)}
                           </span>
                         </button>
@@ -212,7 +212,7 @@ export function VerificationPanel({
           <button type="button" onClick={onClear} className="rounded bg-[#2b1a20] px-2 py-1 text-rose-200">Clear</button>
         </div>
         {snapshots.length ? (
-          <div className={`rounded-lg border ${UI_SURFACES.borderStrong} bg-[#0f1624] p-2`}>
+          <div className={`rounded-lg border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} p-2`}>
             <div className={`mb-1 text-[8px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftBright}`}>Saved snapshots</div>
             <div className="max-h-24 space-y-1 overflow-y-auto pr-1">
               {snapshots.map((snapshot) => (
@@ -234,7 +234,7 @@ export function VerificationPanel({
                       Del
                     </button>
                   </div>
-                  <div className="mt-0.5 truncate text-[8px] text-[#8aa0c8]" title={formatSnapshotEvidenceSummary(snapshot)}>
+                  <div className="mt-0.5 truncate text-[8px] ${UI_SURFACES.textMuted3}" title={formatSnapshotEvidenceSummary(snapshot)}>
                     {formatSnapshotEvidenceSummary(snapshot)}
                   </div>
                 </div>
@@ -242,7 +242,7 @@ export function VerificationPanel({
             </div>
           </div>
         ) : null}
-        <div className={`rounded-lg border ${UI_SURFACES.borderStrong} bg-[#0f1624] px-2 py-1.5`}>
+        <div className={`rounded-lg border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} px-2 py-1.5`}>
           <div className={`flex items-center justify-between ${UI_SURFACES.textSoftBright}`}>
             <span>Alignment Quality</span>
             <span className="font-mono text-[#d4e6ff]">{alignmentScore !== null ? `${Math.round(alignmentScore)}/100` : "N/A"}</span>
@@ -255,7 +255,7 @@ export function VerificationPanel({
             Difference heat overlay
           </label>
         </div>
-        <div className={`rounded-lg border ${UI_SURFACES.borderStrong} bg-[#0f1624] px-2 py-1.5`}>
+        <div className={`rounded-lg border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} px-2 py-1.5`}>
           <div className={`flex items-center justify-between ${UI_SURFACES.textSoftBright}`}>
             <span>Alignment Assist</span>
             <span className="font-mono text-[#d4e6ff]">{alignmentMethod === "auto" ? "AUTO" : alignmentMethod === "manual" ? "MANUAL" : "IDLE"}</span>
@@ -299,7 +299,7 @@ export function VerificationPanel({
           </div>
           <div className="flex gap-1">
             <button type="button" disabled={!canAutoAlign} onClick={onAutoAlign} className="rounded bg-[#13354a] px-2 py-1 text-[#8ce3ff] disabled:cursor-not-allowed disabled:opacity-50">Auto align</button>
-            <button type="button" onClick={onResetAlign} className="rounded bg-[#1d2b3f] px-2 py-1 text-[#9dd6ff]">Reset align</button>
+            <button type="button" onClick={onResetAlign} className="rounded ${UI_SURFACES.borderDeep} px-2 py-1 text-[#9dd6ff]">Reset align</button>
           </div>
         </div>
       </div>

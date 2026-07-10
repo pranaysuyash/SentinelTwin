@@ -205,7 +205,7 @@ export function RedundancyTab() {
                       className={`border-t ${UI_SURFACES.borderFaint} transition-colors ${UI_SURFACES.hoverBgSubtle}`}
                     >
                       {/* Camera name cell */}
-                      <td className="border-r border-[#1a1d26] px-2 py-1.5">
+                      <td className="border-r ${UI_SURFACES.chip} px-2 py-1.5">
                         <button
                           type="button"
                           onClick={() => selectNode(camera.id)}
@@ -233,10 +233,10 @@ export function RedundancyTab() {
                           return (
                             <td
                               key={zone.id}
-                              className="border-r border-[#1a1d26] px-1 py-1.5 text-center"
+                              className="border-r ${UI_SURFACES.chip} px-1 py-1.5 text-center"
                             >
                               <div className="flex items-center justify-center">
-                                <span className={`flex h-5 w-5 items-center justify-center rounded bg-[#0b0e15] text-[7px] ${UI_SURFACES.textDim}`}>
+                                <span className={`flex h-5 w-5 items-center justify-center rounded ${UI_SURFACES.panel} text-[7px] ${UI_SURFACES.textDim}`}>
                                   —
                                 </span>
                               </div>
@@ -250,7 +250,7 @@ export function RedundancyTab() {
                         return (
                           <td
                             key={zone.id}
-                            className="border-r border-[#1a1d26] px-1 py-1.5 text-center"
+                            className="border-r ${UI_SURFACES.chip} px-1 py-1.5 text-center"
                           >
                             <div className="flex items-center justify-center">
                               <span
@@ -272,7 +272,7 @@ export function RedundancyTab() {
                       })}
 
                       {/* Solo-cover zone count */}
-                      <td className="border-r border-[#1a1d26] px-1.5 py-1.5 text-center">
+                      <td className="border-r ${UI_SURFACES.chip} px-1.5 py-1.5 text-center">
                         {soloZones.length > 0 ? (
                           <span className="font-mono text-[10px] font-bold text-red-400">
                             {soloZones.length}

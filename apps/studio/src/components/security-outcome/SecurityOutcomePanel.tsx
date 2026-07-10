@@ -44,7 +44,7 @@ export function SecurityOutcomePanel({ compact = false }: { compact?: boolean })
   }
 
   return (
-    <div className="space-y-3 p-3 text-[#ced7e8]">
+    <div className="space-y-3 p-3 ${UI_SURFACES.textBody2}">
       <OutcomeSummaryCard summary={model.summary} />
       {!compact ? (
         <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-3`}>
@@ -63,9 +63,9 @@ export function SecurityOutcomePanel({ compact = false }: { compact?: boolean })
               ["Privacy", model.scorecard.dimensions.privacy.score, model.scorecard.dimensions.privacy.label],
             ] as [string, number, string][]).map(([label, score, detail]) => (
               <div key={label} className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1`}>
-                <div className="text-[#697790]">{label}</div>
+                <div className="${UI_SURFACES.textSoftMid}">{label}</div>
                 <div className={`font-semibold ${scorecardColor(score)}`}>{score}
-                  <span className="text-[#697790]"> · {detail}</span>
+                  <span className="${UI_SURFACES.textSoftMid}"> · {detail}</span>
                 </div>
               </div>
             ))}
@@ -88,9 +88,9 @@ export function SecurityOutcomePanel({ compact = false }: { compact?: boolean })
         <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-3 text-[10px]`}>
           <h3 className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted3}`}>Narrative Snapshot</h3>
           <div className={`mt-2 space-y-1 ${UI_SURFACES.textSoftMuted}`}>
-            <div><span className="text-[#d8e1f3]">Critical issue:</span> {narrative.criticalIssue}</div>
-            <div><span className="text-[#d8e1f3]">Primary cause:</span> {narrative.primaryCause}</div>
-            <div><span className="text-[#d8e1f3]">Impact:</span> {narrative.impact}</div>
+            <div><span className="${UI_SURFACES.textBody3}">Critical issue:</span> {narrative.criticalIssue}</div>
+            <div><span className="${UI_SURFACES.textBody3}">Primary cause:</span> {narrative.primaryCause}</div>
+            <div><span className="${UI_SURFACES.textBody3}">Impact:</span> {narrative.impact}</div>
           </div>
         </div>
       ) : null}
@@ -113,11 +113,11 @@ export function SecurityOutcomePanel({ compact = false }: { compact?: boolean })
       ) : null}
       {compact ? (
         <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-3 py-2 text-[10px] ${UI_SURFACES.textSoftMuted}`}>
-          <div className="font-semibold uppercase tracking-[0.16em] text-[#d8e1f3]">Quick Risk Review</div>
+          <div className="font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textBody3}">Quick Risk Review</div>
           <div className="mt-1">Critical zones: {model.summary.criticalZonesPassing}/{model.summary.criticalZonesTotal} passing</div>
           <div>Redundancy: {model.summary.redundancyStatus.replace(/_/g, " ")}</div>
           <div>Night readiness: {model.summary.nightReadiness}</div>
-          <div className="mt-1 text-[#7e90b2]">
+          <div className="mt-1 ${UI_SURFACES.textMuted5}">
             Use full Security Outcome mode for camera responsibility, recommendation apply/preview, and path evidence details.
           </div>
         </div>

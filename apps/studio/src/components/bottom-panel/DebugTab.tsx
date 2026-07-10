@@ -1548,7 +1548,7 @@ export function DebugTab() {
                           {getTrustQualityLabel(evaluation.quality, scene.assumptions.doriStandard)} · {evaluation.ppm.toFixed(1)} PPM
                         </Badge>
                       </div>
-                      <div className="mt-1 grid grid-cols-3 gap-x-2 gap-y-1 text-[8px] text-[#8ea2c4]">
+                      <div className="mt-1 grid grid-cols-3 gap-x-2 gap-y-1 text-[8px] ${UI_SURFACES.textMuted3}">
                         <span>FOV: {evaluation.inFov ? "yes" : "no"}</span>
                         <span>Range: {evaluation.withinRange ? "yes" : "no"}</span>
                         <span>Dist: {evaluation.distanceM.toFixed(1)}m</span>
@@ -1562,7 +1562,7 @@ export function DebugTab() {
                       {evaluation.reasonCodes.length > 0 ? (
                         <div className="mt-1 flex flex-wrap gap-1">
                           {evaluation.reasonCodes.slice(0, 3).map((reasonCode) => (
-                            <span key={reasonCode} className="rounded border border-[#314267] bg-[#13203a] px-1 py-0.5 text-[8px] text-[#9dc3ff]">
+                            <span key={reasonCode} className="rounded border border-[#314267] ${UI_SURFACES.hoverBg} px-1 py-0.5 text-[8px] text-[#9dc3ff]">
                               {formatReasonCode(reasonCode)}
                             </span>
                           ))}
@@ -3192,7 +3192,7 @@ export function DebugTab() {
                 className={`rounded-md border px-2 py-1.5 text-left text-[9px] transition-colors ${
                   layers[layerId as keyof typeof layers]
                     ? "border-sky-400/20 bg-sky-500/10 text-sky-100"
-                    : "border-[#1e2030] ${UI_SURFACES.bgDeep} ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverBorder} hover:text-white"
+                    : "${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverBorder} hover:text-white"
                 }`}
               >
                 {label}

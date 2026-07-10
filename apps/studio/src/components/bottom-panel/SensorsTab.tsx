@@ -327,11 +327,11 @@ export function SensorsTab() {
                 <div className={`mt-2 grid grid-cols-2 gap-2 text-[9px] ${UI_SURFACES.textMuted3}`}>
                   <div className={`rounded-md ${UI_SURFACES.panel} px-2 py-1.5`}>
                     <div className={`uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>State</div>
-                    <div className="mt-0.5 font-medium text-[#d8def0]">{selectedSensor.state}</div>
+                    <div className="mt-0.5 font-medium ${UI_SURFACES.textNear}">{selectedSensor.state}</div>
                   </div>
                   <div className={`rounded-md ${UI_SURFACES.panel} px-2 py-1.5`}>
                     <div className={`uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>Live feed</div>
-                    <div className="mt-0.5 font-medium text-[#d8def0]">{sensorEvents.length} events</div>
+                    <div className="mt-0.5 font-medium ${UI_SURFACES.textNear}">{sensorEvents.length} events</div>
                   </div>
                 </div>
               </div>
@@ -590,10 +590,10 @@ export function SensorsTab() {
         </SectionCard>
 
         <SectionCard title="Ingest History" truthLabel="imported">
-          <div className="space-y-2 text-[10px] text-[#9aa7c2]">
+          <div className="space-y-2 text-[10px] ${UI_SURFACES.hoverTextSoft}">
             <div className="flex items-center justify-between">
               <span className={`uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Sensor ingest archive</span>
-              <span className="text-[#7e8ca8]">
+              <span className="${UI_SURFACES.textMuted5}">
                 {sensorIngestHistoryLoading ? "Loading..." : `${sensorIngestHistory.length} recent`}
               </span>
             </div>
@@ -602,21 +602,21 @@ export function SensorsTab() {
                 {sensorIngestHistory.map((entry, index) => (
                   <div key={`${entry.receivedAt}:${index}`} className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} px-2.5 py-2`}>
                     <div className="flex items-center justify-between gap-2">
-                      <div className="font-medium text-[#d7ddef]">{entry.sceneName ?? "Scene ingest"}</div>
-                      <div className="text-[9px] text-[#7684a2]">{entry.sourceCount} record{entry.sourceCount === 1 ? "" : "s"}</div>
+                      <div className="font-medium ${UI_SURFACES.textNear}">{entry.sceneName ?? "Scene ingest"}</div>
+                      <div className="text-[9px] ${UI_SURFACES.textSoftDim}">{entry.sourceCount} record{entry.sourceCount === 1 ? "" : "s"}</div>
                     </div>
                     <div className={`mt-0.5 ${UI_SURFACES.textMuted3}`}>{entry.summary}</div>
-                    <div className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-[#60708c]">
+                    <div className="mt-0.5 text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftMid}">
                       {entry.ingestMode === "external"
                         ? `External feed ${entry.feedLabel ?? entry.feedUrl ?? "source"}`
                         : "Pasted metadata feed"}
                     </div>
-                    <div className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-[#60708c]">{entry.receivedAt}</div>
+                    <div className="mt-0.5 text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftMid}">{entry.receivedAt}</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className={`rounded-lg border border-dashed ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} px-2.5 py-2 text-[#7684a2]`}>
+              <div className={`rounded-lg border border-dashed ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} px-2.5 py-2 ${UI_SURFACES.textSoftDim}`}>
                 No sensor ingest archive yet.
               </div>
             )}
@@ -643,8 +643,8 @@ export function SensorsTab() {
             {(Object.keys(SENSOR_TYPE_LABELS) as SensorNode["sensorType"][]).map((sensorType) => (
               <div key={sensorType} className={`flex items-center justify-between gap-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
                 <div className="min-w-0">
-                  <div className="truncate text-[10px] font-medium text-[#d8def0]">{SENSOR_TYPE_LABELS[sensorType]}</div>
-                  <div className="text-[8px] uppercase tracking-[0.14em] text-[#5d6781]">Scene inventory</div>
+                  <div className="truncate text-[10px] font-medium ${UI_SURFACES.textNear}">{SENSOR_TYPE_LABELS[sensorType]}</div>
+                  <div className="text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted7}">Scene inventory</div>
                 </div>
                 <Badge variant="blue">{typeCounts[sensorType]}</Badge>
               </div>

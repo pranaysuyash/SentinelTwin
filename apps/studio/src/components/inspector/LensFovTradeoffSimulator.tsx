@@ -428,7 +428,7 @@ export function LensFovTradeoffSimulator({ camera, onClose }: LensFovTradeoffSim
                 <tr
                   key={pt.focalLengthMm}
                   className={cn(
-                    "border-b border-[#151a26] hover:${UI_SURFACES.card} cursor-pointer",
+                    "border-b ${UI_SURFACES.hoverBgMuted} hover:${UI_SURFACES.card} cursor-pointer",
                     Math.abs(focalLength - pt.focalLengthMm) < 0.1 ? "bg-cyan-500/5" : "",
                   )}
                   onClick={() => setFocalLength(pt.focalLengthMm)}

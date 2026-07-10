@@ -112,7 +112,7 @@ function ScanTypeChips({
             onClick={() => onChange(type.kind)}
             className={[
               "rounded-full border px-3 py-1.5 text-[11px] transition-colors",
-              active ? `${meta.border} ${meta.bg} ${meta.accent}` : "border-[#263043] bg-[#0d1320] text-[#8b96ae] hover:border-[#39455d] hover:text-white",
+              active ? `${meta.border} ${meta.bg} ${meta.accent}` : "${UI_SURFACES.border} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.textDim} hover:text-white",
             ].join(" ")}
             title={type.description}
           >
@@ -154,7 +154,7 @@ function PhotoCard({
       onClick={onClick}
       className={[
         "group w-full overflow-hidden rounded-2xl border text-left transition-colors",
-        active ? "border-cyan-500/45 bg-cyan-500/10" : "${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} hover:border-[#39506f] hover:bg-[#0b1320]",
+        active ? "border-cyan-500/45 bg-cyan-500/10" : "${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.bgDeep}",
         compact ? "p-2.5" : "p-3",
       ].join(" ")}
     >
@@ -197,12 +197,12 @@ function StepBadge({ step, current, label }: { step: number; current: number; la
       <div
         className={[
           "flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold",
-          complete ? "bg-emerald-500 text-white" : active ? "bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/40" : "bg-[#182032] ${UI_SURFACES.textSoftMid}",
+          complete ? "bg-emerald-500 text-white" : active ? "bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/40" : "${UI_SURFACES.borderFaint} ${UI_SURFACES.textSoftMid}",
         ].join(" ")}
       >
         {complete ? <Check className="h-3 w-3" /> : current + 1}
       </div>
-      <span className={active ? "text-[#dce5f4]" : "text-[#60708d]"}>{label}</span>
+      <span className={active ? "${UI_SURFACES.textBody3}" : "${UI_SURFACES.textSoftMid}"}>{label}</span>
     </div>
   );
 }
@@ -771,9 +771,9 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
     const nextLabel = isFinalStep ? "Compile Scene" : "Next";
 
     return (
-      <div className="flex h-full flex-col overflow-hidden bg-[#08101a] text-slate-200">
+      <div className="flex h-full flex-col overflow-hidden ${UI_SURFACES.panel} text-slate-200">
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside className="flex w-[248px] max-w-[30vw] flex-none flex-col justify-between border-r border-white/8 bg-[#07111b] px-3 py-4">
+          <aside className="flex w-[248px] max-w-[30vw] flex-none flex-col justify-between border-r border-white/8 ${UI_SURFACES.panel} px-3 py-4">
             <div>
               <div className="flex items-center gap-2 px-2 py-1 text-[17px] font-medium tracking-tight text-white">
                 <ShieldCheck className="h-6 w-6 text-sky-400" />
@@ -812,7 +812,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
             <div className="space-y-4">
               <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
                 <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/82">Reference Baseline</div>
-                <div className="overflow-hidden rounded-lg border border-white/6 bg-[#0d1520]">
+                <div className="overflow-hidden rounded-lg border border-white/6 ${UI_SURFACES.bgDeep}">
                   <div
                     className="h-[82px] bg-cover bg-center"
                     style={{
@@ -914,7 +914,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
 
                     <label className="grid grid-cols-[1fr_128px] items-center gap-4">
                       <span className="text-[15px] font-medium text-white">Length (X)</span>
-                      <div className="flex items-center rounded-lg border border-white/8 bg-[#0b1320] px-3 py-2.5">
+                      <div className="flex items-center rounded-lg border border-white/8 ${UI_SURFACES.bgDeep} px-3 py-2.5">
                         <input
                           type="number"
                           value={session.widthM}
@@ -927,7 +927,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
 
                     <label className="grid grid-cols-[1fr_128px] items-center gap-4">
                       <span className="text-[15px] font-medium text-white">Width (Y)</span>
-                      <div className="flex items-center rounded-lg border border-white/8 bg-[#0b1320] px-3 py-2.5">
+                      <div className="flex items-center rounded-lg border border-white/8 ${UI_SURFACES.bgDeep} px-3 py-2.5">
                         <input
                           type="number"
                           value={session.depthM}
@@ -940,7 +940,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
 
                     <label className="grid grid-cols-[1fr_128px] items-center gap-4">
                       <span className="text-[15px] font-medium text-white">Ceiling Height (Z)</span>
-                      <div className="flex items-center rounded-lg border border-white/8 bg-[#0b1320] px-3 py-2.5">
+                      <div className="flex items-center rounded-lg border border-white/8 ${UI_SURFACES.bgDeep} px-3 py-2.5">
                         <input
                           type="number"
                           value={session.heightM}
@@ -951,12 +951,12 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                       </div>
                     </label>
 
-                    <div className="rounded-xl border border-white/8 bg-[#0b1320] px-4 py-5 text-[15px] leading-7 text-slate-300">
+                    <div className="rounded-xl border border-white/8 ${UI_SURFACES.bgDeep} px-4 py-5 text-[15px] leading-7 text-slate-300">
                       These values can be adjusted later. Accuracy here improves results.
                     </div>
                   </div>
 
-                  <div className="rounded-[18px] border border-white/8 bg-[#0b1320] p-5">
+                  <div className="rounded-[18px] border border-white/8 ${UI_SURFACES.bgDeep} p-5">
                     <h3 className="text-[19px] font-medium text-white">Upload Overview Photos</h3>
                     <p className="mt-2 max-w-[430px] text-[15px] leading-6 text-slate-300">
                       Add 3–6 photos from different corners or sides. Include walls, entry, ceiling and layout context.
@@ -965,7 +965,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                     <div className="mt-6 grid grid-cols-3 gap-3">
                       {photoSlots.map((photo, index) =>
                         photo ? (
-                          <div key={photo.id} className="group relative overflow-hidden rounded-[14px] border border-white/8 bg-[#111a28]">
+                          <div key={photo.id} className="group relative overflow-hidden rounded-[14px] border border-white/8 ${UI_SURFACES.hoverBgSubtle}">
                             <div className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-[#2563eb] text-[12px] font-medium text-white">
                               {index + 1}
                             </div>
@@ -989,9 +989,9 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                             key={`empty-${index}`}
                             type="button"
                             onClick={handleUploadClick}
-                            className="group flex h-[144px] items-center justify-center rounded-[14px] border border-dashed border-sky-500/35 bg-[#0d1624] text-sky-400 transition-colors hover:border-sky-400 hover:bg-sky-500/8"
+                            className="group flex h-[144px] items-center justify-center rounded-[14px] border border-dashed border-sky-500/35 ${UI_SURFACES.hoverBgSubtle} text-sky-400 transition-colors hover:border-sky-400 hover:bg-sky-500/8"
                           >
-                            <div className="flex h-14 w-14 items-center justify-center rounded-[12px] border border-white/8 bg-[#111b29]">
+                            <div className="flex h-14 w-14 items-center justify-center rounded-[12px] border border-white/8 ${UI_SURFACES.hoverBgSubtle}">
                               <CirclePlus className="h-7 w-7" />
                             </div>
                           </button>
@@ -1000,7 +1000,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                     </div>
 
                     <div className="mt-6 grid gap-4 xl:grid-cols-[1fr_232px]">
-                      <div className="rounded-[14px] border border-white/8 bg-[#0d1624] px-4 py-4">
+                      <div className="rounded-[14px] border border-white/8 ${UI_SURFACES.hoverBgSubtle} px-4 py-4">
                         <div className="text-[17px] font-medium text-white">Tips for better results</div>
                         <ul className="mt-4 space-y-3 text-[15px] leading-6 text-slate-300">
                           <li className="flex items-start gap-3">
@@ -1018,9 +1018,9 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                         </ul>
                       </div>
 
-                      <div className="rounded-[14px] border border-white/8 bg-[#0d1624] px-4 py-4">
+                      <div className="rounded-[14px] border border-white/8 ${UI_SURFACES.hoverBgSubtle} px-4 py-4">
                         <div className="text-[17px] font-medium text-white">Example coverage</div>
-                        <div className="mt-4 flex h-[120px] items-center justify-center rounded-[12px] border border-white/8 bg-[#09101a]">
+                        <div className="mt-4 flex h-[120px] items-center justify-center rounded-[12px] border border-white/8 ${UI_SURFACES.panel}">
                           <div className="relative h-[88px] w-[136px] rounded-[12px] border border-white/10">
                             <div className="absolute left-2 top-2 h-2.5 w-2.5 rounded-full bg-blue-500" />
                             <div className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-blue-500" />
@@ -1106,7 +1106,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               {isGuided ? "Guided assistant" : "Manual-assisted"}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-[#7e8da9]">
+          <p className="mt-1 text-[11px] ${UI_SURFACES.textMuted5}">
             {isGuided
               ? "Follow the capture checklist, upload one or more site photos, then review the same manual-assisted annotations before compiling."
               : "Upload a site photo, tap objects on the image, classify them, and compile the result into the live Studio scene."}
@@ -1276,7 +1276,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                           notes: event.target.value,
                         },
                       })}
-                      className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} bg-[#09111f] px-3 py-2 text-xs text-[#dce6f5] outline-none`}
+                      className={`mt-1 w-full rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-3 py-2 text-xs ${UI_SURFACES.textBody3} outline-none`}
                       rows={3}
                       placeholder="Record access, staffing, perimeter, or timing assumptions for temporary control."
                     />
@@ -1309,23 +1309,23 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               <h3 className="text-sm font-semibold text-white">Session snapshot</h3>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-3`}>
-                  <div className="text-[11px] text-[#8192b1]">Candidates</div>
+                  <div className="text-[11px] ${UI_SURFACES.textMuted5}">Candidates</div>
                   <div className="mt-1 text-2xl font-semibold text-white">{session.candidates.length}</div>
                 </div>
                 <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-3`}>
-                  <div className="text-[11px] text-[#8192b1]">Cameras</div>
+                  <div className="text-[11px] ${UI_SURFACES.textMuted5}">Cameras</div>
                   <div className="mt-1 text-2xl font-semibold text-white">{candidateStats.cameraCount}</div>
                 </div>
                 <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-3`}>
-                  <div className="text-[11px] text-[#8192b1]">Obstructions</div>
+                  <div className="text-[11px] ${UI_SURFACES.textMuted5}">Obstructions</div>
                   <div className="mt-1 text-2xl font-semibold text-white">{candidateStats.obstructionCount}</div>
                 </div>
                 <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-3`}>
-                  <div className="text-[11px] text-[#8192b1]">Source</div>
+                  <div className="text-[11px] ${UI_SURFACES.textMuted5}">Source</div>
                   <div className="mt-1 text-sm font-medium text-cyan-200">Manual scan</div>
                 </div>
                 <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-3`}>
-                  <div className="text-[11px] text-[#8192b1]">Operational mode</div>
+                  <div className="text-[11px] ${UI_SURFACES.textMuted5}">Operational mode</div>
                   <div className="mt-1 text-sm font-medium text-cyan-200">
                     {session.operationalMode === "permanent" ? "Permanent" : "Temporary / event"}
                   </div>
@@ -1354,7 +1354,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               </p>
 
               <div
-                className={`mt-4 flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#263043] ${UI_SURFACES.panelDeepAlt} px-4 py-10 text-center transition-colors hover:border-cyan-500/40`}
+                className={`mt-4 flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-4 py-10 text-center transition-colors hover:border-cyan-500/40`}
                 onClick={handleUploadClick}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => {
@@ -1372,8 +1372,8 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                   </div>
                 ) : (
                   <>
-                    <ImageUp className="h-10 w-10 text-[#5d6b84]" />
-                    <p className="mt-4 text-sm font-medium text-[#d6dfef]">Drop photos here or click to upload</p>
+                    <ImageUp className="h-10 w-10 ${UI_SURFACES.textMuted7}" />
+                    <p className="mt-4 text-sm font-medium ${UI_SURFACES.textNear}">Drop photos here or click to upload</p>
                     <p className={`mt-1 text-xs ${UI_SURFACES.textSoftDim}`}>PNG, JPG, WEBP, or SVG. You can also use the built-in sample site.</p>
                     <div className="mt-5 flex gap-2">
                       <SurfaceButton type="button" onClick={(event) => {
@@ -1418,7 +1418,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
 
               {session.photos.length > 0 ? (
                 <div className="mt-4">
-                  <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-[#6d7d9b]">Photo set</div>
+                  <div className="mb-2 text-[11px] uppercase tracking-[0.18em] ${UI_SURFACES.textMuted2}">Photo set</div>
                   <div className="grid gap-3 md:grid-cols-2">
                     {session.photos.map((photo) => (
                       <PhotoCard
@@ -1547,8 +1547,8 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                   ) : (
                     <div className="flex h-full min-h-[360px] items-center justify-center px-6 text-center">
                       <div>
-                        <ScanSearch className="mx-auto h-10 w-10 text-[#5b6881]" />
-                        <p className="mt-3 text-sm font-medium text-[#d7e0f0]">Upload a site image to begin</p>
+                        <ScanSearch className="mx-auto h-10 w-10 ${UI_SURFACES.textMuted7}" />
+                        <p className="mt-3 text-sm font-medium ${UI_SURFACES.textNear}">Upload a site image to begin</p>
                         <p className={`mt-1 text-xs ${UI_SURFACES.textSoftDim}`}>The image area will become the annotation canvas once a photo is loaded.</p>
                       </div>
                     </div>
@@ -1728,14 +1728,14 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                                 <button
                                   type="button"
                                   onClick={() => reorderPathCandidate(candidate.id, -1)}
-                                  className={`rounded border border-[#2a354d] ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBody}`}
+                                  className={`rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBody}`}
                                 >
                                   Path Order Up
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => reorderPathCandidate(candidate.id, 1)}
-                                  className={`rounded border border-[#2a354d] ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBody}`}
+                                  className={`rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textBody}`}
                                 >
                                   Path Order Down
                                 </button>
@@ -1820,7 +1820,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                           </button>
                         </div>
                         {candidate.note ? (
-                          <p className="mt-2 text-[11px] text-[#7b8aa8]">{candidate.note}</p>
+                          <p className="mt-2 text-[11px] ${UI_SURFACES.textMuted5}">{candidate.note}</p>
                         ) : null}
                       </div>
                     );
@@ -1829,7 +1829,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               </div>
               {session.photos.length > 0 ? (
                 <div className="mt-4">
-                  <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-[#6d7d9b]">All photos</div>
+                  <div className="mb-2 text-[11px] uppercase tracking-[0.18em] ${UI_SURFACES.textMuted2}">All photos</div>
                   <div className="grid gap-3 lg:grid-cols-2">
                     {session.photos.map((photo) => (
                       <PhotoCard
@@ -1911,7 +1911,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               </div>
               <div className={`mt-3 rounded-2xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} p-3`}>
                 <h4 className="text-xs font-semibold text-white">Compile preview</h4>
-                <p className="mt-1 text-[11px] text-[#8aa1c4]">What will be created in the site twin draft:</p>
+                <p className="mt-1 text-[11px] ${UI_SURFACES.textMuted3}">What will be created in the site twin draft:</p>
                 <div className="mt-3 grid grid-cols-4 gap-2">
                   <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 p-2 text-center">
                     <div className="text-lg font-bold text-emerald-200">{candidateStats.cameraCount}</div>
@@ -1940,7 +1940,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                   </div>
                 )}
               </div>
-              <label className={`mt-3 flex items-start gap-2 rounded-2xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[11px] text-[#c6d3ea]`}>
+              <label className={`mt-3 flex items-start gap-2 rounded-2xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[11px] ${UI_SURFACES.textBody}`}>
                 <input
                   type="checkbox"
                   checked={autoCreatePath}
@@ -1950,7 +1950,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               </label>
               <div className={`mt-3 rounded-2xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} p-3`}>
                 <h4 className="text-xs font-semibold text-white">Structural auto-fix assist (explicit)</h4>
-                <p className="mt-1 text-[11px] text-[#8aa1c4]">
+                <p className="mt-1 text-[11px] ${UI_SURFACES.textMuted3}">
                   These actions are manual and visible. They do not run automatically and only update candidate annotations.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -1964,7 +1964,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               </div>
               <div className={`mt-3 rounded-2xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} p-3`}>
                 <h4 className="text-xs font-semibold text-white">Geometry sanity checks</h4>
-                <div className="mt-2 space-y-1 text-[11px] text-[#8aa1c4]">
+                <div className="mt-2 space-y-1 text-[11px] ${UI_SURFACES.textMuted3}">
                   <p>• Duplicate groups (same type + close points): {duplicateCandidateGroups.length}</p>
                   <p>• Door/window without nearby wall: {openingWithoutWallNearbyCount}</p>
                   <p>• Pending candidate count: {candidateStats.pending}</p>
@@ -1990,13 +1990,13 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                       {provenance.confidenceLevel} confidence
                     </span>
                   </div>
-                  <p className="mt-1 text-[10px] text-[#8aa1c4]">{provenance.summary}</p>
+                  <p className="mt-1 text-[10px] ${UI_SURFACES.textMuted3}">{provenance.summary}</p>
                   <p className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
                     {provenance.acceptedCandidates}/{provenance.totalCandidates} accepted · {(provenance.averageConfidence * 100).toFixed(0)}% avg confidence
                   </p>
                 </div>
                 {lowConfidenceAccepted.length > 0 ? (
-                  <label className="mt-3 flex items-start gap-2 text-[11px] text-[#c6d3ea]">
+                  <label className="mt-3 flex items-start gap-2 text-[11px] ${UI_SURFACES.textBody}">
                     <input
                       type="checkbox"
                       checked={compileLowConfidenceOverride}
@@ -2045,7 +2045,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
 
               <div className={`mt-3 rounded-2xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} p-3`}>
                 <h4 className="text-xs font-semibold text-white">What will be created</h4>
-                <div className="mt-2 space-y-1 text-[11px] text-[#8aa1c4]">
+                <div className="mt-2 space-y-1 text-[11px] ${UI_SURFACES.textMuted3}">
                   <p>• Validated site twin data with real walls, openings, obstructions, lights, cameras, zones, and optional path.</p>
                   <p>• Editable in Studio, starting in map mode with the metrics panel visible.</p>
                   <p>• Simulation-ready when at least one camera and one critical zone are present.</p>

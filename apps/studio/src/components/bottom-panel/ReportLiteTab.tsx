@@ -630,7 +630,7 @@ export function ReportLiteTab() {
                     className={`min-w-[10rem] rounded px-2 py-1 text-left text-[9px] transition-colors ${
                       selected
                         ? "border border-sky-500/40 bg-sky-500/10 text-sky-100"
-                        : `border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textSoftMuted} hover:border-[#2f3650] hover:text-white`
+                        : `border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textSoftMuted} ${UI_SURFACES.hoverBorderSubtle} hover:text-white`
                     }`}
                   >
                     <div className="font-semibold uppercase tracking-[0.14em]">{preset.title}</div>
@@ -1048,7 +1048,7 @@ export function ReportLiteTab() {
           <div className={`{mb-3 rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} p-3}`}>
             <div className={`mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted5}`}>Compare Export Context</div>
             {compareSelectionMissing ? (
-              <div className={`mb-2 rounded-lg border border-dashed ${UI_SURFACES.border} bg-[#091018] px-3 py-2 text-[10px] text-[#8a97af]`}>
+              <div className={`mb-2 rounded-lg border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-[10px] ${UI_SURFACES.textSoftBright}`}>
                 Select both snapshots to generate compare exports. The report keeps the comparison explicit instead of auto-picking the newest saves.
               </div>
             ) : null}

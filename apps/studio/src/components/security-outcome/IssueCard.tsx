@@ -60,13 +60,13 @@ export function IssueCard({
         <button
           type="button"
           onClick={() => setShowWhy((value) => !value)}
-          className={`rounded border ${UI_SURFACES.borderHover} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] text-[#c8d3ea] hover:text-white`}
+          className={`rounded border ${UI_SURFACES.borderHover} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] ${UI_SURFACES.textBody} hover:text-white`}
         >
           Why?
         </button>
       </div>
       {showWhy ? (
-        <div className={`mt-2 rounded border ${UI_SURFACES.borderHover} ${UI_SURFACES.panelDeep} px-2 py-1.5 text-[9px] text-[#9fb2d3]`}>
+        <div className={`mt-2 rounded border ${UI_SURFACES.borderHover} ${UI_SURFACES.panelDeep} px-2 py-1.5 text-[9px] ${UI_SURFACES.textMuted4}`}>
           <div>Category: {issue.category.replace(/_/g, " ")}</div>
           <div>Severity: {issue.severity}</div>
           <div>Affected zones: {issue.affectedZones.length > 0 ? issue.affectedZones.join(", ") : "none mapped"}</div>

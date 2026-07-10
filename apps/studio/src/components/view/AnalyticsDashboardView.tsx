@@ -25,7 +25,7 @@ const TONE_CARD_CLASSES: Record<AnalyticsTone, string> = {
   good: "border-emerald-400/25 bg-emerald-500/10 text-emerald-100",
   warn: "border-amber-400/25 bg-amber-500/10 text-amber-100",
   bad: "border-rose-400/30 bg-rose-500/10 text-rose-100",
-  neutral: "${UI_SURFACES.border} ${UI_SURFACES.card} text-[#c0cbe4]",
+  neutral: "${UI_SURFACES.border} ${UI_SURFACES.card} ${UI_SURFACES.textBody}",
 };
 
 const DORI_BAND_COLORS: Record<string, string> = {
@@ -225,7 +225,7 @@ function TemporalCoverageChart({
   return (
     <div className="relative">
       {hasEffective && (
-        <div className="mb-1 flex items-center gap-3 text-[9px] text-[#5b6780]">
+        <div className="mb-1 flex items-center gap-3 text-[9px] ${UI_SURFACES.textMuted7}">
           <span className="flex items-center gap-1">
             <span className="inline-block h-0.5 w-4 rounded bg-sky-400" />
             Geometric
@@ -311,7 +311,7 @@ function TemporalCoverageChart({
         ) : null}
       </svg>
       {hovered ? (
-        <div className={`pointer-events-none absolute left-2 top-1 rounded-lg border ${UI_SURFACES.border} bg-[#0b1020]/95 px-2 py-1 text-[10px] text-sky-100`}>
+        <div className={`pointer-events-none absolute left-2 top-1 rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep}/95 px-2 py-1 text-[10px] text-sky-100`}>
           <span className="font-semibold">
             {`${hovered.point.hour.toString().padStart(2, "0")}:${hovered.point.minute.toString().padStart(2, "0")}`}
           </span>
@@ -426,7 +426,7 @@ function DirectorsCutCard({
           type="button"
           disabled={exporting}
           onClick={handleExport}
-          className="flex items-center gap-1 rounded-lg border border-[#1f2845] bg-[#0d1628] px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-[#7a8fb5] transition hover:border-sky-500/30 hover:bg-sky-500/8 hover:text-sky-300 disabled:opacity-50"
+          className="flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderDeep} ${UI_SURFACES.hoverBgSubtle} px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-[#7a8fb5] transition hover:border-sky-500/30 hover:bg-sky-500/8 hover:text-sky-300 disabled:opacity-50"
         >
           <Download className="h-3 w-3" />
           {exporting ? "Exporting…" : "Export PDF"}
@@ -542,7 +542,7 @@ export function AnalyticsDashboardView() {
 
   if (!model.hasSimulation) {
     return (
-      <div className="flex h-full items-center justify-center bg-[#070b14] p-6">
+      <div className="flex h-full items-center justify-center ${UI_SURFACES.panelDeepAlt} p-6">
         <div className={`max-w-md rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-6 text-center`}>
           <BarChart3 className="mx-auto mb-3 h-8 w-8 text-sky-300" />
           <div className={`text-sm font-semibold ${UI_SURFACES.textBody3}`}>No simulation data yet</div>
@@ -563,7 +563,7 @@ export function AnalyticsDashboardView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-[#070b14] px-4 pb-6 pt-[var(--st-full-canvas-safe-top,4rem)]">
+    <div className="h-full overflow-y-auto ${UI_SURFACES.panelDeepAlt} px-4 pb-6 pt-[var(--st-full-canvas-safe-top,4rem)]">
       <div className="mx-auto flex max-w-6xl flex-col gap-3">
         <header className="flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -669,7 +669,7 @@ export function AnalyticsDashboardView() {
                             style={{ width: `${(entry.count / maxCount) * 100}%`, backgroundColor: SEVERITY_COLORS[entry.severity] }}
                           />
                         </span>
-                        <span className="w-5 text-right text-[10px] text-[#c0cbe4]">{entry.count}</span>
+                        <span className="w-5 text-right text-[10px] ${UI_SURFACES.textBody}">{entry.count}</span>
                       </button>
                     );
                   })}
@@ -678,7 +678,7 @@ export function AnalyticsDashboardView() {
               <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-3 py-2`}>
                 <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Blind Spots</div>
                 {model.blindSpots ? (
-                  <div className="mt-1.5 space-y-0.5 text-[11px] text-[#c0cbe4]">
+                  <div className="mt-1.5 space-y-0.5 text-[11px] ${UI_SURFACES.textBody}">
                     <div>{model.blindSpots.regionCount} regions · {model.blindSpots.criticalRegionCount} critical</div>
                     <div>{model.blindSpots.totalBlindAreaSqM.toFixed(1)} m² blind total</div>
                     <div>Largest {model.blindSpots.largestRegionAreaSqM.toFixed(1)} m²</div>
@@ -884,13 +884,13 @@ export function AnalyticsDashboardView() {
               </button>
             ) : null}
             <div className={`mt-3 text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Evidence Ledger</div>
-            <div className="mt-1 text-[11px] text-[#c0cbe4]">
+            <div className="mt-1 text-[11px] ${UI_SURFACES.textBody}">
               {model.evidenceActivity.totalEvents} recorded event{model.evidenceActivity.totalEvents === 1 ? "" : "s"}
               {model.evidenceActivity.lastEventTitle ? ` · last: ${model.evidenceActivity.lastEventTitle}` : ""}
             </div>
             <div className="mt-1 flex flex-wrap gap-1">
               {model.evidenceActivity.countsByKind.map((entry) => (
-                <span key={entry.kind} className={`rounded bg-[#161d30] px-1.5 py-0.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
+                <span key={entry.kind} className={`rounded ${UI_SURFACES.borderFaint} px-1.5 py-0.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
                   {entry.kind.replace(/_/g, " ")} × {entry.count}
                 </span>
               ))}

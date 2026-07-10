@@ -232,7 +232,7 @@ export function IssuesTab() {
                   <div className="flex items-start gap-2">
                     <ShieldAlert className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-rose-400" />
                     <div className="min-w-0 flex-1">
-                      <div className="text-[10px] font-semibold text-[#dce5f7]">{issue.description}</div>
+                      <div className="text-[10px] font-semibold ${UI_SURFACES.textBody3}">{issue.description}</div>
                       <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textSoftMid}`}>
                         Zones: {issue.affectedZones.length > 0 ? issue.affectedZones.join(", ") : "None"} · Cameras: {issue.affectedCameras.length > 0 ? issue.affectedCameras.join(", ") : "None"}
                       </div>
@@ -413,7 +413,7 @@ export function IssuesTab() {
                         {isPreviewActive ? (
                           <button type="button"
                             onClick={revertPreview}
-                            className={`flex items-center gap-1 px-2 py-0.5 rounded ${UI_SURFACES.chip} border border-[#2b3143] text-[9px] text-[#b9c2d8] ${UI_SURFACES.hoverBorderBright} transition-colors`}
+                            className={`flex items-center gap-1 px-2 py-0.5 rounded ${UI_SURFACES.chip} border ${UI_SURFACES.hoverBorder} text-[9px] ${UI_SURFACES.textNearAlt} ${UI_SURFACES.hoverBorderBright} transition-colors`}
                           >
                             Revert Preview
                           </button>

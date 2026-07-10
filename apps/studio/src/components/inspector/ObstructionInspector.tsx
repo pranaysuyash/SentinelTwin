@@ -231,7 +231,7 @@ export function ObstructionInspector() {
         </button>
 
         {delta && (
-          <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} bg-[#0a0d15] p-2.5 space-y-1.5}`}>
+          <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeepAlt} p-2.5 space-y-1.5}`}>
             <div className={`text-[9px] font-semibold uppercase tracking-widest ${UI_SURFACES.textDim} mb-2`}>
               If removed — delta vs current
             </div>

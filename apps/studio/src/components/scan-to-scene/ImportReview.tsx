@@ -326,7 +326,7 @@ export function ImportReview({
       <div className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panelDeep} p-3`}>
         <div className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted4}`}>Plan Source Understanding</div>
         <div className={`mt-1 text-[12px] leading-5 ${UI_SURFACES.textMuted4}`}>
-          The detector is currently tuned for <span className="font-semibold text-[#d6e2f4]">{sourceProfile}</span>.
+          The detector is currently tuned for <span className="font-semibold ${UI_SURFACES.textNear}">{sourceProfile}</span>.
           {sourceHint ? <span> {sourceHint}</span> : null}
         </div>
       </div>
@@ -360,18 +360,18 @@ export function ImportReview({
           </div>
         ) : null}
         <div className="mt-4 grid gap-2 text-[10px] md:grid-cols-3">
-          <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0a101d] px-3 py-2 text-[#9fb2d1]`}>
+          <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-3 py-2 ${UI_SURFACES.textMuted4}`}>
             <div className={`${UI_SURFACES.textSoftMid}`}>Warnings</div>
             <div className={unresolvedCount > 0 ? "text-amber-200" : "text-emerald-200"}>{unresolvedCount} unresolved</div>
           </div>
-          <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0a101d] px-3 py-2 text-[#9fb2d1]`}>
+          <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-3 py-2 ${UI_SURFACES.textMuted4}`}>
             <div className={`${UI_SURFACES.textSoftMid}`}>Openings</div>
             <div>{result.doors.length + result.windows.length} total</div>
           </div>
-            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0a101d] px-3 py-2 text-[#9fb2d1]`}>
+            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-3 py-2 ${UI_SURFACES.textMuted4}`}>
               <div className={`${UI_SURFACES.textSoftMid}`}>Detected walls</div>
               <div>{rawWallSegmentCount} raw candidates · {keptWallCount} kept</div>
-              <div className="text-[9px] text-[#6d819f]">
+              <div className="text-[9px] ${UI_SURFACES.textSoftDim}">
               {rawWallSegmentCount > keptWallCount
                 ? `${rawWallSegmentCount - keptWallCount} removed during cleanup or excluded from working shell`
                 : "No pre-filter removals"}
@@ -380,7 +380,7 @@ export function ImportReview({
         </div>
       </div>
 
-      <div className={`rounded-2xl border ${UI_SURFACES.borderStandard} bg-[#0f1828] p-4`}>
+      <div className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.hoverBgSubtle} p-4`}>
         <div className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted4}`}>Plan-understanding notes</div>
         <div className={`mt-2 space-y-1 text-[12px] leading-5 ${UI_SURFACES.textMuted4}`}>
           <p>{interpretationCopy.wallCounts}</p>
@@ -389,14 +389,14 @@ export function ImportReview({
       </div>
 
       {gateDecision ? (
-        <div className={`rounded-2xl border ${UI_SURFACES.borderStandard} bg-[#0a111d] p-4`}>
+        <div className={`rounded-2xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.bgDeep} p-4`}>
           <div className="flex items-center justify-between gap-2">
             <div>
               <div className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted4}`}>Tier 1 Gate</div>
-              <div className="mt-1 text-[14px] font-medium text-[#d5deed]">{formatGateAction(gateDecision.action)}</div>
+              <div className="mt-1 text-[14px] font-medium ${UI_SURFACES.textNear}">{formatGateAction(gateDecision.action)}</div>
             </div>
             {qualityPct != null ? (
-              <span className={`rounded border ${UI_SURFACES.borderHover} bg-[#0f1727] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[#b2c4de]`}>
+              <span className={`rounded border ${UI_SURFACES.borderHover} ${UI_SURFACES.hoverBgSubtle} px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[#b2c4de]`}>
                 Quality {qualityPct}%
               </span>
             ) : null}
@@ -405,11 +405,11 @@ export function ImportReview({
         </div>
       ) : null}
 
-      <div className={`rounded-2xl border ${UI_SURFACES.borderSubtle} bg-[#0a111d] p-4`}>
+      <div className={`rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-4`}>
         <div className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted4}`}>What to check before continuing</div>
         <ul className="mt-3 space-y-2">
           {nextStepGuidance.map((item) => (
-            <li key={item} className="flex items-start gap-2 text-[13px] leading-5 text-[#d2ddf0]">
+            <li key={item} className="flex items-start gap-2 text-[13px] leading-5 ${UI_SURFACES.textNear}">
               <span className="mt-1 h-2 w-2 flex-none rounded-full bg-sky-400" />
               <span>{item}</span>
             </li>
@@ -532,13 +532,13 @@ export function ImportReview({
               setDragging(null);
               setLastActionMessage("Detection state reset to latest extracted geometry.");
             }}
-            className="text-[11px] text-[#8ea5c6] hover:text-white"
+            className="text-[11px] ${UI_SURFACES.textMuted3} hover:text-white"
           >
             Reset
           </button>
         </div>
 
-        <div className={`mb-4 rounded-xl border border-[#1b2233] ${UI_SURFACES.panelDeep} p-3`}>
+        <div className={`mb-4 rounded-xl border ${UI_SURFACES.hoverBg} ${UI_SURFACES.panelDeep} p-3`}>
           <div className={`mb-1 text-[10px] uppercase tracking-[0.14em] ${UI_SURFACES.textSoftBright}`}>Spatial Preview</div>
           <div className={`mb-2 text-[12px] leading-5 ${UI_SURFACES.textMuted4}`}>Preview is zoomed to the extracted geometry so you can inspect the actual draft shell instead of the full uploaded sheet.</div>
           <div className={`mb-2 text-[10px] ${UI_SURFACES.textSoftBright}`}>
@@ -546,7 +546,7 @@ export function ImportReview({
           </div>
           <svg
             viewBox={`${previewViewport.minX} ${previewViewport.minY} ${previewViewport.width} ${previewViewport.height}`}
-            className="h-[28rem] w-full min-h-[360px] max-h-[60vh] rounded-xl border border-[#1b2233] bg-[#060a12]"
+            className="h-[28rem] w-full min-h-[360px] max-h-[60vh] rounded-xl border ${UI_SURFACES.hoverBg} ${UI_SURFACES.panelDeepAlt}"
             preserveAspectRatio="xMidYMid meet"
             onPointerMove={(event) => {
               if (!dragging) return;
@@ -717,7 +717,7 @@ export function ImportReview({
           <div>
             <div className="mb-2 flex items-center justify-between">
               <div className={`text-[10px] uppercase tracking-[0.14em] ${UI_SURFACES.textSoftBright}`}>Walls</div>
-              <div className="text-[10px] text-[#6d819f]">Click a segment on the canvas to keep / exclude</div>
+              <div className="text-[10px] ${UI_SURFACES.textSoftDim}">Click a segment on the canvas to keep / exclude</div>
             </div>
             {/* Intake Pass I3 — buyer-grade wall correction. The checkbox list
                 was the 06-17 trust-break moment ("1335 walls detected?" +
@@ -775,9 +775,9 @@ export function ImportReview({
               </div>
               <div className="max-h-24 space-y-1.5 overflow-y-auto pr-1">
                 {visibleDoorRows.length === 0 ? (
-                  <div className="text-[11px] text-[#4f5a72]">None detected</div>
+                  <div className="text-[11px] ${UI_SURFACES.textDimMid}">None detected</div>
                 ) : visibleDoorRows.map(({ opening, index: globalIndex }, visibleIndex) => (
-                  <label key={`door-${globalIndex}`} className={`flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] ${UI_SURFACES.textMuted4}`}>
+                  <label key={`door-${globalIndex}`} className={`flex items-center justify-between gap-3 rounded-lg border ${UI_SURFACES.hoverBg} px-2 py-1.5 text-[11px] ${UI_SURFACES.textMuted4}`}>
                     <span>D{visibleIndex + 1}: {opening.widthM}m @ ({opening.position.x},{opening.position.y})</span>
                     <input
                       type="checkbox"
@@ -826,9 +826,9 @@ export function ImportReview({
               </div>
               <div className="max-h-24 space-y-1.5 overflow-y-auto pr-1">
                 {visibleWindowRows.length === 0 ? (
-                  <div className="text-[11px] text-[#4f5a72]">None detected</div>
+                  <div className="text-[11px] ${UI_SURFACES.textDimMid}">None detected</div>
                 ) : visibleWindowRows.map(({ opening, index: globalIndex }, visibleIndex) => (
-                  <label key={`window-${globalIndex}`} className={`flex items-center justify-between gap-3 rounded-lg border border-[#1b2233] px-2 py-1.5 text-[11px] ${UI_SURFACES.textMuted4}`}>
+                  <label key={`window-${globalIndex}`} className={`flex items-center justify-between gap-3 rounded-lg border ${UI_SURFACES.hoverBg} px-2 py-1.5 text-[11px] ${UI_SURFACES.textMuted4}`}>
                     <span>Wn{visibleIndex + 1}: {opening.widthM}m @ ({opening.position.x},{opening.position.y})</span>
                     <input
                       type="checkbox"

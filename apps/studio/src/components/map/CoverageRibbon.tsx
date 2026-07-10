@@ -33,7 +33,7 @@ export function CoverageRibbon({ path, coverageCells, stepM = 0.25 }: CoverageRi
 
   return (
     <div className="space-y-1">
-      <div className={`flex h-3 overflow-hidden rounded-full border border-[#202536] ${UI_SURFACES.card}`}>
+      <div className={`flex h-3 overflow-hidden rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card}`}>
         {bands.map((band) => {
           const widthPct = totalDistance > 0
             ? ((band.endDistanceM - band.startDistanceM) / totalDistance) * 100

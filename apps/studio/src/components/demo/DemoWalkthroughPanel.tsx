@@ -138,7 +138,7 @@ function formatPct(value: number | null | undefined) {
 function StepStatusIcon({ completed, current }: { completed: boolean; current: boolean }) {
   if (completed) return <CheckCircle2 className={cn("h-4 w-4", UI_TONES.success.text)} />;
   if (current) return <Play className={cn("h-3.5 w-3.5", UI_TONES.info.text)} />;
-  return <div className="h-2 w-2 rounded-full bg-[#2a3246]" />;
+  return <div className="h-2 w-2 rounded-full ${UI_SURFACES.borderDark}" />;
 }
 
 function DemoMetricCard({ label, value, delta, accent }: { label: string; value: string; delta?: string; accent?: string }) {
@@ -343,8 +343,8 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
                   isCurrent
                     ? "bg-cyan-500/10 text-cyan-100"
                     : isCompleted
-                      ? "text-[#7a8aa8]"
-                      : "${UI_SURFACES.textDimMid} hover:bg-[#151b28]",
+                      ? "${UI_SURFACES.textMuted5}"
+                      : "${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverBgMuted}",
                 )}
               >
                 <StepStatusIcon completed={isCompleted} current={isCurrent} />
@@ -359,7 +359,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
           })}
         </div>
 
-        <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} bg-[#0d111a] p-3`}>
+        <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-3`}>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 mb-2">
             <Icon className="h-4 w-4 text-emerald-400" />
           </div>
@@ -432,7 +432,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
       </div>
 
       <div className={`{border-t ${UI_SURFACES.borderPanel} px-3 py-2}`}>
-        <div className="mb-2 h-1 w-full overflow-hidden rounded-full bg-[#1a2333]">
+        <div className="mb-2 h-1 w-full overflow-hidden rounded-full ${UI_SURFACES.hoverBg}">
           <div className="h-full rounded-full bg-emerald-400 transition-[width] duration-300" style={{ width: `${progress}%` }} />
         </div>
 

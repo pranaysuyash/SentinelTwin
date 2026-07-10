@@ -247,7 +247,7 @@ function ScenePanel({
           <span className="text-white/90">{label}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-medium text-[#7a8da8]">ACTIVE COVERAGE:</span>
+          <span className="text-[9px] font-medium ${UI_SURFACES.textMuted5}">ACTIVE COVERAGE:</span>
           <span className={cn(
             "font-mono text-[11px] font-bold",
             accent === "baseline" ? "text-rose-300" : "text-emerald-300"
@@ -322,7 +322,7 @@ function MetricCard({
   const positive = delta != null ? (invertTone ? delta <= 0 : delta >= 0) : false;
 
   return (
-    <div className="flex min-w-[140px] flex-1 flex-col justify-between rounded-xl border border-[#1e2738] bg-linear-to-b from-[#111726] to-[#0a0f1a] p-3 shadow-md transition-all hover:border-[#2a3850]">
+    <div className="flex min-w-[140px] flex-1 flex-col justify-between rounded-xl border ${UI_SURFACES.borderSubtle} bg-linear-to-b from-[#111726] to-[#0a0f1a] p-3 shadow-md transition-all ${UI_SURFACES.borderStrong}">
       <div className="flex items-center justify-between gap-1">
         <span className={`text-[10px] font-bold uppercase tracking-[0.14em] ${UI_SURFACES.textMuted5}`}>{label}</span>
         {delta != null && delta !== 0 ? (
@@ -333,17 +333,17 @@ function MetricCard({
             {formatDelta(delta)}
           </div>
         ) : delta === 0 ? (
-          <div className={`rounded-md border ${UI_SURFACES.borderDark} bg-[#141b2a] px-1.5 py-0.5 font-mono text-[10px] font-medium ${UI_SURFACES.textSoftDim}`}>
+          <div className={`rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.hoverBgMuted} px-1.5 py-0.5 font-mono text-[10px] font-medium ${UI_SURFACES.textSoftDim}`}>
             NO CHANGE
           </div>
         ) : null}
       </div>
-      <div className="mt-2.5 flex items-baseline justify-between gap-2 border-t border-[#1a2234] pt-2">
+      <div className="mt-2.5 flex items-baseline justify-between gap-2 border-t ${UI_SURFACES.hoverBg} pt-2">
         <div className="flex flex-col">
           <span className="text-[9px] font-semibold uppercase tracking-wider text-rose-300/80">Baseline</span>
           <span className={`font-mono text-[13px] font-medium ${UI_SURFACES.textSoftMuted}`}>{beforeValue == null ? "--" : `${beforeValue.toFixed(1)}${suffix}`}</span>
         </div>
-        <span className="text-[#3a4660]">→</span>
+        <span className="${UI_SURFACES.textDim}">→</span>
         <div className="flex flex-col text-right">
           <span className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Proposed</span>
           <span className="font-mono text-[16px] font-bold text-white" style={{ color: delta != null && delta !== 0 ? (positive ? "#6ee7b7" : "#fda4af") : "white" }}>
@@ -364,7 +364,7 @@ function ToolbarGroup({
 }) {
   return (
     <div className={`flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-1.5 py-1`}>
-      <span className="px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#65718a]">{label}</span>
+      <span className="px-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${UI_SURFACES.textSoftMid}">{label}</span>
       <div className="flex flex-wrap items-center gap-1">{children}</div>
     </div>
   );
@@ -475,7 +475,7 @@ function QualityTrend({
           })}
         </svg>
       ) : (
-        <div className={`flex h-[160px] items-center justify-center rounded-lg border border-dashed border-[#1f2737] ${UI_SURFACES.panelDeepAlt} px-4 text-center`}>
+        <div className={`flex h-[160px] items-center justify-center rounded-lg border border-dashed ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeepAlt} px-4 text-center`}>
           <div>
             <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>No path selected</div>
             <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftBright}`}>
@@ -543,7 +543,7 @@ function NotesPanel({
             <div key={entry.label} className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2.5 py-2`}>
               <div className="flex items-center gap-2">
                 <Icon className={cn("h-3 w-3", entry.tone)} />
-                <span className="text-[#b8c3d9]">{entry.label}</span>
+                <span className="${UI_SURFACES.textNearAlt}">{entry.label}</span>
               </div>
               <span className={cn("font-mono font-semibold", entry.tone)}>
                 {entry.value == null ? "--" : formatDelta(entry.value)}
@@ -698,7 +698,7 @@ function SnapshotPlaceholder({
   description: string;
 }) {
   return (
-    <div className={`flex h-full min-h-[360px] flex-col items-center justify-center rounded-xl border border-dashed border-[#1f2737] ${UI_SURFACES.panelDeepAlt} px-4 text-center`}>
+    <div className={`flex h-full min-h-[360px] flex-col items-center justify-center rounded-xl border border-dashed ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeepAlt} px-4 text-center`}>
       <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>{title}</div>
       <div className={`mt-2 max-w-[280px] text-[10px] ${UI_SURFACES.textSoftBright}`}>{description}</div>
     </div>
@@ -1038,9 +1038,9 @@ export function CompareView() {
 
   return (
     <div className={`relative flex h-full min-h-0 flex-col overflow-hidden ${UI_SURFACES.page}`}>
-      <div className={`{flex flex-wrap items-center gap-2 border-b ${UI_SURFACES.borderPanel} bg-[#0c0f16] px-3 py-2}`}>
+      <div className={`{flex flex-wrap items-center gap-2 border-b ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2}`}>
         <div className="flex min-w-[260px] items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#65718a]">Compare - Before / After</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}">Compare - Before / After</span>
           <div className="flex items-center gap-1.5 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-medium text-rose-300">
             <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
             <span>{snapshotA?.label ?? "Baseline"}</span>
@@ -1068,7 +1068,7 @@ export function CompareView() {
             "ml-0.5 rounded px-1 py-0.5 text-[10px] uppercase tracking-[0.1em]",
             compareOrbitSync
               ? "bg-sky-500/15 text-sky-300"
-              : "bg-[#1d2330] ${UI_SURFACES.textDimMid}",
+              : "${UI_SURFACES.borderPanel} ${UI_SURFACES.textDimMid}",
           )}>
             {compareOrbitSync ? "Synced" : "Independent"}
           </span>
@@ -1106,13 +1106,13 @@ export function CompareView() {
             </ToolbarButton>
             <ToolbarButton
               onClick={handleCaptureVisualEvidence}
-              className={`${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[#b8c3d9] ${UI_SURFACES.hoverText}`}
+              className={`${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textNearAlt} ${UI_SURFACES.hoverText}`}
             >
               Capture Visual Evidence
             </ToolbarButton>
             <ToolbarButton
               onClick={() => saveSnapshot(`Scenario ${snapshots.length + 1}`)}
-              className={`${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-[#b8c3d9] ${UI_SURFACES.hoverText}`}
+              className={`${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textNearAlt} ${UI_SURFACES.hoverText}`}
             >
               <Plus className="h-3 w-3" />
               Add Scenario
@@ -1189,7 +1189,7 @@ export function CompareView() {
         </div>
       ) : null}
 
-      <div className={`{grid grid-cols-2 gap-2 border-b ${UI_SURFACES.borderPanel} bg-[#0a0d14] px-3 py-2}`}>
+      <div className={`{grid grid-cols-2 gap-2 border-b ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeepAlt} px-3 py-2}`}>
         <label className={`flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>
           <span className="min-w-[64px] font-bold text-rose-300">Baseline (A)</span>
           <select
@@ -1321,7 +1321,7 @@ export function CompareView() {
             </div>
             <div className="mt-1.5 grid gap-1.5 md:grid-cols-2">
               {comparisonCards.filter((card) => card.delta != null && card.delta !== 0).map((card) => (
-                <div key={card.label} className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2.5 py-1.5 text-[10px] text-[#b7c5de]`}>
+                <div key={card.label} className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2.5 py-1.5 text-[10px] ${UI_SURFACES.textNearAlt}`}>
                   <span className={`${UI_SURFACES.textSoftDim}`}>{card.label}</span>
                   <span className="font-semibold" style={{ color: card.tone }}>
                     {card.beforeValue != null ? `${Math.round(card.beforeValue)}%` : "—"} → {card.afterValue != null ? `${Math.round(card.afterValue)}%` : "—"}
@@ -1342,7 +1342,7 @@ export function CompareView() {
           <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted5}`}>Actionable Next Move</div>
           <div className="mt-1.5 grid gap-1.5 md:grid-cols-3">
             {prioritizedActions.map((action, i) => (
-              <div key={action} className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5 text-[10px] text-[#b7c5de]`}>
+              <div key={action} className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5 text-[10px] ${UI_SURFACES.textNearAlt}`}>
                 <span className={`mr-1 ${UI_SURFACES.textAccent}`}>{i + 1}.</span>
                 {action}
               </div>
@@ -1421,7 +1421,7 @@ export function CompareView() {
                       <div className={cn("text-[10px] font-semibold uppercase tracking-[0.18em]", tone === "baseline" ? "text-red-300" : "text-emerald-300")}>
                         {tone === "baseline" ? "Camera A" : "Camera B"}
                       </div>
-                      <div className="text-[12px] font-semibold text-[#dfe7f7]">{camera.name}</div>
+                      <div className="text-[12px] font-semibold ${UI_SURFACES.textBody4}">{camera.name}</div>
                       <div className={`text-[10px] ${UI_SURFACES.textDimMid}`}>{camera.mountType} mount · {camera.fovHorizontalDeg}° FOV · {camera.rangeM}m range</div>
                     </div>
                     <div className={cn("rounded-md border px-2 py-1 text-right", tone === "baseline" ? "border-red-500/20 bg-red-500/10" : "border-emerald-500/20 bg-emerald-500/10")}>

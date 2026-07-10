@@ -472,7 +472,7 @@ function PathEventsList({
               className={`flex w-full items-center justify-between rounded-lg border px-2 py-1 text-left transition-colors ${
                 active
                   ? "border-sky-500/40 bg-sky-500/10"
-                  : "${UI_SURFACES.border} ${UI_SURFACES.bgDeep} hover:border-[#2f3c53]"
+                  : "${UI_SURFACES.border} ${UI_SURFACES.bgDeep} ${UI_SURFACES.hoverBorderSubtle}"
               }`}
             >
               <div className="min-w-0">
@@ -495,7 +495,7 @@ function PathEventsList({
               <div className={`flex flex-col items-end gap-0.5 text-[8px] ${UI_SURFACES.textSoftMuted}`}>
                 <span>{event.timeS.toFixed(1)}s</span>
                 {event.quality ? (
-                  <span className="rounded border border-[#2c3347] px-1 py-0.5" style={{ color: qualityColor(event.quality) }}>
+                  <span className="rounded border ${UI_SURFACES.borderDark} px-1 py-0.5" style={{ color: qualityColor(event.quality) }}>
                     {event.quality}
                   </span>
                 ) : null}

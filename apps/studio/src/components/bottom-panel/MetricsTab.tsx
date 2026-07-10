@@ -32,13 +32,13 @@ function SignalRow({ label, value, detail, status }: {
 }) {
   const dotColor = status === "good" ? "bg-emerald-500"
     : status === "warn" ? "bg-amber-500"
-    : "bg-[#3a4158]";
+    : "${UI_SURFACES.textDim}";
   return (
     <div className={`flex items-center gap-2 rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
       <span className={`min-w-[100px] text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>{label}</span>
       <span className={`ml-auto text-[10px] font-semibold ${UI_SURFACES.textBody2}`}>{value}</span>
-      <span className="hidden text-[8px] text-[#5a6a88] sm:inline">{detail}</span>
+      <span className="hidden text-[8px] ${UI_SURFACES.textMuted7} sm:inline">{detail}</span>
     </div>
   );
 }
@@ -66,7 +66,7 @@ function ConfidenceCard({ confidence, zones }: { confidence: ConfidenceBand; zon
           {style.label}
         </span>
       </div>
-      <p className="mb-2 text-[9px] leading-relaxed text-[#6b7a95]">{summary}</p>
+      <p className="mb-2 text-[9px] leading-relaxed ${UI_SURFACES.textMuted2}">{summary}</p>
       {confidence.sensitiveTo.length > 0 && (
         <div className="flex flex-wrap gap-1">
           <span className={`text-[8px] uppercase tracking-wider ${UI_SURFACES.textDim}`}>Sensitive to:</span>
@@ -364,7 +364,7 @@ export function MetricsTab() {
                 ) : null}
               </div>
               {selectedTargetRequirement ? (
-                <div className="text-[#5a6a88]">
+                <div className="${UI_SURFACES.textMuted7}">
                   Threshold: {selectedTargetRequirement.ppmThreshold} · {selectedTargetRequirement.rationale}
                 </div>
               ) : null}

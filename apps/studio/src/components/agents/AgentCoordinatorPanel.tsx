@@ -27,7 +27,7 @@ export function AgentCoordinatorPanel() {
       <div className={`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} pb-1.5}`}>
         <div className="flex items-center gap-1.5">
           <Cpu className="h-3.5 w-3.5 text-emerald-400/70" />
-          <span className="text-[11px] font-medium text-[#e8edf5]">Agent Pipeline</span>
+          <span className="text-[11px] font-medium ${UI_SURFACES.textBody4}">Agent Pipeline</span>
         </div>
         <button type="button"
           onClick={() => setShowDetails(!showDetails)}

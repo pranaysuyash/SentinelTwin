@@ -160,7 +160,7 @@ export function HelpTab() {
     void useStudioStore.getState();
   };
   return (
-    <div className="h-full overflow-y-auto p-3 text-[12px] text-[#c9d5eb]">
+    <div className="h-full overflow-y-auto p-3 text-[12px] ${UI_SURFACES.textBody}">
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div className="space-y-3">
           <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep} p-3`}>
@@ -223,7 +223,7 @@ export function HelpTab() {
         <div className="space-y-3">
           <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep} p-3`}>
             <div className="text-[12px] font-semibold text-white">Keyboard Shortcuts</div>
-            <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#6f809f]">
+            <div className="mt-1 text-[10px] uppercase tracking-[0.18em] ${UI_SURFACES.textSoftDim}">
               {toolShortcutSummary()}
             </div>
             <div className="mt-2 space-y-3">
@@ -250,7 +250,7 @@ export function HelpTab() {
             <div className={`mt-2 text-[11px] ${UI_SURFACES.textMuted4}`}>
               Use the numbered modes to move between map analysis, camera inspection, wall review, path replay, compare, and report handoff without losing your current scene.
             </div>
-            <div className="mt-2 rounded-lg border border-white/5 bg-white/[0.02] p-2 text-[10px] uppercase tracking-[0.16em] text-[#6f809f]">
+            <div className="mt-2 rounded-lg border border-white/5 bg-white/[0.02] p-2 text-[10px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftDim}">
               {viewModeSummary()}
             </div>
           </div>

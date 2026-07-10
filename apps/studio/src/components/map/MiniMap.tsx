@@ -114,11 +114,11 @@ function legendSwatch({
   detail?: string;
 }) {
   return (
-    <div className={`flex items-center gap-2 rounded-lg border ${UI_SURFACES.borderSubtle} bg-[#0d121b] px-2 py-1.5`}>
+    <div className={`flex items-center gap-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
       <span className="h-2.5 w-2.5 rounded-sm border border-white/15" style={{ backgroundColor: color }} />
       <div className="min-w-0">
-        <div className="text-[9px] font-medium text-[#d5dbea]">{label}</div>
-        {detail ? <div className="text-[8px] text-[#6d7690]">{detail}</div> : null}
+        <div className="text-[9px] font-medium ${UI_SURFACES.textBody2}">{label}</div>
+        {detail ? <div className="text-[8px] ${UI_SURFACES.textSoftMid}">{detail}</div> : null}
       </div>
     </div>
   );
@@ -243,7 +243,7 @@ function MiniMapHoverPreview({
       </div>
 
       <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
-        <div className={`overflow-hidden rounded-lg border ${UI_SURFACES.border} bg-[#09101a]`}>
+        <div className={`overflow-hidden rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.panel}`}>
           <MapCanvas
             scene={scene}
             result={result}
@@ -278,17 +278,17 @@ function MiniMapHoverPreview({
 
         <div className="space-y-1.5">
           <div className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-            <span className="text-[9px] text-[#8aa0c2]">Coverage</span>
+            <span className="text-[9px] ${UI_SURFACES.textMuted3}">Coverage</span>
             <span className="text-[11px] font-semibold text-emerald-300">{coveragePct}%</span>
           </div>
           <div className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-            <span className="text-[9px] text-[#8aa0c2]">Critical Zones</span>
+            <span className="text-[9px] ${UI_SURFACES.textMuted3}">Critical Zones</span>
             <span className="text-[11px] font-semibold text-violet-300">
               {passedCritical} / {totalCritical}
             </span>
           </div>
           <div className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-            <span className="text-[9px] text-[#8aa0c2]">Selected</span>
+            <span className="text-[9px] ${UI_SURFACES.textMuted3}">Selected</span>
             <span className={`text-[11px] font-semibold ${UI_SURFACES.textNear}`}>{selectedLabel ?? "None"}</span>
           </div>
         </div>
@@ -653,10 +653,10 @@ function MiniMapExpanded({
                     onClick={() => {
                       useStudioStore.getState().toggleLayer(storeKey);
                     }}
-                    className={`flex h-7 w-full items-center justify-between rounded-lg border border-[#20283c] ${UI_SURFACES.card} px-2 text-left text-[10px] text-[#b9c3d6] transition-colors ${UI_SURFACES.hoverBorderBright} hover:text-white`}
+                    className={`flex h-7 w-full items-center justify-between rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 text-left text-[10px] ${UI_SURFACES.textNearAlt} transition-colors ${UI_SURFACES.hoverBorderBright} hover:text-white`}
                   >
                     <span className="truncate">{layerLabel(typedKey)}</span>
-                    <span className={`h-2.5 w-2.5 rounded-full border ${visible ? "border-emerald-400 bg-emerald-400/80" : "border-[#4b5568] bg-transparent"}`} />
+                    <span className={`h-2.5 w-2.5 rounded-full border ${visible ? "border-emerald-400 bg-emerald-400/80" : "${UI_SURFACES.textMuted} bg-transparent"}`} />
                   </button>
                 );
               })}
@@ -898,7 +898,7 @@ export function MiniMap({
         <div className={`mt-2 flex items-center justify-between text-[8px] ${UI_SURFACES.textDimMid}`}>
           <div className="flex items-center gap-2">
             <span>{tooltipText ?? "Hover objects to preview"}</span>
-            {selectedLabel ? <span className="text-[#8aa0c2]">Selected: {selectedLabel}</span> : null}
+            {selectedLabel ? <span className="${UI_SURFACES.textMuted3}">Selected: {selectedLabel}</span> : null}
           </div>
           <button
             type="button"
@@ -906,7 +906,7 @@ export function MiniMap({
               setReplayPlaying(false);
               setReplayProgress(0);
             }}
-            className="inline-flex items-center gap-1 text-[#7c8ca7]"
+            className="inline-flex items-center gap-1 ${UI_SURFACES.textMuted5}"
             title="Reset replay"
           >
             <RefreshCcw className="h-3 w-3" />

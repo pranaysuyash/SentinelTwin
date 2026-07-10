@@ -185,7 +185,7 @@ export function QuickStartSection({
                       onClick={() => onOpenScene?.(recentScene)}
                       className="group rounded-[12px] border border-[color:var(--st-border)] bg-white/[0.02] p-2 text-left transition-colors hover:border-sky-400/25 hover:bg-white/[0.04]"
                     >
-                      <div className="h-[72px] overflow-hidden rounded-lg border border-white/8 bg-[#08111d]">
+                      <div className="h-[72px] overflow-hidden rounded-lg border border-white/8 ${UI_SURFACES.panel}">
                         <ScenePreview
                           scene={recentScene}
                           result={recentScene.simulation ?? (recentScene.id === scene.id ? result : null)}

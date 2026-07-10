@@ -139,7 +139,7 @@ export function OnboardingTourOverlay({
           <div className="text-[13px] font-medium text-white">{currentStep.title}</div>
         </div>
 
-        <p className="text-[13px] leading-6 text-[#b9c2d8]">{currentStep.description}</p>
+        <p className="text-[13px] leading-6 ${UI_SURFACES.textNearAlt}">{currentStep.description}</p>
 
         <div className="mt-6 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -147,7 +147,7 @@ export function OnboardingTourOverlay({
               <div
                 key={i}
                 className={`h-1.5 rounded-full transition-all ${
-                  i === stepIndex ? "w-4 bg-sky-400" : "w-1.5 bg-[#2a3246]"
+                  i === stepIndex ? "w-4 bg-sky-400" : "w-1.5 ${UI_SURFACES.borderDark}"
                 }`}
               />
             ))}
@@ -158,7 +158,7 @@ export function OnboardingTourOverlay({
               <button
                 type="button"
                 onClick={onPrev}
-                className={`flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderDark} px-3 py-1.5 text-[11px] text-[#b9c2d8] hover:bg-white/8 transition-colors`}
+                className={`flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderDark} px-3 py-1.5 text-[11px] ${UI_SURFACES.textNearAlt} hover:bg-white/8 transition-colors`}
               >
                 <ChevronLeft className="h-3 w-3" />
                 Back

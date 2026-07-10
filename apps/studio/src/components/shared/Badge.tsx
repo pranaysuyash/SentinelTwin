@@ -33,7 +33,7 @@ export function Badge({ children, variant = "gray", className, dot }: BadgeProps
           variant === "red"   && "bg-red-400",
           variant === "amber" && "bg-amber-400",
           variant === "blue"  && "bg-blue-400",
-          (variant === "gray" || variant === "ghost") && "bg-[#4a5568]",
+          (variant === "gray" || variant === "ghost") && "${UI_SURFACES.textMuted}",
         )} />
       )}
       {children}

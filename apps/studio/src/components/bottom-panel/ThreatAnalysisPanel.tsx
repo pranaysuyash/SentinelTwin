@@ -244,7 +244,7 @@ export function ThreatAnalysisPanel() {
               <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Route Visibility Ribbon</span>
               <span className={`text-[8px] ${UI_SURFACES.textDimMid}`}>{failurePath.waypoints.length} waypoints</span>
             </div>
-            <div className={`flex h-3 overflow-hidden rounded-full border border-[#202536] ${UI_SURFACES.card}`}>
+            <div className={`flex h-3 overflow-hidden rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card}`}>
               {failurePath.waypoints.map((wp) => (
                 <div
                   key={`${wp.timeS}-${wp.position[0]}-${wp.position[1]}`}

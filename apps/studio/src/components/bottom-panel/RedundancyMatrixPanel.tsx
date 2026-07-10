@@ -112,7 +112,7 @@ export function RedundancyMatrixPanel() {
               <div className={`text-[8px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textAccent}`}>
                 Selected Camera Impact
               </div>
-              <div className="mt-1 text-[11px] font-semibold text-[#e2e8f7]">
+              <div className="mt-1 text-[11px] font-semibold ${UI_SURFACES.textBody4}">
                 {scene.cameras.find((camera) => camera.id === focusedCamera.cameraId)?.name ?? focusedCamera.cameraName}
                 {focusedCamera.isOffline ? <span className="ml-2 rounded bg-red-900/30 px-1.5 py-0.5 text-[8px] font-semibold text-red-300">OFFLINE</span> : null}
               </div>
@@ -174,7 +174,7 @@ export function RedundancyMatrixPanel() {
                     onClick={() => selectNode(cam.cameraId)}
                     className={cn(
                       "truncate text-[11px] font-semibold hover:text-blue-400",
-                      cam.isOffline ? "text-[#7a869e] line-through" : `${UI_SURFACES.textBody}`,
+                      cam.isOffline ? "${UI_SURFACES.textSoftDim} line-through" : `${UI_SURFACES.textBody}`,
                     )}
                   >
                     {cam.cameraName}

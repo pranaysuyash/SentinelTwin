@@ -222,7 +222,7 @@ export function LeftPanel() {
               <div className="mt-1.5 space-y-1">
                 {toolPresets.length === 0 ? <div className={`text-[10px] ${UI_SURFACES.textMuted2}`}>No presets saved.</div> : null}
                 {toolPresets.map((preset) => (
-                  <div key={preset.name} className={`flex items-center gap-1 rounded border border-[#242a3a] ${UI_SURFACES.card} px-1.5 py-1`}>
+                  <div key={preset.name} className={`flex items-center gap-1 rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1`}>
                     <button
                       type="button"
                       onClick={() => {
@@ -289,7 +289,7 @@ export function LeftPanel() {
                   const next = Number(event.target.value);
                   if (Number.isFinite(next)) setSnapDistanceM(next);
                 }}
-                className={`h-7 w-full rounded border ${UI_SURFACES.borderDark} bg-[#0d111a] px-2 text-[10px] ${UI_SURFACES.textBody}`}
+                className={`h-7 w-full rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.panelDeep} px-2 text-[10px] ${UI_SURFACES.textBody}`}
               />
               <span className={`text-[10px] ${UI_SURFACES.textMuted}`}>m</span>
             </label>
@@ -304,7 +304,7 @@ export function LeftPanel() {
                   const next = Number(event.target.value);
                   if (Number.isFinite(next)) setGridSnapM(next);
                 }}
-                className={`h-7 w-full rounded border ${UI_SURFACES.borderDark} bg-[#0d111a] px-2 text-[10px] ${UI_SURFACES.textBody}`}
+                className={`h-7 w-full rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.panelDeep} px-2 text-[10px] ${UI_SURFACES.textBody}`}
               />
               <span className={`text-[10px] ${UI_SURFACES.textMuted}`}>m</span>
             </label>
@@ -337,7 +337,7 @@ export function LeftPanel() {
                     <span
                       className={cn(
                         "flex h-3 w-3 flex-shrink-0 items-center justify-center rounded-[4px] border",
-                        visible ? "border-blue-500/60 bg-blue-500/25" : "border-[#394153] bg-transparent",
+                        visible ? "border-blue-500/60 bg-blue-500/25" : "${UI_SURFACES.textDim} bg-transparent",
                       )}
                     >
                       {visible && (

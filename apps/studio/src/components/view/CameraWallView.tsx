@@ -364,7 +364,7 @@ function LiveFeedOverlay({
             <div className={`font-semibold ${TYPE_SCALE.micro.class} ${UI_TONES.success.text}`}>
               {bestZoneQuality.toUpperCase()}
             </div>
-            <div className={`text-[#b6c2db] ${TYPE_SCALE.micro.class}`}>
+            <div className={`${UI_SURFACES.textNearAlt} ${TYPE_SCALE.micro.class}`}>
               {coveredZones} covered • {failedZones} failed
             </div>
           </div>
@@ -377,7 +377,7 @@ function LiveFeedOverlay({
             <div className={`font-semibold ${TYPE_SCALE.micro.class} ${visibilityStatus.className}`}>
               {visibilityStatus.label}
             </div>
-            <div className={`text-[#b6c2db] ${TYPE_SCALE.micro.class}`}>
+            <div className={`${UI_SURFACES.textNearAlt} ${TYPE_SCALE.micro.class}`}>
               {visiblePct}% visible • max {pathVisibility.maxQuality.toUpperCase()}
             </div>
           </div>
@@ -387,7 +387,7 @@ function LiveFeedOverlay({
             "rounded-md border px-2 py-1",
             replayState.visible ? `${UI_TONES.success.border} ${UI_TONES.success.bg}` : `${UI_TONES.danger.border} ${UI_TONES.danger.bg}`,
           )}>
-            <div className={`uppercase tracking-[0.12em] ${TYPE_SCALE.micro.class} text-[#e2e8f0]`}>
+            <div className={`uppercase tracking-[0.12em] ${TYPE_SCALE.micro.class} ${UI_SURFACES.textBody3}`}>
               Current Replay
             </div>
             <div className={cn(`font-semibold ${TYPE_SCALE.micro.class}`, replayState.visible ? UI_TONES.success.text : UI_TONES.danger.text)}>
@@ -395,7 +395,7 @@ function LiveFeedOverlay({
               {replayState.quality ? ` · ${replayState.quality.toUpperCase()}` : ""}
             </div>
             {replayState.reason ? (
-              <div className={`text-[#b6c2db] ${TYPE_SCALE.micro.class}`}>{replayState.reason}</div>
+              <div className={`${UI_SURFACES.textNearAlt} ${TYPE_SCALE.micro.class}`}>{replayState.reason}</div>
             ) : null}
           </div>
         ) : null}
@@ -441,7 +441,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
           ? `border-2 ${UI_TONES.info.border} shadow-[0_0_20px_rgba(56,189,248,0.25)] ring-1 ring-[#38bdf8]/40`
           : isBestCamera
             ? `border-2 ${UI_TONES.success.border} shadow-[0_0_20px_rgba(52,211,153,0.25)] ring-1 ring-[#34d399]/40`
-            : "border-[#1e293b]/80 shadow-[0_4px_12px_rgba(0,0,0,0.4)] hover:border-[#334155]",
+            : "${UI_SURFACES.borderDeep}/80 shadow-[0_4px_12px_rgba(0,0,0,0.4)] ${UI_SURFACES.borderElevated}",
       )}
     >
       {isActive ? (
@@ -521,7 +521,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
   ) : (
         <>
           {/* Offline state */}
-          <div className="pointer-events-none absolute inset-0 bg-[#070a10]">
+          <div className="pointer-events-none absolute inset-0 ${UI_SURFACES.page}">
             {/* Subtle noise/static texture */}
             <div
               className="absolute inset-0 opacity-10"
@@ -658,7 +658,7 @@ function CameraGhost() {
 
 function EmptySlot() {
   return (
-    <div className={`relative flex h-full items-center justify-center overflow-hidden rounded-lg border border-dashed ${CAMERA_WALL_SURFACES.borderSubtle} bg-[#0a0d14]`}>
+    <div className={`relative flex h-full items-center justify-center overflow-hidden rounded-lg border border-dashed ${CAMERA_WALL_SURFACES.borderSubtle} ${UI_SURFACES.panelDeepAlt}`}>
       <div
         className="pointer-events-none absolute inset-0 opacity-25"
         style={{
@@ -669,11 +669,11 @@ function EmptySlot() {
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#1a2538]/20 via-transparent to-transparent" />
       <div className="relative z-10 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center text-[#1f2c44]">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center ${UI_SURFACES.borderDeep}">
           <CameraGhost />
         </div>
         <div className="mt-2 flex items-center justify-center gap-1.5">
-          <Camera className="h-2.5 w-2.5 text-[#2a3a54]" />
+          <Camera className="h-2.5 w-2.5 ${UI_SURFACES.borderStrong}" />
           <p className={`text-[9px] font-medium ${CAMERA_WALL_SURFACES.muted2}`}>Empty Slot</p>
         </div>
       </div>
@@ -894,7 +894,7 @@ export function CameraWallView() {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 text-[#1f2c44]">
+          <div className="mx-auto h-16 w-16 ${UI_SURFACES.borderDeep}">
             <CameraGhost />
           </div>
           <p className={`mt-3 text-[11px] font-medium ${CAMERA_WALL_SURFACES.muted}`}>No cameras in scene</p>
@@ -931,11 +931,11 @@ export function CameraWallView() {
                   Bridge Health: {sessionHealth?.totals?.active ?? activeCount} Active · {sessionHealth?.totals?.expired ?? offlineCount} Expired
                 </span>
                 {activePath ? (
-                  <span className="rounded-md border border-[#24527b] bg-[#0b1a2d]/60 px-2 py-0.5 text-[#93c5fd]">
+                  <span className="rounded-md border border-[#24527b] ${UI_SURFACES.hoverBgSubtle}/60 px-2 py-0.5 text-[#93c5fd]">
                     Route {activePath.label}
                   </span>
                 ) : (
-                  <span className={`rounded-md border border-[#334155] bg-[#0f172a]/50 px-2 py-0.5 ${UI_SURFACES.textSoftMuted}`}>
+                  <span className={`rounded-md border ${UI_SURFACES.borderElevated} ${UI_SURFACES.hoverBgSubtle}/50 px-2 py-0.5 ${UI_SURFACES.textSoftMuted}`}>
                     Route unavailable
                   </span>
                 )}
@@ -970,11 +970,11 @@ export function CameraWallView() {
                 Selected {selectedCamera?.name ?? "None"}
               </span>
               {activePath ? (
-                <span className="rounded-md border border-[#24527b] bg-[#0b1a2d]/60 px-2 py-0.5 text-[#93c5fd]">
+                <span className="rounded-md border border-[#24527b] ${UI_SURFACES.hoverBgSubtle}/60 px-2 py-0.5 text-[#93c5fd]">
                   Route Context {activePath.label}
                 </span>
               ) : (
-                <span className={`rounded-md border border-[#334155] bg-[#0f172a]/50 px-2 py-0.5 ${UI_SURFACES.textSoftMuted}`}>
+                <span className={`rounded-md border ${UI_SURFACES.borderElevated} ${UI_SURFACES.hoverBgSubtle}/50 px-2 py-0.5 ${UI_SURFACES.textSoftMuted}`}>
                   Route Context unavailable
                 </span>
               )}
@@ -1012,21 +1012,21 @@ export function CameraWallView() {
               <button
                 type="button"
                 onClick={() => setLayoutMode("quad")}
-                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "quad" ? "bg-[#1d2b40] text-white" : "${UI_SURFACES.textSoftMuted}"}`}
+                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "quad" ? "${UI_SURFACES.borderDeep} text-white" : "${UI_SURFACES.textSoftMuted}"}`}
               >
                 4 Views
               </button>
               <button
                 type="button"
                 onClick={() => setLayoutMode("overview")}
-                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "overview" ? "bg-[#1d2b40] text-white" : "${UI_SURFACES.textSoftMuted}"}`}
+                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "overview" ? "${UI_SURFACES.borderDeep} text-white" : "${UI_SURFACES.textSoftMuted}"}`}
               >
                 6 Views
               </button>
               <button
                 type="button"
                 onClick={() => setLayoutMode("dense")}
-                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "dense" ? "bg-[#1d2b40] text-white" : "${UI_SURFACES.textSoftMuted}"}`}
+                className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "dense" ? "${UI_SURFACES.borderDeep} text-white" : "${UI_SURFACES.textSoftMuted}"}`}
                 data-testid="wall-layout-dense"
               >
                 16 Views
@@ -1064,7 +1064,7 @@ export function CameraWallView() {
         {immersiveMode ? "Exit Focus" : "Focus"}
       </button>
 
-      <div className={`relative grid flex-1 gap-2 rounded-xl border border-[#141b28] bg-[#05070a]/60 p-1.5 ${layoutSpec.gridClass}`}>
+      <div className={`relative grid flex-1 gap-2 rounded-xl border ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.page}/60 p-1.5 ${layoutSpec.gridClass}`}>
         {effectiveLayout === "dense" ? (
           <>
             {visible.map((cam) => (

@@ -74,7 +74,7 @@ export function ObstructionPresetPicker() {
         onClick={() => setCollapsed(false)}
         className={`flex items-center gap-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep}/96 px-3 py-2 shadow-2xl shadow-black/35 transition-colors ${UI_SURFACES.hoverBorderBright} hover:${UI_SURFACES.card}`}
       >
-        <div className="flex h-6 w-6 items-center justify-center rounded-md border border-[#24314a] bg-[#101622] text-amber-200">
+        <div className="flex h-6 w-6 items-center justify-center rounded-md border ${UI_SURFACES.borderStandard} ${UI_SURFACES.card} text-amber-200">
           {PRESET_ICONS[selectedPreset.id] ?? <Box className="h-3 w-3" />}
         </div>
         <span className={`text-[10px] font-semibold ${UI_SURFACES.textBody2}`}>{selectedPreset.label}</span>
@@ -132,7 +132,7 @@ export function ObstructionPresetPicker() {
                   <div className={`text-[10px] font-semibold ${UI_SURFACES.textBody4}`}>{layer.label}</div>
                   <span className={cn(
                     "rounded-full border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em]",
-                    isFitOut ? "border-amber-400/30 bg-amber-500/10 text-amber-200" : "border-[#24314a] ${UI_SURFACES.panel} ${UI_SURFACES.textMuted5}",
+                    isFitOut ? "border-amber-400/30 bg-amber-500/10 text-amber-200" : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textMuted5}",
                   )}>
                     {layer.marketplaceRole}
                   </span>
@@ -150,7 +150,7 @@ export function ObstructionPresetPicker() {
                   <span>{layer.addPath}</span>
                 </div>
                 {layer.futureExamples?.length ? (
-                  <div className={`mt-2 flex items-start gap-1.5 rounded-md border border-dashed border-[#2a3448] ${UI_SURFACES.panel} px-2 py-1`}>
+                  <div className={`mt-2 flex items-start gap-1.5 rounded-md border border-dashed ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-2 py-1`}>
                     <BadgeInfo className="mt-0.5 h-3 w-3 shrink-0 text-sky-200/80" />
                     <div className={`text-[8px] leading-relaxed ${UI_SURFACES.textSoftDim}`}>
                       Future catalog examples: {layer.futureExamples.join(", ")}.
@@ -184,14 +184,14 @@ export function ObstructionPresetPicker() {
                 <div
                   className={cn(
                     "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border",
-                    isSelected ? "border-amber-400/30 bg-amber-500/12 text-amber-200" : "border-[#24314a] bg-[#101622] text-[#93a4bf]",
+                    isSelected ? "border-amber-400/30 bg-amber-500/12 text-amber-200" : "${UI_SURFACES.borderStandard} ${UI_SURFACES.card} ${UI_SURFACES.hoverTextSoft}",
                   )}
                 >
                   {PRESET_ICONS[preset.id] ?? <Box className="h-3.5 w-3.5" />}
                 </div>
                 <div className="min-w-0">
                   <div className={`truncate text-[10px] font-semibold ${UI_SURFACES.textBody4}`}>{preset.label}</div>
-                  <div className="truncate text-[8px] text-[#74829d]">
+                  <div className="truncate text-[8px] ${UI_SURFACES.textSoftDim}">
                     {preset.id === CUSTOM_OBSTRUCTION_PRESET_ID
                       ? `${customDimensions[0]}×${customDimensions[1]}×${customDimensions[2]}m`
                       : `${preset.dimensions[0]}×${preset.dimensions[1]}×${preset.dimensions[2]}m`}

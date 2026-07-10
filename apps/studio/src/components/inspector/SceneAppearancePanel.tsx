@@ -175,7 +175,7 @@ export function SceneAppearancePanel() {
               onChange={(value) => patchLighting({ practicalIntensity: value / 100 })}
             />
           ) : null}
-          <div className="pt-1 text-[8px] leading-relaxed text-[#495468]">
+          <div className="pt-1 text-[8px] leading-relaxed ${UI_SURFACES.textMuted}">
             Edits apply to the active environment mode ({ENV_MODE_LABEL[envMode] ?? envMode}).
             Switch modes in the top bar to tune the others.
           </div>

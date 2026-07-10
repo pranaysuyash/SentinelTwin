@@ -30,7 +30,7 @@ function DeltaChip({ value, suffix = "%" }: { value: number; suffix?: string }) 
     <span
       className={cn(
         "font-mono text-[9px] font-medium",
-        good ? "text-emerald-400" : bad ? "text-red-400" : "text-[#7a859d]",
+        good ? "text-emerald-400" : bad ? "text-red-400" : "${UI_SURFACES.textSoftDim}",
       )}
     >
       {value > 0 ? "+" : ""}{value.toFixed(1)}{suffix}
@@ -122,7 +122,7 @@ export function ScenarioComparisonPanel() {
                   <Sun className="size-3 text-yellow-300" />
                   <span className={`text-[10px] font-medium ${UI_SURFACES.textBody}`}>Baseline (current)</span>
                 </div>
-                <div className="flex items-center gap-3 text-[9px] text-[#7a859d]">
+                <div className="flex items-center gap-3 text-[9px] ${UI_SURFACES.textSoftDim}">
                   <span className={`font-mono ${UI_SURFACES.textBody}`}>{baseline.totalCoveragePct.toFixed(1)}%</span>
                   <span>{baseline.criticalZoneResults.filter(z => z.status === "pass").length}/{baseline.criticalZoneResults.length} zones</span>
                 </div>
@@ -183,7 +183,7 @@ export function ScenarioComparisonPanel() {
                         </div>
                       )}
                       {sr.delta?.description && (
-                        <div className="col-span-2 text-[9px] leading-relaxed text-[#6b7a95]">
+                        <div className="col-span-2 text-[9px] leading-relaxed ${UI_SURFACES.textMuted2}">
                           {sr.delta.description}
                         </div>
                       )}
@@ -254,7 +254,7 @@ export function ScenarioComparisonPanel() {
                         {s.sensitivity}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-[8px] leading-relaxed text-[#5b6880]">{s.description}</p>
+                    <p className="mt-0.5 text-[8px] leading-relaxed ${UI_SURFACES.textMuted7}">{s.description}</p>
                     {s.affectedZones.length > 0 && (
                       <p className={`mt-0.5 text-[8px] ${UI_SURFACES.textDimMid}`}>
                         Affects: {s.affectedZones.slice(0, 3).join(", ")}

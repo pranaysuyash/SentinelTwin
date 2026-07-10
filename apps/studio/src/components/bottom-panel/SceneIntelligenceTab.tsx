@@ -802,7 +802,7 @@ export function SceneIntelligenceTab() {
       </div>
       <div className="mt-2 flex flex-wrap items-baseline gap-2">
         <div className={`text-[15px] font-semibold ${UI_SURFACES.textBright}`}>{scene.name}</div>
-        <div className="text-[10px] text-[#73809b]">{sceneSubtitle}</div>
+        <div className="text-[10px] ${UI_SURFACES.textSoftDim}">{sceneSubtitle}</div>
       </div>
       <div className="mt-2 flex items-center gap-2">
         <div className={`text-[9px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted5}`}>Truth Ladder</div>
@@ -1244,7 +1244,7 @@ export function SceneIntelligenceTab() {
                   ].map((item) => (
                     <div key={item.label} className={`{rounded-md border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} px-3 py-2}`}>
                       <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted7}`}>{item.label}</div>
-                      <div className="mt-1 text-[10px] leading-relaxed text-[#cfd7e7]">{item.value}</div>
+                      <div className="mt-1 text-[10px] leading-relaxed ${UI_SURFACES.textBody2}">{item.value}</div>
                     </div>
                   ))}
                 </div>

@@ -46,7 +46,7 @@ export function AudienceModeSelector({
           onChange={(e) => onChange(e.target.value as AudienceMode)}
           className={cn(
             "w-full appearance-none rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeep}",
-            "px-2.5 py-1.5 pr-7 text-[11px] text-[#c8d3e8]",
+            "px-2.5 py-1.5 pr-7 text-[11px] ${UI_SURFACES.textBody}",
             "focus:outline-none focus:ring-1 focus:ring-blue-500/40",
             "cursor-pointer",
           )}

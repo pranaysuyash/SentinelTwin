@@ -74,7 +74,7 @@ export type UiToneClasses = Record<UiTone, ToneClasses>;
  */
 export const UI_TONES: UiToneClasses = {
   success: {
-    raw: "#34d399",
+    raw: "#22c55e",
     text: "text-emerald-300",
     textBright: "text-emerald-400",
     textDim: "text-emerald-200",
@@ -91,7 +91,7 @@ export const UI_TONES: UiToneClasses = {
     borderHover: "hover:border-emerald-500/30",
   },
   warning: {
-    raw: "#fbbf24",
+    raw: "#f59e0b",
     text: "text-amber-200",
     textBright: "text-amber-400",
     textDim: "text-amber-300",
@@ -108,7 +108,7 @@ export const UI_TONES: UiToneClasses = {
     borderHover: "hover:border-amber-500/30",
   },
   danger: {
-    raw: "#f87171",
+    raw: "#ef4444",
     text: "text-rose-300",
     textBright: "text-rose-400",
     textDim: "text-rose-200",
@@ -125,7 +125,7 @@ export const UI_TONES: UiToneClasses = {
     borderHover: "hover:border-rose-500/30",
   },
   info: {
-    raw: "#7dd3fc",
+    raw: "#3b82f6",
     text: "text-sky-300",
     textBright: "text-sky-400",
     textDim: "text-sky-200",
@@ -159,7 +159,7 @@ export const UI_TONES: UiToneClasses = {
     borderHover: "hover:border-violet-500/30",
   },
   neutral: {
-    raw: "#94a3b8",
+    raw: "#6b7280",
     text: "text-slate-300",
     textBright: "text-slate-400",
     textDim: "text-slate-200",

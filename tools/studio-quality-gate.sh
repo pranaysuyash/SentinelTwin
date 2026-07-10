@@ -17,6 +17,9 @@ npm install --no-audit --no-fund >/dev/null
 echo "[gate] typecheck"
 npx tsc --noEmit
 
+echo "[gate] hex drift check"
+bun ../../tools/hex-drift-detect.ts
+
 echo "[gate] trust audit"
 bun ../../tools/truth-audit.ts --root .
 

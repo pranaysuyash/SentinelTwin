@@ -17,6 +17,8 @@
     "audit:truth": "bun ../../tools/truth-audit.ts",
     "trust-audit": "bun run audit:truth",
     "quality:gate": "bash ../../tools/studio-quality-gate.sh",
+    "hex:check": "bun ../../tools/hex-drift-detect.ts",
+    "hex:update": "bun ../../tools/hex-drift-detect.ts --update",
     "deploy:validate": "node ./scripts/validate-deploy-profile.mjs local-only",
     "deploy:validate:self-hosted": "node ./scripts/validate-deploy-profile.mjs self-hosted",
     "deploy:validate:cloud-assisted": "node ./scripts/validate-deploy-profile.mjs cloud-assisted",

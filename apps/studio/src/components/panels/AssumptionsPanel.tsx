@@ -4,12 +4,13 @@ import { Info, Settings2 } from "lucide-react";
 import { useState } from "react";
 
 import { useStudioStore } from "@/store/studio-store";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-[#181c27] py-2 last:border-b-0">
-      <span className="text-[10px] text-[#6a748b]">{label}</span>
-      <span className="flex items-center gap-1 text-right text-[11px] font-medium text-[#d2d9e8]">
+      <span className={`text-[10px] ${UI_SURFACES.textMuted2}`}>{label}</span>
+      <span className={`flex items-center gap-1 text-right text-[11px] font-medium ${UI_SURFACES.textBody}`}>
         {children}
       </span>
     </div>
@@ -29,40 +30,40 @@ export function AssumptionsPanel() {
   const gridResolution = `${assumptions.pixelsPerMeter.detection} / ${assumptions.pixelsPerMeter.observation}`;
 
   return (
-    <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
       <button type="button"
         onClick={() => setCollapsed(!collapsed)}
-        className="mb-2 flex w-full items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]"
+        className={`mb-2 flex w-full items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted}`}
       >
         <Settings2 className="h-3 w-3" />
         Simulation Assumptions
-        <Info className="ml-auto h-3 w-3 text-[#3a4158]" />
+        <Info className={`ml-auto h-3 w-3 ${UI_SURFACES.textMuted}`} />
       </button>
 
       {!collapsed && (
         <div className="space-y-1">
-          <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-[#1f2536] bg-[#111521] p-2">
-            <div className="rounded-lg border border-[#24283a] bg-[#0b0f17] px-2 py-1.5">
-              <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">DORI Model</div>
-              <div className="mt-0.5 text-[10px] font-medium text-[#d2d9e8]">
+          <div className={`grid grid-cols-2 gap-1.5 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
+            <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5`}>
+              <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textMuted}`}>DORI Model</div>
+              <div className={`mt-0.5 text-[10px] font-medium ${UI_SURFACES.textBody}`}>
                 {assumptions.doriStandard === "oodpcvs_2025" ? "IEC 62676-4:2025" : "DORI 2014"}
               </div>
             </div>
-            <div className="rounded-lg border border-[#24283a] bg-[#0b0f17] px-2 py-1.5">
-              <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Person Height</div>
-              <div className="mt-0.5 font-mono text-[10px] font-medium text-[#d2d9e8]">
+            <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5`}>
+              <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textMuted}`}>Person Height</div>
+              <div className={`mt-0.5 font-mono text-[10px] font-medium ${UI_SURFACES.textBody}`}>
                 {assumptions.personHeightM.toFixed(2)}m
               </div>
             </div>
-            <div className="rounded-lg border border-[#24283a] bg-[#0b0f17] px-2 py-1.5">
-              <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Grid Resolution</div>
-              <div className="mt-0.5 font-mono text-[10px] font-medium text-[#d2d9e8]">
+            <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5`}>
+              <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textMuted}`}>Grid Resolution</div>
+              <div className={`mt-0.5 font-mono text-[10px] font-medium ${UI_SURFACES.textBody}`}>
                 {gridResolution} px/m
               </div>
             </div>
-            <div className="rounded-lg border border-[#24283a] bg-[#0b0f17] px-2 py-1.5">
-              <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Lighting</div>
-              <div className="mt-0.5 text-[10px] font-medium capitalize text-[#d2d9e8]">
+            <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} px-2 py-1.5`}>
+              <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textMuted}`}>Lighting</div>
+              <div className={`mt-0.5 text-[10px] font-medium capitalize ${UI_SURFACES.textBody}`}>
                 {assumptions.timeOfDay === "night" ? "Night" : assumptions.timeOfDay}
               </div>
             </div>
@@ -72,7 +73,7 @@ export function AssumptionsPanel() {
             <select
               value={assumptions.wallHeightM.toString()}
               onChange={(event) => updateAssumptions({ wallHeightM: parseFloat(event.target.value) })}
-              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] text-[#d2d9e8] outline-none focus:border-blue-500/40"
+              className={`rounded border border-[#1e2130] ${UI_SURFACES.card} px-1.5 py-0.5 text-[10px] ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40`}
             >
               <option value="2.4">2.4m</option>
               <option value="3.0">3.0m</option>
@@ -91,9 +92,9 @@ export function AssumptionsPanel() {
               step={0.05}
               value={assumptions.personHeightM}
               onChange={(event) => updateAssumptions({ personHeightM: parseFloat(event.target.value) || 1.75 })}
-              className="w-16 rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[10px] text-[#d2d9e8] outline-none focus:border-blue-500/40"
+              className={`w-16 rounded border border-[#1e2130] ${UI_SURFACES.card} px-1.5 py-0.5 text-right font-mono text-[10px] ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40`}
             />
-            <span className="text-[10px] text-[#6a748b]">m</span>
+            <span className={`text-[10px] ${UI_SURFACES.textMuted2}`}>m</span>
           </Field>
           <Field label="Vehicle Height">
             <input
@@ -103,15 +104,15 @@ export function AssumptionsPanel() {
               step={0.1}
               value={assumptions.vehicleHeightM}
               onChange={(event) => updateAssumptions({ vehicleHeightM: parseFloat(event.target.value) || 1.5 })}
-              className="w-16 rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[10px] text-[#d2d9e8] outline-none focus:border-blue-500/40"
+              className={`w-16 rounded border border-[#1e2130] ${UI_SURFACES.card} px-1.5 py-0.5 text-right font-mono text-[10px] ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40`}
             />
-            <span className="text-[10px] text-[#6a748b]">m</span>
+            <span className={`text-[10px] ${UI_SURFACES.textMuted2}`}>m</span>
           </Field>
           <Field label="Time of Day">
             <select
               value={assumptions.timeOfDay}
               onChange={(event) => updateAssumptions({ timeOfDay: event.target.value as typeof assumptions.timeOfDay })}
-              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] capitalize text-[#d2d9e8] outline-none focus:border-blue-500/40"
+              className={`rounded border border-[#1e2130] ${UI_SURFACES.card} px-1.5 py-0.5 text-[10px] capitalize ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40`}
             >
               <option value="day">day</option>
               <option value="night">night</option>
@@ -122,7 +123,7 @@ export function AssumptionsPanel() {
             <select
               value={assumptions.interiorLightLevel}
               onChange={(event) => updateAssumptions({ interiorLightLevel: event.target.value as typeof assumptions.interiorLightLevel })}
-              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] capitalize text-[#d2d9e8] outline-none focus:border-blue-500/40"
+              className={`rounded border border-[#1e2130] ${UI_SURFACES.card} px-1.5 py-0.5 text-[10px] capitalize ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40`}
             >
               {INTERIOR_LIGHT_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>{opt}</option>
@@ -137,14 +138,14 @@ export function AssumptionsPanel() {
               step={100}
               value={assumptions.exteriorLightLux ?? 10000}
               onChange={(event) => updateAssumptions({ exteriorLightLux: parseFloat(event.target.value) || 0 })}
-              className="w-20 rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[10px] text-[#d2d9e8] outline-none focus:border-blue-500/40"
+              className={`w-20 rounded border border-[#1e2130] ${UI_SURFACES.card} px-1.5 py-0.5 text-right font-mono text-[10px] ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40`}
             />
           </Field>
           <Field label="DORI Standard">
             <select
               value={assumptions.doriStandard}
               onChange={(event) => updateAssumptions({ doriStandard: event.target.value as typeof assumptions.doriStandard })}
-              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] text-[#d2d9e8] outline-none focus:border-blue-500/40"
+              className={`rounded border border-[#1e2130] ${UI_SURFACES.card} px-1.5 py-0.5 text-[10px] ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40`}
             >
               <option value="oodpcvs_2025">IEC 62676-4:2025 (OODPCVS)</option>
               <option value="dori_2014">DORI 2014</option>
@@ -154,7 +155,7 @@ export function AssumptionsPanel() {
             <select
               value={assumptions.nightPenaltyMode}
               onChange={(event) => updateAssumptions({ nightPenaltyMode: event.target.value as typeof assumptions.nightPenaltyMode })}
-              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] capitalize text-[#d2d9e8] outline-none focus:border-blue-500/40"
+              className={`rounded border border-[#1e2130] ${UI_SURFACES.card} px-1.5 py-0.5 text-[10px] capitalize ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40`}
             >
               {NIGHT_PENALTY_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>{opt}</option>
@@ -165,7 +166,7 @@ export function AssumptionsPanel() {
             <select
               value={assumptions.backlightIntensity ?? "none"}
               onChange={(event) => updateAssumptions({ backlightIntensity: event.target.value as typeof assumptions.backlightIntensity })}
-              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] capitalize text-[#d2d9e8] outline-none focus:border-blue-500/40"
+              className={`rounded border border-[#1e2130] ${UI_SURFACES.card} px-1.5 py-0.5 text-[10px] capitalize ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40`}
             >
               {ENV_INTENSITY_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>{opt}</option>
@@ -176,7 +177,7 @@ export function AssumptionsPanel() {
             <select
               value={assumptions.glareIntensity ?? "none"}
               onChange={(event) => updateAssumptions({ glareIntensity: event.target.value as typeof assumptions.glareIntensity })}
-              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] capitalize text-[#d2d9e8] outline-none focus:border-blue-500/40"
+              className={`rounded border border-[#1e2130] ${UI_SURFACES.card} px-1.5 py-0.5 text-[10px] capitalize ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40`}
             >
               {ENV_INTENSITY_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>{opt}</option>
@@ -191,13 +192,13 @@ export function AssumptionsPanel() {
                 onChange={(event) => updateAssumptions({ overexposedZones: event.target.checked })}
                 className="peer sr-only"
               />
-              <div className="h-4 w-7 rounded-full border border-[#1e2130] bg-[#111521] after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-[#5a6882] after:transition-all peer-checked:bg-blue-500/20 peer-checked:after:translate-x-full peer-checked:after:bg-blue-400" />
+              <div className={`h-4 w-7 rounded-full border border-[#1e2130] ${UI_SURFACES.card} after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-[#5a6882] after:transition-all peer-checked:bg-blue-500/20 peer-checked:after:translate-x-full peer-checked:after:bg-blue-400`} />
             </label>
           </Field>
 
           {/* Pixels Per Meter thresholds */}
           <div className="border-b border-[#181c27] py-2 last:border-b-0">
-            <div className="mb-1.5 text-[10px] text-[#6a748b]">PPM Thresholds (px/m)</div>
+            <div className={`mb-1.5 text-[10px] ${UI_SURFACES.textMuted2}`}>PPM Thresholds (px/m)</div>
             <div className="grid grid-cols-2 gap-1">
               {([
                 { label: "Detection", key: "detection" as const },
@@ -205,8 +206,8 @@ export function AssumptionsPanel() {
                 { label: "Recognition", key: "recognition" as const },
                 { label: "Identification", key: "identification" as const },
               ]).map(({ label, key }) => (
-                <div key={key} className="flex items-center justify-between rounded bg-[#111521] px-2 py-1">
-                  <span className="text-[9px] text-[#6a748b]">{label}</span>
+                <div key={key} className={`flex items-center justify-between rounded ${UI_SURFACES.card} px-2 py-1`}>
+                  <span className={`text-[9px] ${UI_SURFACES.textMuted2}`}>{label}</span>
                   <input
                     type="number"
                     min={1}
@@ -218,7 +219,7 @@ export function AssumptionsPanel() {
                         pixelsPerMeter: { ...assumptions.pixelsPerMeter, [key]: parseInt(event.target.value) || 25 },
                       })
                     }
-                    className="w-14 rounded border border-[#1e2130] bg-[#0b0f17] px-1.5 py-0.5 text-right font-mono text-[10px] text-[#d2d9e8] outline-none focus:border-blue-500/40"
+                    className={`w-14 rounded border border-[#1e2130] ${UI_SURFACES.panel} px-1.5 py-0.5 text-right font-mono text-[10px] ${UI_SURFACES.textBody} outline-none focus:border-blue-500/40`}
                   />
                 </div>
               ))}

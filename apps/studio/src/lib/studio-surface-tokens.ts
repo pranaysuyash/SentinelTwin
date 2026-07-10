@@ -7,6 +7,7 @@ export const UI_SURFACES = {
   cardStrong: "bg-[#0e1422]/95",
   cardMuted: "bg-black/40",
   border: "border-[#243146]",
+  borderPanel: "border-[#1e2130]",
   borderSubtle: "border-[#1f2536]",
   borderThin: "border-[#24283a]",
   borderStrong: "border-[#27364e]",

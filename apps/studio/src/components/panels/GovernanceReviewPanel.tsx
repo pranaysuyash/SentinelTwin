@@ -2,6 +2,7 @@ import React from "react";
 import { useStudioStore } from "@/store/studio-store";
 import { GitPullRequest, GitMerge, XCircle, CheckCircle2 } from "lucide-react";
 import { SurfaceButton } from "@/components/shared/SurfaceButton";
+import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 import type { SecurityScene } from "@/schema/security-scene";
 
 type SceneCollectionKey =
@@ -137,7 +138,7 @@ export function GovernanceReviewPanel() {
   
   if (isMain) {
     return (
-      <div className="flex flex-col h-full bg-[#0c0f16] text-[#c7d0e4] p-4 text-sm">
+      <div className={`flex flex-col h-full ${UI_SURFACES.panel} ${UI_SURFACES.textBody} p-4 text-sm`}>
         <div className="flex flex-col items-center justify-center h-full opacity-60">
           <GitMerge className="w-12 h-12 mb-4 text-[#5d6880]" />
           <p className="text-center">You are currently on the published <span className="font-mono text-white">main</span> branch.</p>
@@ -156,60 +157,60 @@ export function GovernanceReviewPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#0c0f16] text-[#c7d0e4]">
-      <div className="p-4 border-b border-[#1e2130]">
+    <div className={`flex flex-col h-full ${UI_SURFACES.panel} ${UI_SURFACES.textBody}`}>
+      <div className={`p-4 border-b border-[#1e2130]`}>
         <h2 className="text-sm font-semibold text-white flex items-center gap-2">
           <GitPullRequest className="w-4 h-4 text-emerald-400" />
           Review Draft: {activeBranch}
         </h2>
-        <p className="text-xs text-[#5d6880] mt-1">
+        <p className={`text-xs ${UI_SURFACES.textMuted} mt-1`}>
           Review the proposed changes in this branch before approving them to merge into the published main scene.
         </p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <div className="bg-[#111521] border border-[#24283a] rounded-lg p-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#5d6880] mb-2">Branch Details</h3>
+        <div className={`${UI_SURFACES.card} border ${UI_SURFACES.borderThin} rounded-lg p-3`}>
+          <h3 className={`text-xs font-semibold uppercase tracking-wider ${UI_SURFACES.textMuted} mb-2`}>Branch Details</h3>
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <span className="text-[#5d6880]">Cameras:</span>
+            <span className={UI_SURFACES.textMuted}>Cameras:</span>
             <span className="text-white">{branchScene.cameras.length}</span>
-            <span className="text-[#5d6880]">Critical Zones:</span>
+            <span className={UI_SURFACES.textMuted}>Critical Zones:</span>
             <span className="text-white">{branchScene.criticalZones.length}</span>
-            <span className="text-[#5d6880]">Total Nodes:</span>
+            <span className={UI_SURFACES.textMuted}>Total Nodes:</span>
             <span className="text-white">
               {branchScene.cameras.length + branchScene.criticalZones.length + branchScene.walls.length + branchScene.securityLights.length + branchScene.obstructions.length}
             </span>
-            <span className="text-[#5d6880]">Source:</span>
+            <span className={UI_SURFACES.textMuted}>Source:</span>
             <span className="text-white">{branchScene.source}</span>
           </div>
         </div>
 
-        <div className="bg-[#111521] border border-[#24283a] rounded-lg p-3">
+        <div className={`${UI_SURFACES.card} border ${UI_SURFACES.borderThin} rounded-lg p-3`}>
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#5d6880]">Change Summary</h3>
-            <span className="rounded border border-[#1e2130] bg-[#0b0f17] px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-[#8594b0]">
+            <h3 className={`text-xs font-semibold uppercase tracking-wider ${UI_SURFACES.textMuted}`}>Change Summary</h3>
+            <span className={`rounded border border-[#1e2130] ${UI_SURFACES.panel} px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted3}`}>
               Compared with main
             </span>
           </div>
           {branchDiff ? (
             <div className="mt-3 space-y-3">
               <div className="grid grid-cols-3 gap-2 text-xs">
-                <div className="rounded-lg border border-[#1e2130] bg-[#0b0f17] p-2">
-                  <div className="text-[9px] uppercase tracking-[0.12em] text-[#5d6880]">Before</div>
+                <div className={`rounded-lg border border-[#1e2130] ${UI_SURFACES.panel} p-2`}>
+                  <div className={`text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted}`}>Before</div>
                   <div className="mt-1 text-white">{branchDiff.totalBefore} nodes</div>
                 </div>
-                <div className="rounded-lg border border-[#1e2130] bg-[#0b0f17] p-2">
-                  <div className="text-[9px] uppercase tracking-[0.12em] text-[#5d6880]">After</div>
+                <div className={`rounded-lg border border-[#1e2130] ${UI_SURFACES.panel} p-2`}>
+                  <div className={`text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted}`}>After</div>
                   <div className="mt-1 text-white">{branchDiff.totalAfter} nodes</div>
                 </div>
-                <div className="rounded-lg border border-[#1e2130] bg-[#0b0f17] p-2">
-                  <div className="text-[9px] uppercase tracking-[0.12em] text-[#5d6880]">Delta</div>
+                <div className={`rounded-lg border border-[#1e2130] ${UI_SURFACES.panel} p-2`}>
+                  <div className={`text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted}`}>Delta</div>
                   <div className="mt-1 text-white">{branchDiff.totalAfter - branchDiff.totalBefore >= 0 ? "+" : ""}{branchDiff.totalAfter - branchDiff.totalBefore} nodes</div>
                 </div>
               </div>
 
               {branchDiff.note ? (
-                <p className="text-[10px] text-[#8d9bb5]">{branchDiff.note}</p>
+                <p className={`text-[10px] ${UI_SURFACES.textMuted3}`}>{branchDiff.note}</p>
               ) : null}
 
               <div className="space-y-2">
@@ -217,29 +218,29 @@ export function GovernanceReviewPanel() {
                   branchDiff.collections
                     .filter((item) => item.beforeCount !== item.afterCount || item.added.length > 0 || item.removed.length > 0 || item.changed.length > 0)
                     .map((item) => (
-                      <div key={item.key} className="rounded-lg border border-[#1e2130] bg-[#0b0f17] p-2">
+                      <div key={item.key} className={`rounded-lg border border-[#1e2130] ${UI_SURFACES.panel} p-2`}>
                         <div className="flex items-center justify-between gap-2">
-                          <div className="text-[10px] font-semibold uppercase tracking-wider text-[#8aa1c4]">{item.label}</div>
-                          <div className="text-[9px] text-[#5d6880]">
+                          <div className={`text-[10px] font-semibold uppercase tracking-wider ${UI_SURFACES.textMuted3}`}>{item.label}</div>
+                          <div className={`text-[9px] ${UI_SURFACES.textMuted}`}>
                             {item.beforeCount} → {item.afterCount}
                           </div>
                         </div>
                         <div className="mt-2 grid gap-2 md:grid-cols-3">
                           <div>
-                            <div className="text-[9px] uppercase tracking-[0.12em] text-[#5d6880]">Added</div>
-                            <div className="mt-1 text-[10px] text-[#d7deed]">
+                            <div className={`text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted}`}>Added</div>
+                            <div className={`mt-1 text-[10px] ${UI_SURFACES.textBody}`}>
                               {item.added.length > 0 ? item.added.join(", ") : "None"}
                             </div>
                           </div>
                           <div>
-                            <div className="text-[9px] uppercase tracking-[0.12em] text-[#5d6880]">Changed</div>
-                            <div className="mt-1 text-[10px] text-[#d7deed]">
+                            <div className={`text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted}`}>Changed</div>
+                            <div className={`mt-1 text-[10px] ${UI_SURFACES.textBody}`}>
                               {item.changed.length > 0 ? item.changed.join(", ") : "None"}
                             </div>
                           </div>
                           <div>
-                            <div className="text-[9px] uppercase tracking-[0.12em] text-[#5d6880]">Removed</div>
-                            <div className="mt-1 text-[10px] text-[#d7deed]">
+                            <div className={`text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted}`}>Removed</div>
+                            <div className={`mt-1 text-[10px] ${UI_SURFACES.textBody}`}>
                               {item.removed.length > 0 ? item.removed.join(", ") : "None"}
                             </div>
                           </div>
@@ -247,19 +248,19 @@ export function GovernanceReviewPanel() {
                       </div>
                     ))
                 ) : (
-                  <div className="rounded-lg border border-dashed border-[#1e2130] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#7f8fae]">
+                  <div className={`rounded-lg border border-dashed border-[#1e2130] ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textMuted3}`}>
                     No structural differences detected against main.
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <p className="text-xs italic text-[#5d6880]">No branch snapshot is available to compare against main.</p>
+            <p className={`text-xs italic ${UI_SURFACES.textMuted}`}>No branch snapshot is available to compare against main.</p>
           )}
         </div>
       </div>
 
-      <div className="p-4 border-t border-[#1e2130] flex flex-col gap-2">
+      <div className={`p-4 border-t border-[#1e2130] flex flex-col gap-2`}>
         <SurfaceButton 
           onClick={() => {
             const confirmed = window.confirm(`Approve and merge '${activeBranch}' into main?`);

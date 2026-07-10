@@ -44,11 +44,11 @@ function SignalRow({ label, value, detail, status }: {
 }
 
 const CONFIDENCE_LEVEL_STYLE: Record<string, { bg: string; text: string; border: string; label: string }> = {
-  verified: { bg: "bg-violet-500/10", text: "text-violet-300", border: "border-violet-500/30", label: "VERIFIED" },
-  high:     { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30", label: "HIGH" },
-  medium:   { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/30", label: "MEDIUM" },
-  low:      { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30", label: "LOW" },
-  none:     { bg: `${UI_SURFACES.card}`, text: `${UI_SURFACES.textDimMid}`, border: `${UI_SURFACES.borderSubtle}`, label: "NONE" },
+  verified: { bg: UI_TONES.accent.bgSoft, text: UI_TONES.accent.text, border: UI_TONES.accent.border, label: "VERIFIED" },
+  high:     { bg: UI_TONES.success.bgSoft, text: UI_TONES.success.textBright, border: UI_TONES.success.border, label: "HIGH" },
+  medium:   { bg: UI_TONES.warning.bgSoft, text: UI_TONES.warning.textBright, border: UI_TONES.warning.border, label: "MEDIUM" },
+  low:      { bg: UI_TONES.danger.bgSoft, text: UI_TONES.danger.textBright, border: UI_TONES.danger.border, label: "LOW" },
+  none:     { bg: UI_SURFACES.card, text: UI_SURFACES.textDimMid, border: UI_SURFACES.borderSubtle, label: "NONE" },
 };
 
 function ConfidenceCard({ confidence, zones }: { confidence: ConfidenceBand; zones: { status: string }[] }) {
@@ -87,11 +87,11 @@ function ConfidenceCard({ confidence, zones }: { confidence: ConfidenceBand; zon
 }
 
 const POSTURE_BAND_STYLE: Record<string, { color: string; bg: string; border: string }> = {
-  exceptional: { color: "#a78bfa", bg: "bg-violet-500/10", border: "border-violet-500/30" },
-  excellent:   { color: "#22c55e", bg: "bg-emerald-500/10", border: "border-emerald-500/30" },
-  good:        { color: "#3b82f6", bg: "bg-blue-500/10", border: "border-blue-500/30" },
-  fair:        { color: "#f5a623", bg: "bg-amber-500/10", border: "border-amber-500/30" },
-  poor:        { color: "#ef4444", bg: "bg-red-500/10", border: "border-red-500/30" },
+  exceptional: { color: UI_TONES.accent.raw, bg: UI_TONES.accent.bgSoft, border: UI_TONES.accent.border },
+  excellent:   { color: UI_TONES.success.raw, bg: UI_TONES.success.bgSoft, border: UI_TONES.success.border },
+  good:        { color: UI_TONES.info.raw, bg: UI_TONES.info.bgSoft, border: UI_TONES.info.border },
+  fair:        { color: UI_TONES.warning.raw, bg: UI_TONES.warning.bgSoft, border: UI_TONES.warning.border },
+  poor:        { color: UI_TONES.danger.raw, bg: UI_TONES.danger.bgSoft, border: UI_TONES.danger.border },
 };
 
 const POSTURE_FACTOR_LABELS: Record<string, string> = {
@@ -191,18 +191,18 @@ export function MetricsTab() {
     ? result.totalCoveragePct - prevCoverage
     : undefined;
 
-  const coverageColor = result.totalCoveragePct > 80 ? "#22c55e"
-    : result.totalCoveragePct > 60 ? "#f97316"
-    : "#ef4444";
+  const coverageColor = result.totalCoveragePct > 80 ? UI_TONES.success.raw
+    : result.totalCoveragePct > 60 ? UI_TONES.warning.raw
+    : UI_TONES.danger.raw;
 
   const fragilitySummary = result.fragilitySummary;
   const fragilityPct = fragilitySummary
     ? Math.round(fragilitySummary.meanFragility * 100)
     : null;
-  const fragilityColor = fragilityPct === null ? "#4a5568"
-    : fragilityPct <= 30 ? "#22c55e"
-    : fragilityPct <= 60 ? "#f5a623"
-    : "#ef4444";
+  const fragilityColor = fragilityPct === null ? UI_TONES.neutral.raw
+    : fragilityPct <= 30 ? UI_TONES.success.raw
+    : fragilityPct <= 60 ? UI_TONES.warning.raw
+    : UI_TONES.danger.raw;
 
   const coverageEntropy = computeCoverageEntropy(result.coverageCells);
   const blindSpotFingerprint = result.blindSpotFingerprint;

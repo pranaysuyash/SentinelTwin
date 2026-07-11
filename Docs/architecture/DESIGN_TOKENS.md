@@ -9,12 +9,13 @@
 
 ## Architecture Overview
 
-The token system has **four layers**, each with a strict scope boundary (per
+The token system has **five layers**, each with a strict scope boundary (per
 `motto_v3 §11 — no conflated sources of truth`):
 
 | Layer | Module | Scope | Owner |
 |-------|--------|-------|-------|
-| **Surface tokens** | `@/lib/studio-surface-tokens` (`UI_SURFACES`) | Neutral palette — backgrounds, borders, text, hover states | Studio chrome |
+| **Surface tokens** | `@/lib/studio-surface-tokens` (`UI_SURFACES`) | Neutral palette — backgrounds, borders, text, hover states (Tailwind class fragments) | Studio chrome |
+| **Surface raw hex** | `@/lib/studio-surface-tokens` (`UI_SURFACES_RAW`) | Raw hex mirror of `UI_SURFACES` for CSS-in-JS `style` props | Studio chrome |
 | **Semantic tones** | `@/lib/design-tokens` (`UI_TONES`) | Semantic states — success, warning, danger, info, accent, neutral | Status badges, deltas, attention signals |
 | **Type scale** | `@/lib/design-tokens` (`TYPE_SCALE`) | Named typography tiers (micro → kpi) | All chrome text |
 | **Canvas palette** | `@/components/map/map-colors` (`MAP_COLORS`) | Simulation geometry — walls, doors, paths, quality levels | Map/canvas only |
@@ -22,7 +23,8 @@ The token system has **four layers**, each with a strict scope boundary (per
 **Rule:** A component picks its token layer based on what it renders:
 - **Canvas geometry** (walls, cameras, zones, paths) → `MAP_COLORS`
 - **Chrome UI** (panels, badges, buttons, text) → `UI_SURFACES` + `UI_TONES`
-- The two **never overlap**.
+- **CSS-in-JS style props** (e.g., `style={{ color }}`) → `UI_SURFACES_RAW`
+- The two palette systems **never overlap**.
 
 ---
 
@@ -122,19 +124,70 @@ Organized by visual weight from dimmest to brightest:
 
 ---
 
+## UI_SURFACES_RAW — Raw Hex Mirror
+
+A type-safe mirror of `UI_SURFACES` providing raw hex values for CSS-in-JS
+`style` props where Tailwind class strings cannot be used. Typed as
+`Record<keyof typeof UI_SURFACES, string>` to enforce that every token has a
+corresponding raw hex value and catch typos at compile time.
+
+### When to use UI_SURFACES_RAW vs UI_SURFACES
+
+| Context | Use | Example |
+|---------|-----|---------|
+| JSX `className` (template literal) | `UI_SURFACES` | `` className={`${UI_SURFACES.panel}`} `` |
+| `cn()` utility | `UI_SURFACES` | `cn(UI_SURFACES.card, ...)` |
+| `style={{ color }}` / `style={{ backgroundColor }}` | `UI_SURFACES_RAW` | `style={{ color: UI_SURFACES_RAW.textBody }}` |
+| Three.js materials (`color`, `emissive`) | `UI_SURFACES_RAW` | `{ color: UI_SURFACES_RAW.textBright }` |
+| SVG `fill` / `stroke` attributes | `UI_SURFACES_RAW` | `fill={UI_SURFACES_RAW.card}` |
+
+### Usage
+
+```tsx
+import { UI_SURFACES_RAW } from "@/lib/studio-surface-tokens";
+
+// In style props (bare property access — NOT template literal syntax):
+<div style={{ backgroundColor: UI_SURFACES_RAW.panel, color: UI_SURFACES_RAW.textBody }}>
+  Content
+</div>
+
+// In Three.js materials:
+const material = new THREE.MeshStandardMaterial({
+  color: UI_SURFACES_RAW.card,
+  emissive: UI_SURFACES_RAW.bgDeep,
+});
+
+// In SVG attributes:
+<circle fill={UI_SURFACES_RAW.textAccent} />
+```
+
+### Opacity Note
+
+Some `UI_SURFACES` tokens include Tailwind opacity modifiers (e.g.,
+`panelSoft: "bg-[#0b0f17]/92"`, `cardMuted: "bg-black/40"`). The corresponding
+`UI_SURFACES_RAW` entries contain only the base hex without opacity. This is an
+acceptable trade-off — CSS-in-JS consumers can apply opacity via `rgba()` if
+needed.
+
+---
+
 ## UI_TONES — Semantic Tone Tokens
 
 6 semantic tones for status, alerts, and attention signals. Each tone provides
-14 class variants (text, border, bg, hover) at different intensity levels.
+14 class variants (text, border, bg, hover) at different intensity levels,
+plus a `raw` hex value for CSS-in-JS style props.
 
 ### Usage
 
 ```tsx
 import { UI_TONES, toneForStatus } from "@/lib/design-tokens";
 
-// Direct tone access:
+// Direct tone access (Tailwind class):
 <span className={UI_TONES.danger.textBright}>Error</span>
 <div className={UI_TONES.success.bgSoft}>Passed</div>
+
+// Direct tone access (raw hex for style props):
+<span style={{ color: UI_TONES.danger.raw }}>Error</span>
 
 // Helper for status-based resolution:
 <span className={UI_TONES[toneForStatus(zone.status)].text}>
@@ -164,6 +217,7 @@ Each tone provides these variants (using `success` as example):
 
 | Variant | Tailwind Class | Intensity |
 |---------|---------------|-----------|
+| `raw` | `#22c55e` | Raw hex value (for CSS-in-JS style props, not a Tailwind class) |
 | `text` | `text-emerald-300` | Standard text |
 | `textBright` | `text-emerald-400` | Brighter text (icons, emphasis) |
 | `textDim` | `text-emerald-200` | Dimmer text |
@@ -252,6 +306,8 @@ import { MAP_COLORS } from "@/components/map/map-colors";
 | 2026-07-09 | Consolidated 67 → 53 `UI_SURFACES` tokens | Removed 15 near-duplicate pairs (e.g., borderMid→border) |
 | 2026-07-09 | Migrated ~1,800+ raw hex → token references | Eliminated color drift across all studio chrome |
 | 2026-07-09 | Added hex drift CI guard (`hex-drift-detect.ts`) | Prevents future raw hex regression |
+| 2026-07-11 | Added `UI_SURFACES_RAW` (Record<keyof typeof UI_SURFACES, string>) | Raw hex mirror for CSS-in-JS style props — eliminates hardcoded hex in Three.js, SVG, and inline styles |
+| 2026-07-11 | Migrated 81 CSS-in-JS hex → `UI_SURFACES_RAW` references | Type-safe raw hex access across 29 files (38 CSS-in-JS replacements) |
 
 ---
 
@@ -260,7 +316,7 @@ import { MAP_COLORS } from "@/components/map/map-colors";
 ### Adding a new token
 
 1. **Determine the layer:** Is this a neutral surface color or a semantic state?
-   - Neutral → `UI_SURFACES` in `studio-surface-tokens.ts`
+   - Neutral → `UI_SURFACES` in `studio-surface-tokens.ts` (also add raw hex to `UI_SURFACES_RAW`)
    - Semantic → `UI_TONES` in `design-tokens.ts`
    - Canvas geometry → `MAP_COLORS` in `map-colors.ts`
 
@@ -273,7 +329,10 @@ import { MAP_COLORS } from "@/components/map/map-colors";
    - Text: `text*`, `textBody*`, `textMuted*`, `textSoft*`, `textDim*`
    - Hover: `hover*`
 
-4. **Update this doc:** Add the new token to the appropriate table.
+4. **Update both `UI_SURFACES` and `UI_SURFACES_RAW`:** Every new Tailwind
+   class token must have a corresponding raw hex entry.
+
+5. **Update this doc:** Add the new token to the appropriate table.
 
 ### Adding a new tone variant
 
@@ -292,17 +351,25 @@ import { MAP_COLORS } from "@/components/map/map-colors";
 <div className="text-emerald-300">  // Use UI_TONES.success.text instead
 <div className="bg-red-500/10">     // Use UI_TONES.danger.bg instead
 
-// ✅ Token-based
+// ❌ Hardcoded hex in style props (use UI_SURFACES_RAW)
+<div style={{ color: "#c7d0e4" }}>      // Use UI_SURFACES_RAW.textBody
+<meshBasicMaterial color="#0b0f17" />   // Use UI_SURFACES_RAW.panel
+
+// ✅ Token-based (Tailwind className)
 <div className={UI_SURFACES.panel}>
 <div className={UI_TONES.danger.textBright}>
+
+// ✅ Token-based (CSS-in-JS style props)
+<div style={{ color: UI_SURFACES_RAW.textBody }}>
+<meshBasicMaterial color={UI_SURFACES_RAW.panel} />
 ```
 
 ### Exceptions (raw hex allowed)
 
-- **Three.js materials:** `<meshBasicMaterial color="#ef4444" />`
-- **SVG attributes:** `<stop stopColor="#ef4444" />`
-- **CSS-in-JS style objects:** `style={{ color: "#ef4444" }}`
+- **Three.js materials** (if not using `UI_SURFACES_RAW`): `<meshBasicMaterial color="#ef4444" />`
+- **SVG attributes** (if not using `UI_SURFACES_RAW`): `<stop stopColor="#ef4444" />`
 - **Canvas palette:** `MAP_COLORS` values (canvas geometry only)
+- **Tailwind opacity modifiers** that cannot be expressed as token: `bg-[#0b0f17]/92` (use `UI_SURFACES.panelSoft` instead)
 
 ### CI enforcement
 
@@ -321,11 +388,15 @@ bun tools/hex-drift-detect.ts --update
 | Metric | Value |
 |--------|-------|
 | `UI_SURFACES` tokens | 53 |
-| `UI_TONES` tones × variants | 6 × 14 = 84 class fragments |
+| `UI_SURFACES_RAW` entries | 53 (typed as `Record<keyof typeof UI_SURFACES, string>`) |
+| `UI_TONES` tones × variants | 6 × 14 = 84 class fragments + 6 raw hex values |
 | `TYPE_SCALE` tiers | 8 |
-| Total `UI_SURFACES` usages | ~7,454 |
-| Total `UI_TONES` usages | ~139 |
-| Files importing `UI_SURFACES` | 152 |
+| Total `UI_SURFACES` usages | ~7,497 |
+| Total `UI_SURFACES_RAW` usages | ~38 |
+| Total `UI_TONES` usages | ~173 |
+| Files importing `UI_SURFACES` | 156 |
+| Files importing `UI_SURFACES_RAW` | 9 |
 | Files importing `UI_TONES` | 13 |
-| Remaining raw hex (Tailwind) | ~14 (below CI threshold) |
-| Remaining raw hex (non-Tailwind) | ~180 (Three.js, SVG, CSS-in-JS — permitted) |
+| Remaining raw hex (Tailwind className) | ~149 (135 bare + 14 hover) |
+| Remaining raw hex (CSS-in-JS, non-token) | ~158 (Three.js, SVG, canvas — mostly MAP_COLORS) |
+| Hex drift baseline | 158 patterns (CI enforced) |

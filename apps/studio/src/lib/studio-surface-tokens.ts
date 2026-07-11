@@ -57,3 +57,59 @@ export const UI_SURFACES = {
   hoverText: "hover:text-white",
   hoverTextSoft: "hover:text-[#9da8c0]",
 };
+
+// ── Raw hex values for CSS-in-JS style props ──
+// When a component needs `style={{ color: "#xxx" }}`, use these instead of
+// hardcoded hex. These match the Tailwind class values in UI_SURFACES above.
+// See DESIGN_TOKENS.md for scope boundary: UI_SURFACES_RAW is for chrome/
+// UI only — canvas geometry uses MAP_COLORS.
+export const UI_SURFACES_RAW: Record<string, string> = {
+  // Backgrounds
+  page: "#07090d",
+  panel: "#0b0f17",
+  panelDeep: "#0d0f17",
+  panelDeepAlt: "#090d14",
+  panelSoft: "#0b0f17",
+  panelMuted: "#0b0f17",
+  card: "#111521",
+  cardStrong: "#0e1422",
+  cardMuted: "#000000",
+  chip: "#1a1d26",
+  bgDeep: "#0f141f",
+  bgPanel: "#1e2130",
+  // Borders
+  border: "#243146",
+  borderPanel: "#1e2130",
+  borderSubtle: "#1f2536",
+  borderThin: "#24283a",
+  borderStandard: "#22314b",
+  borderStrong: "#27364e",
+  borderDark: "#2a3246",
+  borderFaint: "#1a2030",
+  borderHover: "#2a3045",
+  borderDeep: "#222b3f",
+  borderInteractive: "#32384d",
+  borderElevated: "#31405a",
+  // Text
+  textMuted: "#4a5568",
+  textMuted2: "#6b7c95",
+  textMuted3: "#8ea5cc",
+  textMuted4: "#9ab0ce",
+  textMuted5: "#8090a8",
+  textMuted7: "#5f6a82",
+  textDim: "#3a4158",
+  textDimMid: "#556076",
+  textSoftMid: "#6a748b",
+  textSoftBright: "#8b96ab",
+  textSoftDim: "#74809a",
+  textSoftMuted: "#9da8c0",
+  textBody: "#c7d0e4",
+  textBody2: "#d2d9e8",
+  textBody3: "#dde2ef",
+  textBody4: "#e6ebf7",
+  textNear: "#d7deed",
+  textNearAlt: "#c0c8da",
+  textBright: "#edf2ff",
+  textAccent: "#7dd3fc",
+};
+

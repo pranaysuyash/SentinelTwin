@@ -426,7 +426,7 @@ function DirectorsCutCard({
           type="button"
           disabled={exporting}
           onClick={handleExport}
-          className="flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderDeep} ${UI_SURFACES.hoverBgSubtle} px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-[#7a8fb5] transition hover:border-sky-500/30 hover:bg-sky-500/8 hover:text-sky-300 disabled:opacity-50"
+          className="flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderDeep} ${UI_SURFACES.hoverBgSubtle} px-2 py-1 text-[9px] font-semibold uppercase tracking-wider ${UI_SURFACES.textMuted5} transition hover:border-sky-500/30 hover:bg-sky-500/8 hover:text-sky-300 disabled:opacity-50"
         >
           <Download className="h-3 w-3" />
           {exporting ? "Exporting…" : "Export PDF"}

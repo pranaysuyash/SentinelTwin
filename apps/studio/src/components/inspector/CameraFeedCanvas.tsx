@@ -505,7 +505,7 @@ export function CameraFeedCanvas({
           <div className="mt-1 text-[10px] font-semibold text-amber-300">
             {targetQuality.toUpperCase()} <span className={`text-[9px] font-normal ${UI_SURFACES.textSoftBright}`}>/ {qualityRangeLabel(targetQuality, scene.assumptions.doriStandard)}</span>
           </div>
-          <div className="mt-1 grid grid-cols-2 gap-2 text-[8px] text-[#94a3b8]">
+          <div className="mt-1 grid grid-cols-2 gap-2 text-[8px] ${UI_SURFACES.textSoftMuted}">
             <div>
               <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Target Type</div>
               <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{targetZone.targetType.replace(/_/g, " ")}</div>

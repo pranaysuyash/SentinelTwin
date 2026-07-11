@@ -208,7 +208,7 @@ export function CommandBar() {
                   {status.message}
                 </div>
                 {status.descriptions.length > 0 ? (
-                  <ul className="space-y-1 rounded-md border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] text-[#b8c9e8]">
+                  <ul className="space-y-1 rounded-md border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] ${UI_SURFACES.textNearAlt}">
                     {status.descriptions.map((description, index) => (
                       <li key={`desc-${index}`} /* stable order */ className="flex items-center gap-2">
                         <span className="inline-flex h-4 min-w-4 items-center justify-center rounded ${UI_SURFACES.hoverBg} px-1 text-[8px] text-cyan-200">{index + 1}</span>
@@ -346,7 +346,7 @@ export function CommandBar() {
                 setInput(cmd);
                 inputRef.current?.focus();
               }}
-              className="rounded-md border ${UI_SURFACES.hoverBg} ${UI_SURFACES.bgDeep} px-2 py-1 font-mono text-[9px] text-emerald-400/70 transition-colors hover:border-[#1a3540] hover:text-emerald-300"
+              className="rounded-md border ${UI_SURFACES.hoverBg} ${UI_SURFACES.bgDeep} px-2 py-1 font-mono text-[9px] text-emerald-400/70 transition-colors ${UI_SURFACES.hoverBorder} hover:text-emerald-300"
             >
               {cmd}
             </button>

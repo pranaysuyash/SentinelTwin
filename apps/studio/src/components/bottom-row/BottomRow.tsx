@@ -181,7 +181,7 @@ function AssumptionsPanel() {
         ) : (
           <button type="button"
             onClick={startEdit}
-            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[8px] text-[#aab5ca] transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white`}
+            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[8px] ${UI_SURFACES.textMuted4} transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white`}
           >
             <Edit3 className="h-3 w-3" />
             Edit

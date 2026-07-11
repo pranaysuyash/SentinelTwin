@@ -35,7 +35,7 @@ export function NodeHistoryTab({ nodeId }: { nodeId: string }) {
 
   return (
     <div className="space-y-2.5 p-3">
-      <div className="mb-2 text-[10px] uppercase tracking-[0.14em] text-[#5f6f8e] flex items-center gap-1.5">
+      <div className="mb-2 text-[10px] uppercase tracking-[0.14em] ${UI_SURFACES.textSoftMid} flex items-center gap-1.5">
         <History className="w-3.5 h-3.5" />
         Node Evidence History
       </div>

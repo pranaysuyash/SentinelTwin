@@ -484,7 +484,7 @@ function QualityTrend({
           </div>
         </div>
       )}
-        <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] text-[#91a0bc]">
+        <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] ${UI_SURFACES.textSoftMuted}">
         <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5`}>
           <div className={`${UI_SURFACES.textDimMid}`}>Baseline quality</div>
           <div className="mt-0.5 font-semibold text-red-300">{qualityLabel(qualityForScore(seriesA.at(-1)?.score ?? 0))}</div>
@@ -495,7 +495,7 @@ function QualityTrend({
         </div>
         <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5`}>
           <div className={`${UI_SURFACES.textDimMid}`}>Path visibility</div>
-          <div className="mt-0.5 font-semibold text-[#d9e6ff]">
+          <div className="mt-0.5 font-semibold ${UI_SURFACES.textBody4}">
             {formatPct(((resultB?.visibleDurationS ?? resultA?.visibleDurationS ?? 0) / Math.max(
               clampPathDuration(resultB?.totalDurationS ?? resultA?.totalDurationS ?? 0),
               1,
@@ -671,7 +671,7 @@ function ChangedObjectsPanel({ snapshotA, snapshotB }: { snapshotA: SceneSnapsho
           <div key={label} className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2.5 py-2`}>
             <div className="flex items-center justify-between text-[10px]">
               <span className={`font-semibold ${UI_SURFACES.textBody}`}>{label}</span>
-              <span className="font-mono text-[#91a0bc]">{diff.before} → {diff.after}</span>
+              <span className="font-mono ${UI_SURFACES.textSoftMuted}">{diff.before} → {diff.after}</span>
             </div>
             <div className="mt-1 grid grid-cols-3 gap-1 text-[10px]">
               <span className="rounded border border-emerald-400/25 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-300">+{diff.added.length}</span>
@@ -1425,7 +1425,7 @@ export function CompareView() {
                       <div className={`text-[10px] ${UI_SURFACES.textDimMid}`}>{camera.mountType} mount · {camera.fovHorizontalDeg}° FOV · {camera.rangeM}m range</div>
                     </div>
                     <div className={cn("rounded-md border px-2 py-1 text-right", tone === "baseline" ? "border-red-500/20 bg-red-500/10" : "border-emerald-500/20 bg-emerald-500/10")}>
-                      <div className="text-[10px] uppercase tracking-[0.16em] text-[#8da0bf]">Coverage</div>
+                      <div className="text-[10px] uppercase tracking-[0.16em] ${UI_SURFACES.textMuted3}">Coverage</div>
                       <div className={cn("font-mono text-[15px] font-semibold", tone === "baseline" ? "text-red-300" : "text-emerald-300")}>
                         {result.coveragePct.toFixed(1)}%
                       </div>
@@ -1460,7 +1460,7 @@ export function CompareView() {
                   </div>
                 </div>
               ))}
-              <div className={`lg:col-span-2 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[10px] text-[#91a0bc]`}>
+              <div className={`lg:col-span-2 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[10px] ${UI_SURFACES.textSoftMuted}`}>
                 Camera delta: coverage {cameraDeltas.coverage >= 0 ? "+" : ""}{cameraDeltas.coverage.toFixed(1)}%, passed zones {cameraDeltas.passedZones >= 0 ? "+" : ""}{cameraDeltas.passedZones}, failed zones {cameraDeltas.failedZones >= 0 ? "+" : ""}{cameraDeltas.failedZones}.
               </div>
             </div>

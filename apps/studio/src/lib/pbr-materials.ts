@@ -21,6 +21,7 @@
  */
 
 import type { ColorRepresentation } from "three";
+import { UI_SURFACES_RAW } from "@/lib/studio-surface-tokens";
 
 export type SurfaceKind =
   | "floor"
@@ -100,13 +101,13 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       receiveShadow: true,
     },
     wall: {
-      color: "#f0f2f6",
+      color: UI_SURFACES_RAW.textBright,
       roughness: 0.78,
       metalness: 0.0,
       receiveShadow: true,
     },
     wall_glass: {
-      color: "#dceeff",
+      color: UI_SURFACES_RAW.textBody4,
       roughness: 0.05,
       metalness: 0.12,
       opacity: 0.22,
@@ -130,13 +131,13 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       receiveShadow: true,
     },
     door_handle: {
-      color: "#9aa0a6",
+      color: UI_SURFACES_RAW.textSoftBright,
       roughness: 0.28,
       metalness: 0.78,
       castShadow: true,
     },
     window_frame: {
-      color: "#8a9ab0",
+      color: UI_SURFACES_RAW.textSoftBright,
       roughness: 0.4,
       metalness: 0.4,
       castShadow: true,
@@ -152,14 +153,14 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       receiveShadow: true,
     },
     window_sill: {
-      color: "#c0c8d4",
+      color: UI_SURFACES_RAW.textNearAlt,
       roughness: 0.5,
       metalness: 0.15,
       castShadow: true,
       receiveShadow: true,
     },
     ceiling: {
-      color: "#f6f7fa",
+      color: UI_SURFACES_RAW.textBright,
       roughness: 0.85,
       metalness: 0.0,
       receiveShadow: true,
@@ -186,7 +187,7 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       receiveShadow: true,
     },
     cabinet_handle: {
-      color: "#9aa0a6",
+      color: UI_SURFACES_RAW.textSoftBright,
       roughness: 0.3,
       metalness: 0.7,
       castShadow: true,
@@ -205,14 +206,14 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       castShadow: true,
     },
     pillar_concrete: {
-      color: "#9ca3af",
+      color: UI_SURFACES_RAW.textSoftMuted,
       roughness: 0.6,
       metalness: 0.1,
       castShadow: true,
       receiveShadow: true,
     },
     display_glass: {
-      color: "#dde8f8",
+      color: UI_SURFACES_RAW.textBody4,
       roughness: 0.04,
       metalness: 0.32,
       opacity: 0.2,
@@ -228,21 +229,21 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       receiveShadow: true,
     },
     vehicle_body: {
-      color: "#374151",
+      color: UI_SURFACES_RAW.textDim,
       roughness: 0.5,
       metalness: 0.4,
       castShadow: true,
       receiveShadow: true,
     },
     vehicle_cabin: {
-      color: "#4a5568",
+      color: UI_SURFACES_RAW.textMuted,
       roughness: 0.4,
       metalness: 0.3,
       castShadow: true,
       receiveShadow: true,
     },
     vehicle_windshield: {
-      color: "#b8d4f0",
+      color: UI_SURFACES_RAW.textBody,
       roughness: 0.04,
       metalness: 0.2,
       opacity: 0.4,
@@ -250,7 +251,7 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       ior: 1.5,
     },
     vehicle_tire: {
-      color: "#1a1a1a",
+      color: UI_SURFACES_RAW.card,
       roughness: 0.9,
       metalness: 0.0,
     },
@@ -267,31 +268,31 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       castShadow: true,
     },
     actor_body: {
-      color: "#1e293b",
+      color: UI_SURFACES_RAW.bgPanel,
       roughness: 0.6,
       metalness: 0.1,
       castShadow: true,
     },
     actor_head: {
-      color: "#475569",
+      color: UI_SURFACES_RAW.textMuted,
       roughness: 0.5,
       metalness: 0.0,
       castShadow: true,
     },
     actor_limb: {
-      color: "#334155",
+      color: UI_SURFACES_RAW.textDim,
       roughness: 0.6,
       metalness: 0.0,
       castShadow: true,
     },
     actor_limb_dark: {
-      color: "#0f172a",
+      color: UI_SURFACES_RAW.card,
       roughness: 0.6,
       metalness: 0.0,
       castShadow: true,
     },
     camera_housing: {
-      color: "#d8dde3",
+      color: UI_SURFACES_RAW.textBody2,
       roughness: 0.32,
       metalness: 0.55,
       clearcoat: 0.35,
@@ -300,21 +301,21 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       receiveShadow: true,
     },
     camera_lens: {
-      color: "#0c0e12",
+      color: UI_SURFACES_RAW.page,
       roughness: 0.05,
       metalness: 0.9,
       reflectivity: 0.7,
       castShadow: true,
     },
     camera_mount: {
-      color: "#5a6168",
+      color: UI_SURFACES_RAW.textDimMid,
       roughness: 0.55,
       metalness: 0.55,
       castShadow: true,
       receiveShadow: true,
     },
     spotlight_housing: {
-      color: "#3a4250",
+      color: UI_SURFACES_RAW.textDim,
       roughness: 0.5,
       metalness: 0.45,
       castShadow: true,

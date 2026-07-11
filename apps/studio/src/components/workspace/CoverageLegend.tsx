@@ -3,7 +3,7 @@
 import { type ReactNode, useState } from "react";
 import { ChevronDown, ChevronUp, EyeOff, Filter, Layers, Sigma, Shield, Sun, Target } from "lucide-react";
 import { MAP_COLORS } from "@/components/map/map-colors";
-import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+import { UI_SURFACES , UI_SURFACES_RAW} from "@/lib/studio-surface-tokens";
 import { useStudioStore, type OverlayDensity, type OverlayFilterId, type HeatmapMode } from "@/store/studio-store";
 
 
@@ -36,7 +36,7 @@ const LIGHTING_LEVELS = [
   { label: "Usable", range: "35-65%", detail: "Moderate illumination", color: "#f97316" },
   { label: "Low", range: "12-35%", detail: "Weak light / IR-dependent", color: "#3b82f6" },
   { label: "Shadow", range: "Blocked", detail: "Light ray obstructed", color: "#b91c1c" },
-  { label: "Dark", range: "<12%", detail: "No useful light", color: "#1c2435" },
+  { label: "Dark", range: "<12%", detail: "No useful light", color: UI_SURFACES_RAW.bgPanel },
 ];
 
 const MODE_ORDER: HeatmapMode[] = [
@@ -201,7 +201,7 @@ export function CoverageLegend() {
                     aria-label={`${config.label} heatmap`}
                     className="flex flex-col items-center gap-0.5 py-0.5 text-[7px] font-semibold tracking-wide transition-colors"
                     title={config.description}
-                    style={isActive ? { background: HEATMAP_ACTIVE_BG_BY_MODE[config.mode], color: MAP_COLORS.panelText } : { color: "#3a4158" }}
+                    style={isActive ? { background: HEATMAP_ACTIVE_BG_BY_MODE[config.mode], color: MAP_COLORS.panelText } : { color: UI_SURFACES_RAW.textDim }}
                   >
                     {config.icon}
                     <span className="leading-none">{config.label}</span>

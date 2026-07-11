@@ -190,7 +190,7 @@ export function HelpTab() {
             <div className="mt-2 grid gap-2">
               {SECURITY_TEAM_GUIDES.map((guide) => (
                 <div key={guide.title} className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
-                  <div className="text-[11px] font-semibold text-[#d7e4ff]">{guide.title}</div>
+                  <div className="text-[11px] font-semibold ${UI_SURFACES.textBody3}">{guide.title}</div>
                   <div className={`mt-0.5 text-[10px] leading-relaxed ${UI_SURFACES.textMuted4}`}>{guide.detail}</div>
                 </div>
               ))}
@@ -202,7 +202,7 @@ export function HelpTab() {
             <div className={`mt-2 space-y-1 text-[11px] ${UI_SURFACES.textMuted4}`}>
               {DOMAIN_TERMS.map((entry) => (
                 <div key={entry.term} className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
-                  <div><span className="text-[#d7e4ff]">{entry.term}:</span> {entry.meaning}</div>
+                  <div><span className="${UI_SURFACES.textBody3}">{entry.term}:</span> {entry.meaning}</div>
                   <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textSoftDim}`}>Why it matters: {entry.why}</div>
                 </div>
               ))}
@@ -229,7 +229,7 @@ export function HelpTab() {
             <div className="mt-2 space-y-3">
               {SHORTCUT_GROUPS.map((group) => (
                 <div key={group.title} className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
-                  <div className="text-[11px] font-semibold text-[#d7e4ff]">{group.title}</div>
+                  <div className="text-[11px] font-semibold ${UI_SURFACES.textBody3}">{group.title}</div>
                   <div className="mt-2 space-y-1">
                     {group.items.map(({ keys, action }) => (
                       <div key={`${group.title}-${keys}`} className="flex items-center justify-between gap-2">

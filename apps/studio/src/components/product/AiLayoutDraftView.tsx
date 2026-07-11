@@ -425,7 +425,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                 ["Paths", "paths"],
                 ["Entries", "entryPoints"],
               ].map(([label, key]) => (
-                <div key={key} className={`rounded-lg border ${UI_SURFACES.borderStandard} ${UI_SURFACES.card} px-2 py-1.5 text-[#b6c6e6]`}>
+                <div key={key} className={`rounded-lg border ${UI_SURFACES.borderStandard} ${UI_SURFACES.card} px-2 py-1.5 ${UI_SURFACES.textNearAlt}`}>
                   <div className={`${UI_SURFACES.textSoftBright}`}>{label}</div>
                   <div className="text-sm font-semibold text-white">
                     {aiDraftDisplayCounts?.[key as keyof typeof aiDraftDisplayCounts] ?? 0}
@@ -543,7 +543,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
               </div>
             ) : null}
 
-            <div className={`mt-3 rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep} px-3 py-2 text-[10px] text-[#a8b8d5]`}>
+            <div className={`mt-3 rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep} px-3 py-2 text-[10px] ${UI_SURFACES.textMuted4}`}>
               {aiDraftSummary.summary}
             </div>
             {aiDraftSummary.warnings.length > 0 ? (
@@ -589,7 +589,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
         </div>
 
         {aiDraftNotice ? (
-          <div className={`mt-3 rounded-lg border ${UI_SURFACES.borderStandard} ${UI_SURFACES.card} px-3 py-2 text-[10px] text-[#b6c6e6]`}>
+          <div className={`mt-3 rounded-lg border ${UI_SURFACES.borderStandard} ${UI_SURFACES.card} px-3 py-2 text-[10px] ${UI_SURFACES.textNearAlt}`}>
             <span className="font-semibold text-cyan-200">Draft status:</span> {aiDraftNotice}
           </div>
         ) : null}

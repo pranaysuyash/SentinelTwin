@@ -280,7 +280,7 @@ export function ReportView() {
               </span>
             </div>
             <h1 className="mt-1 text-2xl font-semibold text-white">Client-ready evidence summary</h1>
-            <p className="mt-1 max-w-3xl text-sm text-[#90a0bc]">
+            <p className="mt-1 max-w-3xl text-sm ${UI_SURFACES.textSoftMuted}">
               The report view surfaces the verified simulation outcome, the strongest findings, and a concise handoff narrative without forcing the user back into the editing shell.
             </p>
             {outcome.summary.primaryRisk ? (

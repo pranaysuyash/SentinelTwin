@@ -96,7 +96,7 @@ import "@/lib/three-compat";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import { SceneHtml } from "@/components/shared/SceneHtml";
 
-import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+import { UI_SURFACES , UI_SURFACES_RAW} from "@/lib/studio-surface-tokens";
 function getMapFrame(width: number, depth: number) {
   const centerX = width / 2;
   const centerZ = depth / 2;
@@ -777,7 +777,7 @@ function MarkerHoverChip({
         {label.toUpperCase()}
       </span>
       {detail && detail !== label ? (
-        <span style={{ fontSize: 6, fontWeight: 600, color: "#64748b" }}>{detail}</span>
+        <span style={{ fontSize: 6, fontWeight: 600, color: UI_SURFACES_RAW.textSoftMid }}>{detail}</span>
       ) : null}
     </div>
   );
@@ -1971,7 +1971,7 @@ function HeatmapCellExplainabilityCard() {
           topEvaluations.map(([cameraId, evaluation]) => (
             <div key={cameraId} className="rounded-md border ${UI_SURFACES.borderDeep} ${UI_SURFACES.bgDeep} px-2 py-1.5">
               <div className="flex items-center justify-between text-[9px]">
-                <span className="font-semibold text-[#dbe7ff]">{cameraId}</span>
+                <span className="font-semibold ${UI_SURFACES.textBody4}">{cameraId}</span>
                 <span className="${UI_SURFACES.textMuted3}">
                   {getTrustQualityLabel(evaluation.quality, scene.assumptions.doriStandard)} · {evaluation.ppm.toFixed(1)} PPM
                 </span>
@@ -1998,7 +1998,7 @@ function HeatmapCellExplainabilityCard() {
               {evaluation.reasonCodes.length > 0 ? (
                 <div className="mt-1 flex flex-wrap gap-1">
                   {evaluation.reasonCodes.slice(0, 4).map((reasonCode) => (
-                    <span key={reasonCode} className="rounded border border-[#314267] ${UI_SURFACES.hoverBg} px-1 py-0.5 text-[8px] text-[#9dc3ff]">
+                    <span key={reasonCode} className="rounded border ${UI_SURFACES.borderElevated} ${UI_SURFACES.hoverBg} px-1 py-0.5 text-[8px] text-[#9dc3ff]">
                       {formatReasonCode(reasonCode)}
                     </span>
                   ))}

@@ -55,7 +55,7 @@ export function WorkflowChips({ activeTab }: { activeTab: BottomTab }) {
 
   return (
     <div className="flex items-center gap-1.5" data-testid="workflow-chips">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5f6f8e]">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textSoftMid}">
         Workflows
       </span>
       {visibleWorkflows.map((workflow) => (

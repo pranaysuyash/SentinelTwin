@@ -52,7 +52,7 @@ export function ExplainBadge({
           id={id}
           role="tooltip"
           className={cn(
-            "absolute top-full z-50 mt-1 w-64 rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.panelDeep} p-2 text-[10px] leading-snug text-[#c9d7f0] shadow-xl shadow-black/35",
+            "absolute top-full z-50 mt-1 w-64 rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.panelDeep} p-2 text-[10px] leading-snug ${UI_SURFACES.textBody2} shadow-xl shadow-black/35",
             side === "right" ? "left-0" : "right-0",
             panelClassName,
           )}

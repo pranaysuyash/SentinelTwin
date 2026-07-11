@@ -1,5 +1,6 @@
 import { SceneFloatingCard } from "./SceneFloatingCard";
 import type { CameraNode } from "@/schema/security-scene";
+import { UI_SURFACES_RAW } from "@/lib/studio-surface-tokens";
 
 type CameraMountType = CameraNode["mountType"];
 type CameraStatus = CameraNode["status"];
@@ -102,7 +103,7 @@ export function CameraLabelCard({ name, resolutionMP, mountType, isActive, statu
           </span>
         )}
       </div>
-      <div style={{ fontWeight: 400, fontSize: 8, color: "#73809a" }}>
+      <div style={{ fontWeight: 400, fontSize: 8, color: UI_SURFACES_RAW.textSoftDim }}>
         {resolutionMP}MP · {MOUNT_LABELS[mountType]} mount
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2 }}>

@@ -231,7 +231,7 @@ export function ViewSettingsModal() {
             type="button"
             onClick={() => setOpen(false)}
             aria-label="Close view settings"
-            className={`ml-auto rounded-full border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} p-2 text-[#93a1bd] transition-colors ${UI_SURFACES.textDim} ${UI_SURFACES.hoverText}`}
+            className={`ml-auto rounded-full border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} p-2 ${UI_SURFACES.textSoftMuted} transition-colors ${UI_SURFACES.textDim} ${UI_SURFACES.hoverText}`}
           >
             <X className="h-4 w-4" />
           </button>

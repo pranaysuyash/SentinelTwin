@@ -174,7 +174,7 @@ function PhotoCard({
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="truncate text-sm font-medium text-white">{photo.name}</div>
-              <div className="mt-1 text-[11px] text-[#8da0bf]">
+              <div className="mt-1 text-[11px] ${UI_SURFACES.textMuted3}">
                 {photo.widthPx} × {photo.heightPx}px
               </div>
             </div>
@@ -1565,13 +1565,13 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                     Confirm, relabel, or reject each annotation before compile.
                   </p>
                 </div>
-                <span className={`rounded-full border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-2 py-1 text-[10px] text-[#8da0bf]`}>
+                <span className={`rounded-full border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-2 py-1 text-[10px] ${UI_SURFACES.textMuted3}`}>
                   {session.candidates.length} total
                 </span>
               </div>
 
               <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
-                <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[10px] text-[#89a0c2]`}>
+                <div className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeepAlt} px-3 py-2 text-[10px] ${UI_SURFACES.textMuted3}`}>
                   Drag markers to reposition. Use keyboard arrow keys for fine nudges when the canvas is focused.
                 </div>
                 <div className={`grid grid-cols-4 gap-2 rounded-xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panelDeep} px-3 py-2 text-[10px] ${UI_SURFACES.textSoftMuted}`}>
@@ -1624,7 +1624,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">
                               <span className="truncate text-sm font-medium text-white">{candidate.label}</span>
-                              <span className={`rounded-full border ${UI_SURFACES.border} ${UI_SURFACES.panelDeep} px-2 py-0.5 text-[10px] text-[#89a0c2]`}>
+                              <span className={`rounded-full border ${UI_SURFACES.border} ${UI_SURFACES.panelDeep} px-2 py-0.5 text-[10px] ${UI_SURFACES.textMuted3}`}>
                                 {candidate.status}
                               </span>
                             </div>
@@ -1813,7 +1813,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                           <button
                             type="button"
                             onClick={() => removeCandidate(candidate.id)}
-                            className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-2 text-[#7890b2] transition-colors hover:border-rose-500/40 hover:text-rose-300`}
+                            className={`rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panel} p-2 ${UI_SURFACES.textMuted5} transition-colors hover:border-rose-500/40 hover:text-rose-300`}
                             title="Remove candidate"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -2077,7 +2077,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                           <div className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>{meta.label} • {candidate.status}</div>
                         </div>
                       </div>
-                      <div className="text-[10px] text-[#8093b4]">{Math.round(candidate.confidence * 100)}%</div>
+                      <div className="text-[10px] ${UI_SURFACES.textMuted5}">{Math.round(candidate.confidence * 100)}%</div>
                     </div>
                   );
                 })}

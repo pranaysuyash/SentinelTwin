@@ -221,7 +221,7 @@ export function VerificationPanel({
                     <button
                       type="button"
                       onClick={() => onLoadSnapshot(snapshot.id)}
-                      className={`truncate text-left text-[8px] text-[#c9d8f3] ${UI_SURFACES.hoverText}`}
+                      className={`truncate text-left text-[8px] ${UI_SURFACES.textBody2} ${UI_SURFACES.hoverText}`}
                       title={snapshot.fileName}
                     >
                       {snapshot.fileName}

@@ -3,7 +3,7 @@
 import { cn } from "@/lib/cn";
 import { qualityToScore } from "@sentineltwin/core";
 import type { DoriQuality } from "@/schema/security-scene";
-import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+import { UI_SURFACES , UI_SURFACES_RAW} from "@/lib/studio-surface-tokens";
 
 interface QualitySegment {
   minScore: number;
@@ -61,7 +61,7 @@ export function QualityBar({ cells, segments = DEFAULT_SEGMENTS, className }: Qu
         return (
           <div
             className="h-full transition-[width]"
-            style={{ width: `${w}%`, backgroundColor: "#1a1d26" }}
+            style={{ width: `${w}%`, backgroundColor: UI_SURFACES_RAW.card }}
             title={`none: ${Math.round(w)}%`}
           />
         );

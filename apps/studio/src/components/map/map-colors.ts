@@ -1,5 +1,6 @@
 import type { DoriQuality } from "@/schema/security-scene";
 import { QUALITY_COLOR } from "@/lib/quality-display";
+import { UI_SURFACES_RAW } from "@/lib/studio-surface-tokens";
 
 export const MAP_COLORS = {
   // Surfaces & Backgrounds
@@ -84,7 +85,7 @@ export const MAP_COLORS = {
     glass: "rgba(125,211,252,0.28)",
     partial: "rgba(148,163,184,0.22)",
     solid: "rgba(148,163,184,0.35)",
-    stroke: "#94a3b8",
+    stroke: UI_SURFACES_RAW.textSoftMuted,
     strokeSelected: "#fbbf24",
   },
   priority: {

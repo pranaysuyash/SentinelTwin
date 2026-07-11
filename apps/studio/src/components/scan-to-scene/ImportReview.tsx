@@ -396,7 +396,7 @@ export function ImportReview({
               <div className="mt-1 text-[14px] font-medium ${UI_SURFACES.textNear}">{formatGateAction(gateDecision.action)}</div>
             </div>
             {qualityPct != null ? (
-              <span className={`rounded border ${UI_SURFACES.borderHover} ${UI_SURFACES.hoverBgSubtle} px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[#b2c4de]`}>
+              <span className={`rounded border ${UI_SURFACES.borderHover} ${UI_SURFACES.hoverBgSubtle} px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textNearAlt}`}>
                 Quality {qualityPct}%
               </span>
             ) : null}

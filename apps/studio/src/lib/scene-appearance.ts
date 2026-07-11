@@ -26,6 +26,7 @@ import type {
 } from "@sentineltwin/core";
 
 import type { PbrMaterialSpec } from "@/lib/pbr-materials";
+import { UI_SURFACES_RAW } from "@/lib/studio-surface-tokens";
 
 // ── Environment themes (canonical source; SharedScene re-exports) ──
 
@@ -87,12 +88,12 @@ export const APPEARANCE_PRESETS: Readonly<Record<AppearancePresetId, AppearanceP
     default: { label: "Default", spec: {}, textureStyle: null },
     plaster: {
       label: "Plaster",
-      spec: { color: "#eef0f4", roughness: 0.8, metalness: 0.0 },
+      spec: { color: UI_SURFACES_RAW.textBody4, roughness: 0.8, metalness: 0.0 },
       textureStyle: "plaster",
     },
     paint: {
       label: "Painted",
-      spec: { color: "#e8eaef", roughness: 0.9, metalness: 0.0 },
+      spec: { color: UI_SURFACES_RAW.textBody4, roughness: 0.9, metalness: 0.0 },
       textureStyle: null,
     },
     brick: {
@@ -102,7 +103,7 @@ export const APPEARANCE_PRESETS: Readonly<Record<AppearancePresetId, AppearanceP
     },
     concrete: {
       label: "Concrete",
-      spec: { color: "#9aa0a8", roughness: 0.72, metalness: 0.04 },
+      spec: { color: UI_SURFACES_RAW.textSoftBright, roughness: 0.72, metalness: 0.04 },
       textureStyle: "concrete",
     },
     wood: {
@@ -117,12 +118,12 @@ export const APPEARANCE_PRESETS: Readonly<Record<AppearancePresetId, AppearanceP
     },
     marble: {
       label: "Marble",
-      spec: { color: "#e9e7e2", roughness: 0.22, metalness: 0.03 },
+      spec: { color: UI_SURFACES_RAW.textBody3, roughness: 0.22, metalness: 0.03 },
       textureStyle: "marble",
     },
     carpet: {
       label: "Carpet",
-      spec: { color: "#5f6672", roughness: 0.95, metalness: 0.0 },
+      spec: { color: UI_SURFACES_RAW.textDimMid, roughness: 0.95, metalness: 0.0 },
       textureStyle: "carpet",
     },
     metal: {

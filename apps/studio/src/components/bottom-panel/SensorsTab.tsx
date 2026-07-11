@@ -291,7 +291,7 @@ export function SensorsTab() {
                       "rounded-lg border px-2 py-1.5 text-left text-[10px] transition-colors",
                       active
                         ? "border-cyan-500/30 bg-cyan-500/12 text-cyan-200"
-                        : `${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} text-[#95a0b7] ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`,
+                        : `${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftMuted} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`,
                     )}
                   >
                     <div className="font-semibold">{SENSOR_TYPE_LABELS[sensorType]}</div>
@@ -462,7 +462,7 @@ export function SensorsTab() {
                       <div className={`text-[9px] font-medium ${UI_SURFACES.textBody2}`}>{event.resultingState ?? "—"}</div>
                     </div>
                   </div>
-                  <div className="mt-1 grid grid-cols-3 gap-1.5 text-[9px] text-[#90a0bf]">
+                  <div className="mt-1 grid grid-cols-3 gap-1.5 text-[9px] ${UI_SURFACES.textMuted3}">
                     <div className={`rounded-md ${UI_SURFACES.panel} px-1.5 py-1`}>
                       <div className={`text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>Nearest Cam</div>
                       <div className="mt-0.5 truncate font-mono">{event.nearestCameraName ?? "None"}</div>
@@ -693,7 +693,7 @@ export function SensorsTab() {
                       </div>
                       <Badge variant={state.tone}>{state.label}</Badge>
                     </div>
-                    <div className="mt-2 grid grid-cols-3 gap-1.5 text-[9px] text-[#90a0bf]">
+                    <div className="mt-2 grid grid-cols-3 gap-1.5 text-[9px] ${UI_SURFACES.textMuted3}">
                       <div className={`rounded-md ${UI_SURFACES.panel} px-1.5 py-1`}>
                         <div className={`text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textDimMid}`}>X/Z</div>
                         <div className="mt-0.5 font-mono">{sensor.position[0].toFixed(1)} / {sensor.position[2].toFixed(1)}</div>

@@ -31,7 +31,7 @@ import { buildTimelineShareLink } from "@/lib/timeline-share-link";
 import { shareLinkOrCopy, writeClipboardText } from "@/lib/share-link";
 import { useStudioStore } from "@/store/studio-store";
 import type { SceneSnapshot } from "@/schema/security-scene";
-import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+import { UI_SURFACES , UI_SURFACES_RAW} from "@/lib/studio-surface-tokens";
 
 const SOURCE_STYLES: Record<string, { label: string; className: string; variant: "green" | "blue" | "amber" | "gray" }> = {
   manual: { label: "Manual", className: "bg-emerald-500/8", variant: "green" },
@@ -62,7 +62,7 @@ function kindTone(kind: string) {
     case "source":
       return { fill: "#0f766e", stroke: "#2dd4bf", label: "Source" };
     case "entity":
-      return { fill: "#1f2937", stroke: "#94a3b8", label: "Entity" };
+      return { fill: UI_SURFACES_RAW.bgPanel, stroke: UI_SURFACES_RAW.textSoftMuted, label: "Entity" };
     case "assumption":
       return { fill: "#7c3aed", stroke: "#c4b5fd", label: "Assumption" };
     case "simulation":
@@ -70,7 +70,7 @@ function kindTone(kind: string) {
     case "snapshot":
       return { fill: "#9a3412", stroke: "#fdba74", label: "Snapshot" };
     default:
-      return { fill: "#334155", stroke: "#94a3b8", label: kind };
+      return { fill: UI_SURFACES_RAW.textDim, stroke: UI_SURFACES_RAW.textSoftMuted, label: kind };
   }
 }
 
@@ -89,7 +89,7 @@ function columnForKind(kind: string) {
 
 function edgeTone(kind: string, status?: "pass" | "partial" | "fail", selected = false) {
   if (selected) {
-    return { stroke: "#f8fafc", opacity: 0.95, width: 3.2 };
+    return { stroke: UI_SURFACES_RAW.textBright, opacity: 0.95, width: 3.2 };
   }
 
   if (kind === "covers") {

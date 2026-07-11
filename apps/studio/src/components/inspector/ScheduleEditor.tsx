@@ -9,9 +9,9 @@ import { EventConfigPanel } from "@/components/inspector/EventConfigPanel";
 import type { OccupancyPeriod, PatrolSchedule, TimeSchedule } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
-import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+import { UI_SURFACES , UI_SURFACES_RAW} from "@/lib/studio-surface-tokens";
 const OCCUPANCY_OPTIONS: Array<{ value: OccupancyPeriod["level"]; label: string; color: string }> = [
-  { value: "empty",  label: "Empty",  color: "#4a5568" },
+  { value: "empty",  label: "Empty",  color: UI_SURFACES_RAW.textMuted },
   { value: "low",    label: "Low",    color: "#60a5fa" },
   { value: "medium", label: "Medium", color: "#eab308" },
   { value: "high",   label: "High",   color: "#f97316" },

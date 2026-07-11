@@ -32,7 +32,7 @@ export function CameraModeFilter({ mode }: { mode: CameraFeedMode }) {
   }
 
   if (mode === "low_light") {
-    return <div className="pointer-events-none absolute inset-0 bg-[#0a1330]/40" />;
+    return <div className="pointer-events-none absolute inset-0 ${UI_SURFACES.card}/40" />;
   }
 
   if (mode === "thermal") {

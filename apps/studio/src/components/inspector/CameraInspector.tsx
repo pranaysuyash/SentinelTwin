@@ -1051,7 +1051,7 @@ export function CameraInspector() {
                     type="button"
                     onClick={refreshLiveConnection}
                     disabled={liveConnectionLoading || !liveConnectionUrl.trim()}
-                    className="rounded-xl border border-[#24485e] bg-cyan-500/8 px-3 py-1.5 text-[10px] font-medium text-cyan-100 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/12 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-xl border ${UI_SURFACES.borderElevated} bg-cyan-500/8 px-3 py-1.5 text-[10px] font-medium text-cyan-100 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/12 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {liveConnectionLoading ? "Refreshing..." : "Refresh Session"}
                   </button>
@@ -1059,7 +1059,7 @@ export function CameraInspector() {
                     type="button"
                     onClick={heartbeatLiveConnection}
                     disabled={liveConnectionLoading}
-                    className="rounded-xl border border-[#24485e] bg-cyan-500/8 px-3 py-1.5 text-[10px] font-medium text-cyan-100 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/12 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-xl border ${UI_SURFACES.borderElevated} bg-cyan-500/8 px-3 py-1.5 text-[10px] font-medium text-cyan-100 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/12 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {liveConnectionLoading ? "Renewing..." : "Heartbeat Session"}
                   </button>
@@ -1921,7 +1921,7 @@ export function CameraInspector() {
                 <SummaryStat label="Connection" value={fusionSummary?.cameraLiveConnectionEvent ? `${fusionSummary.cameraLiveConnectionEvent.liveConnectionStatus ?? "unknown"} · ${fusionSummary.cameraLiveConnectionEvent.transportSessionState ?? "transport?"}` : "none"} accent="text-blue-300" />
                 <SummaryStat label="Sensors" value={fusionSummary ? `${fusionSummary.sensorFusion.activeCount} / ${fusionSummary.sensorFusion.totalCount}` : "--"} accent="text-amber-300" />
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-1.5 text-[9px] text-[#93a0bd]">
+              <div className="mt-2 grid grid-cols-2 gap-1.5 text-[9px] ${UI_SURFACES.textSoftMuted}">
                 <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
                   <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Nearest sensor</div>
                   <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{fusionSummary?.sensorFusion.nearestSensor?.label ?? "None"}</div>
@@ -1964,7 +1964,7 @@ export function CameraInspector() {
                   accent="text-amber-300"
                 />
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-1.5 text-[9px] text-[#93a0bd]">
+              <div className="mt-2 grid grid-cols-2 gap-1.5 text-[9px] ${UI_SURFACES.textSoftMuted}">
                 <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
                   <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Nearest sensor state</div>
                   <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{nearestSensorState}</div>
@@ -2089,7 +2089,7 @@ export function CameraInspector() {
                     <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{angleFromCenterDeg != null ? `${angleFromCenterDeg.toFixed(1)}°` : "—"}</div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-[9px] text-[#93a0bd]">
+                <div className="grid grid-cols-2 gap-2 text-[9px] ${UI_SURFACES.textSoftMuted}">
                   <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-1.5`}>
                     <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>DORI band</div>
                     <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{targetZone ? qualityRangeLabel(targetQuality, scene.assumptions.doriStandard) : "No target selected"}</div>
@@ -2185,7 +2185,7 @@ export function CameraInspector() {
                               <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: color }} />
                               <span className={`${UI_SURFACES.textBody2} capitalize`}>{label}</span>
                             </div>
-                            <span className="font-mono text-[10px] text-[#93a0bd]">{value.toFixed(1)}m</span>
+                            <span className="font-mono text-[10px] ${UI_SURFACES.textSoftMuted}">{value.toFixed(1)}m</span>
                           </div>
                         ))}
                       </div>

@@ -62,6 +62,11 @@ export const UI_SURFACES = {
   textGreenLight: "text-[#d2f5db]",
   textInfoLight: "text-[#93c5fd]",
   textWarningLight: "text-[#fdba74]",
+  // ── Material / Dual-use ──
+  floorBase: "bg-[#e2dbd0]",
+  glassBlue: "bg-[#cfe5ff]",
+  partitionGray: "text-[#6b7280]",
+  warmLight: "bg-[#fff4d0]",
   // ── Hover states ──
   hoverBg: "hover:bg-[#1a2333]",
   hoverBgSubtle: "hover:bg-[#101725]",
@@ -144,6 +149,11 @@ export const UI_SURFACES_RAW: Record<keyof typeof UI_SURFACES, string> = {
   textGreenLight: "#d2f5db",
   textInfoLight: "#93c5fd",
   textWarningLight: "#fdba74",
+  // Material / Dual-use (shared with MATERIAL_PALETTE in pbr-materials.ts)
+  floorBase: "#e2dbd0",
+  glassBlue: "#cfe5ff",
+  partitionGray: "#6b7280",
+  warmLight: "#fff4d0",
   // Hover states (raw hex for CSS-in-JS — these are Tailwind class fragments,
   // so the raw hex below is the base color without the hover: prefix)
   hoverBg: "#1a2333",

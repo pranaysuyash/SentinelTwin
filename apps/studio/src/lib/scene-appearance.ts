@@ -26,27 +26,29 @@ import type {
 } from "@sentineltwin/core";
 
 import type { PbrMaterialSpec } from "@/lib/pbr-materials";
+import { MATERIAL_PALETTE } from "@sentineltwin/core";
+import { MAP_COLORS } from "@/components/map/map-colors";
 import { UI_SURFACES_RAW } from "@/lib/studio-surface-tokens";
 
 // ── Environment themes (canonical source; SharedScene re-exports) ──
 
 export const ENVIRONMENT_THEMES = {
   day: {
-    background: "#0d1420",   // slightly brighter dark blue (reference background)
+    background: MAP_COLORS.backgroundDay,
     ambient: 2.2,            // bright enough to fully illuminate white walls
     hemisphere: 1.2,
     directional: 2.2,
     fill: 1.2,
   },
   dusk: {
-    background: "#090b12",
+    background: MAP_COLORS.backgroundDusk,
     ambient: 0.7,
     hemisphere: 0.55,
     directional: 1.3,
     fill: 0.55,
   },
   night: {
-    background: "#06080d",
+    background: MAP_COLORS.backgroundNight,
     ambient: 0.4,
     hemisphere: 0.35,
     directional: 0.9,
@@ -98,7 +100,7 @@ export const APPEARANCE_PRESETS: Readonly<Record<AppearancePresetId, AppearanceP
     },
     brick: {
       label: "Brick",
-      spec: { color: "#9c5a44", roughness: 0.88, metalness: 0.0 },
+      spec: { color: MATERIAL_PALETTE.brickTerra, roughness: 0.88, metalness: 0.0 },
       textureStyle: "brick",
     },
     concrete: {
@@ -108,12 +110,12 @@ export const APPEARANCE_PRESETS: Readonly<Record<AppearancePresetId, AppearanceP
     },
     wood: {
       label: "Wood",
-      spec: { color: "#8a6a44", roughness: 0.68, metalness: 0.02 },
+      spec: { color: MATERIAL_PALETTE.woodOak, roughness: 0.68, metalness: 0.02 },
       textureStyle: "wood",
     },
     tile: {
       label: "Tile",
-      spec: { color: "#e2dbd0", roughness: 0.45, metalness: 0.02 },
+      spec: { color: MATERIAL_PALETTE.floorTile, roughness: 0.45, metalness: 0.02 },
       textureStyle: "tile",
     },
     marble: {
@@ -128,12 +130,12 @@ export const APPEARANCE_PRESETS: Readonly<Record<AppearancePresetId, AppearanceP
     },
     metal: {
       label: "Metal",
-      spec: { color: "#aeb4bc", roughness: 0.26, metalness: 0.82 },
+      spec: { color: MATERIAL_PALETTE.metalAluminum, roughness: 0.26, metalness: 0.82 },
       textureStyle: null,
     },
     fabric: {
       label: "Fabric",
-      spec: { color: "#6b7280", roughness: 0.92, metalness: 0.0 },
+      spec: { color: MATERIAL_PALETTE.partitionGray, roughness: 0.92, metalness: 0.0 },
       textureStyle: null,
     },
     custom: { label: "Custom", spec: {}, textureStyle: null },
@@ -258,8 +260,8 @@ export interface ResolvedSceneLighting {
   shadows: boolean;
 }
 
-const DEFAULT_KEY_LIGHT_COLOR = "#f5f8ff";
-const DEFAULT_FILL_LIGHT_COLOR = "#c8d8ff";
+const DEFAULT_KEY_LIGHT_COLOR = MAP_COLORS.lightKey;
+const DEFAULT_FILL_LIGHT_COLOR = MAP_COLORS.lightFill;
 
 function clampNonNegative(value: number | undefined, fallback: number): number {
   return value !== undefined && Number.isFinite(value) && value >= 0 ? value : fallback;

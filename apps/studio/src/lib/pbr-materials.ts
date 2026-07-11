@@ -21,6 +21,7 @@
  */
 
 import type { ColorRepresentation } from "three";
+import { MATERIAL_PALETTE } from "@sentineltwin/core";
 import { UI_SURFACES_RAW } from "@/lib/studio-surface-tokens";
 
 export type SurfaceKind =
@@ -87,6 +88,8 @@ export const SELECTED_EMISSIVE = "#1e3a5f";
 export const SELECTED_EMISSIVE_INTENSITY = 0.45;
 export const SELECTED_OPACITY_BOOST = 0.12;
 
+
+
 /**
  * Single source of truth for surface material parameters. Anything in
  * `SharedScene.tsx`, the camera housings, and the actor should resolve
@@ -95,7 +98,7 @@ export const SELECTED_OPACITY_BOOST = 0.12;
 export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Object.freeze(
   {
     floor: {
-      color: "#e2dbd0",
+      color: UI_SURFACES_RAW.floorBase,
       roughness: 0.82,
       metalness: 0.02,
       receiveShadow: true,
@@ -117,14 +120,14 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       receiveShadow: true,
     },
     door_panel: {
-      color: "#8b5e34",
+      color: MATERIAL_PALETTE.woodDoor,
       roughness: 0.65,
       metalness: 0.06,
       castShadow: true,
       receiveShadow: true,
     },
     door_frame: {
-      color: "#5c4a3a",
+      color: MATERIAL_PALETTE.woodFrame,
       roughness: 0.62,
       metalness: 0.05,
       castShadow: true,
@@ -144,7 +147,7 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       receiveShadow: true,
     },
     window_glass: {
-      color: "#cfe5ff",
+      color: UI_SURFACES_RAW.glassBlue,
       roughness: 0.08,
       metalness: 0.18,
       opacity: 0.24,
@@ -166,21 +169,21 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       receiveShadow: true,
     },
     ceiling_fixture: {
-      color: "#fff4d0",
+      color: UI_SURFACES_RAW.warmLight,
       roughness: 0.3,
       metalness: 0.1,
-      emissive: "#fff4d0",
+      emissive: UI_SURFACES_RAW.warmLight,
       emissiveIntensity: 0.15,
     },
     countertop: {
-      color: "#a09080",
+      color: MATERIAL_PALETTE.countertop,
       roughness: 0.42,
       metalness: 0.1,
       castShadow: true,
       receiveShadow: true,
     },
     cabinet_body: {
-      color: "#624633",
+      color: MATERIAL_PALETTE.woodCabinet,
       roughness: 0.78,
       metalness: 0.05,
       castShadow: true,
@@ -193,14 +196,14 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       castShadow: true,
     },
     shelf_panel: {
-      color: "#5c4324",
+      color: MATERIAL_PALETTE.woodShelf,
       roughness: 0.82,
       metalness: 0.05,
       castShadow: true,
       receiveShadow: true,
     },
     shelf_board: {
-      color: "#6d522f",
+      color: MATERIAL_PALETTE.woodBoard,
       roughness: 0.82,
       metalness: 0.05,
       castShadow: true,
@@ -222,7 +225,7 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       receiveShadow: true,
     },
     partition_panel: {
-      color: "#6b7280",
+      color: UI_SURFACES_RAW.partitionGray,
       roughness: 0.7,
       metalness: 0.05,
       castShadow: true,
@@ -256,13 +259,13 @@ export const PBR_MATERIALS: Readonly<Record<SurfaceKind, PbrMaterialSpec>> = Obj
       metalness: 0.0,
     },
     tree_trunk: {
-      color: "#5a3a1a",
+      color: MATERIAL_PALETTE.treeTrunk,
       roughness: 0.9,
       metalness: 0.0,
       castShadow: true,
     },
     tree_canopy: {
-      color: "#2d6b2d",
+      color: MATERIAL_PALETTE.treeCanopy,
       roughness: 0.85,
       metalness: 0.0,
       castShadow: true,

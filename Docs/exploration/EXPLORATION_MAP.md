@@ -7705,3 +7705,560 @@ A `Job` is a config object (motto §0.8 — data layer is product):
 - OQ-JOB-04: `UserRole` grain cleanup — split into `SystemRole` / `Profession` / `WorkflowStage`? Flagged follow-up, separate decision record.
 
 **Decision trace:** D-020 (Evidence Twin framing — relevant because the insurer/compliance job lenses lean on evidence as the deliverable); product thesis "Target Users" + value staircase.
+
+---
+
+### Thread 156: Feature Deep Dives — Comprehensive System Documentation (2026-07-11)
+
+**Status:** Documentation complete. All core subsystems documented.
+**Date:** 2026-07-11
+
+**Purpose:** Comprehensive deep-dive documentation of SentinelTwin's core subsystems, analyzing implementation status, architecture, integration points, and gaps. Created as part of a systematic documentation pass to ground all future work in verified code-level understanding.
+
+**Deep Dive Documents Created (all in `Docs/exploration/`):**
+
+| Document | Scope | Key Findings |
+|---|---|---|
+| `ADVERSARIAL_PATH_DEEP_DIVE_2026-07-11.md` | Algorithm, UX flow, coverage engine integration | Dijkstra with exposure cost, <10ms for 6,400 nodes, sparse nav graph with waypoints at corners, exposure-weighted edges from camera visibility calculations. 4 candidate path types. UI via ScenarioPathPanel + PathReplayView. |
+| `TEMPORAL_PROFILE_DEEP_DIVE_2026-07-11.md` | 24h simulation, lighting schedules, guard patrol, vulnerability detection | Change-timeline optimization (10-15 transitions vs 96 brute-force). Interior/exterior lighting schedules with 02:00-05:00 timer cutout. 35% guard deterrence per active guard. Vulnerability windows + anomaly detection algorithms. |
+| `SCAN_TO_SCENE_DEEP_DIVE_2026-07-11.md` | Photo annotation compilation, phone capture gaps, reconstruction stack | 6 intake paths converging on SiteCompilerResult. 8-stage reconstruction pipeline (depth/segmentation/correspondence are stubs). Working manual photo scan + floor plan import + IFC/BIM boundary parser. |
+| `COUNTERFACTUAL_ANALYSIS_DEEP_DIVE_2026-07-11.md` | Candidate generation, simulation verification, ranking | 3 cooperating surfaces (algorithmic/AI/studio runner). 4 candidate types (move obstruction, rotate camera, add camera, add light). Verified delta scoring with Fix Sandbox application flow. |
+| `AI_AGENT_PIPELINE_DEEP_DIVE_2026-07-11.md` | Multi-agent workflows, scene operation validation, verified recommendations | 5 agent roles (CommandAgent, CounterfactualAgent, ReportAgent, SceneUnderstandingAgent, CoordinatorAgent). Provider abstraction. Scene operation validator. Simulation verification before user sees any AI proposal. |
+| `USE_CASE_FEATURE_AUDIT_2026-07-11.md` | 10 core use cases, 40+ features, 5 novel features, market gaps | All core use cases verified against implementation. No competitor has these capabilities. Market gap validated across VSaaS, guard patrol, and planning tool verticals. |
+
+**Cross-Reference Index:**
+
+| Thread | Deep Dive | Key Code Anchors |
+|---|---|---|
+| Thread 3 | `ADVERSARIAL_PATH_DEEP_DIVE_2026-07-11.md` | `packages/simulation/src/adversarial-path.ts`, `packages/simulation/src/critical-zone-selection.ts`, `apps/studio/src/components/bottom-panel/ScenarioPathPanel.tsx`, `apps/studio/src/components/view/PathReplayView.tsx` |
+| Thread 6 | `TEMPORAL_PROFILE_DEEP_DIVE_2026-07-11.md` | `packages/simulation/src/temporal.ts`, `packages/simulation/src/temporal-anomaly.ts`, `packages/simulation/src/coverage.ts`, `apps/studio/src/components/bottom-panel/TemporalProfileView.tsx` |
+| Thread 5a | `SCAN_TO_SCENE_DEEP_DIVE_2026-07-11.md` | `apps/studio/src/lib/scan-to-scene.ts`, `apps/studio/src/lib/floor-plan-import.ts`, `apps/studio/src/lib/reconstruction-pipeline.ts`, `packages/core/src/lib/ifc-structural-parser.ts` |
+| Thread 2b | `COUNTERFACTUAL_ANALYSIS_DEEP_DIVE_2026-07-11.md` | `packages/simulation/src/counterfactual-search.ts`, `packages/agents/src/counterfactual-agent.ts`, `apps/studio/src/simulation/counterfactual-runner.ts`, `packages/core/src/schema/SceneOperation.ts` |
+| Thread 4 | `AI_AGENT_PIPELINE_DEEP_DIVE_2026-07-11.md` | `packages/agents/src/command-agent.ts`, `packages/agents/src/report-agent.ts`, `packages/agents/src/coordinator.ts`, `packages/agents/src/prompt-registry.ts`, `packages/agents/src/scene-operation-validator.ts` |
+| All | `USE_CASE_FEATURE_AUDIT_2026-07-11.md` | Cross-codebase audit against `packages/simulation/`, `packages/agents/`, `packages/core/`, `apps/studio/` |
+
+**How to use these:**
+- Before modifying any subsystem, read its deep dive first to understand the current architecture and integration points.
+- Use the code anchors to locate all files touched by each subsystem.
+- Cross-reference with the original architecture docs in `Docs/architecture/` for design intent.
+- The USE_CASE_FEATURE_AUDIT is the authoritative source for feature implementation status.
+
+**Next:** These deep dives are the baseline for Phase 17 (SDK extensibility), Phase 18 (platform polish), and any V0.2+ work. Use them to identify which subsystems need hardening before external use.
+
+### Thread 157: Coverage Engine Algorithm — Comprehensive System Documentation (2026-07-11)
+
+**Status:** Documentation complete.
+**Date:** 2026-07-11
+
+**Purpose:** Comprehensive deep-dive documentation of SentinelTwin's coverage engine — the deterministic geometry-based visibility and quality engine that computes per-cell camera coverage, occlusion, DORI/OODPCVS quality scoring, and heatmap rendering.
+
+**Deep Dive Document:**
+
+| Document | Scope | Key Findings |
+|---|---|---|
+| `COVERAGE_ENGINE_DEEP_DIVE_2026-07-11.md` | Raycasting, DORI quality, heatmap, occlusion | 6-stage deterministic pipeline: grid sampling → FOV test → occlusion raycast → PPM computation → quality scoring → aggregation. BVH-accelerated Three.js raycasting. ~10ms for 6,400 cells. 4-layer penalty model. 7-camera calibration presets. 11-level OODPCVS quality ladder. |
+
+**Core Architecture:**
+
+1. **Grid Sampling** (`grid.ts`): Uniform grid at 4 cells/meter (0.25m cells). Adaptive grid option for higher density near critical zones. Area-capped at 160K cells for performance.
+2. **FOV Test** (`coverage.ts`): Compute yaw/pitch angles from camera to cell. Reject if outside `fovHorizontalDeg/2` or `fovVerticalDeg/2`.
+3. **Occlusion Raycast** (`vision-collider-mesh.ts`): Merge all scene geometry (walls, obstructions, doors, windows, fences) into single BVH-accelerated mesh. `three-mesh-bvh` provides O(log n) ray intersections. `firstHitOnly = true` for single-ray queries.
+4. **PPM Computation** (`coverage.ts`): `ppm = resolutionWidthPx / (2 * distance * tan(fovH/2))`. Then multiply by 6 penalty factors.
+5. **Quality Scoring** (`dori.ts` + `odpcvs.ts`): Map PPM to DORI 4-level or OODPCVS 11-level quality. OODPCVS applies Pop factor (scene complexity × operator experience) and criticality margin.
+6. **Aggregation** (`simulate-studio.ts`): Best quality across all cameras per cell. Zone quality at 25th percentile. Total coverage = cells with quality ≠ "none" / total cells.
+
+**Key Code Anchors:**
+- `packages/simulation/src/coverage.ts` — Core coverage evaluator (1,080+ lines)
+- `packages/core/src/simulation/dori.ts` — DORI/OODPCVS threshold tables
+- `packages/simulation/src/vision-collider-mesh.ts` — BVH mesh builder
+- `packages/simulation/src/occlusion-blame.ts` — Per-obstruction blame analysis
+- `packages/simulation/src/blind-spot-topology.ts` — Connected blind region classification
+- `packages/simulation/src/coverage-entropy.ts` — Quality distribution entropy
+- `packages/simulation/src/coverage-fragility.ts` — Near-threshold cell detection
+- `packages/simulation/src/mount-model.ts` — 5 mount types with blind spot radii
+- `packages/simulation/src/calibration.ts` — 7 camera presets, lux thresholds, night mode retention
+- `packages/simulation/src/simulate-studio.ts` — Full simulation orchestrator
+- `packages/simulation/src/adaptive-grid.ts` — Variable density near critical zones
+- `packages/simulation/src/odpcvs.ts` — Multi-factor OODPCVS quality model
+
+**Related Threads:** Thread 2b (Simulation Engine), Thread 4 (R3F Rendering), Thread 3 (Coverage)
+
+**Usage Guidance:** For any work touching coverage computation, occlusion handling, quality scoring, or heatmap rendering, read this document first.
+
+### Thread 158: IFC/BIM Import Pipeline — Comprehensive System Documentation (2026-07-11)
+
+**Status:** Documentation complete.
+**Date:** 2026-07-11
+
+**Purpose:** Comprehensive deep-dive documentation of SentinelTwin's IFC/BIM import pipeline — the headless zero-dependency STEP ASCII parser, material mapping system, and integration with the scene compiler for multi-floor BIM structural geometry extraction.
+
+**Deep Dive Document:**
+
+| Document | Scope | Key Findings |
+|---|---|---|
+| `IFC_BIM_IMPORT_DEEP_DIVE_2026-07-11.md` | STEP ASCII parser, material mapping, scene compiler integration | 3-pass parser: cartesian points → storeys → walls/doors/windows. Zero dependencies. Material keyword detection (glass/grill/partition). Multi-floor support via IFCBUILDINGSTOREY. 4 material options with RF attenuation values. IfcImportModal with level filtering, import/merge modes. |
+
+**Core Architecture:**
+
+1. **STEP Tokenizer** (`ifc-structural-parser.ts`): Regex-based entity extraction from ISO-10303-21 ASCII. Strips comments, splits on semicolons, matches `#ID = TYPE(ARGS);` pattern.
+2. **3-Pass Parser**: Pass 1: IFCCARTESIANPOINT → point map. Pass 2: IFCBUILDINGSTOREY → levels sorted by elevation. Pass 3: IFCWALL/IFCDOOR/IFCWINDOW → spatial nodes.
+3. **Material Mapping**: Keyword detection on wall description field. Maps to SecurityScene material types with visionTransmission values.
+4. **Level Assignment**: Each spatial node gets a levelId based on elevation Z-coordinate matching.
+5. **Scene Compiler Integration**: Parsed result feeds into SiteCompilerResult → SiteTwinDraft pipeline with warnings and readiness assessment.
+6. **IfcImportModal**: Full UI with file upload/paste, material configuration, level filtering, import/merge modes.
+
+**Key Code Anchors:**
+- `packages/core/src/lib/ifc-structural-parser.ts` — Core parser (320 lines, zero dependencies)
+- `packages/core/src/__tests__/ifc-structural-parser.test.ts` — Parser tests
+- `apps/studio/src/components/workspace/modals/IfcImportModal.tsx` — Full import UI
+- `apps/studio/src/lib/site-compiler.ts` — Scene compiler integration
+- `apps/studio/src/lib/import-adapters/adapters/cad-adapter.ts` — CAD adapter boundary
+
+**Material Mapping Table:**
+
+| IFC Keyword | SecurityScene Material | visionTransmission | RF Attenuation |
+|---|---|---|---|
+| glass, glaz | glass | 0.85 | 1 dB |
+| grill, mesh | grill | 0.50 | 5 dB |
+| partition | partial | 0.20 | 3 dB |
+| (default) | solid | 0.00 | 20 dB |
+
+**Multi-Floor Support:**
+- IFCBUILDINGSTOREY entities → SceneLevel entries
+- Sorted by elevation, assigned sequential order
+- Each spatial node (wall/door/window) gets levelId via elevation matching
+- IfcImportModal allows level-by-level selection before import
+
+**Integration with Scene Compiler:**
+- `parseIfcToSecurityScene()` returns `IfcParseResult` (levels, walls, doors, windows, stats)
+- IfcImportModal wraps result into `SecurityScene` via `createBlankSecurityScene()`
+- Two import modes: "Import as New Scene" (full replacement) or "Merge into Current Scene" (append)
+- Result passes through `safeParseSecurityScene()` Zod validation
+- Warnings generated by `makeSiteCompilerWarnings()` (NO_CAMERA, NO_CRITICAL_ZONE, etc.)
+
+**Related Threads:** Thread 5a (Scan/Reconstruction Pipeline), Thread 2 (Editor Integration), Thread 11 (Monorepo Packages)
+
+**Usage Guidance:** For any work touching IFC/BIM import, STEP parsing, material mapping, or multi-floor support, read this document first.
+
+### Thread 159: Report Generation System — Comprehensive System Documentation (2026-07-11)
+
+**Status:** Documentation complete.
+**Date:** 2026-07-11
+
+**Purpose:** Comprehensive deep-dive documentation of SentinelTwin's report generation system — how simulation data becomes compliance-ready documentation through deterministic report building, regulatory compliance templates, audience-aware redaction, and multi-format export.
+
+**Deep Dive Document:**
+
+| Document | Scope | Key Findings |
+|---|---|---| 
+| `REPORT_GENERATION_DEEP_DIVE_2026-07-11.md` | Report engine, compliance templates, redaction, export | Deterministic report factory: buildReportData() maps SimulationResult → ReportData. 11 standard templates (GDPR UK/France/Germany, PCI DSS, BIPA/HIPAA). 8 audience profiles with disclosure policies. 3 visibility modes with redaction. 5 export formats (Markdown, HTML, Text, PDF, Evidence Bundle). AI report agent for prose generation. |
+
+**Core Architecture:**
+
+1. **Report Factory** (`packages/report/src/index.ts`): `buildReportData()` is the deterministic entry point. Maps SimulationResult → ReportData with audience, template, and redaction policy.
+2. **Compliance Templates** (`compliance-templates.ts`): 11 standard templates with regulatory mandates, mandatory redactions, and retention limits.
+3. **Redaction Engine** (`applyPolicyRedaction()`): Policy-driven redaction for camera IPs, GPS coordinates, patrol routes, and vulnerability masking.
+4. **Export Templates** (`export-templates.ts`): 5 audience-specific Markdown renderers (Operator, Auditor, Insurer, Installer, Privacy Reviewer).
+5. **Redundancy Matrix** (`redundancy-matrix.ts`): Camera criticality scoring and single-point-of-failure zone identification.
+6. **Evidence Bundle** (`evidence-bundle.ts`): Packages scene, simulation, and provenance for archival/handoff.
+7. **AI Report Agent** (`report-agent.ts`): LLM-backed prose generation from simulation data.
+
+**Key Code Anchors:**
+- `packages/report/src/index.ts` — Report factory + exports (900+ lines)
+- `packages/report/src/compliance-templates.ts` — 11 templates + redaction engine (450+ lines)
+- `packages/report/src/export-templates.ts` — 5 audience-specific renderers (600+ lines)
+- `packages/report/src/redundancy-matrix.ts` — Camera criticality matrix (120 lines)
+- `apps/studio/src/report/evidence-bundle.ts` — Evidence bundle builder
+- `apps/studio/src/lib/report-evidence-bundle.ts` — Bundle serialization
+- `apps/studio/src/lib/report-analytics-export.ts` — Analytics HTML fragment
+- `apps/studio/src/report/report-document-builder.ts` — Document builder
+- `apps/studio/src/schema/report-document.ts` — Zod schema
+- `packages/agents/src/report-agent.ts` — AI report generation
+
+**Compliance Templates:**
+
+| Template | Standard | Retention | Mandatory Redactions |
+|---|---|---|---|
+| `gdpr-uk-ico` | UK GDPR Art. 35 / DPA 2018 | 30 days | Camera IPs, Patrol Routes |
+| `gdpr-cnil` | French CSI Art. L251-1 | 30 days | Camera IPs, Patrol Routes |
+| `gdpr-bdsg` | German BDSG §4 / BetrVG §87 | 3 days | Camera IPs, Patrol Routes |
+| `pci-dss-sec9` | PCI DSS v4.0 Req 9.1 | 90 days | Vulnerability Masking |
+| `bipa-hipaa` | BIPA 740 ILCS 14 / HIPAA §164.310 | 30 days | Camera IPs, GPS, Vulnerability Masking |
+
+**Audience Profiles (8):**
+
+| Audience | Disclosure | Visible Sections | Withheld |
+|---|---|---|---|
+| operator | full_internal | coverage, issues, counterfactual, timeline, provenance | none |
+| auditor | partner_shared | coverage, issues, assumptions, provenance | credentials, internal_only_notes |
+| insurer | partner_shared | coverage, issues, recommendations, before_after | internal_only_notes |
+| installer | partner_shared | recommendations, camera_matrix, zones, commissioning | internal_only_notes |
+| privacy_reviewer | partner_shared | coverage_summary, privacy_zones, governance | identifiable_media, credentials |
+| consultant | partner_shared | coverage, issues, assumptions, provenance, recommendations | credentials, internal_only_notes |
+| facilities_director | full_internal | coverage, issues, recommendations, timeline, assumptions, provenance | none |
+| operations_manager | full_internal | coverage, issues, recommendations, counterfactual, timeline | internal_only_notes |
+
+**Export Formats:**
+
+| Format | Function | Use Case |
+|---|---|---|
+| Markdown | `exportAsMarkdown()` | Documentation, wikis |
+| HTML | `exportAsHtml()` | Web embedding, email |
+| Text | `exportAsText()` | Plain text, CLI |
+| Evidence Bundle | `buildReportEvidenceBundle()` | Archival, handoff |
+| PDF | `pdf-export.ts` | Formal documents |
+
+**Related Threads:** Thread 2b (Simulation Engine), Thread 5a (Scan Pipeline), Thread 11 (Monorepo Packages)
+
+**Usage Guidance:** For any work touching report generation, compliance templates, audience redaction, or export formats, read this document first.
+
+### Thread 160: Rendering Pipeline — Comprehensive System Documentation (2026-07-11)
+
+**Status:** Documentation complete.
+**Date:** 2026-07-11
+
+**Purpose:** Comprehensive deep-dive documentation of SentinelTwin's rendering pipeline — how R3F/WebGL renders the 3D scene, camera cones, DORI quality arcs, heatmap overlays, blind spot highlights, path replay animation, and the adaptive performance system.
+
+**Deep Dive Document:**
+
+| Document | Scope | Key Findings |
+|---|---|---|
+| `RENDERING_PIPELINE_DEEP_DIVE_2026-07-11.md` | R3F scene, overlays, perf budget | 4 canvas modes (Map, Camera, Wall, PathReplay). 3 quality tiers (high/medium/low). RoomEnvironment IBL. Adaptive DPR via PerformanceMonitor. 6 heatmap modes. DORI arcs computed from resolution MP + FOV. Instanced mesh for 6,400+ cells. RAF-driven path actor animation. |
+
+**Core Architecture:**
+
+1. **4 Canvas Modes** (each with its own R3F `<Canvas>`):
+   - **Map View** (`WorkspaceCanvas.tsx`): Full 3D workspace, orbit controls, all scene nodes
+   - **Camera View** (`CameraViewMode.tsx`): Single-camera POV, post-processing filters, DORI arcs
+   - **Camera Wall** (`CameraWallView.tsx`): Multi-tile grid (4/6/16 views), each with independent canvas
+   - **Path Replay** (`PathReplayView.tsx`): Animated actor along path, visibility timeline, coverage bands
+
+2. **3 Quality Tiers** (`r3f-rendering.ts`):
+   ```
+   high:   IBL 0.7, 2048 shadow map, AA on, high-performance GPU
+   medium: IBL 0.55, 1024 shadow map, AA on, default GPU
+   low:    IBL 0.4, no shadows, no AA, low-power GPU
+   ```
+   - RoomEnvironment (procedural IBL, zero network) installed via PMREMGenerator
+   - ACES Filmic tone mapping everywhere, sRGB output
+   - PCF shadow maps, capped at 2048×2048
+
+3. **Adaptive DPR Budget** (`adaptive-dpr-budget.ts`):
+   - Camera Wall: DPR range [0.75, 1.25], dense mode [0.5, 1.0]
+   - Single Canvas: DPR range [0.85, 1.5]
+   - PerformanceMonitor samples FPS over 300ms windows, 12 iterations
+   - DPR step size: 0.05 (prevents visible popping)
+   - Flip-flop threshold: 5 before fallback callback
+
+4. **Shared Scene Components** (`SharedScene.tsx`):
+   - `SceneFloor`: Textured plane with grid helper, PBR materials
+   - `SceneWalls`: Box geometry with glass/solid materials, baseboard trim, selection edges
+   - `SceneDoors`: Frame + panel + handle, open/closed/locked states
+   - `SceneWindows`: Glass pane with mullions, curtain/reflective/open states
+   - `SceneObstructions`: 8 type-specific geometries (shelf, counter, pillar, vehicle, tree, etc.)
+   - `ScenePrivacyZones`: Shape geometry with restriction-colored fills
+   - `PathActor`: Capsule-based human figure with animated position along waypoints
+   - `CoverageTileFloor`: Instanced mesh for 0.25m coverage tiles
+   - `CoverageHeatmapInstanced`: 6-mode heatmap overlay (quality/lighting/fragility/overlap/contribution/blindspots)
+   - `CoverageSegmentPath`: DORI-quality-colored path segments
+   - `CrowdChokepointOverlay`: Occlusion probability rings
+
+5. **DORI Band Arcs** (`DoriBandArcs.tsx`):
+   - Computes distance for each DORI threshold from camera resolution + FOV
+   - Formula: `distance = resolutionWidthPx / (2 * targetPpm * tan(fovRad/2))`
+   - Renders concentric ring meshes at floor level
+   - 4 quality bands: identification (blue), recognition (green), observation (yellow), detection (amber)
+
+6. **Heatmap Rendering** (`SharedScene.tsx`):
+   - Instanced mesh with vertex colors for performance (6,400+ cells)
+   - 6 modes: quality (DORI-based), lighting (shadow/light level), fragility (near-threshold), overlap (camera count), contribution (single-camera dependency), blindspots (uncovered regions)
+   - PPM-based color stops: red → orange → yellow → green → blue
+   - Opacity: 0.88 for most modes, 0.62 for blindspots
+
+7. **Path Replay Animation** (`PathReplayView.tsx`):
+   - RAF-driven playback at configurable speed (0.5×, 1×, 2×, 4×)
+   - Legalized waypoints: collision detection against obstructions, walkability grid snap
+   - Coverage quality bands on scrub bar (segment-colored by DORI quality)
+   - Current visibility panel: visible/lost camera state at current time
+   - Visibility timeline: per-camera visible/lost events
+   - Camera cones rendered during replay with color per camera ID
+   - Collision markers: orange ring at raw position, green ring at corrected position
+
+8. **Camera Wall** (`CameraWallView.tsx`):
+   - 4 layout modes: quad (2×2), overview (3×2), dense (4×4), auto (adaptive)
+   - Each tile is an independent R3F canvas with frameloop="demand"
+   - Live feed support: `<video>` element for bound RTSP/HLS streams
+   - Dense mode performance guard: warns about 16-canvas GPU cost
+   - Wall overview panel: mini 3D map with heatmap overlay
+   - Route context: best camera, weak-route count, risk indicator
+
+**Key Files:**
+
+| File | Purpose | Lines |
+|---|---|---|
+| `apps/studio/src/lib/r3f-rendering.ts` | 3 quality tiers, IBL setup, shadow caster | 200 |
+| `apps/studio/src/lib/adaptive-dpr-budget.ts` | DPR budget for wall + single canvas | 120 |
+| `apps/studio/src/components/workspace/SharedScene.tsx` | All shared 3D scene components | 1,600+ |
+| `apps/studio/src/components/view/DoriBandArcs.tsx` | DORI quality arc overlays | 80 |
+| `apps/studio/src/components/view/CameraViewMode.tsx` | Single-camera POV canvas | 600+ |
+| `apps/studio/src/components/view/CameraWallView.tsx` | Multi-tile camera wall | 900+ |
+| `apps/studio/src/components/view/PathReplayView.tsx` | Path replay animation | 1,500+ |
+| `apps/studio/src/components/workspace/WorkspaceCanvas.tsx` | Main map workspace canvas | 1,100+ |
+| `apps/studio/src/lib/three-compat.ts` | Three.js compatibility patches | 50 |
+| `apps/studio/src/lib/scene-appearance.ts` | Environment themes + material resolution | 200 |
+| `apps/studio/src/lib/pbr-materials.ts` | PBR material factory | 150 |
+| `Docs/architecture/07_RENDERING_PIPELINE.md` | Architecture documentation | 200 |
+
+**Usage Guidance:**
+- For any task touching 3D rendering, visualization, overlays, or visual quality, check this thread first
+- SharedScene.tsx is the canonical source for all shared 3D components — import from here, not duplicate
+- r3f-rendering.ts defines the canonical Canvas configuration — all canvases should use R3F_PRESETS
+- adaptive-dpr-budget.ts defines the performance contract — test against these constants
+- DoriBandArcs.tsx is the only place DORI arcs are rendered — modify here for visual changes
+- CoverageHeatmapInstanced handles all 6 heatmap modes — add new modes here
+- PathReplayView.tsx is the most complex view (1,500+ lines) — read carefully before modifying
+
+
+### Thread 161: Governance & Audit Trail System — Comprehensive System Documentation (2026-07-11)
+
+**Status:** Documentation complete.
+**Date:** 2026-07-11
+
+**Purpose:** Comprehensive deep-dive documentation of SentinelTwin's governance and audit trail system — snapshots, provenance tracking, truth ladders, role-based approval workflows, operational evidence journaling, and trust surface auditing.
+
+**Deep Dive Document:**
+
+| Document | Scope | Key Findings |
+|---|---|---|
+| `GOVERNANCE_AUDIT_TRAIL_DEEP_DIVE_2026-07-11.md` | Snapshot slice, truth ladder, workspace governance, operational evidence, trust audit | 5-layer governance system. 40+ operational evidence event kinds. 8 workspace roles with context-aware approval routing. 5-level truth ladder (unreviewed→verified). 45 trust audit surfaces with required/forbidden phrase verification. Timeline reconstruction + 3-way branch merge. |
+
+**Core Architecture:**
+
+1. **Snapshot Slice** — Point-in-time scene captures with evidence events, comparison, and re-simulation. Every snapshot creates an `OperationalEvidenceEvent` with before/after summaries.
+
+2. **Truth Ladder** — Quantifies node trust via 3 dimensions: review status (5 levels), geometry validity (3 levels), and source traces. Aggregated into coverage percentages for reports.
+
+3. **Workspace Governance** — 8 roles with context-aware approval routing. High-priority zones escalate to admin. Privacy zones require privacy reviewer. Emergency scenarios trigger full escalation.
+
+4. **Operational Evidence Journal** — Immutable append-only log with 40+ event kinds, 8 lifecycle stages, timeline reconstruction, branch comparison, merge readiness assessment, and 3-way scene merge.
+
+5. **Trust Audit** — 45 UI surfaces verified for required phrases and forbidden stubs. CI-ready gate for preventing regression in truth labeling and governance controls.
+
+**Code Anchors:**
+
+| Thread | File | Lines |
+|---|---|---|
+| Snapshot | `apps/studio/src/store/slices/core/snapshot-slice.ts` | 200 |
+| Truth Ladder | `apps/studio/src/lib/truth-ladder.ts` | 90 |
+| Governance | `apps/studio/src/lib/workspace-governance.ts` | 200 |
+| Trust Audit | `apps/studio/src/lib/truth-audit.ts` | 350 |
+| Archive | `apps/studio/src/lib/governance-archive.ts` | 200 |
+| Evidence | `apps/studio/src/lib/operational-evidence.ts` | 1,400 |
+| Governance Slice | `apps/studio/src/store/slices/enterprise/governance-slice.ts` | 500+ |
+| Governance UI | `apps/studio/src/components/bottom-panel/GovernanceTab.tsx` | 1,000+ |
+| Intelligence UI | `apps/studio/src/components/bottom-panel/SceneIntelligenceTab.tsx` | 800+ |
+| Report Engine | `packages/report/src/index.ts` | 1,200+ |
+| Export Templates | `packages/report/src/export-templates.ts` | 600+ |
+
+**Related Threads:** Thread 159 (Report Generation), Thread 156 (Feature Deep Dives), Thread 157 (Coverage Engine)
+
+### Thread 162: Temporal Simulation System — Comprehensive System Documentation (2026-07-11)
+
+**Status:** Documentation complete.
+**Date:** 2026-07-11
+
+**Purpose:** Comprehensive deep-dive documentation of SentinelTwin's temporal simulation engine — 24h lighting schedules, seasonal SunCalc integration, guard patrol deterrence, vulnerability detection, anomaly detection, and crowd occlusion across time.
+
+**Deep Dive Document:**
+
+| Document | Scope | Key Findings |
+|---|---|---|
+| `TEMPORAL_SIMULATION_DEEP_DIVE_2026-07-11.md` | Temporal engine, lighting, patrols, anomalies | Change timeline optimization: 10-15 transitions vs 96 brute-force. SunCalc twilight phases. 35% guard deterrence per active guard. Vulnerability windows at coverage <60%. Anomaly detection for sudden drops ≥8%. Crowd-adjusted effective coverage. 20% temporal resilience in posture score. |
+
+**Core Architecture:**
+
+1. **Change Timeline Optimization** — Only simulates at schedule boundaries (light on/off, occupancy shift, patrol start/end). Fills 15-min gaps via state-label interpolation. 10-15 transitions typical.
+
+2. **Default Schedules** — Interior: business hours 6-18, cleaning 22-24. Exterior: night 19-2, timer cutout 2-5 (realistic vulnerability). Occupancy: empty→medium→high→medium→low→empty.
+
+3. **Seasonal Lighting** — SunCalc integration when location configured. 5 twilight phases (day/civil/nautical/astronomical/night). Lux estimation from sun altitude.
+
+4. **Guard Patrol Deterrence** — Each active guard reduces adversarial exposure by 35%. Patrol rounds defined by firstPatrolHour + intervalMinutes + durationMinutes.
+
+5. **Vulnerability Detection** — Coverage <60% or zone failure = vulnerable window. Severity: high (≥3 reasons or adversarial route), medium (2 reasons), low (1 reason).
+
+6. **Anomaly Detection** — Sudden changes between snapshots. Coverage drop ≥8%, zone flip, or exposure spike ≥2.5. Contiguous same-type windows merged.
+
+7. **Crowd Occlusion** — Event phase crowd scaling. Effective coverage = geometric - crowd penalty. 24h countByHour arrays per archetype.
+
+**Code Anchors:**
+
+| Thread | File | Lines |
+|---|---|---|
+| Core Engine | `packages/simulation/src/temporal.ts` | 660 |
+| Anomaly Detection | `packages/simulation/src/temporal-anomaly.ts` | 150 |
+| Seasonal Lighting | `packages/simulation/src/seasonal-lighting.ts` | 180 |
+| Posture Score | `packages/simulation/src/posture-score.ts` | 170 |
+| Crowd Sim | `packages/simulation/src/crowd-sim.ts` | 250 |
+| Schema | `packages/core/src/schema/security-scene.ts` | 1,700+ |
+| Temporal UI | `apps/studio/src/components/bottom-panel/TemporalProfileView.tsx` | 650+ |
+| Schedule Editor | `apps/studio/src/components/inspector/ScheduleEditor.tsx` | 360+ |
+| Crowd Editor | `apps/studio/src/components/inspector/CrowdProfileEditor.tsx` | 200+ |
+| Worker | `apps/studio/src/workers/simulation.worker.ts` | 40 |
+| Tests | `packages/simulation/src/__tests__/temporal.test.ts` | 400+ |
+| Lighting Tests | `packages/simulation/src/__tests__/seasonal-lighting.test.ts` | 220+ |
+
+**Related Threads:** Thread 157 (Coverage Engine), Thread 160 (Rendering Pipeline), Thread 156 (Feature Deep Dives)
+
+### Thread 163: Counterfactual Analysis Pipeline — Comprehensive System Documentation (2026-07-11)
+
+**Status:** Documentation complete.
+**Date:** 2026-07-11
+
+**Purpose:** Comprehensive deep-dive documentation of SentinelTwin's counterfactual analysis pipeline — algorithmic candidate generation, AI proposer, simulation verification, ranking, and fix sandbox UI.
+
+**Deep Dive Document:**
+
+| Document | Scope | Key Findings |
+|---|---|---|
+| `COUNTERFACTUAL_ANALYSIS_DEEP_DIVE_2026-07-11.md` | 3-surface architecture, scoring, sandbox | Three cooperating surfaces: algorithmic search (deterministic, Web Worker), AI proposer (LLM, cloud-backed), studio runner (coordination + ranking). 4 candidate types: rotate camera, move obstruction, add camera, add light. Scoring: improvement (10) + quality + cost penalty + zone delta (3/zone). Fix sandbox: baseline preserved, draft receives mutations, amber (operator) vs violet (AI proposal) accent. Rate limit: 8 req/min for AI counterfactuals. |
+
+**Core Architecture:**
+
+1. **Algorithmic Search** — Enumerates 4 candidate types per failing zone, runs simulateStudio() per candidate, scores by coverage gain + cost penalty. Deterministic, no AI.
+
+2. **AI Proposer** — Takes issue summary + scene context, asks LLM for natural-language fixes as structured SceneOperation arrays. Rate-limited (8 req/min). Blocked in local-only mode.
+
+3. **Studio Runner** — Coordinates both surfaces, applies constraints (budget, wiring, privacy), runs each plan through simulation, ranks by improvement then cost.
+
+4. **Fix Sandbox** — Baseline scene preserved for revert. Draft scene receives mutations. Operator-initiated (amber) or AI-proposal-initiated (violet). "Run Review" re-simulates. "Apply Changes" commits. "Discard" reverts.
+
+**Code Anchors:**
+
+| Thread | File | Lines |
+|---|---|---|
+| Algorithmic Search | `packages/simulation/src/counterfactual-search.ts` | 360 |
+| AI Proposer | `packages/agents/src/counterfactual-agent.ts` | 80 |
+| Studio Runner | `apps/studio/src/simulation/counterfactual-runner.ts` | 200 |
+| Counterfactual Panel UI | `apps/studio/src/components/bottom-panel/CounterfactualPanel.tsx` | 400 |
+| Fix Sandbox Bar | `apps/studio/src/components/top-bar/FixSandboxBar.tsx` | 150 |
+| Simulation Slice | `apps/studio/src/store/slices/core/simulation-slice.ts` | 450+ |
+| Governance Slice (sandbox) | `apps/studio/src/store/slices/enterprise/governance-slice.ts` | 1,200+ |
+| AI Command Hook | `apps/studio/src/hooks/use-ai-command.ts` | 1,300+ |
+| API Route | `apps/studio/src/app/api/ai/counterfactuals/route.ts` | 90 |
+| Schema | `packages/core/src/schema/security-scene.ts` | 1,700+ |
+
+**Related Threads:** Thread 157 (Coverage Engine), Thread 160 (Rendering Pipeline), Thread 162 (Temporal Simulation), Thread 161 (Governance & Audit Trail)
+
+### Thread 164: Scan-to-Scene Pipeline — Comprehensive System Documentation (2026-07-11)
+
+**Status:** Documentation complete.
+**Date:** 2026-07-11
+
+**Purpose:** Comprehensive deep-dive documentation of SentinelTwin's scan-to-scene pipeline — 6 intake paths, photo annotation, guided capture, floor plan import, IFC/BIM parsing, reconstruction stack, and site compilation.
+
+**Deep Dive Document:**
+
+| Document | Scope | Key Findings |
+|---|---|---|
+| `SCAN_TO_SCENE_DEEP_DIVE_2026-07-11.md` | 6 intake paths, candidate types, compilation | 6 intake paths converge on SiteCompilerResult → SiteTwinDraft → SecurityScene. 12 candidate kinds (wall, door, camera, zone, etc.). 13-step guided capture sequence. 8-stage reconstruction pipeline (mostly stubs). 3-pass IFC parser. 5 source maturity labels. 3 readiness levels (deploy-ready, review-required, insufficient). Truth audit enforces "candidate confirmation required". |
+
+**Core Architecture:**
+
+1. **Manual-Assisted Scan** — User uploads photos, clicks points to mark 12 candidate types. compileScanSessionToScene() converts accepted candidates to SecurityScene nodes with wall snapping, camera auto-aim, and entry point merging.
+
+2. **Guided Capture** — 13-step structured capture (overview → walls → zones → cameras → obstructions → measurements → compile). Feeds into 8-stage reconstruction pipeline.
+
+3. **Floor Plan Import** — Image → edge detection → wall/door/window extraction → scale calibration → scene.
+
+4. **IFC/BIM Import** — 3-pass STEP ASCII parser: cartesian points → building storeys → walls/doors/windows. Material keyword detection.
+
+5. **Site Compiler** — Common hub: SiteCompilerResult → SiteTwinDraft with maturity labels, warnings, assumptions, suggested actions.
+
+6. **Site Draft Review** — Maturity disclosure, warning review, "Approve as Canonical Twin" → promoteToActiveScene().
+
+**Code Anchors:**
+
+| Thread | File | Lines |
+|---|---|---|
+| Scan-to-Scene | `apps/studio/src/lib/scan-to-scene.ts` | 830 |
+| Scan Artifacts | `apps/studio/src/lib/scan-artifacts.ts` | 550 |
+| Reconstruction | `apps/studio/src/lib/scan-reconstruction.ts` | 700 |
+| Pipeline | `apps/studio/src/lib/reconstruction-pipeline.ts` | 380 |
+| Site Compiler | `apps/studio/src/lib/site-compiler.ts` | 930 |
+| Floor Plan | `apps/studio/src/lib/floor-plan-import.ts` | 500 |
+| Draft Approval | `apps/studio/src/lib/site-draft-approval.ts` | 100 |
+| IFC Parser | `packages/core/src/lib/ifc-structural-parser.ts` | 300 |
+| Scan Wizard UI | `apps/studio/src/components/scan-to-scene/ScanSiteWizard.tsx` | 600 |
+| Guided Capture | `apps/studio/src/components/scan-to-scene/GuidedCaptureAssistant.tsx` | 600 |
+| Scene Builder | `apps/studio/src/components/scan-to-scene/SceneBuilderWizard.tsx` | 400 |
+| Intake Hub | `apps/studio/src/components/site-intake/SiteIntakeHub.tsx` | 400 |
+| Draft Review | `apps/studio/src/components/site-intake/SiteDraftReview.tsx` | 400 |
+| Adapter Registry | `apps/studio/src/lib/scan-adapters/registry.ts` | 170 |
+| SAM2 Adapter | `apps/studio/src/lib/scan-adapters/adapters/sam2-adapter.ts` | 120 |
+| Schema | `apps/studio/src/schema/reconstruction-pipeline.ts` | 150 |
+
+**Related Threads:** Thread 158 (IFC/BIM Import), Thread 161 (Governance & Audit Trail), Thread 160 (Rendering Pipeline)
+
+### Thread 165: Crowd Occlusion & NPC Simulation — Comprehensive System Documentation (2026-07-11)
+
+**Status:** Documentation complete.
+**Date:** 2026-07-11
+
+**Purpose:** Comprehensive deep-dive documentation of SentinelTwin's crowd occlusion and NPC simulation system — Poisson-process occlusion model, agent archetypes, density mapping, chokepoint detection, and temporal integration.
+
+**Deep Dive Document:**
+
+| Document | Scope | Key Findings |
+|---|---|---|
+| `CROWD_OCCLUSION_DEEP_DIVE_2026-07-11.md` | Poisson model, archetypes, density, chokepoints | Poisson occlusion probability: 1 - e^(-λ·A_agent). 4 default retail archetypes (customer, staff, stocking cart, loiterer). Zone-based density with 10% ambient fallback. Chokepoint threshold: occlusionP > 0.4. Top-10 chokepoints returned. O(zones × cells), main-thread safe, <1ms typical. 20% temporal resilience weight in posture score. |
+
+**Core Architecture:**
+
+1. **Poisson-Process Model** — Statistical occlusion probability per cell based on agent density and body cross-section area.
+2. **Agent Archetypes** — 4 default retail types with 24h count arrays: customer (peak 32 at noon), staff (steady 5 during hours), stocking cart (wider 0.55m radius), loiterer (peaks 4 at 16:00-17:00).
+3. **Zone-Based Density** — Agents distributed across preferred zones or all zones. Density = count_per_zone / zone_area.
+4. **Chokepoint Detection** — Covered cells with occlusion probability > 40% flagged as chokepoints.
+5. **Temporal Integration** — Crowd counts feed into 24h temporal profile change timeline.
+6. **Posture Score** — Temporal resilience (crowd-adjusted) contributes 20% to overall posture score.
+
+**Key Constants:**
+- Body radius: 0.3m (person), 0.55m (stocking cart)
+- Chokepoint threshold: 40% occlusion probability
+- Ambient density: 10% of mean zone density
+- Minimum zone area: 0.5 m² (prevents divide-by-zero)
+
+**Files:** crowd-sim.ts (250 lines), crowd-sim.test.ts (140 lines), CrowdProfileEditor.tsx (200+ lines)
+
+
+### Thread 166: Adversarial Path Simulation — Comprehensive System Documentation (2026-07-11)
+
+**Status:** Documentation complete.
+**Date:** 2026-07-11
+
+**Purpose:** Comprehensive deep-dive documentation of SentinelTwin's adversarial path simulation — A* pathfinding with exposure-weighted costs, coverage gap detection, path replay animation, and integration with posture scoring.
+
+**Deep Dive Document:**
+
+| Document | Scope | Key Findings |
+|---|---|---|
+| `ADVERSARIAL_PATH_DEEP_DIVE_2026-07-11.md` | A* algorithm, cost model, replay, integration | A* search with exposure-weighted costs: cost = distance + 4×distance×detectionProbability. EXPOSURE_MULTIPLIER=4 calibrated for retail scenes. Octile heuristic for 8-directional grid. 1.5m barrier snap radius. VIABLE_EXPOSURE_THRESHOLD=3.0 for k-robustness. 25% posture score weight (adversarial resistance). Director's Cut camera-switching sequence. Path replay with RAF clock loop. |
+
+**Core Architecture:**
+
+1. **A* Pathfinding** — Exposure-weighted cost: stepDistance + 4×stepDistance×detectionProbability. Prefers stealthier routes through low-coverage areas.
+2. **Coverage Gap Detection** — Identifies obstructions path passes through, cameras missing route coverage, critical zones reachable along route.
+3. **Access Control Barriers** — Doors/gates with breach time penalties (pin=5s, card=15s, biometric=30s, guard_post=120s).
+4. **Path Replay Animation** — RAF-based clock loop, progress tracking, speed control, actor following, camera switching via Director's Cut.
+5. **Posture Score Integration** — Adversarial path resistance contributes 25% to 0-850 posture score.
+6. **K-Robustness Testing** — Tests camera subsets by disabling k cameras and checking if viable adversarial route exists.
+
+**Key Constants:**
+- EXPOSURE_MULTIPLIER: 4 (empirically calibrated)
+- Grid resolution: 4 cells/meter (0.25m cells)
+- Barrier snap radius: 1.5m
+- VIABLE_EXPOSURE_THRESHOLD: 3.0
+- MAX_K for robustness: 3
+
+**Files:** adversarial-path.ts (420 lines), adversarial-path.test.ts (220 lines), ThreatAnalysisPanel.tsx (180 lines), PathReplayView.tsx (1050+ lines), directors-cut.ts (130 lines)
+

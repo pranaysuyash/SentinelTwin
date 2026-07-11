@@ -5,6 +5,9 @@ import { UI_SURFACES_RAW } from "@/lib/studio-surface-tokens";
 export const MAP_COLORS = {
   // Surfaces & Backgrounds
   background: "#0a0d14",
+  backgroundDay: "#0d1420",
+  backgroundDusk: "#090b12",
+  backgroundNight: "#06080d",
   surface: {
     base: "#0b0f17",
     alt: "#111521",
@@ -66,6 +69,9 @@ export const MAP_COLORS = {
   lightOn: "#fbbf24",
   lightOff: "#6b7280",
   lightFailed: "#ef4444",
+  // Environment Lighting
+  lightKey: "#f5f8ff",
+  lightFill: "#c8d8ff",
   // Privacy Zones
   privacy: {
     fill: "#fecdd3",

@@ -59,14 +59,16 @@ describe("provider selection", () => {
   });
 
   test("summarizes estimated cost and latency policy per stage", () => {
+    // Use localOnlyMode=true so the test is environment-independent:
+    // regardless of whether API keys are set in the env, all stages are blocked.
     const telemetry = describeAiProviderTelemetry(
       normalizeAiProviderSelection({ providerId: "gemini", model: "gemini-2.5-flash" }),
-      false,
+      true,
     );
 
     expect(telemetry.activeCostTier).toBe("low");
     expect(telemetry.activeLatencyTier).toBe("fast");
-    // Without API keys configured, all stages are blocked (cloudAvailable is false)
+    // localOnlyMode forces all stages to blocked regardless of API key presence
     expect(telemetry.overallStatus).toBe("blocked");
     expect(telemetry.stagePolicies.find((stage) => stage.stage === "command")?.ready).toBe(false);
     expect(telemetry.stagePolicies.find((stage) => stage.stage === "draft")?.ready).toBe(false);

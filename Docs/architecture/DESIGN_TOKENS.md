@@ -161,6 +161,24 @@ const material = new THREE.MeshStandardMaterial({
 <circle fill={UI_SURFACES_RAW.textAccent} />
 ```
 
+### Dual-Use Tokens (Material / 3D)
+
+Four tokens serve dual purposes — they are both UI chrome colors and physically-
+accurate material colors used in PBR rendering. These bridge the gap between
+`UI_SURFACES_RAW` (chrome) and `MATERIAL_PALETTE` (3D materials).
+
+| Token | Value | Chrome Usage | 3D Material Usage |
+|-------|-------|-------------|-------------------|
+| `floorBase` | `#e2dbd0` | — | Floor tile color |
+| `glassBlue` | `#cfe5ff` | — | Window/wall glass |
+| `partitionGray` | `#6b7280` | — | Partition panels |
+| `warmLight` | `#fff4d0` | — | Ceiling fixture glow |
+
+> **Note:** `MATERIAL_PALETTE` in `@sentineltwin/core` retains its own string
+> literals for these values (not references to `UI_SURFACES_RAW`) to preserve
+> literal type safety, since `UI_SURFACES_RAW` is typed as
+> `Record<keyof typeof UI_SURFACES, string>`.
+
 ### Opacity Note
 
 Some `UI_SURFACES` tokens include Tailwind opacity modifiers (e.g.,
@@ -285,7 +303,8 @@ const fontSize = TYPE_SCALE.kpi.px; // 22
 ## MAP_COLORS — Canvas Palette
 
 Owned by `@/components/map/map-colors`. Used **only** for canvas/map geometry
-(walls, doors, cameras, paths, quality levels). Never use in chrome UI.
+(walls, doors, cameras, paths, quality levels) and environment lighting.
+Never use in chrome UI.
 
 ```tsx
 import { MAP_COLORS } from "@/components/map/map-colors";
@@ -293,7 +312,57 @@ import { MAP_COLORS } from "@/components/map/map-colors";
 // Canvas geometry only:
 <line stroke={MAP_COLORS.wall} />
 <meshBasicMaterial color={MAP_COLORS.quality.none} />
+
+// Environment lighting:
+const theme = { background: MAP_COLORS.backgroundDay, ... };
 ```
+
+### Environment Lighting Entries
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `backgroundDay` | `#0d1420` | Day mode background |
+| `backgroundDusk` | `#090b12` | Dusk mode background |
+| `backgroundNight` | `#06080d` | Night mode background |
+| `lightKey` | `#f5f8ff` | Key light color (default) |
+| `lightFill` | `#c8d8ff` | Fill light color (default) |
+
+---
+
+## MATERIAL_PALETTE — Physical Material Colors
+
+Owned by `@sentineltwin/core` (`lib/material-palette.ts`). Physically accurate
+material colors for 3D rendering, reports, and AI recommendations. These colors
+are **neither** UI chrome (use `UI_SURFACES`) **nor** canvas geometry (use
+`MAP_COLORS`).
+
+```tsx
+import { MATERIAL_PALETTE } from "@sentineltwin/core";
+
+// In PBR materials:
+const floorMaterial = new THREE.MeshStandardMaterial({ color: MATERIAL_PALETTE.floorTile });
+
+// In reports:
+console.log(`Floor color: ${MATERIAL_PALETTE.floorTile}`);
+```
+
+| Category | Token | Value |
+|----------|-------|-------|
+| Wood | `woodDoor` | `#8b5e34` |
+| Wood | `woodFrame` | `#5c4a3a` |
+| Wood | `woodCabinet` | `#624633` |
+| Wood | `woodShelf` | `#5c4324` |
+| Wood | `woodBoard` | `#6d522f` |
+| Wood | `woodOak` | `#8a6a44` |
+| Stone | `floorTile` | `#e2dbd0` |
+| Stone | `countertop` | `#a09080` |
+| Nature | `treeTrunk` | `#5a3a1a` |
+| Nature | `treeCanopy` | `#2d6b2d` |
+| Glass | `glassBlue` | `#cfe5ff` |
+| Light | `warmGlow` | `#fff4d0` |
+| Gray | `partitionGray` | `#6b7280` |
+| Brick | `brickTerra` | `#9c5a44` |
+| Metal | `metalAluminum` | `#aeb4bc` |
 
 ---
 
@@ -308,6 +377,9 @@ import { MAP_COLORS } from "@/components/map/map-colors";
 | 2026-07-09 | Added hex drift CI guard (`hex-drift-detect.ts`) | Prevents future raw hex regression |
 | 2026-07-11 | Added `UI_SURFACES_RAW` (Record<keyof typeof UI_SURFACES, string>) | Raw hex mirror for CSS-in-JS style props — eliminates hardcoded hex in Three.js, SVG, and inline styles |
 | 2026-07-11 | Migrated 81 CSS-in-JS hex → `UI_SURFACES_RAW` references | Type-safe raw hex access across 29 files (38 CSS-in-JS replacements) |
+| 2026-07-11 | Added `MATERIAL_PALETTE` to `@sentineltwin/core` | Centralized 16 physically-based material colors for cross-package access |
+| 2026-07-11 | Added 4 dual-use `UI_SURFACES_RAW` tokens | Bridged chrome and 3D material color systems (floorBase, glassBlue, partitionGray, warmLight) |
+| 2026-07-11 | Added 5 environment lighting entries to `MAP_COLORS` | Unified backgroundDay/Dusk/Night + lightKey/Fill in canvas palette |
 
 ---
 
@@ -387,8 +459,10 @@ bun tools/hex-drift-detect.ts --update
 
 | Metric | Value |
 |--------|-------|
-| `UI_SURFACES` tokens | 69 |
-| `UI_SURFACES_RAW` entries | 53 (typed as `Record<keyof typeof UI_SURFACES, string>`) |
+| `UI_SURFACES` tokens | 73 |
+| `UI_SURFACES_RAW` entries | 73 (typed as `Record<keyof typeof UI_SURFACES, string>`) | |
+| `MAP_COLORS` env lighting entries | 5 |
+| `MATERIAL_PALETTE` entries | 16 |
 | `UI_TONES` tones × variants | 6 × 15 = 90 class fragments + 6 raw hex values |
 | `TYPE_SCALE` tiers | 8 |
 | Total `UI_SURFACES` usages | ~7,497 |

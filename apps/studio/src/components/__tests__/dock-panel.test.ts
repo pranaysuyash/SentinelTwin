@@ -15,6 +15,6 @@ describe("Dock panels", () => {
     expect(panelSource).toContain('width: "28px"');
     expect(railSource).toContain('isBottom ? "flex-row border-t px-1.5 py-1" : "flex-col border-r px-1 py-1"');
     expect(railSource).toContain('isBottom ? "h-6 w-6 flex-shrink-0" : "h-7 w-7 flex-shrink-0"');
-    expect(railSource).toContain('className={`inline-flex h-5 w-5 items-center justify-center rounded-md border UI_SURFACES.borderThin UI_SURFACES.card UI_SURFACES.textSoftBright transition-colors UI_SURFACES.hoverBorderSubtle hover:text-white`}');
+    expect(railSource).toContain('className={`inline-flex h-5 w-5 items-center justify-center rounded-md border UI_SURFACES.borderThin UI_SURFACES.card UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverText`}');
   });
 });

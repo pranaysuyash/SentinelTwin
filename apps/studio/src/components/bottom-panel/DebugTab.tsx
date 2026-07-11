@@ -48,6 +48,7 @@ import type { SupportIngestResponse } from "@/lib/support-ingest";
 import type { SupportIngestHistoryRecord } from "@/lib/support-ingest-history";
 import type { TrustAuditReport } from "@/lib/truth-audit";
 import { OPERATIONAL_EVIDENCE_STORAGE_KEY, useStudioStore } from "@/store/studio-store";
+import { DebugControlsSection } from "./debug-tab/DebugControlsSection";
 import { DEBUG_TOGGLE_LABELS } from "@/store/slices/core/debug-toggles-slice";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
@@ -187,7 +188,6 @@ export function DebugTab() {
   const setArchiveHandoffRequest = useStudioStore((s) => s.setArchiveHandoffRequest);
   const recordSupportIngestResponse = useStudioStore((s) => s.recordSupportIngestResponse);
   const clearSupportIngestHistory = useStudioStore((s) => s.clearSupportIngestHistory);
-  const archiveInputRef = useRef<HTMLInputElement | null>(null);
   const [pendingArchive, setPendingArchive] = useState<OperationalEvidenceArchive | null>(null);
   const [pendingArchiveError, setPendingArchiveError] = useState<string | null>(null);
   const [archiveRestoreBranch, setArchiveRestoreBranch] = useState<"draft" | "recovered" | "published">("recovered");

@@ -263,7 +263,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
 
   return (
     <div className="flex flex-col">
-      <header className={`relative z-[320] isolate flex h-12 items-center gap-2 overflow-visible border-b ${UI_SURFACES.borderThin} ${UI_SURFACES.panel}/96 px-2.5`}>
+      <header className={`relative z-[320] isolate flex h-12 items-center gap-2 overflow-visible border-b UI_SURFACES.borderThin UI_SURFACES.panel/96 px-2.5`}>
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <div className="flex min-w-0 items-center gap-2 pr-2.5">
           <div className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border ${UI_TONES.success.borderStrong} ${UI_TONES.success.bg} shadow-[0_0_18px_rgba(16,185,129,0.18)]`}>
@@ -271,11 +271,11 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           </div>
           <div className="min-w-0 leading-tight">
             <div className="truncate text-[12px] font-semibold tracking-[0.01em] text-white">SentinelTwin</div>
-            <div className={`truncate text-[10px] uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>Security Site Twin</div>
+            <div className={`truncate text-[10px] uppercase tracking-[0.18em] UI_SURFACES.textMuted`}>Security Site Twin</div>
           </div>
         </div>
 
-        <div className={`hidden h-5 w-px ${UI_SURFACES.borderThin} xl:block`} />
+        <div className={`hidden h-5 w-px UI_SURFACES.borderThin xl:block`} />
 
         <SurfaceButton
           onClick={() => navigateProductView("product_home")}
@@ -296,7 +296,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           <span className="hidden lg:inline">Settings</span>
         </SurfaceButton>
 
-        <div className={`hidden h-5 w-px ${UI_SURFACES.borderThin} xl:block`} />
+        <div className={`hidden h-5 w-px UI_SURFACES.borderThin xl:block`} />
 
         <BranchSwitcher />
 
@@ -322,7 +322,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 type="button"
                 onClick={() => setImportOpen((o) => !o)}
                 title="More import options"
-                className={`inline-flex h-7 items-center justify-center rounded-r-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 ${UI_SURFACES.textMuted2} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
+                className={`inline-flex h-7 items-center justify-center rounded-r-lg border UI_SURFACES.borderThin UI_SURFACES.card px-1.5 UI_SURFACES.textMuted2 transition-colors UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverText`}
               >
                 <ChevronDown className="h-3 w-3" />
               </button>
@@ -330,38 +330,38 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
             {importOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setImportOpen(false)} />
-                <div className={`absolute left-0 top-full z-50 mt-1 min-w-[180px] rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} py-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)]`}>
+                <div className={`absolute left-0 top-full z-50 mt-1 min-w-[180px] rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel py-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)]`}>
                   <button
                     type="button"
-                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`}
+                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] UI_SURFACES.textBody UI_SURFACES.hoverBg UI_SURFACES.hoverText`}
                     onClick={() => { setImportOpen(false); openFloorPlanImport(); }}
                   >
                     <Upload className={`h-3.5 w-3.5 ${UI_TONES.info.dot} flex-shrink-0`} />
                     <div>
                       <div className="font-medium">Floor Plan</div>
-                      <div className={`text-[10px] ${UI_SURFACES.textMuted2}`}>Image → auto-generate walls</div>
+                      <div className={`text-[10px] UI_SURFACES.textMuted2`}>Image → auto-generate walls</div>
                     </div>
                   </button>
                   <button
                     type="button"
-                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`}
+                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] UI_SURFACES.textBody UI_SURFACES.hoverBg UI_SURFACES.hoverText`}
                     onClick={() => { setImportOpen(false); handleImportScene(); }}
                   >
                     <FileText className={`h-3.5 w-3.5 ${UI_TONES.success.dot} flex-shrink-0`} />
                     <div>
                       <div className="font-medium">Scene File</div>
-                      <div className={`text-[10px] ${UI_SURFACES.textMuted2}`}>.json exported site twin</div>
+                      <div className={`text-[10px] UI_SURFACES.textMuted2`}>.json exported site twin</div>
                     </div>
                   </button>
                   <button
                     type="button"
-                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`}
+                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] UI_SURFACES.textBody UI_SURFACES.hoverBg UI_SURFACES.hoverText`}
                     onClick={() => { setImportOpen(false); setIfcImportModalOpen(true); }}
                   >
                     <Building2 className={`h-3.5 w-3.5 ${UI_TONES.info.dot} flex-shrink-0`} />
                     <div>
                       <div className="font-medium">IFC / STEP BIM Model</div>
-                      <div className={`text-[10px] ${UI_SURFACES.textMuted2}`}>CAD structural geometry & storeys</div>
+                      <div className={`text-[10px] UI_SURFACES.textMuted2`}>CAD structural geometry & storeys</div>
                     </div>
                   </button>
                 </div>
@@ -370,7 +370,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           </div>
         </div>
 
-        <div className={`mr-1 hidden h-4 w-px flex-shrink-0 ${UI_SURFACES.borderThin} md:block`} />
+        <div className={`mr-1 hidden h-4 w-px flex-shrink-0 UI_SURFACES.borderThin md:block`} />
 
         <div className="flex items-center gap-0.5">
           <SurfaceButton
@@ -389,25 +389,25 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           </SurfaceButton>
         </div>
 
-        <div className={`hidden h-4 w-px flex-shrink-0 ${UI_SURFACES.borderThin} md:block`} />
+        <div className={`hidden h-4 w-px flex-shrink-0 UI_SURFACES.borderThin md:block`} />
 
         <div className="relative hidden min-w-0 md:block">
           <button type="button"
             onClick={() => setSceneOpen((open) => !open)}
-            className={`flex h-7 min-w-[128px] max-w-[18vw] items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 text-[11px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText} xl:min-w-[170px] xl:max-w-[190px]`}
+            className={`flex h-7 min-w-[128px] max-w-[18vw] items-center gap-1.5 rounded-lg border UI_SURFACES.borderThin UI_SURFACES.card px-2.5 text-[11px] font-medium UI_SURFACES.textBody transition-colors UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverText xl:min-w-[170px] xl:max-w-[190px]`}
           >
             <span className="truncate">{scene.name || "Untitled Site"}</span>
-            <ChevronDown className={`h-3 w-3 flex-shrink-0 ${UI_SURFACES.textMuted}`} />
+            <ChevronDown className={`h-3 w-3 flex-shrink-0 UI_SURFACES.textMuted`} />
           </button>
           {sceneOpen && (
             <div
-              className={`absolute left-0 top-full z-[420] mt-1 w-64 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-1.5 shadow-2xl shadow-black/35`}
+              className={`absolute left-0 top-full z-[420] mt-1 w-64 rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.bgDeep p-1.5 shadow-2xl shadow-black/35`}
               onMouseLeave={() => setSceneOpen(false)}
             >
               {/* User workspaces from localStorage */}
               {savedScenes.length > 0 ? (
                 <>
-                  <div className={`px-2.5 pb-1 text-[9px] font-bold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted2}`}>Your Workspaces</div>
+                  <div className={`px-2.5 pb-1 text-[9px] font-bold uppercase tracking-[0.2em] UI_SURFACES.textMuted2`}>Your Workspaces</div>
                   {savedScenes.map((saved) => (
                     <div key={saved.id} className="group flex items-center gap-0.5">
                       <button type="button"
@@ -416,7 +416,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                           setSceneOpen(false);
                         }}
                         className={cn(
-                          "flex-1 truncate rounded-lg px-2.5 py-2 text-left text-[11px] transition-colors ${UI_SURFACES.hoverBgMuted}",
+                          "flex-1 truncate rounded-lg px-2.5 py-2 text-left text-[11px] transition-colors UI_SURFACES.hoverBgMuted",
                           saved.id === scene.id ? UI_TONES.success.dot : UI_SURFACES.textBody,
                         )}
                       >
@@ -445,7 +445,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                         disabled={saved.source === "demo"}
                         className={cn(
                           `hidden rounded-lg px-1.5 py-2 text-[10px] opacity-60 transition-colors hover:opacity-100 group-hover:block`,
-                          saved.source === "demo" ? `cursor-not-allowed ${UI_SURFACES.textMuted}` : UI_TONES.warning.text,
+                          saved.source === "demo" ? `cursor-not-allowed UI_SURFACES.textMuted` : UI_TONES.warning.text,
                         )}
                         title={saved.source === "demo" ? "Duplicate the reference baseline first to rename it" : "Rename scene"}
                       >
@@ -453,16 +453,16 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                       </button>
                     </div>
                   ))}
-                  <div className={`my-1 border-t ${UI_SURFACES.borderThin}`} />
+                  <div className={`my-1 border-t UI_SURFACES.borderThin`} />
                 </>
               ) : null}
 
               {/* Reference scenes */}
               {referenceScenes.length > 0 ? (
                 <>
-                  <div className={`px-2.5 pb-1 text-[9px] font-bold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted2}`}>
+                  <div className={`px-2.5 pb-1 text-[9px] font-bold uppercase tracking-[0.2em] UI_SURFACES.textMuted2`}>
                     Reference Scenes
-                    <span className={`ml-1.5 font-normal normal-case ${UI_SURFACES.textMuted}`}>(duplicate to edit)</span>
+                    <span className={`ml-1.5 font-normal normal-case UI_SURFACES.textMuted`}>(duplicate to edit)</span>
                   </div>
                   {referenceScenes.map((ref) => (
                     <div key={ref.id} className="group flex items-center gap-0.5">
@@ -471,7 +471,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                           duplicateReferenceToWorkspace(ref.id);
                           setSceneOpen(false);
                         }}
-                        className={`flex-1 truncate rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                        className={`flex-1 truncate rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
                       >
                         {ref.name}
                       </button>
@@ -487,12 +487,12 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                       </button>
                     </div>
                   ))}
-                  <div className={`my-1 border-t ${UI_SURFACES.borderThin}`} />
+                  <div className={`my-1 border-t UI_SURFACES.borderThin`} />
                 </>
               ) : null}
 
               {savedScenes.length === 0 && referenceScenes.length === 0 && (
-                <div className={`px-2.5 py-3 text-[11px] ${UI_SURFACES.textMuted2}`}>No saved site twins yet</div>
+                <div className={`px-2.5 py-3 text-[11px] UI_SURFACES.textMuted2`}>No saved site twins yet</div>
               )}
 
               <div className="space-y-0.5">
@@ -500,7 +500,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   onClick={() => {
                     handleExportScene();
                     setSceneOpen(false);
-                  }}                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted2} transition-colors ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`}
+                  }}                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted2 transition-colors UI_SURFACES.hoverBg UI_SURFACES.hoverText`}
                 >
                   <Download className="h-3 w-3" />
                   Export Site Twin File
@@ -509,7 +509,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   onClick={() => {
                     handleImportScene();
                     setSceneOpen(false);
-                  }}                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted2} transition-colors ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`}
+                  }}                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted2 transition-colors UI_SURFACES.hoverBg UI_SURFACES.hoverText`}
                 >
                   <Upload className="h-3 w-3" />
                   Import Site Twin File
@@ -518,13 +518,13 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   onClick={() => {
                     navigateProductView("scan_site");
                     setSceneOpen(false);
-                  }}                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted2} transition-colors ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`}
+                  }}                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted2 transition-colors UI_SURFACES.hoverBg UI_SURFACES.hoverText`}
                 >
                   <ScanSearch className="h-3 w-3" />
                   Scan a Site...
                 </button>
                 <button type="button"
-                  onClick={handleNewBlankScene}                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted2} transition-colors ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`}
+                  onClick={handleNewBlankScene}                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted2 transition-colors UI_SURFACES.hoverBg UI_SURFACES.hoverText`}
                 >
                   <Plus className="h-3 w-3" />
                   New Blank Scene
@@ -533,7 +533,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   onClick={() => {
                     openManualBuilder();
                     setSceneOpen(false);
-                  }}                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted2} transition-colors ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`}
+                  }}                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted2 transition-colors UI_SURFACES.hoverBg UI_SURFACES.hoverText`}
                 >
                   <Plus className="h-3 w-3" />
                   New Site Twin (Guided)...
@@ -542,7 +542,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   onClick={() => {
                     saveSceneToStorage();
                     setSceneOpen(false);
-                  }}                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted2} transition-colors ${UI_SURFACES.hoverBg} ${UI_SURFACES.hoverText}`}
+                  }}                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted2 transition-colors UI_SURFACES.hoverBg UI_SURFACES.hoverText`}
                 >
                   <Save className="h-3 w-3" />
                   Save Current Site Twin
@@ -571,7 +571,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
         <div className="relative hidden min-w-0 2xl:block">
           <button type="button"
             onClick={() => setTargetOpen((open) => !open)}
-            className={`flex h-7 max-w-[190px] items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 text-[11px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
+            className={`flex h-7 max-w-[190px] items-center gap-1.5 rounded-lg border UI_SURFACES.borderThin UI_SURFACES.card px-2.5 text-[11px] font-medium UI_SURFACES.textBody transition-colors UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverText`}
           >
             <Shield className={`h-3 w-3 ${UI_TONES.info.text}`} />
             <span className="truncate">
@@ -579,25 +579,25 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 ? `Target: ${currentTargetLabel}`
                 : `Default Target: ${currentTargetLabel}`}
             </span>
-            <ChevronDown className={`h-3 w-3 ${UI_SURFACES.textMuted}`} />
+            <ChevronDown className={`h-3 w-3 UI_SURFACES.textMuted`} />
           </button>
           {targetOpen && (
             <div
-              className={`absolute left-0 top-full z-[420] mt-1 w-64 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-1.5 shadow-2xl shadow-black/35`}
+              className={`absolute left-0 top-full z-[420] mt-1 w-64 rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.bgDeep p-1.5 shadow-2xl shadow-black/35`}
               onMouseLeave={() => setTargetOpen(false)}
             >
               {TARGET_TYPE_OPTIONS.map((entry) => (
                 <button type="button"
                   key={entry.value}
-                  className={`w-full rounded-lg px-2.5 py-2 text-left transition-colors ${UI_SURFACES.hoverBgMuted}`}
+                  className={`w-full rounded-lg px-2.5 py-2 text-left transition-colors UI_SURFACES.hoverBgMuted`}
                   onClick={() => {
                     useStudioStore.getState().setCriticalZoneTargetType(entry.value);
                     setAllZoneTargetTypes(entry.value);
                     setTargetOpen(false);
                   }}
                 >
-                  <div className={`text-[11px] font-medium ${UI_SURFACES.textBody}`}>{entry.label}</div>
-                  <div className={`text-[9px] ${UI_SURFACES.textMuted2}`}>{entry.hint}</div>
+                  <div className={`text-[11px] font-medium UI_SURFACES.textBody`}>{entry.label}</div>
+                  <div className={`text-[9px] UI_SURFACES.textMuted2`}>{entry.hint}</div>
                 </button>
               ))}
             </div>
@@ -629,7 +629,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           type="button"
           aria-label="Open keyboard shortcuts"
           onClick={() => {}}
-          className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
+          className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border UI_SURFACES.borderThin UI_SURFACES.card UI_SURFACES.textMuted transition-colors UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverText`}
         >
           <Keyboard className="h-3.5 w-3.5" />
         </button>
@@ -670,107 +670,107 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
             aria-haspopup="menu"
             aria-expanded={moreOpen}
             aria-controls="topbar-more-menu"
-            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
+            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border UI_SURFACES.borderThin UI_SURFACES.card UI_SURFACES.textMuted transition-colors UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverText`}
           >
             <MoreHorizontal className="h-4 w-4" />
           </button>
           {moreOpen && (
             <div
               id="topbar-more-menu"
-              className={`absolute right-0 top-full z-[420] mt-1 w-52 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-1.5 shadow-2xl shadow-black/35`}
+              className={`absolute right-0 top-full z-[420] mt-1 w-52 rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.bgDeep p-1.5 shadow-2xl shadow-black/35`}
               onMouseLeave={() => setMoreOpen(false)}
             >
               {/* Simulation tools */}
-              <div className={`px-2.5 pb-1 pt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted2}`}>Simulation</div>
+              <div className={`px-2.5 pb-1 pt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] UI_SURFACES.textMuted2`}>Simulation</div>
               <button type="button"
                 onClick={() => { setEnvMode(envMode === "night" ? "day" : "night"); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <Moon className="h-3 w-3" />
                 Night Mode
               </button>
               <button type="button"
                 onClick={() => { handleCameraFailure(); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <Shield className="h-3 w-3" />
                 Test Camera Outage
               </button>
               <button type="button"
                 onClick={() => { saveSnapshot(`Snapshot ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <Copy className="h-3 w-3" />
                 Save Snapshot
               </button>
 
-              <div className={`my-1 border-t ${UI_SURFACES.borderThin}`} />
+              <div className={`my-1 border-t UI_SURFACES.borderThin`} />
 
               {/* Analysis jump targets */}
-              <div className={`px-2.5 pb-1 pt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted2}`}>Jump to</div>
+              <div className={`px-2.5 pb-1 pt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] UI_SURFACES.textMuted2`}>Jump to</div>
               <button type="button"
                 onClick={() => { setBottomTab("beforeafter"); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <Clapperboard className="h-3 w-3" />
                 Compare
               </button>
               <button type="button"
                 onClick={() => { setBottomTab("threat"); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <Crosshair className="h-3 w-3" />
                 Path Risk
               </button>
               <button type="button"
                 onClick={() => { setBottomTab("report"); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <FileText className="h-3 w-3" />
                 Prepare Report
               </button>
               <button type="button"
                 onClick={() => { setBottomTab("assumptions"); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <Info className="h-3 w-3" />
                 Assumptions
               </button>
               <button type="button"
                 onClick={() => { setBottomTab("provenance"); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <SlidersHorizontal className="h-3 w-3" />
                 Evidence Trail
               </button>
 
-              <div className={`my-1 border-t ${UI_SURFACES.borderThin}`} />
+              <div className={`my-1 border-t UI_SURFACES.borderThin`} />
 
               {/* Tools */}
               <button type="button"
                 onClick={() => { setDemoMode(!demoMode); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 {demoMode ? "Exit Guided Walkthrough" : "Start Guided Walkthrough"}
               </button>
               <button type="button"
                 onClick={() => { toggleViewSettingsOpen(); setMoreOpen(false); }}
                 data-testid="more-view-settings"
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <SlidersHorizontal className="h-3 w-3" />
                 View Settings
               </button>
               <button type="button"
                 onClick={() => { handleExportScene(); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <Download className="h-3 w-3" />
                 Export Site Twin File
               </button>
               <button type="button"
                 onClick={() => { window.dispatchEvent(new CustomEvent(STUDIO_SHORTCUT_EVENTS.toggleShortcuts)); setMoreOpen(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <Keyboard className="h-3 w-3" />
                 Keyboard Shortcuts

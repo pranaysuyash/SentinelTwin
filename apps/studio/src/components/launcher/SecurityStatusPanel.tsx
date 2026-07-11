@@ -44,7 +44,7 @@ export function SecurityStatusPanel({
   return (
     <div className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
       <div className="flex items-center justify-between">
-        <div className={`text-[10px] font-bold uppercase tracking-[0.2em] ${UI_SURFACES.textAccent}`}>SECURITY STATUS</div>
+        <div className={`text-[10px] font-bold uppercase tracking-[0.2em] UI_SURFACES.textAccent`}>SECURITY STATUS</div>
         <div className="flex items-center gap-2">
           <TruthBadge label={displayCoverage != null ? "simulated" : "placeholder"} />
           <HideSectionButton label="security status" onClick={onHide} />
@@ -52,22 +52,22 @@ export function SecurityStatusPanel({
       </div>
 
       <div className="mt-3">
-        <div className={`mb-2 rounded-xl border ${UI_SURFACES.borderFaint} bg-white/[0.02] px-3 py-2`}>
-          <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textSoftBright}`}>SITE RISK</div>
+        <div className={`mb-2 rounded-xl border UI_SURFACES.borderFaint bg-white/[0.02] px-3 py-2`}>
+          <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textSoftBright`}>SITE RISK</div>
           <div className="mt-1 text-[12px] font-semibold text-white">{displayOutcomeStatus}</div>
-          <div className={`mt-1 text-[10px] ${UI_SURFACES.textNearAlt}`}>{displayPrimaryRisk}</div>
+          <div className={`mt-1 text-[10px] UI_SURFACES.textNearAlt`}>{displayPrimaryRisk}</div>
         </div>
-          <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textSoftBright}`}>OUTCOME SUMMARY</div>
+          <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textSoftBright`}>OUTCOME SUMMARY</div>
           <div className="space-y-1">
           {[
             { id: "cash-counter", label: "Cash Counter", detail: "Recognition required", badge: displayIssues.some((i) => i.severity === "critical") ? "FAILS" : railWorstQuality, tone: "danger" as const },
             { id: "main-entry", label: "Main Entry", detail: "Minimum requirement", badge: railWorstQuality, tone: "warn" as const },
             { id: "night-mode", label: "Night Mode", detail: "Low light performance", badge: railNightStatus, tone: "warn" as const },
           ].map((row) => (
-            <div key={row.id} className={`flex items-center justify-between rounded-xl border ${UI_SURFACES.borderFaint} bg-white/[0.015] px-3 py-2`}>
+            <div key={row.id} className={`flex items-center justify-between rounded-xl border UI_SURFACES.borderFaint bg-white/[0.015] px-3 py-2`}>
               <div className="min-w-0">
                 <div className="truncate text-[11px] font-medium text-white">{row.label}</div>
-                <div className={`text-[9px] ${UI_SURFACES.textSoftBright}`}>{row.detail}</div>
+                <div className={`text-[9px] UI_SURFACES.textSoftBright`}>{row.detail}</div>
               </div>
               <span className={cn(
                 "ml-2 flex-none rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em]",
@@ -79,10 +79,10 @@ export function SecurityStatusPanel({
               </span>
             </div>
           ))}
-          <div className={`flex items-center justify-between rounded-xl border ${UI_SURFACES.borderFaint} bg-white/[0.015] px-3 py-2`}>
+          <div className={`flex items-center justify-between rounded-xl border UI_SURFACES.borderFaint bg-white/[0.015] px-3 py-2`}>
             <div className="min-w-0">
               <div className="text-[11px] font-medium text-white">Overall Coverage</div>
-              <div className={`text-[9px] ${UI_SURFACES.textSoftBright}`}>{overallCoverageLabel}</div>
+              <div className={`text-[9px] UI_SURFACES.textSoftBright`}>{overallCoverageLabel}</div>
             </div>
             <span className={cn(
               "ml-2 flex-none rounded border px-1.5 py-0.5 text-[8px] font-bold",
@@ -96,7 +96,7 @@ export function SecurityStatusPanel({
 
           {/* Capability maturity indicators */}
           <div className="mt-3">
-            <div className={`mb-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>
+            <div className={`mb-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textMuted`}>
               Capabilities
             </div>
             <div className="space-y-1">
@@ -104,8 +104,8 @@ export function SecurityStatusPanel({
                 const cap = getCapabilityStatus(cid);
                 if (!cap) return null;
                 return (
-                  <div key={cid} className={`flex items-center justify-between rounded-xl border ${UI_SURFACES.borderFaint} bg-white/[0.015] px-3 py-1.5`}>
-                    <span className={`text-[10px] ${UI_SURFACES.textSoftBright}`}>{cap.label}</span>
+                  <div key={cid} className={`flex items-center justify-between rounded-xl border UI_SURFACES.borderFaint bg-white/[0.015] px-3 py-1.5`}>
+                    <span className={`text-[10px] UI_SURFACES.textSoftBright`}>{cap.label}</span>
                     <span className={cn(
                       "flex-none rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em]",
                       cap.level === "Available"

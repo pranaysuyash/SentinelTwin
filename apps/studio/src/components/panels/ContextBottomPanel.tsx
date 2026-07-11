@@ -9,7 +9,7 @@ export function ContextBottomPanel({ sizePx }: { sizePx: number }) {
   const showSecondary = sizePx >= 320;
 
   return (
-    <div className={`flex h-full min-h-0 flex-col overflow-hidden ${UI_SURFACES.panel}`}>
+    <div className={`flex h-full min-h-0 flex-col overflow-hidden UI_SURFACES.panel`}>
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
           <div className={showSecondary ? "h-[180px] min-h-0 overflow-hidden" : "min-h-0 flex-1 overflow-hidden"}>
@@ -17,7 +17,7 @@ export function ContextBottomPanel({ sizePx }: { sizePx: number }) {
           </div>
 
           {showSecondary && (
-            <div className={`flex-1 min-h-0 overflow-hidden border-t ${UI_SURFACES.borderPanel}`}>
+            <div className={`flex-1 min-h-0 overflow-hidden border-t UI_SURFACES.borderPanel`}>
               <BottomRow />
             </div>
           )}

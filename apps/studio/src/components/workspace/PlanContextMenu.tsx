@@ -162,7 +162,7 @@ export function PlanContextMenu({
             <button
               type="button"
               onClick={onClose}
-              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition-colors hover:bg-white/10 ${UI_SURFACES.hoverText}`}
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition-colors hover:bg-white/10 UI_SURFACES.hoverText`}
             >
               <X className="h-3.5 w-3.5" />
             </button>

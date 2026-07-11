@@ -26,7 +26,7 @@ export function ViewControls() {
         onClick={() => setUiExposure(nextUiExposure(uiExposure))}
         aria-label={`UI exposure: ${exposurePreset.label}. Click to cycle.`}
         title={`${exposurePreset.label} — ${exposurePreset.description}`}
-        className={`flex h-8 w-8 items-center justify-center rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 text-[7px] font-bold tracking-wide ${UI_SURFACES.hoverTextSoft} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+        className={`flex h-8 w-8 items-center justify-center rounded-lg border UI_SURFACES.borderDark UI_SURFACES.bgDeep/90 text-[7px] font-bold tracking-wide UI_SURFACES.hoverTextSoft transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
       >
         {exposurePreset.shortLabel}
       </button>
@@ -39,7 +39,7 @@ export function ViewControls() {
           "flex h-8 w-8 items-center justify-center rounded-lg border text-[9px] font-bold transition-colors",
            canvasMode === "orbit_3d"
              ? "border-sky-400 text-sky-100"
-             : "${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 ${UI_SURFACES.textSoftMid} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}",
+             : "UI_SURFACES.borderDark UI_SURFACES.bgDeep/90 UI_SURFACES.textSoftMid UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText",
         )}
         style={canvasMode === "orbit_3d"
           ? {
@@ -59,7 +59,7 @@ export function ViewControls() {
           "flex h-8 w-8 items-center justify-center rounded-lg border text-[8px] font-bold transition-colors",
            canvasMode === "topdown_2d"
              ? "border-emerald-400 text-emerald-100"
-             : "${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 ${UI_SURFACES.textSoftMid} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}",
+             : "UI_SURFACES.borderDark UI_SURFACES.bgDeep/90 UI_SURFACES.textSoftMid UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText",
         )}
         style={canvasMode === "topdown_2d"
           ? {
@@ -79,7 +79,7 @@ export function ViewControls() {
           "flex h-8 w-8 items-center justify-center rounded-lg border text-[9px] font-bold transition-colors",
            canvasMode === "plan_2d"
              ? "border-amber-400 text-amber-100"
-             : "${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 ${UI_SURFACES.textSoftMid} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}",
+             : "UI_SURFACES.borderDark UI_SURFACES.bgDeep/90 UI_SURFACES.textSoftMid UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText",
         )}
         style={canvasMode === "plan_2d"
           ? {
@@ -95,18 +95,18 @@ export function ViewControls() {
         onClick={resetCanvasView}
         aria-label="Reset canvas view"
         title="Reset canvas view"
-        className={`flex h-8 w-8 items-center justify-center rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 ${UI_SURFACES.hoverBgMuted}`}
+        className={`flex h-8 w-8 items-center justify-center rounded-lg border UI_SURFACES.borderDark UI_SURFACES.bgDeep/90 UI_SURFACES.hoverBgMuted`}
       >
-        <RefreshCcw className={`h-3.5 w-3.5 ${UI_SURFACES.textSoftMid} ${UI_SURFACES.hoverText}`} />
+        <RefreshCcw className={`h-3.5 w-3.5 UI_SURFACES.textSoftMid UI_SURFACES.hoverText`} />
       </button>
       <button
         type="button"
         onClick={() => toggleViewSettingsOpen()}
         aria-label="Open View Settings"
         title="Open View Settings"
-        className={`flex h-8 w-8 items-center justify-center rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 ${UI_SURFACES.hoverBgMuted}`}
+        className={`flex h-8 w-8 items-center justify-center rounded-lg border UI_SURFACES.borderDark UI_SURFACES.bgDeep/90 UI_SURFACES.hoverBgMuted`}
       >
-        <Layers className={`h-3.5 w-3.5 ${UI_SURFACES.textSoftMid} ${UI_SURFACES.hoverText}`} />
+        <Layers className={`h-3.5 w-3.5 UI_SURFACES.textSoftMid UI_SURFACES.hoverText`} />
       </button>
     </div>
   );

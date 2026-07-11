@@ -23,7 +23,7 @@ function BottomSection({ title, action, children }: { title: string; action?: Re
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="mb-1.5 flex items-center justify-between">
-        <span className={`text-[9px] font-semibold uppercase tracking-widest ${UI_SURFACES.textDimMid}`}>{title}</span>
+        <span className={`text-[9px] font-semibold uppercase tracking-widest UI_SURFACES.textDimMid`}>{title}</span>
         {action}
       </div>
       <div className="min-h-0 flex-1">{children}</div>
@@ -70,7 +70,7 @@ function SnapshotsPanel() {
       action={
         <button type="button"
           onClick={() => result && saveSnap(`Snapshot ${snapshots.length + 1}`)}
-          className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[8px] text-green-300 transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white`}
+          className={`inline-flex items-center gap-1 rounded-md border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-1 text-[8px] text-green-300 transition-colors UI_SURFACES.hoverBorderSubtle hover:text-white`}
         >
           <Plus className="h-3 w-3" />
           New
@@ -79,14 +79,14 @@ function SnapshotsPanel() {
     >
       <div className="flex h-full items-stretch gap-2 overflow-x-auto pb-1">
         {snapshots.map((snap, i) => (
-          <div key={snap.id} className={`w-[84px] flex-shrink-0 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+          <div key={snap.id} className={`w-[84px] flex-shrink-0 rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
             <SnapshotThumb coverage={snap.simulation?.totalCoveragePct} index={i} />
-            <div className={`mt-1 text-[10px] font-medium ${UI_SURFACES.textNear} truncate`}>{snap.label}</div>
-            <div className="mt-0.5 text-[8px] ${UI_SURFACES.textMuted7}">{panelTimeLabel(snap.createdAt)}</div>
+            <div className={`mt-1 text-[10px] font-medium UI_SURFACES.textNear truncate`}>{snap.label}</div>
+            <div className="mt-0.5 text-[8px] UI_SURFACES.textMuted7">{panelTimeLabel(snap.createdAt)}</div>
           </div>
         ))}
 
-        <button type="button" className={`flex w-[96px] flex-shrink-0 flex-col items-center justify-center rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} ${UI_SURFACES.textSoftBright} transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white`}>
+        <button type="button" className={`flex w-[96px] flex-shrink-0 flex-col items-center justify-center rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel UI_SURFACES.textSoftBright transition-colors UI_SURFACES.hoverBorderSubtle hover:text-white`}>
           <Plus className="h-4 w-4" />
           <span className="mt-1 text-[10px]">New Snapshot</span>
         </button>
@@ -98,11 +98,11 @@ function SnapshotsPanel() {
 function AssumptionRow({ label, sublabel, value }: { label: string; sublabel?: string; value: string }) {
   return (
     <div className="flex min-w-0 items-center justify-between gap-2 text-[9px]">
-      <span className={`truncate ${UI_SURFACES.textSoftMid}`}>
+      <span className={`truncate UI_SURFACES.textSoftMid`}>
         {label}
-        {sublabel ? <span className={`ml-1 hidden text-[8px] ${UI_SURFACES.textDim} sm:inline`}>({sublabel})</span> : null}
+        {sublabel ? <span className={`ml-1 hidden text-[8px] UI_SURFACES.textDim sm:inline`}>({sublabel})</span> : null}
       </span>
-      <span className="flex-shrink-0 text-right ${UI_SURFACES.textBody2}">{value}</span>
+      <span className="flex-shrink-0 text-right UI_SURFACES.textBody2">{value}</span>
     </div>
   );
 }
@@ -111,14 +111,14 @@ function SegmentedControl<T extends string>({
   value, options, onChange,
 }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void }) {
   return (
-    <div className={`inline-flex overflow-hidden rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel}`}>
+    <div className={`inline-flex overflow-hidden rounded-md border UI_SURFACES.borderThin UI_SURFACES.panel`}>
       {options.map((opt) => (
         <button
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
-          className={`px-2 py-0.5 text-[9px] font-medium transition-colors border-r ${UI_SURFACES.borderThin} last:border-r-0 ${
-            value === opt.value ? "bg-blue-600/25 text-blue-200" : "${UI_SURFACES.textSoftBright} hover:text-white"
+          className={`px-2 py-0.5 text-[9px] font-medium transition-colors border-r UI_SURFACES.borderThin last:border-r-0 ${
+            value === opt.value ? "bg-blue-600/25 text-blue-200" : "UI_SURFACES.textSoftBright hover:text-white"
           }`}
         >
           {opt.label}
@@ -173,7 +173,7 @@ function AssumptionsPanel() {
             </button>
             <button type="button"
               onClick={cancelEdit}
-              className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[8px] ${UI_SURFACES.textSoftMid} transition-colors hover:text-white`}
+              className={`inline-flex items-center gap-1 rounded-md border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-1 text-[8px] UI_SURFACES.textSoftMid transition-colors hover:text-white`}
             >
               <X className="h-3 w-3" />
             </button>
@@ -181,7 +181,7 @@ function AssumptionsPanel() {
         ) : (
           <button type="button"
             onClick={startEdit}
-            className={`inline-flex items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[8px] ${UI_SURFACES.textMuted4} transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white`}
+            className={`inline-flex items-center gap-1 rounded-md border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-1 text-[8px] UI_SURFACES.textMuted4 transition-colors UI_SURFACES.hoverBorderSubtle hover:text-white`}
           >
             <Edit3 className="h-3 w-3" />
             Edit
@@ -189,12 +189,12 @@ function AssumptionsPanel() {
         )
       }
     >
-      <div className={`h-full overflow-y-auto rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+      <div className={`h-full overflow-y-auto rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
         {editing ? (
           <div className="space-y-2 text-[9px]">
             {/* Time of Day */}
             <div className="flex items-center justify-between gap-2">
-              <span className={`${UI_SURFACES.textSoftMid}`}>Time of Day</span>
+              <span className={`UI_SURFACES.textSoftMid`}>Time of Day</span>
               <SegmentedControl
                 value={cur("timeOfDay") as SimulationAssumptions["timeOfDay"]}
                 options={[
@@ -207,7 +207,7 @@ function AssumptionsPanel() {
             </div>
             {/* DORI Standard */}
             <div className="flex items-center justify-between gap-2">
-              <span className={`${UI_SURFACES.textSoftMid}`}>DORI Model</span>
+              <span className={`UI_SURFACES.textSoftMid`}>DORI Model</span>
               <SegmentedControl
                 value={cur("doriStandard") as SimulationAssumptions["doriStandard"]}
                 options={[
@@ -219,7 +219,7 @@ function AssumptionsPanel() {
             </div>
             {/* Interior Light Level */}
             <div className="flex items-center justify-between gap-2">
-              <span className={`${UI_SURFACES.textSoftMid}`}>Light Level</span>
+              <span className={`UI_SURFACES.textSoftMid`}>Light Level</span>
               <SegmentedControl
                 value={cur("interiorLightLevel") as SimulationAssumptions["interiorLightLevel"]}
                 options={[
@@ -233,7 +233,7 @@ function AssumptionsPanel() {
             </div>
             {/* Night Penalty */}
             <div className="flex items-center justify-between gap-2">
-              <span className={`${UI_SURFACES.textSoftMid}`}>Night Penalty</span>
+              <span className={`UI_SURFACES.textSoftMid`}>Night Penalty</span>
               <SegmentedControl
                 value={cur("nightPenaltyMode") as SimulationAssumptions["nightPenaltyMode"]}
                 options={[
@@ -246,7 +246,7 @@ function AssumptionsPanel() {
             </div>
             {/* Person Height */}
             <div className="flex items-center justify-between gap-2">
-              <span className={`${UI_SURFACES.textSoftMid}`}>Person Height</span>
+              <span className={`UI_SURFACES.textSoftMid`}>Person Height</span>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
@@ -255,14 +255,14 @@ function AssumptionsPanel() {
                   step={0.05}
                   value={cur("personHeightM") as number}
                   onChange={(e) => setDraft((d) => ({ ...d, personHeightM: parseFloat(e.target.value) || d.personHeightM }))}
-                  className={`w-16 rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-0.5 text-right font-mono text-[9px] text-white outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
+                  className={`w-16 rounded border UI_SURFACES.borderThin UI_SURFACES.card px-1.5 py-0.5 text-right font-mono text-[9px] text-white outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
                 />
-                <span className={`${UI_SURFACES.textDimMid}`}>m</span>
+                <span className={`UI_SURFACES.textDimMid`}>m</span>
               </div>
             </div>
             {/* Wall Height */}
             <div className="flex items-center justify-between gap-2">
-              <span className={`${UI_SURFACES.textSoftMid}`}>Wall Height</span>
+              <span className={`UI_SURFACES.textSoftMid`}>Wall Height</span>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
@@ -271,12 +271,12 @@ function AssumptionsPanel() {
                   step={0.1}
                   value={cur("wallHeightM") as number}
                   onChange={(e) => setDraft((d) => ({ ...d, wallHeightM: parseFloat(e.target.value) || d.wallHeightM }))}
-                  className={`w-16 rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-0.5 text-right font-mono text-[9px] text-white outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
+                  className={`w-16 rounded border UI_SURFACES.borderThin UI_SURFACES.card px-1.5 py-0.5 text-right font-mono text-[9px] text-white outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
                 />
-                <span className={`${UI_SURFACES.textDimMid}`}>m</span>
+                <span className={`UI_SURFACES.textDimMid`}>m</span>
               </div>
             </div>
-            <div className={`pt-1 text-[8px] ${UI_SURFACES.textDim}`}>Changes apply on next simulation run.</div>
+            <div className={`pt-1 text-[8px] UI_SURFACES.textDim`}>Changes apply on next simulation run.</div>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-1.5 text-[9px]">
@@ -303,7 +303,7 @@ function ReportBullet({ color, label, text }: { color: string; label: string; te
   return (
     <div className="flex items-start gap-2 text-[9px] leading-relaxed">
       <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
-      <span className="${UI_SURFACES.hoverTextSoft}">
+      <span className="UI_SURFACES.hoverTextSoft">
         <span style={{ color }} className="font-semibold">{label}: </span>
         {text}
       </span>
@@ -321,9 +321,9 @@ function ReportSummaryPanel() {
   return (
     <BottomSection
       title="Report Summary (Latest Run)"
-      action={<FileText className={`h-3 w-3 ${UI_SURFACES.textDimMid}`} />}
+      action={<FileText className={`h-3 w-3 UI_SURFACES.textDimMid`} />}
     >
-      <div className={`flex h-full flex-col rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+      <div className={`flex h-full flex-col rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
         <div className="flex-1 space-y-1.5 overflow-y-auto">
           {reportSummary ? reportSummary.map((line) => (
             <ReportBullet
@@ -341,14 +341,14 @@ function ReportSummaryPanel() {
               text={line.text}
             />
           )) : (
-            <div className={`rounded-lg border border-dashed ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 py-3 text-[10px] ${UI_SURFACES.textSoftMid}`}>
+            <div className={`rounded-lg border border-dashed UI_SURFACES.borderThin UI_SURFACES.card px-2.5 py-3 text-[10px] UI_SURFACES.textSoftMid`}>
               Run simulation to populate the report summary.
             </div>
           )}
         </div>
         <button type="button"
           onClick={() => setBottomTab("report")}
-          className={`mt-2 inline-flex w-fit items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[8px] ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white`}
+          className={`mt-2 inline-flex w-fit items-center gap-1 rounded-md border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-1 text-[8px] UI_SURFACES.textBody transition-colors UI_SURFACES.hoverBorderSubtle hover:text-white`}
         >
           Open Report Lite
         </button>
@@ -364,13 +364,13 @@ function EnvironmentPanel() {
 
   return (
     <BottomSection title="Environment">
-      <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+      <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
         <div className="space-y-2">
           {rows.map((row) => (
             <div key={row.label} className="flex items-center gap-2 text-[9px]">
               {row.label === "Mode" ? <Lightbulb className="h-3.5 w-3.5 text-yellow-400" /> : null}
-              <span className={`${UI_SURFACES.textSoftMid}`}>{row.label}</span>
-              <span className="ml-auto text-right ${UI_SURFACES.textBody2}">{row.value}</span>
+              <span className={`UI_SURFACES.textSoftMid`}>{row.label}</span>
+              <span className="ml-auto text-right UI_SURFACES.textBody2">{row.value}</span>
             </div>
           ))}
         </div>
@@ -382,7 +382,7 @@ function EnvironmentPanel() {
 export function BottomRow() {
   return (
     <div
-      className={`{grid flex-shrink-0 grid-cols-4 divide-x divide-[#1e2130] border-t ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel}}`}
+      className={`{grid flex-shrink-0 grid-cols-4 divide-x divide-[#1e2130] border-t UI_SURFACES.borderPanel UI_SURFACES.panel}`}
       style={{ height: 148 }}
     >
       <div className="flex overflow-hidden px-3 py-2"><SnapshotsPanel /></div>

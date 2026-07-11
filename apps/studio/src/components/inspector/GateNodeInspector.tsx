@@ -27,9 +27,9 @@ export function GateNodeInspector() {
 
   return (
     <>
-      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-b UI_SURFACES.borderPanel px-3 py-3}`}>
         <div className="text-[12px] font-semibold text-white">{gate.label}</div>
-        <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Gate · {gate.gateType}</div>
+        <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Gate · {gate.gateType}</div>
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">

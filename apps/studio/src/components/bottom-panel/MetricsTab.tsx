@@ -18,8 +18,8 @@ function MetricCard({ label, children, className = "" }: {
   label: string; children: React.ReactNode; className?: string;
 }) {
   return (
-    <div className={`flex flex-col items-center justify-between px-3 py-2.5 border-r ${UI_SURFACES.borderPanel} min-w-0 ${className}`}>
-      <div className={`text-[9px] ${UI_SURFACES.textMuted} font-medium tracking-wide uppercase mb-2 text-center w-full`}>
+    <div className={`flex flex-col items-center justify-between px-3 py-2.5 border-r UI_SURFACES.borderPanel min-w-0 ${className}`}>
+      <div className={`text-[9px] UI_SURFACES.textMuted font-medium tracking-wide uppercase mb-2 text-center w-full`}>
         {label}
       </div>
       {children}
@@ -32,13 +32,13 @@ function SignalRow({ label, value, detail, status }: {
 }) {
   const dotColor = status === "good" ? "bg-emerald-500"
     : status === "warn" ? "bg-amber-500"
-    : "${UI_SURFACES.textDim}";
+    : "UI_SURFACES.textDim";
   return (
-    <div className={`flex items-center gap-2 rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+    <div className={`flex items-center gap-2 rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
-      <span className={`min-w-[100px] text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>{label}</span>
-      <span className={`ml-auto text-[10px] font-semibold ${UI_SURFACES.textBody2}`}>{value}</span>
-      <span className="hidden text-[8px] ${UI_SURFACES.textMuted7} sm:inline">{detail}</span>
+      <span className={`min-w-[100px] text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>{label}</span>
+      <span className={`ml-auto text-[10px] font-semibold UI_SURFACES.textBody2`}>{value}</span>
+      <span className="hidden text-[8px] UI_SURFACES.textMuted7 sm:inline">{detail}</span>
     </div>
   );
 }
@@ -56,29 +56,29 @@ function ConfidenceCard({ confidence, zones }: { confidence: ConfidenceBand; zon
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const summary = formatConfidenceSummary(confidence, zones as any);
   return (
-    <div className={`rounded-xl border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-3 py-2.5`}>
+    <div className={`rounded-xl border UI_SURFACES.borderFaint UI_SURFACES.panel px-3 py-2.5`}>
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>Simulation Confidence</span>
+          <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textMuted`}>Simulation Confidence</span>
           <TruthBadge label="simulated" />
         </div>
         <span className={`rounded-md border px-2 py-0.5 text-[8px] font-bold tracking-wider ${style.bg} ${style.text} ${style.border}`}>
           {style.label}
         </span>
       </div>
-      <p className="mb-2 text-[9px] leading-relaxed ${UI_SURFACES.textMuted2}">{summary}</p>
+      <p className="mb-2 text-[9px] leading-relaxed UI_SURFACES.textMuted2">{summary}</p>
       {confidence.sensitiveTo.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          <span className={`text-[8px] uppercase tracking-wider ${UI_SURFACES.textDim}`}>Sensitive to:</span>
+          <span className={`text-[8px] uppercase tracking-wider UI_SURFACES.textDim`}>Sensitive to:</span>
           {confidence.sensitiveTo.map((s) => (
-            <span key={s} className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeepAlt} px-1.5 py-0.5 text-[8px] ${UI_SURFACES.textSoftBright}`}>{s}</span>
+            <span key={s} className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.panelDeepAlt px-1.5 py-0.5 text-[8px] UI_SURFACES.textSoftBright`}>{s}</span>
           ))}
         </div>
       )}
       {confidence.reasonCodes.length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
           {confidence.reasonCodes.map((r) => (
-            <span key={r} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.page} px-1.5 py-0.5 text-[7px] uppercase tracking-wider ${UI_SURFACES.textDim}`}>{r}</span>
+            <span key={r} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.page px-1.5 py-0.5 text-[7px] uppercase tracking-wider UI_SURFACES.textDim`}>{r}</span>
           ))}
         </div>
       )}
@@ -125,16 +125,16 @@ function PostureScoreCard() {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <div className={`text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted} mb-1`}>Security Posture (300–850)</div>
-        <div className={`h-1.5 w-full rounded-full ${UI_SURFACES.borderFaint} overflow-hidden`}>
+        <div className={`text-[8px] uppercase tracking-[0.14em] UI_SURFACES.textMuted mb-1`}>Security Posture (300–850)</div>
+        <div className={`h-1.5 w-full rounded-full UI_SURFACES.borderFaint overflow-hidden`}>
           <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: style.color }} />
         </div>
       </div>
       <div className="flex gap-2 shrink-0">
         {Object.entries(posture.factorScores).map(([key, val]) => (
           <div key={key} className="text-center min-w-[40px]">
-            <div className={`text-[11px] font-semibold ${UI_SURFACES.textBody}`}>{val as number}</div>
-            <div className={`text-[7px] uppercase tracking-wider ${UI_SURFACES.textMuted}`}>{POSTURE_FACTOR_LABELS[key] ?? key}</div>
+            <div className={`text-[11px] font-semibold UI_SURFACES.textBody`}>{val as number}</div>
+            <div className={`text-[7px] uppercase tracking-wider UI_SURFACES.textMuted`}>{POSTURE_FACTOR_LABELS[key] ?? key}</div>
           </div>
         ))}
       </div>
@@ -275,9 +275,9 @@ export function MetricsTab() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className={`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-3 py-2 text-[9px] ${UI_SURFACES.textMuted5} shrink-0}`}>
+      <div className={`{flex items-center justify-between border-b UI_SURFACES.borderPanel px-3 py-2 text-[9px] UI_SURFACES.textMuted5 shrink-0}`}>
         <div className="flex items-center gap-2">
-          <span className={`font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textBody}`}>Truth:</span>
+          <span className={`font-semibold uppercase tracking-[0.14em] UI_SURFACES.textBody`}>Truth:</span>
           <TruthBadge label="simulated" />
         </div>
         <div className="max-w-[32rem] truncate text-right" title={truthLabelDetail("simulated")}>{truthLabelDetail("simulated")}</div>
@@ -289,7 +289,7 @@ export function MetricsTab() {
       </div>
 
       {/* ── Main metric cards: 6-column grid ── */}
-      <div className={`{grid shrink-0 gap-2 border-b ${UI_SURFACES.borderPanel} py-2}`} style={{gridTemplateColumns: "repeat(6, minmax(0, 1fr))"}}>
+      <div className={`{grid shrink-0 gap-2 border-b UI_SURFACES.borderPanel py-2}`} style={{gridTemplateColumns: "repeat(6, minmax(0, 1fr))"}}>
 
         {/* 1: Overall Coverage */}
         <MetricCard label="Overall Coverage (Detection)">
@@ -312,12 +312,12 @@ export function MetricsTab() {
         <MetricCard label="Critical Zones">
           <div className="text-center">
             <div className="text-[28px] font-bold text-white leading-none">
-              {zonesPass}<span className={`text-[16px] ${UI_SURFACES.textMuted}`}>/{zonesTotal}</span>
+              {zonesPass}<span className={`text-[16px] UI_SURFACES.textMuted`}>/{zonesTotal}</span>
             </div>
-            <div className={`text-[9px] ${UI_SURFACES.textSoftMid} mt-0.5`}>Zones Passing</div>
+            <div className={`text-[9px] UI_SURFACES.textSoftMid mt-0.5`}>Zones Passing</div>
             {result.criticalZoneResults.map((z) => (
               <div key={z.zoneId} className="mt-2">
-                <div className={`text-[9px] ${UI_SURFACES.textMuted5} mb-0.5`}>{z.label}</div>
+                <div className={`text-[9px] UI_SURFACES.textMuted5 mb-0.5`}>{z.label}</div>
                 <Badge variant={z.status === "pass" ? "green" : "red"}>
                   {z.status === "pass" ? "PASS" : "FAILS"}
                 </Badge>
@@ -338,7 +338,7 @@ export function MetricsTab() {
               </>
             )}
             {offlineCams === 0 && (
-              <div className={`text-[9px] ${UI_SURFACES.textMuted} mt-1`}>0 Offline</div>
+              <div className={`text-[9px] UI_SURFACES.textMuted mt-1`}>0 Offline</div>
             )}
           </div>
         </MetricCard>
@@ -354,23 +354,23 @@ export function MetricsTab() {
             sublabel={qualityLabel}
           />
           {selectedCriticalZone ? (
-            <div className={`mt-1 space-y-0.5 text-[9px] ${UI_SURFACES.textSoftMid}`}>
+            <div className={`mt-1 space-y-0.5 text-[9px] UI_SURFACES.textSoftMid`}>
               <div>
-                Target: <span className={`font-semibold ${UI_SURFACES.textNearAlt}`}>
+                Target: <span className={`font-semibold UI_SURFACES.textNearAlt`}>
                   {selectedCriticalZone.requiredQuality.toUpperCase()}
                 </span>
                 {selectedTargetRequirement ? (
-                  <span className={`${UI_SURFACES.textMuted}`}> · default {selectedTargetRequirement.defaultRequiredQuality} for {selectedCriticalZone.targetType.replace(/_/g, " ")}</span>
+                  <span className={`UI_SURFACES.textMuted`}> · default {selectedTargetRequirement.defaultRequiredQuality} for {selectedCriticalZone.targetType.replace(/_/g, " ")}</span>
                 ) : null}
               </div>
               {selectedTargetRequirement ? (
-                <div className="${UI_SURFACES.textMuted7}">
+                <div className="UI_SURFACES.textMuted7">
                   Threshold: {selectedTargetRequirement.ppmThreshold} · {selectedTargetRequirement.rationale}
                 </div>
               ) : null}
             </div>
           ) : (
-            <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftMid}`}>
+            <div className={`mt-1 text-[9px] UI_SURFACES.textSoftMid`}>
               Select a critical zone to show the target quality requirement.
             </div>
           )}
@@ -383,16 +383,16 @@ export function MetricsTab() {
             <div className="mt-1 text-[10px] font-bold tracking-wide" style={{ color: worstColor }}>
               {worstLabel}
             </div>
-            <div className={`text-[9px] ${UI_SURFACES.textSoftMid} mt-1`}>{blockageLabel}</div>
+            <div className={`text-[9px] UI_SURFACES.textSoftMid mt-1`}>{blockageLabel}</div>
             {fragilityPct !== null ? (
-              <div className={`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-1.5}`}>
-                <div className={`text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted}`}>Fragility</div>
+              <div className={`{mt-2 border-t UI_SURFACES.borderPanel pt-1.5}`}>
+                <div className={`text-[8px] uppercase tracking-[0.14em] UI_SURFACES.textMuted`}>Fragility</div>
                 <div className="text-[13px] font-semibold leading-none" style={{ color: fragilityColor }}>
                   {fragilityPct}% <span className="text-[9px] font-normal" style={{ color: fragilityColor }}>
                     {fragilityPct <= 30 ? "ROBUST" : fragilityPct <= 60 ? "MODERATE" : "FRAGILE"}
                   </span>
                 </div>
-                <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textMuted}`}>
+                <div className={`mt-0.5 text-[8px] UI_SURFACES.textMuted`}>
                   {fragilitySummary!.fragileCellCount} fragile · {fragilitySummary!.robustCellCount} robust
                 </div>
               </div>
@@ -407,14 +407,14 @@ export function MetricsTab() {
               <div className={`text-[22px] font-bold ${UI_TONES.success.textBright} leading-none`}>
                 {Math.round(result.recognitionAreaPct)}%
               </div>
-              <div className={`text-[8px] ${UI_SURFACES.textSoftMid} mt-1`}>Recognition</div>
+              <div className={`text-[8px] UI_SURFACES.textSoftMid mt-1`}>Recognition</div>
             </div>
-            <div className={`h-8 w-px ${UI_SURFACES.bgPanel}`} />
+            <div className={`h-8 w-px UI_SURFACES.bgPanel`} />
             <div className="text-center">
               <div className={`text-[22px] font-bold ${UI_TONES.info.textBright} leading-none`}>
                 {Math.round(result.identificationAreaPct)}%
               </div>
-              <div className={`text-[8px] ${UI_SURFACES.textSoftMid} mt-1`}>Identification</div>
+              <div className={`text-[8px] UI_SURFACES.textSoftMid mt-1`}>Identification</div>
             </div>
           </div>
         </MetricCard>
@@ -425,9 +425,9 @@ export function MetricsTab() {
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
         {advancedSignals.length > 0 && (
           <div>
-            <div className={`mb-2 flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
+            <div className={`mb-2 flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>
               <span>Advanced Coverage Signals</span>
-              <span className={`${UI_SURFACES.textDim} font-normal`}>· {advancedSignals.length} metrics</span>
+              <span className={`UI_SURFACES.textDim font-normal`}>· {advancedSignals.length} metrics</span>
             </div>
             <div className="grid gap-1.5 sm:grid-cols-2">
               {advancedSignals.map((signal) => (

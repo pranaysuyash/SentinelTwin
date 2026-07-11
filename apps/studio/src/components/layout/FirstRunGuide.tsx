@@ -72,27 +72,27 @@ export default function FirstRunGuide({ onClose, onOpenHelp }: { onClose: () => 
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/55 backdrop-blur-sm" onClick={handleStart}>
-      <div className="w-[560px] max-w-[92vw] rounded-xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panelDeep} p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-[560px] max-w-[92vw] rounded-xl border UI_SURFACES.borderStandard UI_SURFACES.panelDeep p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="text-[13px] font-semibold text-white">Welcome to SentinelTwin Studio</div>
-        <div className="mt-2 text-[12px] ${UI_SURFACES.textMuted4}">First run flow:</div>
-        <ol className="mt-2 space-y-1 text-[12px] ${UI_SURFACES.textBody}">
+        <div className="mt-2 text-[12px] UI_SURFACES.textMuted4">First run flow:</div>
+        <ol className="mt-2 space-y-1 text-[12px] UI_SURFACES.textBody">
           <li>1. Place/select cameras and assumptions.</li>
-          <li>2. Run simulation with <kbd className={`rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-1`}>Ctrl/Cmd + Enter</kbd>.</li>
+          <li>2. Run simulation with <kbd className={`rounded border UI_SURFACES.borderDark UI_SURFACES.card px-1`}>Ctrl/Cmd + Enter</kbd>.</li>
           <li>3. Open Security Outcome to review failures and causes.</li>
           <li>4. Preview Fix, compare before/after, then apply.</li>
         </ol>
-        <div className={`mt-4 flex items-center justify-between border-t ${UI_SURFACES.borderSubtle} pt-3`}>
-          <label className="flex cursor-pointer items-center gap-2 text-[11px] ${UI_SURFACES.textMuted4} select-none">
+        <div className={`mt-4 flex items-center justify-between border-t UI_SURFACES.borderSubtle pt-3`}>
+          <label className="flex cursor-pointer items-center gap-2 text-[11px] UI_SURFACES.textMuted4 select-none">
             <input
               type="checkbox"
               checked={dontShowAgain}
               onChange={(e) => setDontShowAgain(e.target.checked)}
-              className={`h-3.5 w-3.5 rounded ${UI_SURFACES.borderElevated} ${UI_SURFACES.card} text-emerald-500 focus:ring-0 focus:ring-offset-0`}
+              className={`h-3.5 w-3.5 rounded UI_SURFACES.borderElevated UI_SURFACES.card text-emerald-500 focus:ring-0 focus:ring-offset-0`}
             />
             Don&apos;t show this guide again on startup
           </label>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={onOpenHelp} className={`rounded border ${UI_SURFACES.borderElevated} px-3 py-1.5 text-[11px] ${UI_SURFACES.textBluePale} ${UI_SURFACES.hoverBgDark}`}>Open Help</button>
+            <button type="button" onClick={onOpenHelp} className={`rounded border UI_SURFACES.borderElevated px-3 py-1.5 text-[11px] UI_SURFACES.textBluePale UI_SURFACES.hoverBgDark`}>Open Help</button>
             <button
               type="button"
               onClick={handleStart}

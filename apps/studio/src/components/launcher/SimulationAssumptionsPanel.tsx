@@ -37,7 +37,7 @@ export function SimulationAssumptionsPanel({
   return (
     <div className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
       <div className="flex items-center justify-between">
-        <div className={`text-[10px] font-bold uppercase tracking-[0.2em] ${UI_SURFACES.textSoftBright}`}>SIMULATION ASSUMPTIONS</div>
+        <div className={`text-[10px] font-bold uppercase tracking-[0.2em] UI_SURFACES.textSoftBright`}>SIMULATION ASSUMPTIONS</div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={onOpenStudio} className="text-[10px] text-sky-300 hover:text-sky-200">Edit</button>
           <HideSectionButton label="simulation assumptions" onClick={onHide} />
@@ -45,27 +45,27 @@ export function SimulationAssumptionsPanel({
       </div>
       <div className="mt-2 space-y-1.5">
         <div className="flex items-center justify-between">
-          <span className={`text-[10px] ${UI_SURFACES.textSoftBright}`}>DORI Model</span>
-          <span className={`text-[10px] font-medium ${UI_SURFACES.textBody}`}>{formatDoriStandard(sceneAssumptions.doriStandard)}</span>
+          <span className={`text-[10px] UI_SURFACES.textSoftBright`}>DORI Model</span>
+          <span className={`text-[10px] font-medium UI_SURFACES.textBody`}>{formatDoriStandard(sceneAssumptions.doriStandard)}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className={`text-[10px] ${UI_SURFACES.textSoftBright}`}>Person Height</span>
-          <span className={`text-[10px] font-medium ${UI_SURFACES.textBody}`}>{sceneAssumptions.personHeightM} m</span>
+          <span className={`text-[10px] UI_SURFACES.textSoftBright`}>Person Height</span>
+          <span className={`text-[10px] font-medium UI_SURFACES.textBody`}>{sceneAssumptions.personHeightM} m</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className={`text-[10px] ${UI_SURFACES.textSoftBright}`}>Lighting</span>
-          <span className={`text-[10px] font-medium ${UI_SURFACES.textBody}`}>{sceneAssumptions.timeOfDay === "night" ? "Night Mode" : sceneAssumptions.timeOfDay === "custom" ? "Custom" : "Day Mode"}</span>
+          <span className={`text-[10px] UI_SURFACES.textSoftBright`}>Lighting</span>
+          <span className={`text-[10px] font-medium UI_SURFACES.textBody`}>{sceneAssumptions.timeOfDay === "night" ? "Night Mode" : sceneAssumptions.timeOfDay === "custom" ? "Custom" : "Day Mode"}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className={`text-[10px] ${UI_SURFACES.textSoftBright}`}>Grid Resolution</span>
-          <span className={`text-[10px] font-medium ${UI_SURFACES.textBody}`}>{sceneAssumptions.pixelsPerMeter.detection} / {sceneAssumptions.pixelsPerMeter.observation} / {sceneAssumptions.pixelsPerMeter.recognition} / {sceneAssumptions.pixelsPerMeter.identification} PPM</span>
+          <span className={`text-[10px] UI_SURFACES.textSoftBright`}>Grid Resolution</span>
+          <span className={`text-[10px] font-medium UI_SURFACES.textBody`}>{sceneAssumptions.pixelsPerMeter.detection} / {sceneAssumptions.pixelsPerMeter.observation} / {sceneAssumptions.pixelsPerMeter.recognition} / {sceneAssumptions.pixelsPerMeter.identification} PPM</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className={`text-[10px] ${UI_SURFACES.textSoftBright}`}>Glass Handling</span>
-          <span className={`text-[10px] font-medium ${UI_SURFACES.textBody}`}>{sceneAssumptions.nightPenaltyMode === "none" ? "Standard" : "Adjusted"}</span>
+          <span className={`text-[10px] UI_SURFACES.textSoftBright`}>Glass Handling</span>
+          <span className={`text-[10px] font-medium UI_SURFACES.textBody`}>{sceneAssumptions.nightPenaltyMode === "none" ? "Standard" : "Adjusted"}</span>
         </div>
       </div>
-      <button type="button" onClick={onOpenStudio} className={`mt-3 w-full text-center text-[10px] ${UI_SURFACES.textSoftBright} hover:text-white transition-colors`}>
+      <button type="button" onClick={onOpenStudio} className={`mt-3 w-full text-center text-[10px] UI_SURFACES.textSoftBright hover:text-white transition-colors`}>
         View all assumptions
       </button>
     </div>

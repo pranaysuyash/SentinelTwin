@@ -50,19 +50,19 @@ export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } =
   const groupedSelection = selectedCount > 1;
 
   return (
-    <aside className={`{flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeep}}`}>
+    <aside className={`{flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l UI_SURFACES.borderPanel UI_SURFACES.panelDeep}`}>
       {showHeader ? (
-        <div className={`{flex h-8 items-center border-b ${UI_SURFACES.borderPanel} px-3 text-[9px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textMuted}}`}>
+        <div className={`{flex h-8 items-center border-b UI_SURFACES.borderPanel px-3 text-[9px] font-semibold uppercase tracking-[0.22em] UI_SURFACES.textMuted}`}>
           Inspector
         </div>
       ) : null}
 
       {groupedSelection ? (
-        <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+        <div className={`{border-b UI_SURFACES.borderPanel px-3 py-3}`}>
           <div className="mb-2 flex items-start justify-between gap-3">
             <div>
               <div className="text-[12px] font-semibold text-white">{selectedCount} objects selected</div>
-              <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
+              <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>
                 Primary inspector still follows the first selection
               </div>
             </div>
@@ -72,7 +72,7 @@ export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } =
             <button
               type="button"
               onClick={() => duplicateNode(selectedId ?? selectedNodeIds[0] ?? "")}
-              className={`flex h-8 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgDark}`}
+              className={`flex h-8 items-center justify-center gap-1.5 rounded-lg border UI_SURFACES.border UI_SURFACES.card text-[10px] font-medium UI_SURFACES.textBody transition-colors UI_SURFACES.hoverBorderBright UI_SURFACES.hoverBgDark`}
             >
               <Copy className="h-3 w-3" />
               Duplicate
@@ -88,7 +88,7 @@ export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } =
             <button
               type="button"
               onClick={() => clearSelection()}
-              className={`flex h-8 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgDark}`}
+              className={`flex h-8 items-center justify-center gap-1.5 rounded-lg border UI_SURFACES.border UI_SURFACES.card text-[10px] font-medium UI_SURFACES.textBody transition-colors UI_SURFACES.hoverBorderBright UI_SURFACES.hoverBgDark`}
             >
               Clear
             </button>

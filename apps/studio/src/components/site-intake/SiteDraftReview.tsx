@@ -251,8 +251,8 @@ function DraftSceneMiniPreview({ scene, warnings }: { scene: SecurityScene; warn
   ];
 
   return (
-    <div className="mt-3 rounded-xl border border-[color:var(--border)] ${UI_SURFACES.bgDeep} p-2">
-      <svg viewBox={`0 0 ${width} ${height}`} className="aspect-video w-full rounded-lg ${UI_SURFACES.panel}">
+    <div className="mt-3 rounded-xl border border-[color:var(--border)] UI_SURFACES.bgDeep p-2">
+      <svg viewBox={`0 0 ${width} ${height}`} className="aspect-video w-full rounded-lg UI_SURFACES.panel">
         {scene.criticalZones.map((zone) => (
           <polygon
             key={zone.id}

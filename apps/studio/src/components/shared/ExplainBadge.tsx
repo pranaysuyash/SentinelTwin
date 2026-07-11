@@ -38,7 +38,7 @@ export function ExplainBadge({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "inline-flex items-center justify-center gap-1 rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.hoverBgSubtle} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderBright} hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50",
+          "inline-flex items-center justify-center gap-1 rounded border UI_SURFACES.borderDark UI_SURFACES.hoverBgSubtle UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBorderBright hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50",
           label ? "h-6 px-1.5 text-[9px] font-medium" : "h-4 w-4",
         )}
         aria-label={label ? `${label}: ${title}` : title}
@@ -52,7 +52,7 @@ export function ExplainBadge({
           id={id}
           role="tooltip"
           className={cn(
-            "absolute top-full z-50 mt-1 w-64 rounded-md border ${UI_SURFACES.borderDark} ${UI_SURFACES.panelDeep} p-2 text-[10px] leading-snug ${UI_SURFACES.textBody2} shadow-xl shadow-black/35",
+            "absolute top-full z-50 mt-1 w-64 rounded-md border UI_SURFACES.borderDark UI_SURFACES.panelDeep p-2 text-[10px] leading-snug UI_SURFACES.textBody2 shadow-xl shadow-black/35",
             side === "right" ? "left-0" : "right-0",
             panelClassName,
           )}

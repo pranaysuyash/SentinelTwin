@@ -514,7 +514,7 @@ function ReplayCollisionMarkers({
         </lineSegments>
       )}
       <SceneHtml position={[firstCollision.rawPosition[0], 0.55, firstCollision.rawPosition[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-        <div className={`rounded-md border ${UI_SURFACES.borderWarning}/50 bg-black/80 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textWarningLight}`}>
+        <div className={`rounded-md border UI_SURFACES.borderWarning/50 bg-black/80 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] UI_SURFACES.textWarningLight`}>
           Collision corrected
         </div>
       </SceneHtml>
@@ -574,7 +574,7 @@ function PlaybackControls({
           step={0.05}
           value={currentTime}
           onChange={(e) => onSeek(parseFloat(e.target.value))}
-          className="relative h-1.5 w-full cursor-pointer appearance-none rounded-full bg-transparent [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:${UI_SURFACES.bgInfoLight} [&::-webkit-slider-thumb]:shadow-[0_0_12px_rgba(56,189,248,0.8)] [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150 [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:active:scale-90"
+          className="relative h-1.5 w-full cursor-pointer appearance-none rounded-full bg-transparent [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:UI_SURFACES.bgInfoLight [&::-webkit-slider-thumb]:shadow-[0_0_12px_rgba(56,189,248,0.8)] [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150 [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:active:scale-90"
           style={{
             background: `linear-gradient(to right, #38bdf8 ${progress * 100}%, #1f2536 ${progress * 100}%)`,
           }}
@@ -672,7 +672,7 @@ function PlaybackControls({
               className={`rounded px-1.5 py-0.5 ${TYPE_SCALE.micro.class} font-medium transition-colors ${
                 speed === s
                   ? `${UI_TONES.info.bg} ${UI_TONES.info.text}`
-                : `${UI_TONES.neutral.text} ${UI_SURFACES.hoverBgMuted} ${REPLAY_SURFACES.mutedText2}`
+                : `${UI_TONES.neutral.text} UI_SURFACES.hoverBgMuted ${REPLAY_SURFACES.mutedText2}`
               }`}
             >
               {s}×
@@ -781,7 +781,7 @@ function CoverageMiniLegend() {
             className="h-1.5 w-1.5 rounded-full"
             style={{ backgroundColor: QUALITY_COLOR[q] }}
           />
-          <span className={`text-[7px] uppercase tracking-[0.08em] ${UI_SURFACES.textDimMid}`}>
+          <span className={`text-[7px] uppercase tracking-[0.08em] UI_SURFACES.textDimMid`}>
             {QUALITY_ABBR[q]}
           </span>
         </div>
@@ -908,8 +908,8 @@ function InfoOverlay({
       </div>
 
       {collisionCount > 0 && (
-        <div className="mb-2 rounded-lg border ${UI_SURFACES.borderWarning}/30 bg-[#451a03]/40 px-2 py-1.5">
-          <div className="text-[7px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textWarningLight}">Collision guard</div>
+        <div className="mb-2 rounded-lg border UI_SURFACES.borderWarning/30 bg-[#451a03]/40 px-2 py-1.5">
+          <div className="text-[7px] font-semibold uppercase tracking-[0.16em] UI_SURFACES.textWarningLight">Collision guard</div>
           <div className="mt-0.5 text-[9px] text-[#fed7aa]">
             {collisionCount} path sample{collisionCount === 1 ? "" : "s"} corrected away from
             {firstCollisionLabel ? ` ${firstCollisionLabel}` : " an obstruction"}
@@ -933,7 +933,7 @@ function InfoOverlay({
                   </span>
                 </div>
                 {/* Mini bar */}
-                <div className="mt-0.5 h-0.5 w-full overflow-hidden rounded-full ${UI_SURFACES.hoverBg}">
+                <div className="mt-0.5 h-0.5 w-full overflow-hidden rounded-full UI_SURFACES.hoverBg">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
@@ -1369,8 +1369,8 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
           )}
           {!compactViewport && (
             <div className={`mt-2 flex flex-wrap items-center gap-1.5 text-[9px] ${REPLAY_SURFACES.mutedText2}`}>
-              <span className={`rounded-md border ${UI_SURFACES.borderStrong} bg-black/30 px-2 py-0.5`}>Time {safeCurrentTime.toFixed(1)}s</span>
-              <span className={`rounded-md border ${UI_SURFACES.borderStrong} bg-black/30 px-2 py-0.5`}>Visible {activePathResult ? `${replayCameraStateSummary.visibleNow.length}/${scene.cameras.length}` : "--"}</span>
+              <span className={`rounded-md border UI_SURFACES.borderStrong bg-black/30 px-2 py-0.5`}>Time {safeCurrentTime.toFixed(1)}s</span>
+              <span className={`rounded-md border UI_SURFACES.borderStrong bg-black/30 px-2 py-0.5`}>Visible {activePathResult ? `${replayCameraStateSummary.visibleNow.length}/${scene.cameras.length}` : "--"}</span>
               <button
                 type="button"
                 onClick={handlePlayPause}
@@ -1381,7 +1381,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
               <button
                 type="button"
                 onClick={handleReset}
-                className={`rounded-md border ${UI_SURFACES.borderStrong} bg-black/30 px-2 py-0.5 font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverText}`}
+                className={`rounded-md border UI_SURFACES.borderStrong bg-black/30 px-2 py-0.5 font-medium UI_SURFACES.textBody transition-colors UI_SURFACES.hoverText`}
               >
                 Reset
               </button>
@@ -1400,7 +1400,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <select
-                className={`min-w-55 rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-2.5 py-1.5 text-[11px] font-medium ${UI_SURFACES.textNear} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors ${UI_SURFACES.hoverBorderSubtle}`}
+                className={`min-w-55 rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-2.5 py-1.5 text-[11px] font-medium UI_SURFACES.textNear outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors UI_SURFACES.hoverBorderSubtle`}
                 value={activePathId ?? ""}
                 onChange={(event) => handlePathChange(event.target.value || null)}
                 aria-label="Select active replay path"
@@ -1416,7 +1416,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
                 type="button"
                 onClick={handleEditPath}
                 disabled={!activePath}
-                className={`rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-3 py-1.5 text-[10px] font-medium ${REPLAY_SURFACES.bodyText} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${REPLAY_SURFACES.hoverText} disabled:cursor-not-allowed disabled:opacity-40`}
+                className={`rounded-lg border ${REPLAY_SURFACES.borderThin} ${REPLAY_SURFACES.card} px-3 py-1.5 text-[10px] font-medium ${REPLAY_SURFACES.bodyText} transition-colors UI_SURFACES.hoverBorderSubtle ${REPLAY_SURFACES.hoverText} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 Edit Path
               </button>
@@ -1455,7 +1455,7 @@ const handleSpeedChange = useCallback((nextSpeed: number) => {
       <button
         type="button"
         onClick={toggleImmersiveMode}
-        className={`absolute right-3 top-3 z-30 rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 px-3 py-1.5 text-[10px] font-medium ${REPLAY_SURFACES.bodyText} transition-colors ${UI_SURFACES.hoverBorderBright} ${REPLAY_SURFACES.hoverText}`}
+        className={`absolute right-3 top-3 z-30 rounded-lg border UI_SURFACES.borderDark UI_SURFACES.bgDeep/90 px-3 py-1.5 text-[10px] font-medium ${REPLAY_SURFACES.bodyText} transition-colors UI_SURFACES.hoverBorderBright ${REPLAY_SURFACES.hoverText}`}
       >
         {immersiveMode ? "Exit Focus" : "Focus"}
       </button>

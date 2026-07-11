@@ -10,7 +10,7 @@ interface ExposureBarProps {
 
 export function ExposureBar({ color, valuePct, animated = true }: ExposureBarProps) {
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full ${UI_SURFACES.hoverBg}">
+    <div className="h-1.5 w-full overflow-hidden rounded-full UI_SURFACES.hoverBg">
       {animated ? (
         <motion.div
           initial={{ width: 0 }}

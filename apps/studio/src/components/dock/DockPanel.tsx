@@ -58,7 +58,7 @@ export function DockPanel({
     return (
       <aside
         className={cn(
-          `group relative flex flex-shrink-0 items-center justify-center ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} transition-colors ${UI_SURFACES.hoverBg}`,
+          `group relative flex flex-shrink-0 items-center justify-center UI_SURFACES.borderPanel UI_SURFACES.panel transition-colors UI_SURFACES.hoverBg`,
           isBottom ? "flex-row border-t" : "flex-col border-r",
           side === "right" && "border-l border-r-0",
           className,
@@ -71,7 +71,7 @@ export function DockPanel({
           onClick={onToggle}
           onFocus={onFocus}
           className={cn(
-            `flex h-full w-full items-center justify-center ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverText}`,
+            `flex h-full w-full items-center justify-center UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverText`,
             attention && `${attentionTone.text} font-bold`,
           )}
           title={
@@ -102,7 +102,7 @@ export function DockPanel({
   return (
     <aside
       className={cn(
-        `relative flex flex-shrink-0 overflow-hidden ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel}`,
+        `relative flex flex-shrink-0 overflow-hidden UI_SURFACES.borderPanel UI_SURFACES.panel`,
         isBottom ? "flex-col border-t" : "flex-col",
         className,
       )}
@@ -116,7 +116,7 @@ export function DockPanel({
         type="button"
         onClick={onToggle}
         className={cn(
-          `absolute z-30 inline-flex h-6 w-6 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`,
+          `absolute z-30 inline-flex h-6 w-6 items-center justify-center rounded-md border UI_SURFACES.borderThin UI_SURFACES.card UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverText`,
           isBottom ? "right-2 top-2" : side === "left" ? "right-2 top-2" : "left-2 top-2",
         )}
         title={`Collapse ${title}`}

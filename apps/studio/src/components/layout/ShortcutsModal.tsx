@@ -39,24 +39,24 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className={`w-[420px] rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-4 shadow-2xl`}
+        className={`w-[420px] rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panelDeep p-4 shadow-2xl`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 text-[11px] font-semibold text-white">Keyboard Shortcuts</div>
-        <div className={`mb-3 rounded-lg border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panel} px-3 py-2 text-[9px] leading-relaxed ${UI_SURFACES.textMuted5}`}>
+        <div className={`mb-3 rounded-lg border UI_SURFACES.borderDeep UI_SURFACES.panel px-3 py-2 text-[9px] leading-relaxed UI_SURFACES.textMuted5`}>
           Selected cameras also expose drag handles on the canvas and the same actions in the right-click menu.
         </div>
         <div className="space-y-2">
           {shortcuts.map(({ keys, action }) => (
             <div key={keys} className="flex items-center justify-between">
-              <span className={`text-[10px] ${UI_SURFACES.textMuted5}`}>{action}</span>
-              <kbd className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-0.5 font-mono text-[10px] ${UI_SURFACES.textBody}`}>
+              <span className={`text-[10px] UI_SURFACES.textMuted5`}>{action}</span>
+              <kbd className={`rounded border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-0.5 font-mono text-[10px] UI_SURFACES.textBody`}>
                 {keys}
               </kbd>
             </div>
           ))}
         </div>
-        <p className={`mt-3 text-[9px] ${UI_SURFACES.textMuted}`}>Press <kbd className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1 font-mono text-[9px]`}>?</kbd> or click anywhere to close.</p>
+        <p className={`mt-3 text-[9px] UI_SURFACES.textMuted`}>Press <kbd className={`rounded border UI_SURFACES.borderThin UI_SURFACES.card px-1 font-mono text-[9px]`}>?</kbd> or click anywhere to close.</p>
       </div>
     </div>
   );

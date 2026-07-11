@@ -31,7 +31,7 @@ export interface QualityBarProps {
 
 export function QualityBar({ cells, segments = DEFAULT_SEGMENTS, className }: QualityBarProps) {
   if (!cells || cells.length === 0) {
-    return <div className={cn("h-3 rounded-sm ${UI_SURFACES.chip}", className)} />;
+    return <div className={cn("h-3 rounded-sm UI_SURFACES.chip", className)} />;
   }
 
   const total = cells.length;

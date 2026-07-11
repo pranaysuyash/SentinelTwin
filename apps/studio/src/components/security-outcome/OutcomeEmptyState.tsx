@@ -14,7 +14,7 @@ export function OutcomeEmptyState() {
   return (
     <div className="space-y-3 p-3">
       <RunSimulationPrompt
-        className={`rounded-xl border border-dashed ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-3 py-4`}
+        className={`rounded-xl border border-dashed UI_SURFACES.borderDark UI_SURFACES.panel px-3 py-4`}
         message="Simulation not run yet. Run the shared simulation to compute the security outcome."
       />
       {model.missingPrerequisites.length > 0 ? (

@@ -107,14 +107,14 @@ export function CommandBar() {
     return (
         <button type="button"
           onClick={() => setIsExpanded(true)}
-          className={`group absolute bottom-3 right-3 z-30 flex h-9 items-center gap-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/80 px-3 text-[10px] font-medium ${UI_SURFACES.textDimMid} shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-[border-color,color,box-shadow] ${UI_SURFACES.hoverBorderSubtle} hover:text-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.35)]`}
+          className={`group absolute bottom-3 right-3 z-30 flex h-9 items-center gap-2 rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel/80 px-3 text-[10px] font-medium UI_SURFACES.textDimMid shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-[border-color,color,box-shadow] UI_SURFACES.hoverBorderSubtle hover:text-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.35)]`}
         >
         <Sparkles className="h-3.5 w-3.5 text-emerald-400/70 group-hover:text-emerald-400" />
         <span className="hidden sm:inline">Guided Edit</span>
         <span className="hidden rounded-full border border-emerald-500/15 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] text-emerald-300 sm:inline">
           {mode.label}
         </span>
-        <span className={`hidden rounded-full border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] ${UI_SURFACES.textSoftBright} md:inline`}>
+        <span className={`hidden rounded-full border UI_SURFACES.borderThin UI_SURFACES.card px-1.5 py-0.5 text-[8px] UI_SURFACES.textSoftBright md:inline`}>
           {mode.providerLabel}
         </span>
         <span className={`hidden rounded-full border px-1.5 py-0.5 text-[8px] md:inline ${compactHealthClass}`}>
@@ -123,7 +123,7 @@ export function CommandBar() {
         <span className={`hidden rounded-full border px-1.5 py-0.5 text-[8px] md:inline ${compactTelemetryClass}`}>
           {hasMounted ? (telemetryStatus === "ready" ? "AI ready" : telemetryStatus === "guarded" ? "AI limited" : "AI paused") : "Syncing"}
         </span>
-        <kbd className={`ml-1 hidden rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1 py-0.5 text-[8px] ${UI_SURFACES.textDimMid} sm:inline`}>
+        <kbd className={`ml-1 hidden rounded border UI_SURFACES.borderThin UI_SURFACES.card px-1 py-0.5 text-[8px] UI_SURFACES.textDimMid sm:inline`}>
           ⌘K
         </kbd>
       </button>
@@ -138,17 +138,17 @@ export function CommandBar() {
       transition={{ duration: 0.15, ease: "easeOut" }}
       className="absolute bottom-3 left-3 right-3 z-30"
     >
-      <div className={`mx-auto max-w-2xl rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/95 p-2 shadow-[0_8px_40px_rgba(0,0,0,0.45)]`}>
-        <div className={`mb-2 flex items-start justify-between gap-2 rounded-xl border ${UI_SURFACES.borderFaint} ${UI_SURFACES.page}/70 px-3 py-2`}>
+      <div className={`mx-auto max-w-2xl rounded-2xl border UI_SURFACES.borderSubtle UI_SURFACES.panel/95 p-2 shadow-[0_8px_40px_rgba(0,0,0,0.45)]`}>
+        <div className={`mb-2 flex items-start justify-between gap-2 rounded-xl border UI_SURFACES.borderFaint UI_SURFACES.page/70 px-3 py-2`}>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="rounded-full border border-emerald-500/15 bg-emerald-500/10 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
                 {mode.label}
               </span>
-              <span className={`rounded-full border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-0.5 text-[8px] ${UI_SURFACES.textSoftBright}`}>
+              <span className={`rounded-full border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-0.5 text-[8px] UI_SURFACES.textSoftBright`}>
                 {mode.providerLabel}
               </span>
-              <span className={`rounded-full border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-0.5 text-[8px] ${UI_SURFACES.textSoftBright}`}>
+              <span className={`rounded-full border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-0.5 text-[8px] UI_SURFACES.textSoftBright`}>
                 {mode.cloudAvailable ? "Cloud review available" : "Local-only"}
               </span>
               <span className={`rounded-full border px-2 py-0.5 text-[8px] ${fullHealthClass}`}>
@@ -158,20 +158,20 @@ export function CommandBar() {
                 {hasMounted ? (telemetryStatus === "ready" ? "AI ready" : telemetryStatus === "guarded" ? "AI limited" : "AI paused") : "AI syncing"}
               </span>
             </div>
-            <p className={`mt-1 text-[10px] leading-snug ${UI_SURFACES.textSoftBright}`}>{modeDetail}</p>
-            <div className={`mt-1 flex flex-wrap items-center gap-1.5 text-[10px] leading-snug ${UI_SURFACES.textSoftBright}`}>
+            <p className={`mt-1 text-[10px] leading-snug UI_SURFACES.textSoftBright`}>{modeDetail}</p>
+            <div className={`mt-1 flex flex-wrap items-center gap-1.5 text-[10px] leading-snug UI_SURFACES.textSoftBright`}>
               <span>Readiness: {providerHealth.healthyProviders} ready / {providerHealth.partialProviders} limited / {providerHealth.blockedProviders} blocked.</span>
               <ExplainBadge
                 text="Guided edits can parse plain-language changes. The scene still changes through structured operations, and security impact must be verified by running the simulation."
                 side="right"
               />
             </div>
-            <p className={`mt-1 text-[10px] leading-snug ${UI_SURFACES.textSoftBright}`}>Review cost and response time: {providerTelemetry.activeCostLabel} · {providerTelemetry.activeLatencyLabel}.</p>
-            <p className={`mt-1 text-[10px] leading-snug ${UI_SURFACES.textSoftBright}`}>Policy gates: {providerTelemetry.stagePolicies.map((stage) => `${stage.stage}:${stage.ready ? "ready" : "guarded"}`).join(" · ")}.</p>
-            <p className={`mt-1 text-[10px] leading-snug ${UI_SURFACES.textSoftBright}`}>
+            <p className={`mt-1 text-[10px] leading-snug UI_SURFACES.textSoftBright`}>Review cost and response time: {providerTelemetry.activeCostLabel} · {providerTelemetry.activeLatencyLabel}.</p>
+            <p className={`mt-1 text-[10px] leading-snug UI_SURFACES.textSoftBright`}>Policy gates: {providerTelemetry.stagePolicies.map((stage) => `${stage.stage}:${stage.ready ? "ready" : "guarded"}`).join(" · ")}.</p>
+            <p className={`mt-1 text-[10px] leading-snug UI_SURFACES.textSoftBright`}>
               Last assisted edit: {latestAiActionTelemetry ? `${latestAiActionTelemetry.stage} · ${latestAiActionTelemetry.durationMs} ms · ~${latestAiActionTelemetry.estimatedTotalTokens} tokens` : "none yet"}.
             </p>
-            <p className={`mt-1 text-[10px] leading-snug ${UI_SURFACES.textSoftBright}`}>
+            <p className={`mt-1 text-[10px] leading-snug UI_SURFACES.textSoftBright`}>
               Usage trend: {aiActionTelemetrySummary.trendLabel} · {aiActionTelemetrySummary.trendNote}
             </p>
           </div>
@@ -180,7 +180,7 @@ export function CommandBar() {
               setIsExpanded(false);
               dismissError();
             }}
-            className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} p-1 ${UI_SURFACES.textMuted7} ${UI_SURFACES.hoverBorderSubtle} hover:text-white`}
+            className={`rounded-lg border UI_SURFACES.borderThin UI_SURFACES.card p-1 UI_SURFACES.textMuted7 UI_SURFACES.hoverBorderSubtle hover:text-white`}
           >
             <X className="h-3 w-3" />
           </button>
@@ -188,7 +188,7 @@ export function CommandBar() {
 
         {/* Status indicators */}
         {status.state !== "idle" && (
-          <div className={`mb-2 rounded-xl border ${UI_SURFACES.borderFaint} ${UI_SURFACES.page}/60 px-3 py-2`}>
+          <div className={`mb-2 rounded-xl border UI_SURFACES.borderFaint UI_SURFACES.page/60 px-3 py-2`}>
             {status.state === "parsing" && (
               <div className="flex items-center gap-2 text-[11px] text-amber-300">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -208,10 +208,10 @@ export function CommandBar() {
                   {status.message}
                 </div>
                 {status.descriptions.length > 0 ? (
-                  <ul className="space-y-1 rounded-md border ${UI_SURFACES.border} ${UI_SURFACES.panel} px-2.5 py-2 text-[10px] ${UI_SURFACES.textNearAlt}">
+                  <ul className="space-y-1 rounded-md border UI_SURFACES.border UI_SURFACES.panel px-2.5 py-2 text-[10px] UI_SURFACES.textNearAlt">
                     {status.descriptions.map((description, index) => (
                       <li key={`desc-${index}`} /* stable order */ className="flex items-center gap-2">
-                        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded ${UI_SURFACES.hoverBg} px-1 text-[8px] text-cyan-200">{index + 1}</span>
+                        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded UI_SURFACES.hoverBg px-1 text-[8px] text-cyan-200">{index + 1}</span>
                         <span>{description}</span>
                       </li>
                     ))}
@@ -229,7 +229,7 @@ export function CommandBar() {
                 <div className="flex justify-end gap-2">
                   <button type="button"
                     onClick={cancelPreview}
-                    className={`rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2.5 py-1 text-[10px] text-[#aab8d2] ${UI_SURFACES.hoverBorderBright} hover:text-white`}
+                    className={`rounded border UI_SURFACES.borderDark UI_SURFACES.card px-2.5 py-1 text-[10px] text-[#aab8d2] UI_SURFACES.hoverBorderBright hover:text-white`}
                   >
                     Cancel
                   </button>
@@ -295,7 +295,7 @@ export function CommandBar() {
             className="min-w-0 flex-1 bg-transparent text-[12px] text-white placeholder-[#4d566b] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 disabled:opacity-50"
           />
           <div className="flex items-center gap-1">
-            <span className={`text-[8px] ${UI_SURFACES.textDim}`}>Esc</span>
+            <span className={`text-[8px] UI_SURFACES.textDim`}>Esc</span>
           </div>
           <button type="button"
             onClick={handleSubmit}
@@ -327,14 +327,14 @@ export function CommandBar() {
                 setInput(hint);
                 inputRef.current?.focus();
               }}
-              className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} px-2 py-1 text-[9px] ${UI_SURFACES.textDimMid} transition-colors ${UI_SURFACES.borderDark} ${UI_SURFACES.hoverTextSoft}`}
+              className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.panelDeep px-2 py-1 text-[9px] UI_SURFACES.textDimMid transition-colors UI_SURFACES.borderDark UI_SURFACES.hoverTextSoft`}
               data-testid="command-bar-sample-hint"
             >
               {hint}
             </button>
           ))}
         </div>
-        <div className={`mt-1.5 rounded-lg border ${UI_SURFACES.borderFaint} ${UI_SURFACES.page}/70 px-2.5 py-1.5 text-[9px] ${UI_SURFACES.textMuted5}`}>
+        <div className={`mt-1.5 rounded-lg border UI_SURFACES.borderFaint UI_SURFACES.page/70 px-2.5 py-1.5 text-[9px] UI_SURFACES.textMuted5`}>
           {mode.label}: recognized site edits run locally. {mode.cloudAvailable ? "Cloud-assisted parsing and fix proposals use a configured API key." : "Cloud-assisted parsing and fix proposals are disabled by policy."}
         </div>
         {/* Slash commands */}
@@ -346,7 +346,7 @@ export function CommandBar() {
                 setInput(cmd);
                 inputRef.current?.focus();
               }}
-              className="rounded-md border ${UI_SURFACES.hoverBg} ${UI_SURFACES.bgDeep} px-2 py-1 font-mono text-[9px] text-emerald-400/70 transition-colors ${UI_SURFACES.hoverBorder} hover:text-emerald-300"
+              className="rounded-md border UI_SURFACES.hoverBg UI_SURFACES.bgDeep px-2 py-1 font-mono text-[9px] text-emerald-400/70 transition-colors UI_SURFACES.hoverBorder hover:text-emerald-300"
             >
               {cmd}
             </button>
@@ -360,28 +360,28 @@ export function CommandBar() {
 /** Compact candidate card rendered inline in the command bar results. */
 function CandidateCard({ candidate, onApply }: { candidate: CounterfactualCandidate; onApply: () => void }) {
   return (
-    <div className={`rounded-lg border ${UI_SURFACES.borderFaint} ${UI_SURFACES.page} px-2.5 py-2`}>
+    <div className={`rounded-lg border UI_SURFACES.borderFaint UI_SURFACES.page px-2.5 py-2`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-1.5">
           <span
             className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-[7px] font-bold ${
-              COST_COLORS[candidate.costCategory] ?? "${UI_SURFACES.textSoftMid} border ${UI_SURFACES.borderThin}"
+              COST_COLORS[candidate.costCategory] ?? "UI_SURFACES.textSoftMid border UI_SURFACES.borderThin"
             }`}
           >
             {candidate.rank}
           </span>
-          <p className={`text-[10px] leading-snug ${UI_SURFACES.textBody}`}>{candidate.description}</p>
+          <p className={`text-[10px] leading-snug UI_SURFACES.textBody`}>{candidate.description}</p>
         </div>
         <span
           className={`shrink-0 rounded px-1 py-0.5 text-[7px] font-medium uppercase tracking-wider ${
-            COST_COLORS[candidate.costCategory] ?? "${UI_SURFACES.textSoftMid}"
+            COST_COLORS[candidate.costCategory] ?? "UI_SURFACES.textSoftMid"
           }`}
         >
           {candidate.costCategory}
         </span>
       </div>
       {candidate.verifiedDelta && (
-        <div className="mt-1 flex flex-wrap gap-3 rounded ${UI_SURFACES.panelDeepAlt} px-2 py-1 text-[8px]">
+        <div className="mt-1 flex flex-wrap gap-3 rounded UI_SURFACES.panelDeepAlt px-2 py-1 text-[8px]">
           <span className={candidate.verifiedDelta.totalCoveragePctDelta >= 0 ? "text-emerald-400" : "text-red-400"}>
             {candidate.verifiedDelta.totalCoveragePctDelta >= 0 ? "+" : ""}{candidate.verifiedDelta.totalCoveragePctDelta}% coverage
           </span>
@@ -395,7 +395,7 @@ function CandidateCard({ candidate, onApply }: { candidate: CounterfactualCandid
       )}
       <button type="button"
         onClick={onApply}
-        className={`mt-1.5 inline-flex w-full items-center justify-center gap-1 rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} py-1 text-[9px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10`}
+        className={`mt-1.5 inline-flex w-full items-center justify-center gap-1 rounded border UI_SURFACES.borderThin UI_SURFACES.card py-1 text-[9px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10`}
       >
         <Sparkles className="h-2.5 w-2.5" />
         Apply Verified Fix

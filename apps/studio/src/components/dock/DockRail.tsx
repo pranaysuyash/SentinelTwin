@@ -44,7 +44,7 @@ export function DockRail({
   return (
     <div
       className={cn(
-        `flex h-full w-full items-stretch gap-1 ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} ${UI_SURFACES.textBody}`,
+        `flex h-full w-full items-stretch gap-1 UI_SURFACES.borderPanel UI_SURFACES.panel UI_SURFACES.textBody`,
         isBottom ? "flex-row border-t px-1.5 py-1" : "flex-col border-r px-1 py-1",
       )}
     >
@@ -52,7 +52,7 @@ export function DockRail({
         type="button"
         onClick={onToggle}
         className={cn(
-          `inline-flex items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted4} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`,
+          `inline-flex items-center justify-center rounded-md border UI_SURFACES.borderThin UI_SURFACES.card UI_SURFACES.textMuted4 transition-colors UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverText`,
           attention && "border-amber-400/40 bg-amber-500/15 text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.25)]",
           isBottom ? "h-6 w-6 flex-shrink-0" : "h-7 w-7 flex-shrink-0",
         )}
@@ -68,10 +68,10 @@ export function DockRail({
         )}
       >
         <div className={cn("min-w-0", isBottom ? "flex items-center gap-2" : "space-y-0.5")}>
-          <div className={`truncate text-[8px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted3}`}>
+          <div className={`truncate text-[8px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textMuted3`}>
             {title}
           </div>
-          <div className={`truncate text-[8px] ${UI_SURFACES.textMuted}`}>{subtitle ?? workspacePreset.replace(/_/g, " ")}</div>
+          <div className={`truncate text-[8px] UI_SURFACES.textMuted`}>{subtitle ?? workspacePreset.replace(/_/g, " ")}</div>
           {attention ? <div className="text-[8px] uppercase tracking-[0.14em] text-amber-200">Needs attention</div> : null}
         </div>
 
@@ -80,7 +80,7 @@ export function DockRail({
             <button
               type="button"
               onClick={onFocus}
-              className={`inline-flex h-5 w-5 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
+              className={`inline-flex h-5 w-5 items-center justify-center rounded-md border UI_SURFACES.borderThin UI_SURFACES.card UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverText`}
               title="Focus mode"
             >
               {FOCUS_ICON}
@@ -89,7 +89,7 @@ export function DockRail({
           <button
             type="button"
             onClick={onToggle}
-            className={`inline-flex h-5 w-5 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textMuted3} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
+            className={`inline-flex h-5 w-5 items-center justify-center rounded-md border UI_SURFACES.borderThin UI_SURFACES.card UI_SURFACES.textMuted3 transition-colors UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverText`}
             title={`Collapse ${title}`}
           >
             {COLLAPSE_ICONS[side]}

@@ -74,7 +74,7 @@ export const QUALITY_COLOR: Record<DoriQuality, string> = {
 
 /** Tailwind text-color classes per quality level (used by CameraStatusSummaryPanel). */
 export const QUALITY_TEXT_COLOR: Record<DoriQuality, string> = {
-  none: "${UI_SURFACES.textMuted}",
+  none: "UI_SURFACES.textMuted",
   detection: "text-orange-300",
   overview: "text-orange-300",
   outline: "text-orange-300",

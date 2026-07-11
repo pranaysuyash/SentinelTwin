@@ -197,7 +197,7 @@ function FeedArtifacts({
       ) : null}
 
       {overlayOptions.timestamp ? (
-        <div className={`pointer-events-none absolute left-3 bottom-3 z-10 rounded-lg border ${UI_SURFACES.borderElevated} bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.12em] ${UI_SURFACES.textBody}`}>
+        <div className={`pointer-events-none absolute left-3 bottom-3 z-10 rounded-lg border UI_SURFACES.borderElevated bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.12em] UI_SURFACES.textBody`}>
           {timestamp}
         </div>
       ) : null}
@@ -385,7 +385,7 @@ export function CameraFeedCanvas({
   ].join(" ");
 
   return (
-    <div className={`relative w-full overflow-hidden rounded-lg border ${UI_SURFACES.borderSubtle}`} style={{ aspectRatio: "16 / 9" }}>
+    <div className={`relative w-full overflow-hidden rounded-lg border UI_SURFACES.borderSubtle`} style={{ aspectRatio: "16 / 9" }}>
       <div className={cn("absolute inset-0", canvasFilterClass)}>
         <Canvas
           camera={{ position: camera.position, fov: camera.fovHorizontalDeg, near: 0.1, far: 50 }}
@@ -460,7 +460,7 @@ export function CameraFeedCanvas({
         </div>
       ) : null}
 
-      <div className={`absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border ${UI_SURFACES.border} bg-black/50 p-1`}>
+      <div className={`absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border UI_SURFACES.border bg-black/50 p-1`}>
         {(Object.keys(FEED_MODE_LABELS) as FeedViewMode[]).map((mode) => (
           <button
             key={mode}
@@ -468,7 +468,7 @@ export function CameraFeedCanvas({
             onClick={() => setViewMode(mode)}
             className={cn(
               "rounded-md px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] transition-colors",
-              viewMode === mode ? "bg-blue-500/25 text-blue-200" : "${UI_SURFACES.textMuted5} ${UI_SURFACES.hoverText}",
+              viewMode === mode ? "bg-blue-500/25 text-blue-200" : "UI_SURFACES.textMuted5 UI_SURFACES.hoverText",
             )}
           >
             {FEED_MODE_LABELS[mode]}
@@ -488,12 +488,12 @@ export function CameraFeedCanvas({
       )}
 
       {overlayFlags.doriLabels && targetZone ? (
-        <div className={`absolute right-2 top-2 z-10 rounded-xl border ${UI_SURFACES.border} bg-black/70 px-2.5 py-2`}>
+        <div className={`absolute right-2 top-2 z-10 rounded-xl border UI_SURFACES.border bg-black/70 px-2.5 py-2`}>
           <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.18em] text-[#8ab4ff]">DORI Overlay</div>
           <div className="text-[11px] font-semibold text-white">
             {targetZone.label}
           </div>
-          <div className={`mt-1 text-[9px] ${UI_SURFACES.textBody}`}>
+          <div className={`mt-1 text-[9px] UI_SURFACES.textBody`}>
             {targetZoneResult?.status === "pass"
               ? "PASS"
               : targetZoneResult?.status === "partial"
@@ -503,27 +503,27 @@ export function CameraFeedCanvas({
                   : "UNKNOWN"}
           </div>
           <div className="mt-1 text-[10px] font-semibold text-amber-300">
-            {targetQuality.toUpperCase()} <span className={`text-[9px] font-normal ${UI_SURFACES.textSoftBright}`}>/ {qualityRangeLabel(targetQuality, scene.assumptions.doriStandard)}</span>
+            {targetQuality.toUpperCase()} <span className={`text-[9px] font-normal UI_SURFACES.textSoftBright`}>/ {qualityRangeLabel(targetQuality, scene.assumptions.doriStandard)}</span>
           </div>
-          <div className="mt-1 grid grid-cols-2 gap-2 text-[8px] ${UI_SURFACES.textSoftMuted}">
+          <div className="mt-1 grid grid-cols-2 gap-2 text-[8px] UI_SURFACES.textSoftMuted">
             <div>
-              <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Target Type</div>
-              <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{targetZone.targetType.replace(/_/g, " ")}</div>
+              <div className={`uppercase tracking-[0.16em] UI_SURFACES.textDimMid`}>Target Type</div>
+              <div className={`mt-0.5 UI_SURFACES.textNear`}>{targetZone.targetType.replace(/_/g, " ")}</div>
             </div>
             <div>
-              <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Distance</div>
-              <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{targetDistanceM != null ? `${targetDistanceM.toFixed(1)}m` : "—"}</div>
+              <div className={`uppercase tracking-[0.16em] UI_SURFACES.textDimMid`}>Distance</div>
+              <div className={`mt-0.5 UI_SURFACES.textNear`}>{targetDistanceM != null ? `${targetDistanceM.toFixed(1)}m` : "—"}</div>
             </div>
             <div>
-              <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Angle</div>
-              <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{angleFromCenterDeg != null ? `${angleFromCenterDeg.toFixed(1)}°` : "—"}</div>
+              <div className={`uppercase tracking-[0.16em] UI_SURFACES.textDimMid`}>Angle</div>
+              <div className={`mt-0.5 UI_SURFACES.textNear`}>{angleFromCenterDeg != null ? `${angleFromCenterDeg.toFixed(1)}°` : "—"}</div>
             </div>
             <div>
-              <div className={`uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Best Camera</div>
-              <div className={`mt-0.5 ${UI_SURFACES.textNear}`}>{bestCameraName}</div>
+              <div className={`uppercase tracking-[0.16em] UI_SURFACES.textDimMid`}>Best Camera</div>
+              <div className={`mt-0.5 UI_SURFACES.textNear`}>{bestCameraName}</div>
             </div>
           </div>
-          <div className={`mt-2 text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
+          <div className={`mt-2 text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>
             Lighting: {scene.assumptions.timeOfDay === "night" ? "Night" : scene.assumptions.timeOfDay === "custom" ? "Custom" : "Day"}
           </div>
         </div>
@@ -533,7 +533,7 @@ export function CameraFeedCanvas({
         <div className="text-[8px] font-mono text-green-400">
           {camera.name} • {camera.resolutionMP}MP
         </div>
-        <div className="text-[7px] font-mono ${UI_SURFACES.textSoftMid}">
+        <div className="text-[7px] font-mono UI_SURFACES.textSoftMid">
           FOV {camera.fovHorizontalDeg}° • {isNight ? "NIGHT" : "DAY"}
         </div>
       </div>

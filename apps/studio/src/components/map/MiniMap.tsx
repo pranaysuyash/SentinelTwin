@@ -114,11 +114,11 @@ function legendSwatch({
   detail?: string;
 }) {
   return (
-    <div className={`flex items-center gap-2 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+    <div className={`flex items-center gap-2 rounded-lg border UI_SURFACES.borderSubtle UI_SURFACES.bgDeep px-2 py-1.5`}>
       <span className="h-2.5 w-2.5 rounded-sm border border-white/15" style={{ backgroundColor: color }} />
       <div className="min-w-0">
-        <div className="text-[9px] font-medium ${UI_SURFACES.textBody2}">{label}</div>
-        {detail ? <div className="text-[8px] ${UI_SURFACES.textSoftMid}">{detail}</div> : null}
+        <div className="text-[9px] font-medium UI_SURFACES.textBody2">{label}</div>
+        {detail ? <div className="text-[8px] UI_SURFACES.textSoftMid">{detail}</div> : null}
       </div>
     </div>
   );
@@ -130,14 +130,14 @@ function scaleBarLabel(scene: SecurityScene) {
 
 function ScaleBar({ label }: { label: number }) {
   return (
-    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2`}>
-      <div className={`flex items-center justify-between text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
+    <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel px-2 py-2`}>
+      <div className={`flex items-center justify-between text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>
         <span>Scale</span>
         <span>{label}m</span>
       </div>
       <div className="mt-1 flex items-center gap-2">
         <div className="h-1.5 rounded-full bg-gradient-to-r from-[#93c5fd] via-[#60a5fa] to-[#3b82f6]" style={{ width: `${Math.max(42, label * 8)}px` }} />
-        <span className={`text-[8px] ${UI_SURFACES.textSoftBright}`}>approx.</span>
+        <span className={`text-[8px] UI_SURFACES.textSoftBright`}>approx.</span>
       </div>
     </div>
   );
@@ -145,10 +145,10 @@ function ScaleBar({ label }: { label: number }) {
 
 function NorthIndicator() {
   return (
-    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2 text-center`}>
-      <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>North</div>
-      <div className={`mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-full border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep}`}>
-        <ChevronUp className="h-4 w-4 ${UI_SURFACES.textInfoLight}" />
+    <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel px-2 py-2 text-center`}>
+      <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>North</div>
+      <div className={`mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-full border UI_SURFACES.border UI_SURFACES.bgDeep`}>
+        <ChevronUp className="h-4 w-4 UI_SURFACES.textInfoLight" />
       </div>
     </div>
   );
@@ -156,10 +156,10 @@ function NorthIndicator() {
 
 function ViewportIndicator({ zoom, pan }: { zoom: number; pan: [number, number] }) {
   return (
-    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2`}>
-      <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Viewport</div>
-      <div className={`mt-1 text-[10px] font-semibold ${UI_SURFACES.textNear}`}>{zoom.toFixed(2)}x</div>
-      <div className={`text-[8px] ${UI_SURFACES.textSoftBright}`}>pan {pan[0].toFixed(0)}, {pan[1].toFixed(0)}</div>
+    <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel px-2 py-2`}>
+      <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Viewport</div>
+      <div className={`mt-1 text-[10px] font-semibold UI_SURFACES.textNear`}>{zoom.toFixed(2)}x</div>
+      <div className={`text-[8px] UI_SURFACES.textSoftBright`}>pan {pan[0].toFixed(0)}, {pan[1].toFixed(0)}</div>
     </div>
   );
 }
@@ -175,16 +175,16 @@ function MiniMapCollapsed({
     <button
       type="button"
       onClick={onExpand}
-      className={`flex h-12 w-full items-center justify-between rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-3 text-left transition-colors ${UI_SURFACES.hoverBorderBright}`}
+      className={`flex h-12 w-full items-center justify-between rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel px-3 text-left transition-colors UI_SURFACES.hoverBorderBright`}
       title="Expand minimap"
     >
       <div className="flex items-center gap-2">
-        <div className={`flex h-7 w-7 items-center justify-center rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.card}`}>
-          <Map className="h-3.5 w-3.5 ${UI_SURFACES.textInfoLight}" />
+        <div className={`flex h-7 w-7 items-center justify-center rounded-lg border UI_SURFACES.border UI_SURFACES.card`}>
+          <Map className="h-3.5 w-3.5 UI_SURFACES.textInfoLight" />
         </div>
         <div>
-          <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>MiniMap - Collapsed</div>
-          <div className={`text-[10px] ${UI_SURFACES.textSoftMuted}`}>Tap to expand</div>
+          <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>MiniMap - Collapsed</div>
+          <div className={`text-[10px] UI_SURFACES.textSoftMuted`}>Tap to expand</div>
         </div>
       </div>
       <div className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[8px] font-medium text-emerald-300">
@@ -231,11 +231,11 @@ function MiniMapHoverPreview({
     [mapPanX, mapPanY, mapZoom],
   );
   return (
-    <div className={`mb-2 rounded-xl border ${UI_SURFACES.border} ${UI_SURFACES.panelDeep} p-2 shadow-[0_10px_24px_rgba(0,0,0,0.24)]`}>
+    <div className={`mb-2 rounded-xl border UI_SURFACES.border UI_SURFACES.panelDeep p-2 shadow-[0_10px_24px_rgba(0,0,0,0.24)]`}>
       <div className="mb-2 flex items-center justify-between">
         <div>
-          <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Hover Preview</div>
-          <div className={`text-[10px] ${UI_SURFACES.textSoftMuted}`}>Quick readout for navigation</div>
+          <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Hover Preview</div>
+          <div className={`text-[10px] UI_SURFACES.textSoftMuted`}>Quick readout for navigation</div>
         </div>
         <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[8px] font-medium text-emerald-300">
           Live
@@ -243,7 +243,7 @@ function MiniMapHoverPreview({
       </div>
 
       <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
-        <div className={`overflow-hidden rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.panel}`}>
+        <div className={`overflow-hidden rounded-lg border UI_SURFACES.border UI_SURFACES.panel`}>
           <MapCanvas
             scene={scene}
             result={result}
@@ -277,19 +277,19 @@ function MiniMapHoverPreview({
         </div>
 
         <div className="space-y-1.5">
-          <div className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-            <span className="text-[9px] ${UI_SURFACES.textMuted3}">Coverage</span>
+          <div className={`flex items-center justify-between rounded-lg border UI_SURFACES.border UI_SURFACES.bgDeep px-2 py-1`}>
+            <span className="text-[9px] UI_SURFACES.textMuted3">Coverage</span>
             <span className="text-[11px] font-semibold text-emerald-300">{coveragePct}%</span>
           </div>
-          <div className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-            <span className="text-[9px] ${UI_SURFACES.textMuted3}">Critical Zones</span>
+          <div className={`flex items-center justify-between rounded-lg border UI_SURFACES.border UI_SURFACES.bgDeep px-2 py-1`}>
+            <span className="text-[9px] UI_SURFACES.textMuted3">Critical Zones</span>
             <span className="text-[11px] font-semibold text-violet-300">
               {passedCritical} / {totalCritical}
             </span>
           </div>
-          <div className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-            <span className="text-[9px] ${UI_SURFACES.textMuted3}">Selected</span>
-            <span className={`text-[11px] font-semibold ${UI_SURFACES.textNear}`}>{selectedLabel ?? "None"}</span>
+          <div className={`flex items-center justify-between rounded-lg border UI_SURFACES.border UI_SURFACES.bgDeep px-2 py-1`}>
+            <span className="text-[9px] UI_SURFACES.textMuted3">Selected</span>
+            <span className={`text-[11px] font-semibold UI_SURFACES.textNear`}>{selectedLabel ?? "None"}</span>
           </div>
         </div>
       </div>
@@ -370,18 +370,18 @@ function MiniMapCompact({
   void onMapDoubleClick;
   const focusPoint = useStudioStore((s) => s.focusScenePointHighlight?.point ?? null);
   return (
-    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+    <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>MiniMap - Compact</div>
-          <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textSoftBright}`}>Compact navigation + status</div>
+          <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>MiniMap - Compact</div>
+          <div className={`mt-0.5 text-[10px] UI_SURFACES.textSoftBright`}>Compact navigation + status</div>
         </div>
 
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={onExpand}
-            className={`inline-flex h-7 items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 text-[9px] font-medium ${UI_SURFACES.textSoftBright} transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white active:scale-[0.97]`}
+            className={`inline-flex h-7 items-center gap-1 rounded-md border UI_SURFACES.borderThin UI_SURFACES.card px-2 text-[9px] font-medium UI_SURFACES.textSoftBright transition-colors UI_SURFACES.hoverBorderSubtle hover:text-white active:scale-[0.97]`}
             title="Expand drawer"
           >
             <ChevronUp className="h-3 w-3" />
@@ -417,16 +417,16 @@ function MiniMapCompact({
       />
 
       <div className="grid grid-cols-3 gap-2">
-        <div className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-          <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Coverage</div>
+        <div className={`rounded-lg border UI_SURFACES.border UI_SURFACES.bgDeep px-2 py-1`}>
+          <div className={`text-[8px] uppercase tracking-[0.16em] UI_SURFACES.textSoftMid`}>Coverage</div>
           <div className="text-[11px] font-semibold text-emerald-300">{coveragePct}%</div>
         </div>
-        <div className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-          <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Critical</div>
+        <div className={`rounded-lg border UI_SURFACES.border UI_SURFACES.bgDeep px-2 py-1`}>
+          <div className={`text-[8px] uppercase tracking-[0.16em] UI_SURFACES.textSoftMid`}>Critical</div>
           <div className="text-[11px] font-semibold text-violet-300">{passedCritical}/{totalCritical}</div>
         </div>
-        <div className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-          <div className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftMid}`}>Worst</div>
+        <div className={`rounded-lg border UI_SURFACES.border UI_SURFACES.bgDeep px-2 py-1`}>
+          <div className={`text-[8px] uppercase tracking-[0.16em] UI_SURFACES.textSoftMid`}>Worst</div>
           <div className={`text-[11px] font-semibold ${severityLabel(failedCritical) === "Poor" ? "text-rose-300" : severityLabel(failedCritical) === "Mixed" ? "text-amber-300" : "text-emerald-300"}`}>
             {severityLabel(failedCritical)}
           </div>
@@ -434,13 +434,13 @@ function MiniMapCompact({
       </div>
 
       {selectedLabel ? (
-        <div className={`mt-2 rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftMuted}`}>
-          Selected: <span className={`${UI_SURFACES.textNear}`}>{selectedLabel}</span>
+        <div className={`mt-2 rounded-lg border UI_SURFACES.border UI_SURFACES.bgDeep px-2 py-1 text-[9px] UI_SURFACES.textSoftMuted`}>
+          Selected: <span className={`UI_SURFACES.textNear`}>{selectedLabel}</span>
         </div>
       ) : null}
 
       {tooltipText ? (
-        <div className={`mt-1.5 text-[8px] ${UI_SURFACES.textDimMid}`}>{tooltipText}</div>
+        <div className={`mt-1.5 text-[8px] UI_SURFACES.textDimMid`}>{tooltipText}</div>
       ) : null}
     </div>
   );
@@ -524,18 +524,18 @@ function MiniMapExpanded({
   const focusPoint = useStudioStore((s) => s.focusScenePointHighlight?.point ?? null);
   const labelMode = labelDensity !== "off";
   return (
-    <div className={`rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+    <div className={`rounded-2xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>MiniMap - Expanded</div>
-          <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textSoftBright}`}>Navigation drawer</div>
+          <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>MiniMap - Expanded</div>
+          <div className={`mt-0.5 text-[10px] UI_SURFACES.textSoftBright`}>Navigation drawer</div>
         </div>
 
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={onCollapse}
-            className={`inline-flex h-7 items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 text-[9px] font-medium ${UI_SURFACES.textSoftBright} transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white active:scale-[0.97]`}
+            className={`inline-flex h-7 items-center gap-1 rounded-md border UI_SURFACES.borderThin UI_SURFACES.card px-2 text-[9px] font-medium UI_SURFACES.textSoftBright transition-colors UI_SURFACES.hoverBorderSubtle hover:text-white active:scale-[0.97]`}
             title="Collapse drawer"
           >
             <ChevronDown className="h-3 w-3" />
@@ -544,7 +544,7 @@ function MiniMapExpanded({
           <button
             type="button"
             onClick={() => setLabelDensity(labelDensity === "off" ? "sparse" : labelDensity === "sparse" ? "dense" : "off")}
-            className={`inline-flex h-7 items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 text-[9px] font-medium ${UI_SURFACES.textSoftBright} transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white active:scale-[0.97]`}
+            className={`inline-flex h-7 items-center gap-1 rounded-md border UI_SURFACES.borderThin UI_SURFACES.card px-2 text-[9px] font-medium UI_SURFACES.textSoftBright transition-colors UI_SURFACES.hoverBorderSubtle hover:text-white active:scale-[0.97]`}
             title="Cycle label density"
           >
             <Layers className="h-3 w-3" />
@@ -581,18 +581,18 @@ function MiniMapExpanded({
       />
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_140px]">
-        <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2`}>
-          <div className={`mb-2 flex flex-wrap items-center gap-1.5 text-[8px] ${UI_SURFACES.textSoftBright}`}>
-            <span className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1`}>Drag to pan</span>
-            <span className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1`}>Wheel to zoom</span>
-            <span className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1`}>Click objects to select</span>
-            <span className={`rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-1.5 py-1`}>Click empty map to focus 3D</span>
+        <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2`}>
+          <div className={`mb-2 flex flex-wrap items-center gap-1.5 text-[8px] UI_SURFACES.textSoftBright`}>
+            <span className={`rounded-md border UI_SURFACES.borderThin UI_SURFACES.card px-1.5 py-1`}>Drag to pan</span>
+            <span className={`rounded-md border UI_SURFACES.borderThin UI_SURFACES.card px-1.5 py-1`}>Wheel to zoom</span>
+            <span className={`rounded-md border UI_SURFACES.borderThin UI_SURFACES.card px-1.5 py-1`}>Click objects to select</span>
+            <span className={`rounded-md border UI_SURFACES.borderThin UI_SURFACES.card px-1.5 py-1`}>Click empty map to focus 3D</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
             <button type="button"
               onClick={() => onSetZoom("minimap", mapState.zoom * 0.9)}
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} ${UI_SURFACES.textDimMid} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white`}
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card UI_SURFACES.textDimMid transition-colors UI_SURFACES.hoverBorder hover:text-white`}
               aria-label="Zoom out minimap"
               title="Zoom out"
             >
@@ -600,7 +600,7 @@ function MiniMapExpanded({
             </button>
             <button type="button"
               onClick={() => onSetZoom("minimap", mapState.zoom * 1.1)}
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} ${UI_SURFACES.textDimMid} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white active:scale-[0.97]`}
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card UI_SURFACES.textDimMid transition-colors UI_SURFACES.hoverBorder hover:text-white active:scale-[0.97]`}
               aria-label="Zoom in minimap"
               title="Zoom in"
             >
@@ -608,7 +608,7 @@ function MiniMapExpanded({
             </button>
             <button type="button"
               onClick={() => onFit("minimap")}
-              className={`h-7 rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 text-[9px] font-medium ${UI_SURFACES.textSoftBright} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white active:scale-[0.97]`}
+              className={`h-7 rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 text-[9px] font-medium UI_SURFACES.textSoftBright transition-colors UI_SURFACES.hoverBorder hover:text-white active:scale-[0.97]`}
               aria-label="Fit minimap"
             >
               Fit
@@ -618,7 +618,7 @@ function MiniMapExpanded({
                 useStudioStore.getState().setViewMode("map");
                 onFit("minimap");
               }}
-              className={`h-7 rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 text-[9px] font-medium ${UI_SURFACES.textSoftBright} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white active:scale-[0.97]`}
+              className={`h-7 rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 text-[9px] font-medium UI_SURFACES.textSoftBright transition-colors UI_SURFACES.hoverBorder hover:text-white active:scale-[0.97]`}
               title="Switch to 2D top view"
             >
               2D Top View
@@ -628,7 +628,7 @@ function MiniMapExpanded({
                 useStudioStore.getState().setPathReplayPlaying(false);
                 useStudioStore.getState().setPathReplayProgress(0);
               }}
-              className={`inline-flex h-7 items-center gap-1 rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 text-[9px] font-medium ${UI_SURFACES.textSoftBright} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white active:scale-[0.97]`}
+              className={`inline-flex h-7 items-center gap-1 rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 text-[9px] font-medium UI_SURFACES.textSoftBright transition-colors UI_SURFACES.hoverBorder hover:text-white active:scale-[0.97]`}
               title="Reset replay"
             >
               <RefreshCcw className="h-3 w-3" />
@@ -638,8 +638,8 @@ function MiniMapExpanded({
         </div>
 
         <div className="space-y-3">
-          <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2`}>
-            <div className={`mb-2 text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Layers</div>
+          <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2`}>
+            <div className={`mb-2 text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Layers</div>
             <div className="space-y-1">
               {Object.keys(mapLayers).map((layerKey) => {
                 const typedKey = layerKey as keyof ReturnType<typeof mapLayerFlagsFromStore>;
@@ -653,10 +653,10 @@ function MiniMapExpanded({
                     onClick={() => {
                       useStudioStore.getState().toggleLayer(storeKey);
                     }}
-                    className={`flex h-7 w-full items-center justify-between rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 text-left text-[10px] ${UI_SURFACES.textNearAlt} transition-colors ${UI_SURFACES.hoverBorderBright} hover:text-white`}
+                    className={`flex h-7 w-full items-center justify-between rounded-lg border UI_SURFACES.borderThin UI_SURFACES.card px-2 text-left text-[10px] UI_SURFACES.textNearAlt transition-colors UI_SURFACES.hoverBorderBright hover:text-white`}
                   >
                     <span className="truncate">{layerLabel(typedKey)}</span>
-                    <span className={`h-2.5 w-2.5 rounded-full border ${visible ? "border-emerald-400 bg-emerald-400/80" : "${UI_SURFACES.textMuted} bg-transparent"}`} />
+                    <span className={`h-2.5 w-2.5 rounded-full border ${visible ? "border-emerald-400 bg-emerald-400/80" : "UI_SURFACES.textMuted bg-transparent"}`} />
                   </button>
                 );
               })}
@@ -664,8 +664,8 @@ function MiniMapExpanded({
           </div>
 
           <div className="grid gap-2">
-            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2`}>
-              <div className={`mb-2 text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Legend</div>
+            <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2`}>
+              <div className={`mb-2 text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Legend</div>
               <div className="grid gap-1.5">
                 {legendSwatch({ color: "#2563eb", label: "Cameras", detail: "Active sensor points" })}
                 {legendSwatch({ color: "rgba(37,99,235,0.35)", label: "Camera FOV", detail: "Visible cone" })}
@@ -684,10 +684,10 @@ function MiniMapExpanded({
 
             <div className="grid grid-cols-2 gap-2">
               <ViewportIndicator zoom={mapState.zoom} pan={mapState.pan} />
-              <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Labels</div>
-                <div className={`mt-1 text-[10px] font-semibold ${UI_SURFACES.textNear}`}>{labelDensity}</div>
-                <div className={`text-[8px] ${UI_SURFACES.textSoftBright}`}>off · sparse · dense</div>
+              <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel px-2 py-2`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Labels</div>
+                <div className={`mt-1 text-[10px] font-semibold UI_SURFACES.textNear`}>{labelDensity}</div>
+                <div className={`text-[8px] UI_SURFACES.textSoftBright`}>off · sparse · dense</div>
               </div>
             </div>
           </div>
@@ -695,13 +695,13 @@ function MiniMapExpanded({
       </div>
 
       {selectedLabel ? (
-        <div className={`mt-2 rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftMuted}`}>
-          Selected: <span className={`${UI_SURFACES.textNear}`}>{selectedLabel}</span>
+        <div className={`mt-2 rounded-lg border UI_SURFACES.border UI_SURFACES.bgDeep px-2 py-1 text-[9px] UI_SURFACES.textSoftMuted`}>
+          Selected: <span className={`UI_SURFACES.textNear`}>{selectedLabel}</span>
         </div>
       ) : null}
 
       {tooltipText ? (
-        <div className={`mt-1.5 text-[8px] ${UI_SURFACES.textDimMid}`}>{tooltipText}</div>
+        <div className={`mt-1.5 text-[8px] UI_SURFACES.textDimMid`}>{tooltipText}</div>
       ) : null}
     </div>
   );
@@ -813,8 +813,8 @@ export function MiniMap({
     <div
       className={
         mode === "expanded"
-          ? "rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
-          : "rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
+          ? "rounded-2xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
+          : "rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
       }
       onMouseEnter={() => setHoveredPreview(true)}
       onMouseLeave={() => setHoveredPreview(false)}
@@ -895,10 +895,10 @@ export function MiniMap({
       ) : null}
 
       {mode === "compact" ? (
-        <div className={`mt-2 flex items-center justify-between text-[8px] ${UI_SURFACES.textDimMid}`}>
+        <div className={`mt-2 flex items-center justify-between text-[8px] UI_SURFACES.textDimMid`}>
           <div className="flex items-center gap-2">
             <span>{tooltipText ?? "Hover objects to preview"}</span>
-            {selectedLabel ? <span className="${UI_SURFACES.textMuted3}">Selected: {selectedLabel}</span> : null}
+            {selectedLabel ? <span className="UI_SURFACES.textMuted3">Selected: {selectedLabel}</span> : null}
           </div>
           <button
             type="button"
@@ -906,7 +906,7 @@ export function MiniMap({
               setReplayPlaying(false);
               setReplayProgress(0);
             }}
-            className="inline-flex items-center gap-1 ${UI_SURFACES.textMuted5}"
+            className="inline-flex items-center gap-1 UI_SURFACES.textMuted5"
             title="Reset replay"
           >
             <RefreshCcw className="h-3 w-3" />
@@ -916,9 +916,9 @@ export function MiniMap({
       ) : null}
 
       {mode !== "collapsed" ? (
-        <div className={`mt-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2`}>
+        <div className={`mt-2 rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2`}>
           <div className="flex items-center justify-between gap-2">
-            <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Quick Controls</div>
+            <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Quick Controls</div>
             <button
               type="button"
               onClick={() => {
@@ -926,7 +926,7 @@ export function MiniMap({
                 setMode("collapsed");
                 setHoveredPreview(false);
               }}
-              className={`inline-flex h-6 items-center gap-1 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 text-[9px] font-medium ${UI_SURFACES.textSoftBright} transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white active:scale-[0.97]`}
+              className={`inline-flex h-6 items-center gap-1 rounded-md border UI_SURFACES.borderThin UI_SURFACES.card px-2 text-[9px] font-medium UI_SURFACES.textSoftBright transition-colors UI_SURFACES.hoverBorderSubtle hover:text-white active:scale-[0.97]`}
             >
               <X className="h-3 w-3" />
               Collapse to Icon
@@ -935,7 +935,7 @@ export function MiniMap({
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <button type="button"
               onClick={() => setZoom("minimap", mapState.zoom * 0.9)}
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} ${UI_SURFACES.textDimMid} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white active:scale-[0.97]`}
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card UI_SURFACES.textDimMid transition-colors UI_SURFACES.hoverBorder hover:text-white active:scale-[0.97]`}
               aria-label="Zoom out minimap"
               title="Zoom out"
             >
@@ -943,7 +943,7 @@ export function MiniMap({
             </button>
             <button type="button"
               onClick={() => setZoom("minimap", mapState.zoom * 1.1)}
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} ${UI_SURFACES.textDimMid} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white active:scale-[0.97]`}
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card UI_SURFACES.textDimMid transition-colors UI_SURFACES.hoverBorder hover:text-white active:scale-[0.97]`}
               aria-label="Zoom in minimap"
               title="Zoom in"
             >
@@ -951,7 +951,7 @@ export function MiniMap({
             </button>
             <button type="button"
               onClick={() => fitMap("minimap")}
-              className={`h-7 rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 text-[9px] font-medium ${UI_SURFACES.textSoftBright} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white active:scale-[0.97]`}
+              className={`h-7 rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 text-[9px] font-medium UI_SURFACES.textSoftBright transition-colors UI_SURFACES.hoverBorder hover:text-white active:scale-[0.97]`}
               aria-label="Fit minimap"
             >
               Fit

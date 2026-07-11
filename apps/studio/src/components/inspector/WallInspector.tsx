@@ -28,9 +28,9 @@ export function WallInspector() {
 
   return (
     <>
-      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-b UI_SURFACES.borderPanel px-3 py-3}`}>
         <div className="text-[12px] font-semibold text-white">{wall.label}</div>
-        <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Wall · {lengthM.toFixed(2)}m</div>
+        <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Wall · {lengthM.toFixed(2)}m</div>
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
@@ -74,7 +74,7 @@ export function WallInspector() {
         />
       </div>
 
-      <div className={`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-t UI_SURFACES.borderPanel px-3 py-3}`}>
         <button
           type="button"
           onClick={() => removeNode(wall.id)}

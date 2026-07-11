@@ -24,9 +24,9 @@ export function PrivacyZoneInspector() {
 
   return (
     <>
-      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-b UI_SURFACES.borderPanel px-3 py-3}`}>
         <div className="text-[12px] font-semibold text-white">{zone.label}</div>
-        <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Privacy Zone</div>
+        <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Privacy Zone</div>
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
@@ -48,22 +48,22 @@ export function PrivacyZoneInspector() {
             onChange={(value) => updateNode(zone.id, { restriction: value as PrivacyZoneNode["restriction"] })}
           />
           <Field label="Vertices" value={zone.polygon.length} />
-          <label className={`block rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
+          <label className={`block rounded-lg border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1.5`}>
             <div className="mb-1 flex items-center justify-between gap-2">
-              <span className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Regulation</span>
+              <span className={`text-[8px] uppercase tracking-[0.16em] UI_SURFACES.textDimMid`}>Regulation</span>
             </div>
             <input
               type="text"
               value={zone.regulation}
               onChange={(event) => updateNode(zone.id, { regulation: event.target.value })}
-              className={`w-full bg-transparent text-right font-mono text-[11px] ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
+              className={`w-full bg-transparent text-right font-mono text-[11px] UI_SURFACES.textBody2 outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
               placeholder="manual"
             />
           </label>
         </SectionCard>
       </div>
 
-      <div className={`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-t UI_SURFACES.borderPanel px-3 py-3}`}>
         <button
           type="button"
           onClick={() => removeNode(zone.id)}

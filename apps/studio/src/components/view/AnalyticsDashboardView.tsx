@@ -25,7 +25,7 @@ const TONE_CARD_CLASSES: Record<AnalyticsTone, string> = {
   good: "border-emerald-400/25 bg-emerald-500/10 text-emerald-100",
   warn: "border-amber-400/25 bg-amber-500/10 text-amber-100",
   bad: "border-rose-400/30 bg-rose-500/10 text-rose-100",
-  neutral: "${UI_SURFACES.border} ${UI_SURFACES.card} ${UI_SURFACES.textBody}",
+  neutral: "UI_SURFACES.border UI_SURFACES.card UI_SURFACES.textBody",
 };
 
 const DORI_BAND_COLORS: Record<string, string> = {
@@ -106,12 +106,12 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className={`min-w-0 rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep}/80 p-3`}>
+    <section className={`min-w-0 rounded-2xl border UI_SURFACES.borderSubtle UI_SURFACES.panelDeep/80 p-3`}>
       <header className="mb-2 flex items-center justify-between gap-2">
-        <div className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textSoftDim}`}>
+        <div className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] UI_SURFACES.textSoftDim`}>
           {icon}
           <span>{title}</span>
-          {subtitle ? <span className={`font-normal tracking-normal ${UI_SURFACES.textDim}`}>({subtitle})</span> : null}
+          {subtitle ? <span className={`font-normal tracking-normal UI_SURFACES.textDim`}>({subtitle})</span> : null}
         </div>
         <div className="flex items-center gap-1.5">
           {action}
@@ -225,7 +225,7 @@ function TemporalCoverageChart({
   return (
     <div className="relative">
       {hasEffective && (
-        <div className="mb-1 flex items-center gap-3 text-[9px] ${UI_SURFACES.textMuted7}">
+        <div className="mb-1 flex items-center gap-3 text-[9px] UI_SURFACES.textMuted7">
           <span className="flex items-center gap-1">
             <span className="inline-block h-0.5 w-4 rounded bg-sky-400" />
             Geometric
@@ -311,7 +311,7 @@ function TemporalCoverageChart({
         ) : null}
       </svg>
       {hovered ? (
-        <div className={`pointer-events-none absolute left-2 top-1 rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep}/95 px-2 py-1 text-[10px] text-sky-100`}>
+        <div className={`pointer-events-none absolute left-2 top-1 rounded-lg border UI_SURFACES.border UI_SURFACES.bgDeep/95 px-2 py-1 text-[10px] text-sky-100`}>
           <span className="font-semibold">
             {`${hovered.point.hour.toString().padStart(2, "0")}:${hovered.point.minute.toString().padStart(2, "0")}`}
           </span>
@@ -331,7 +331,7 @@ function TemporalCoverageChart({
 function DoriDistributionBar({ bands }: { bands: { band: string; label: string; pct: number }[] }) {
   return (
     <div>
-      <div className={`flex h-4 w-full overflow-hidden rounded-full border ${UI_SURFACES.borderSubtle}`}>
+      <div className={`flex h-4 w-full overflow-hidden rounded-full border UI_SURFACES.borderSubtle`}>
         {bands.map((band) =>
           band.pct > 0 ? (
             <motion.div
@@ -345,7 +345,7 @@ function DoriDistributionBar({ bands }: { bands: { band: string; label: string; 
           ) : null,
         )}
       </div>
-      <div className={`mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] ${UI_SURFACES.textSoftBright}`}>
+      <div className={`mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] UI_SURFACES.textSoftBright`}>
         {bands.map((band) => (
           <span key={band.band} className="inline-flex items-center gap-1">
             <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: DORI_BAND_COLORS[band.band] }} />
@@ -366,7 +366,7 @@ function CoverageTrendSparkline({
   const height = 64;
   const pad = 8;
   if (points.length < 2) {
-    return <div className={`text-[11px] ${UI_SURFACES.textSoftDim}`}>Save snapshots to build a coverage trend across design iterations.</div>;
+    return <div className={`text-[11px] UI_SURFACES.textSoftDim`}>Save snapshots to build a coverage trend across design iterations.</div>;
   }
   const min = Math.min(...points.map((p) => p.coveragePct));
   const max = Math.max(...points.map((p) => p.coveragePct));
@@ -426,14 +426,14 @@ function DirectorsCutCard({
           type="button"
           disabled={exporting}
           onClick={handleExport}
-          className="flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderDeep} ${UI_SURFACES.hoverBgSubtle} px-2 py-1 text-[9px] font-semibold uppercase tracking-wider ${UI_SURFACES.textMuted5} transition hover:border-sky-500/30 hover:bg-sky-500/8 hover:text-sky-300 disabled:opacity-50"
+          className="flex items-center gap-1 rounded-lg border UI_SURFACES.borderDeep UI_SURFACES.hoverBgSubtle px-2 py-1 text-[9px] font-semibold uppercase tracking-wider UI_SURFACES.textMuted5 transition hover:border-sky-500/30 hover:bg-sky-500/8 hover:text-sky-300 disabled:opacity-50"
         >
           <Download className="h-3 w-3" />
           {exporting ? "Exporting…" : "Export PDF"}
         </button>
       }
     >
-      <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>
+      <div className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>
         Camera-cut sequence following the adversarial path
         {directorsCut.totalDurationS > 0
           ? ` · ${Math.round((directorsCut.noCoverageDurationS / directorsCut.totalDurationS) * 100)}% with no usable shot`
@@ -542,11 +542,11 @@ export function AnalyticsDashboardView() {
 
   if (!model.hasSimulation) {
     return (
-      <div className="flex h-full items-center justify-center ${UI_SURFACES.panelDeepAlt} p-6">
-        <div className={`max-w-md rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-6 text-center`}>
+      <div className="flex h-full items-center justify-center UI_SURFACES.panelDeepAlt p-6">
+        <div className={`max-w-md rounded-2xl border UI_SURFACES.borderSubtle UI_SURFACES.panelDeep p-6 text-center`}>
           <BarChart3 className="mx-auto mb-3 h-8 w-8 text-sky-300" />
-          <div className={`text-sm font-semibold ${UI_SURFACES.textBody3}`}>No simulation data yet</div>
-          <p className={`mt-1 text-[12px] ${UI_SURFACES.textSoftBright}`}>
+          <div className={`text-sm font-semibold UI_SURFACES.textBody3`}>No simulation data yet</div>
+          <p className={`mt-1 text-[12px] UI_SURFACES.textSoftBright`}>
             The analytics dashboard reads from the deterministic simulation result. Run the simulation to populate it.
           </p>
           <button
@@ -563,15 +563,15 @@ export function AnalyticsDashboardView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto ${UI_SURFACES.panelDeepAlt} px-4 pb-6 pt-[var(--st-full-canvas-safe-top,4rem)]">
+    <div className="h-full overflow-y-auto UI_SURFACES.panelDeepAlt px-4 pb-6 pt-[var(--st-full-canvas-safe-top,4rem)]">
       <div className="mx-auto flex max-w-6xl flex-col gap-3">
         <header className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className={`text-sm font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textBody3}`}>Security Analytics</h1>
+              <h1 className={`text-sm font-semibold uppercase tracking-[0.2em] UI_SURFACES.textBody3`}>Security Analytics</h1>
               <TruthBadge label="simulated" />
             </div>
-            <p className={`text-[11px] ${UI_SURFACES.textSoftDim}`}>
+            <p className={`text-[11px] UI_SURFACES.textSoftDim`}>
               {model.sceneName} · Simulation results · geometry-based, not from live feeds
               {model.computedAt ? ` · computed ${new Date(model.computedAt).toLocaleTimeString()}` : ""}
             </p>
@@ -602,7 +602,7 @@ export function AnalyticsDashboardView() {
                 <button
                   type="button"
                   onClick={() => setBottomTab("temporal")}
-                  className={`rounded border ${UI_SURFACES.border} px-2 py-0.5 text-[10px] ${UI_SURFACES.textSoftMuted} hover:bg-white/5`}
+                  className={`rounded border UI_SURFACES.border px-2 py-0.5 text-[10px] UI_SURFACES.textSoftMuted hover:bg-white/5`}
                 >
                   Open 24h Profile
                 </button>
@@ -618,7 +618,7 @@ export function AnalyticsDashboardView() {
                     setBottomTab("temporal");
                   }}
                 />
-                <div className={`mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[10px] ${UI_SURFACES.textSoftBright}`}>
+                <div className={`mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[10px] UI_SURFACES.textSoftBright`}>
                   {model.temporal.worstPoint ? (
                     <span>
                       Worst {model.temporal.worstPoint.coveragePct.toFixed(1)}% at{" "}
@@ -633,7 +633,7 @@ export function AnalyticsDashboardView() {
                 </div>
               </>
             ) : (
-              <div className={`flex items-center justify-between gap-3 text-[11px] ${UI_SURFACES.textSoftBright}`}>
+              <div className={`flex items-center justify-between gap-3 text-[11px] UI_SURFACES.textSoftBright`}>
                 <span>No 24h profile computed for this scene yet.</span>
                 <button
                   type="button"
@@ -649,8 +649,8 @@ export function AnalyticsDashboardView() {
           <SectionCard title="What can you actually see?" subtitle="DORI quality distribution" truthLabel="simulated" icon={<Layers className="h-3.5 w-3.5" />}>
             <DoriDistributionBar bands={model.doriDistribution} />
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-3 py-2`}>
-                <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Issue Severity</div>
+              <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.card px-3 py-2`}>
+                <div className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>Issue Severity</div>
                 <div className="mt-1.5 flex flex-col gap-1">
                   {model.issueBreakdown.map((entry) => {
                     const maxCount = Math.max(1, ...model.issueBreakdown.map((e) => e.count));
@@ -662,29 +662,29 @@ export function AnalyticsDashboardView() {
                         className="group flex items-center gap-2 text-left"
                         title={`Open issues tab (${entry.count} ${entry.severity})`}
                       >
-                        <span className={`w-14 text-[10px] capitalize ${UI_SURFACES.textSoftBright} group-${UI_SURFACES.hoverText}`}>{entry.severity}</span>
-                        <span className={`h-2 flex-1 overflow-hidden rounded-full ${UI_SURFACES.borderFaint}`}>
+                        <span className={`w-14 text-[10px] capitalize UI_SURFACES.textSoftBright group-UI_SURFACES.hoverText`}>{entry.severity}</span>
+                        <span className={`h-2 flex-1 overflow-hidden rounded-full UI_SURFACES.borderFaint`}>
                           <span
                             className="block h-full rounded-full"
                             style={{ width: `${(entry.count / maxCount) * 100}%`, backgroundColor: SEVERITY_COLORS[entry.severity] }}
                           />
                         </span>
-                        <span className="w-5 text-right text-[10px] ${UI_SURFACES.textBody}">{entry.count}</span>
+                        <span className="w-5 text-right text-[10px] UI_SURFACES.textBody">{entry.count}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
-              <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-3 py-2`}>
-                <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Blind Spots</div>
+              <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.card px-3 py-2`}>
+                <div className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>Blind Spots</div>
                 {model.blindSpots ? (
-                  <div className="mt-1.5 space-y-0.5 text-[11px] ${UI_SURFACES.textBody}">
+                  <div className="mt-1.5 space-y-0.5 text-[11px] UI_SURFACES.textBody">
                     <div>{model.blindSpots.regionCount} regions · {model.blindSpots.criticalRegionCount} critical</div>
                     <div>{model.blindSpots.totalBlindAreaSqM.toFixed(1)} m² blind total</div>
                     <div>Largest {model.blindSpots.largestRegionAreaSqM.toFixed(1)} m²</div>
                   </div>
                 ) : (
-                  <div className={`mt-1.5 text-[11px] ${UI_SURFACES.textSoftDim}`}>No blind-spot fingerprint in this run.</div>
+                  <div className={`mt-1.5 text-[11px] UI_SURFACES.textSoftDim`}>No blind-spot fingerprint in this run.</div>
                 )}
               </div>
             </div>
@@ -694,7 +694,7 @@ export function AnalyticsDashboardView() {
         <div className="grid gap-3 lg:grid-cols-3">
           <SectionCard title="Camera Leaderboard" truthLabel="simulated" icon={<Camera className="h-3.5 w-3.5" />}>
             {model.cameraLeaderboard.length === 0 ? (
-              <div className={`text-[11px] ${UI_SURFACES.textSoftDim}`}>No cameras in the scene.</div>
+              <div className={`text-[11px] UI_SURFACES.textSoftDim`}>No cameras in the scene.</div>
             ) : (
               <ul className="flex flex-col gap-1">
                 {model.cameraLeaderboard.map((camera) => (
@@ -706,14 +706,14 @@ export function AnalyticsDashboardView() {
                         setSelectedCameraId(camera.cameraId);
                         setViewMode("camera_view");
                       }}
-                      className={`flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-1 text-left transition hover:${UI_SURFACES.border} hover:bg-white/5`}
+                      className={`flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-1 text-left transition hover:UI_SURFACES.border hover:bg-white/5`}
                       title={`Open ${camera.name} in Camera View`}
                     >
-                      <span className={`min-w-0 flex-1 truncate text-[11px] ${UI_SURFACES.textBody3}`}>{camera.name}</span>
-                      <span className={`h-1.5 w-20 overflow-hidden rounded-full ${UI_SURFACES.borderFaint}`}>
+                      <span className={`min-w-0 flex-1 truncate text-[11px] UI_SURFACES.textBody3`}>{camera.name}</span>
+                      <span className={`h-1.5 w-20 overflow-hidden rounded-full UI_SURFACES.borderFaint`}>
                         <span className="block h-full rounded-full bg-sky-400" style={{ width: `${camera.coveragePct}%` }} />
                       </span>
-                      <span className={`w-12 text-right text-[10px] ${UI_SURFACES.textSoftMuted}`}>{camera.coveragePct.toFixed(1)}%</span>
+                      <span className={`w-12 text-right text-[10px] UI_SURFACES.textSoftMuted`}>{camera.coveragePct.toFixed(1)}%</span>
                       {camera.zonesFailed > 0 ? (
                         <span className="rounded bg-rose-500/15 px-1 text-[9px] text-rose-200">{camera.zonesFailed} fail</span>
                       ) : null}
@@ -726,7 +726,7 @@ export function AnalyticsDashboardView() {
 
           <SectionCard title="Occlusion Offenders" truthLabel="simulated" icon={<Crosshair className="h-3.5 w-3.5" />}>
             {model.occlusionOffenders.length === 0 ? (
-              <div className={`text-[11px] ${UI_SURFACES.textSoftDim}`}>No obstruction is currently degrading a critical zone.</div>
+              <div className={`text-[11px] UI_SURFACES.textSoftDim`}>No obstruction is currently degrading a critical zone.</div>
             ) : (
               <ul className="flex flex-col gap-1">
                 {model.occlusionOffenders.map((offender) => (
@@ -738,11 +738,11 @@ export function AnalyticsDashboardView() {
                         setBottomTab("counterfactual");
                         setViewMode("map");
                       }}
-                      className={`flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-1 text-left transition hover:${UI_SURFACES.border} hover:bg-white/5`}
+                      className={`flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-1 text-left transition hover:UI_SURFACES.border hover:bg-white/5`}
                       title="Select obstruction and open counterfactual analysis"
                     >
-                      <span className={`min-w-0 flex-1 truncate text-[11px] ${UI_SURFACES.textBody3}`}>{offender.label}</span>
-                      <span className={`text-[10px] ${UI_SURFACES.textSoftMuted}`}>
+                      <span className={`min-w-0 flex-1 truncate text-[11px] UI_SURFACES.textBody3`}>{offender.label}</span>
+                      <span className={`text-[10px] UI_SURFACES.textSoftMuted`}>
                         {offender.affectedZoneCount} zone{offender.affectedZoneCount === 1 ? "" : "s"}
                       </span>
                       <span className="rounded bg-amber-500/15 px-1.5 text-[10px] text-amber-200">
@@ -782,32 +782,32 @@ export function AnalyticsDashboardView() {
             <SectionCard title="Crowd Impact" subtitle="people blocking camera views" truthLabel="simulated" icon={<Users className="h-3.5 w-3.5" />}>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Agents at hour {simulationResult.crowdOcclusion.hour}:00</span>
-                  <span className={`font-mono text-[11px] ${UI_SURFACES.textBody3}`}>{simulationResult.crowdOcclusion.totalAgentCount}</span>
+                  <span className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>Agents at hour {simulationResult.crowdOcclusion.hour}:00</span>
+                  <span className={`font-mono text-[11px] UI_SURFACES.textBody3`}>{simulationResult.crowdOcclusion.totalAgentCount}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Geometric coverage</span>
-                  <span className={`font-mono text-[11px] ${UI_SURFACES.textBody3}`}>{simulationResult.crowdOcclusion.geometricCoveragePct.toFixed(1)}%</span>
+                  <span className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>Geometric coverage</span>
+                  <span className={`font-mono text-[11px] UI_SURFACES.textBody3`}>{simulationResult.crowdOcclusion.geometricCoveragePct.toFixed(1)}%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Effective (crowd-adjusted)</span>
+                  <span className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>Effective (crowd-adjusted)</span>
                   <span className="font-mono text-[11px] text-emerald-200">{simulationResult.crowdOcclusion.effectiveCoveragePct.toFixed(1)}%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Occlusion penalty</span>
-                  <span className={`font-mono text-[11px] ${simulationResult.crowdOcclusion.occlusionPenaltyPct > 5 ? "text-amber-200" : "${UI_SURFACES.textBody3}"}`}>
+                  <span className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>Occlusion penalty</span>
+                  <span className={`font-mono text-[11px] ${simulationResult.crowdOcclusion.occlusionPenaltyPct > 5 ? "text-amber-200" : "UI_SURFACES.textBody3"}`}>
                     -{simulationResult.crowdOcclusion.occlusionPenaltyPct.toFixed(1)}%
                   </span>
                 </div>
                 {simulationResult.crowdOcclusion.chokepoints.length > 0 && (
                   <div className="mt-1">
-                    <div className={`mb-1 text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>
+                    <div className={`mb-1 text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>
                       Chokepoints ({simulationResult.crowdOcclusion.chokepoints.length})
                     </div>
                     <ul className="flex flex-col gap-0.5">
                       {simulationResult.crowdOcclusion.chokepoints.slice(0, 5).map((cp, i) => (
-                        <li key={i} className={`flex items-center justify-between rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1`}>
-                          <span className={`font-mono text-[10px] ${UI_SURFACES.textSoftMuted}`}>
+                        <li key={i} className={`flex items-center justify-between rounded border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1`}>
+                          <span className={`font-mono text-[10px] UI_SURFACES.textSoftMuted`}>
                             ({cp.x.toFixed(1)}, {cp.z.toFixed(1)})
                           </span>
                           <span className="rounded bg-amber-500/15 px-1.5 text-[10px] text-amber-200">
@@ -826,19 +826,19 @@ export function AnalyticsDashboardView() {
             <SectionCard title="Perimeter Integrity" icon={<ShieldAlert className="h-3.5 w-3.5" />} subtitle="fence coverage & gate exposure" truthLabel="simulated">
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>Fence Segments</span>
-                  <span className={`font-mono text-[11px] ${UI_SURFACES.textBody3}`}>{simulationResult.perimeterIntegrity.fenceSegmentCount}</span>
+                  <span className={`text-[10px] UI_SURFACES.textSoftDim`}>Fence Segments</span>
+                  <span className={`font-mono text-[11px] UI_SURFACES.textBody3`}>{simulationResult.perimeterIntegrity.fenceSegmentCount}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>Total Perimeter</span>
-                  <span className={`font-mono text-[11px] ${UI_SURFACES.textBody3}`}>{simulationResult.perimeterIntegrity.totalPerimeterM.toFixed(1)}m</span>
+                  <span className={`text-[10px] UI_SURFACES.textSoftDim`}>Total Perimeter</span>
+                  <span className={`font-mono text-[11px] UI_SURFACES.textBody3`}>{simulationResult.perimeterIntegrity.totalPerimeterM.toFixed(1)}m</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>Camera-Covered</span>
-                  <span className={`font-mono text-[11px] ${UI_SURFACES.textBody3}`}>{simulationResult.perimeterIntegrity.coveredPerimeterM.toFixed(1)}m</span>
+                  <span className={`text-[10px] UI_SURFACES.textSoftDim`}>Camera-Covered</span>
+                  <span className={`font-mono text-[11px] UI_SURFACES.textBody3`}>{simulationResult.perimeterIntegrity.coveredPerimeterM.toFixed(1)}m</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>Integrity Score</span>
+                  <span className={`text-[10px] UI_SURFACES.textSoftDim`}>Integrity Score</span>
                   <span className={`font-mono text-[11px] ${simulationResult.perimeterIntegrity.integrityPct >= 80 ? "text-emerald-300" : simulationResult.perimeterIntegrity.integrityPct >= 50 ? "text-amber-300" : "text-red-300"}`}>
                     {simulationResult.perimeterIntegrity.integrityPct.toFixed(1)}%
                   </span>
@@ -870,7 +870,7 @@ export function AnalyticsDashboardView() {
           )}
 
           <SectionCard title="Trend & Activity" truthLabel="computed" icon={<Activity className="h-3.5 w-3.5" />}>
-            <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Coverage Across Snapshots</div>
+            <div className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>Coverage Across Snapshots</div>
             <div className="mt-1">
               <CoverageTrendSparkline points={model.coverageTrend} />
             </div>
@@ -878,19 +878,19 @@ export function AnalyticsDashboardView() {
               <button
                 type="button"
                 onClick={() => setBottomTab("beforeafter")}
-                className={`mt-1 rounded border ${UI_SURFACES.border} px-2 py-0.5 text-[10px] ${UI_SURFACES.textSoftMuted} hover:bg-white/5`}
+                className={`mt-1 rounded border UI_SURFACES.border px-2 py-0.5 text-[10px] UI_SURFACES.textSoftMuted hover:bg-white/5`}
               >
                 Open Before / After
               </button>
             ) : null}
-            <div className={`mt-3 text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Evidence Ledger</div>
-            <div className="mt-1 text-[11px] ${UI_SURFACES.textBody}">
+            <div className={`mt-3 text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>Evidence Ledger</div>
+            <div className="mt-1 text-[11px] UI_SURFACES.textBody">
               {model.evidenceActivity.totalEvents} recorded event{model.evidenceActivity.totalEvents === 1 ? "" : "s"}
               {model.evidenceActivity.lastEventTitle ? ` · last: ${model.evidenceActivity.lastEventTitle}` : ""}
             </div>
             <div className="mt-1 flex flex-wrap gap-1">
               {model.evidenceActivity.countsByKind.map((entry) => (
-                <span key={entry.kind} className={`rounded ${UI_SURFACES.borderFaint} px-1.5 py-0.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
+                <span key={entry.kind} className={`rounded UI_SURFACES.borderFaint px-1.5 py-0.5 text-[9px] UI_SURFACES.textSoftBright`}>
                   {entry.kind.replace(/_/g, " ")} × {entry.count}
                 </span>
               ))}
@@ -898,7 +898,7 @@ export function AnalyticsDashboardView() {
             <button
               type="button"
               onClick={() => setBottomTab("provenance")}
-              className={`mt-2 rounded border ${UI_SURFACES.border} px-2 py-0.5 text-[10px] ${UI_SURFACES.textSoftMuted} hover:bg-white/5`}
+              className={`mt-2 rounded border UI_SURFACES.border px-2 py-0.5 text-[10px] UI_SURFACES.textSoftMuted hover:bg-white/5`}
             >
               Open Scene Intelligence
             </button>
@@ -907,7 +907,7 @@ export function AnalyticsDashboardView() {
 
         {regressionReport ? (
           <SectionCard title="Coverage CI" truthLabel="computed" icon={<Activity className="h-3.5 w-3.5" />}>
-            <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>
+            <div className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>
               vs. baseline: {regressionReport.baselineLabel}
             </div>
             <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -940,7 +940,7 @@ export function AnalyticsDashboardView() {
             icon={<Compass className="h-3.5 w-3.5" />}
           >
             <div className="flex items-center justify-between gap-2">
-              <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>
+              <div className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>
                 {observedVsPlannedReport.trackedSensors + observedVsPlannedReport.trackedCameras > 0
                   ? `${observedVsPlannedReport.trackedSensors} sensor${observedVsPlannedReport.trackedSensors === 1 ? "" : "s"} · ${observedVsPlannedReport.trackedCameras} camera${observedVsPlannedReport.trackedCameras === 1 ? "" : "s"} tracked`
                   : observedVsPlannedReport.baselineLabel
@@ -962,7 +962,7 @@ export function AnalyticsDashboardView() {
             </div>
             {observedVsPlannedReport.driftEntries.length > 0 ? (
               <div className="mt-2">
-                <div className={`mb-1 text-[9px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted}`}>
+                <div className={`mb-1 text-[9px] uppercase tracking-[0.14em] UI_SURFACES.textMuted`}>
                   Design drift
                   {observedVsPlannedReport.baselineLabel
                     ? ` · vs. ${observedVsPlannedReport.baselineLabel}`
@@ -989,7 +989,7 @@ export function AnalyticsDashboardView() {
             ) : null}
             {observedVsPlannedReport.liveAlerts.length > 0 ? (
               <div className="mt-2">
-                <div className={`mb-1 text-[9px] uppercase tracking-[0.14em] ${UI_SURFACES.textMuted}`}>Live faults</div>
+                <div className={`mb-1 text-[9px] uppercase tracking-[0.14em] UI_SURFACES.textMuted`}>Live faults</div>
                 <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                   {observedVsPlannedReport.liveAlerts.map((alert) => (
                     <div
@@ -1014,7 +1014,7 @@ export function AnalyticsDashboardView() {
 
         {framingGradeReport && framingGradeReport.zonesNeedingAttention.length > 0 ? (
           <SectionCard title="Shot Quality" truthLabel="simulated" icon={<Clapperboard className="h-3.5 w-3.5" />}>
-            <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>
+            <div className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>
               Framing of critical zones — beyond pixel density
             </div>
             <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -1048,22 +1048,22 @@ export function AnalyticsDashboardView() {
         {simulationResult?.adversarialPath?.accessControlBarriers &&
           simulationResult.adversarialPath.accessControlBarriers.length > 0 && (
           <SectionCard title="Access Control on Route" icon={<ShieldAlert className="h-3.5 w-3.5" />} subtitle="barriers the intruder must pass" truthLabel="simulated">
-            <div className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>
+            <div className={`text-[10px] UI_SURFACES.textSoftDim`}>
               {simulationResult.adversarialPath.accessControlBarriers.length} barrier{simulationResult.adversarialPath.accessControlBarriers.length !== 1 ? "s" : ""} add{" "}
               {simulationResult.adversarialPath.accessControlBarriers.reduce((s, b) => s + b.breachTimeS, 0)}s breach time to the route.
             </div>
             <ul className="mt-1.5 flex flex-col gap-1">
               {simulationResult.adversarialPath.accessControlBarriers.map((barrier) => (
-                <li key={barrier.nodeId} className={`flex items-center justify-between rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2.5 py-1.5`}>
+                <li key={barrier.nodeId} className={`flex items-center justify-between rounded-lg border UI_SURFACES.borderSubtle UI_SURFACES.card px-2.5 py-1.5`}>
                   <div>
-                    <div className={`text-[11px] ${UI_SURFACES.textBody3}`}>{barrier.label}</div>
-                    <div className={`text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textDimMid}`}>{barrier.controlType.replace("_", " ")}</div>
+                    <div className={`text-[11px] UI_SURFACES.textBody3`}>{barrier.label}</div>
+                    <div className={`text-[9px] uppercase tracking-[0.12em] UI_SURFACES.textDimMid`}>{barrier.controlType.replace("_", " ")}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="rounded bg-rose-500/15 px-1.5 text-[10px] text-rose-300">
                       diff {barrier.breachDifficulty}/5
                     </span>
-                    <span className={`font-mono text-[10px] ${UI_SURFACES.textSoftMuted}`}>{barrier.breachTimeS}s</span>
+                    <span className={`font-mono text-[10px] UI_SURFACES.textSoftMuted`}>{barrier.breachTimeS}s</span>
                   </div>
                 </li>
               ))}
@@ -1073,14 +1073,14 @@ export function AnalyticsDashboardView() {
 
         <SectionCard title="Resilience" truthLabel="simulated" icon={<ShieldAlert className="h-3.5 w-3.5" />}>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-3 py-2`}>
-              <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>
-                Failure tolerance <span className={`${UI_SURFACES.textDim}`}>(k-robustness)</span>
+            <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.card px-3 py-2`}>
+              <div className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>
+                Failure tolerance <span className={`UI_SURFACES.textDim`}>(k-robustness)</span>
               </div>
-              <div className={`mt-0.5 text-base font-semibold ${UI_SURFACES.textBody3}`}>
+              <div className={`mt-0.5 text-base font-semibold UI_SURFACES.textBody3`}>
                 {model.resilience.kRobustness === null ? "—" : `K=${model.resilience.kRobustness}`}
               </div>
-              <div className={`text-[10px] ${UI_SURFACES.textSoftBright}`}>
+              <div className={`text-[10px] UI_SURFACES.textSoftBright`}>
                 {model.resilience.isRobust === null
                   ? "Not computed"
                   : model.resilience.isRobust
@@ -1088,25 +1088,25 @@ export function AnalyticsDashboardView() {
                     : "A single failure can break critical coverage"}
               </div>
             </div>
-            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-3 py-2`}>
-              <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Fragile Cells</div>
-              <div className={`mt-0.5 text-base font-semibold ${UI_SURFACES.textBody3}`}>
+            <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.card px-3 py-2`}>
+              <div className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>Fragile Cells</div>
+              <div className={`mt-0.5 text-base font-semibold UI_SURFACES.textBody3`}>
                 {model.resilience.fragileCellPct === null ? "—" : `${model.resilience.fragileCellPct.toFixed(1)}%`}
               </div>
-              <div className={`text-[10px] ${UI_SURFACES.textSoftBright}`}>Cells within noise of dropping a DORI band</div>
+              <div className={`text-[10px] UI_SURFACES.textSoftBright`}>Cells within noise of dropping a DORI band</div>
             </div>
-            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-3 py-2`}>
-              <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Critical Failure Sets</div>
-              <div className={`mt-0.5 text-base font-semibold ${UI_SURFACES.textBody3}`}>{model.resilience.criticalSetCount}</div>
-              <div className={`text-[10px] ${UI_SURFACES.textSoftBright}`}>Camera combinations that break coverage</div>
+            <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.card px-3 py-2`}>
+              <div className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>Critical Failure Sets</div>
+              <div className={`mt-0.5 text-base font-semibold UI_SURFACES.textBody3`}>{model.resilience.criticalSetCount}</div>
+              <div className={`text-[10px] UI_SURFACES.textSoftBright`}>Camera combinations that break coverage</div>
             </div>
-            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-3 py-2`}>
-              <div className={`text-[10px] uppercase tracking-[0.12em] ${UI_SURFACES.textSoftDim}`}>Cameras</div>
-              <div className={`mt-0.5 text-base font-semibold ${UI_SURFACES.textBody3}`}>{model.resilience.totalCameras}</div>
+            <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.card px-3 py-2`}>
+              <div className={`text-[10px] uppercase tracking-[0.12em] UI_SURFACES.textSoftDim`}>Cameras</div>
+              <div className={`mt-0.5 text-base font-semibold UI_SURFACES.textBody3`}>{model.resilience.totalCameras}</div>
               <button
                 type="button"
                 onClick={() => setBottomTab("redundancy")}
-                className={`mt-0.5 rounded border ${UI_SURFACES.border} px-2 py-0.5 text-[10px] ${UI_SURFACES.textSoftMuted} hover:bg-white/5`}
+                className={`mt-0.5 rounded border UI_SURFACES.border px-2 py-0.5 text-[10px] UI_SURFACES.textSoftMuted hover:bg-white/5`}
               >
                 Open Redundancy Matrix
               </button>

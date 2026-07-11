@@ -97,9 +97,9 @@ export function ProjectSettingsPanel({
             onChange={(event) => onChangeOrganization(event.target.value || null)}
             className="mt-1 w-full rounded-lg border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-[11px] text-white outline-none transition-colors focus:border-sky-400/35"
           >
-            <option value="" className={`${UI_SURFACES.panel} text-white`}>Use workspace primary</option>
+            <option value="" className={`UI_SURFACES.panel text-white`}>Use workspace primary</option>
             {organizations.map((organization) => (
-              <option key={organization.id} value={organization.id} className={`${UI_SURFACES.panel} text-white`}>
+              <option key={organization.id} value={organization.id} className={`UI_SURFACES.panel text-white`}>
                 {organization.name}
               </option>
             ))}

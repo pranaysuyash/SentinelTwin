@@ -29,7 +29,7 @@ export const GIZMO_AXIS_COLORS = {
 function HoverChip({ label, position }: { label: string; position: [number, number, number] }) {
   return (
     <SceneHtml center position={position} style={{ pointerEvents: "none" }}>
-      <div className={`rounded border ${UI_SURFACES.border} ${UI_SURFACES.panel}/92 px-1.5 py-0.5 text-[8px] font-semibold ${UI_SURFACES.textBody2} whitespace-nowrap`}>
+      <div className={`rounded border UI_SURFACES.border UI_SURFACES.panel/92 px-1.5 py-0.5 text-[8px] font-semibold UI_SURFACES.textBody2 whitespace-nowrap`}>
         {label}
       </div>
     </SceneHtml>

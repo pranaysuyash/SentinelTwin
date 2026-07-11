@@ -68,7 +68,7 @@ export function SensorInspector() {
 
   return (
     <>
-      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-b UI_SURFACES.borderPanel px-3 py-3}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-500/20 bg-cyan-500/10">
@@ -76,7 +76,7 @@ export function SensorInspector() {
             </div>
             <div>
               <div className="text-[12px] font-semibold text-white">{sensor.label}</div>
-              <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
+              <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>
                 {SENSOR_TYPE_LABELS[sensor.sensorType]} · {SENSOR_COVERAGE_LABELS[sensor.coverageMode]}
               </div>
             </div>
@@ -145,7 +145,7 @@ export function SensorInspector() {
           <Field label="Nearest Camera" value={nearestCamera?.name ?? "None"} />
           <Field label="Camera Distance" value={nearestCamera ? `${nearestDistance.toFixed(1)}m` : "—"} />
           <Field label="Coverage Mode" value={SENSOR_COVERAGE_LABELS[sensor.coverageMode]} />
-          <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2 text-[10px] leading-relaxed ${UI_SURFACES.textSoftBright}`}>
+          <div className={`rounded-lg border UI_SURFACES.borderSubtle UI_SURFACES.panel px-2 py-2 text-[10px] leading-relaxed UI_SURFACES.textSoftBright`}>
             Sensors participate in the canonical scene graph and report summary. Live event binding records sensor triggers, heartbeats, faults, and restores into the evidence trail.
           </div>
         </SectionCard>
@@ -176,7 +176,7 @@ export function SensorInspector() {
                 details: `${sensor.label} sent a heartbeat.`,
                 resultingState: sensor.state,
               })}
-              className={`rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.card} px-2 py-2 text-[10px] font-medium ${UI_SURFACES.textBody2} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgDark}`}
+              className={`rounded-lg border UI_SURFACES.border UI_SURFACES.card px-2 py-2 text-[10px] font-medium UI_SURFACES.textBody2 transition-colors UI_SURFACES.hoverBorderBright UI_SURFACES.hoverBgDark`}
             >
               Heartbeat
             </button>
@@ -218,22 +218,22 @@ export function SensorInspector() {
         </SectionCard>
 
         <SectionCard title="Notes">
-          <label className={`block rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5`}>
+          <label className={`block rounded-lg border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1.5`}>
             <div className="mb-1 flex items-center justify-between gap-2">
-              <span className={`text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Notes</span>
+              <span className={`text-[8px] uppercase tracking-[0.16em] UI_SURFACES.textDimMid`}>Notes</span>
             </div>
             <textarea
               value={sensor.notes ?? ""}
               onChange={(event) => updateNode(sensor.id, { notes: event.target.value })}
               rows={3}
-              className={`w-full resize-none bg-transparent text-[11px] leading-relaxed ${UI_SURFACES.textBody2} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
+              className={`w-full resize-none bg-transparent text-[11px] leading-relaxed UI_SURFACES.textBody2 outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50`}
               placeholder="Optional sensor notes"
             />
           </label>
         </SectionCard>
       </div>
 
-      <div className={`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-t UI_SURFACES.borderPanel px-3 py-3}`}>
         <button
           type="button"
           onClick={() => removeNode(sensor.id)}

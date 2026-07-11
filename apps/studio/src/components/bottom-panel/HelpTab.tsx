@@ -160,23 +160,23 @@ export function HelpTab() {
     void useStudioStore.getState();
   };
   return (
-    <div className="h-full overflow-y-auto p-3 text-[12px] ${UI_SURFACES.textBody}">
+    <div className="h-full overflow-y-auto p-3 text-[12px] UI_SURFACES.textBody">
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div className="space-y-3">
-          <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep} p-3`}>
+          <div className={`rounded-xl border UI_SURFACES.borderDeep UI_SURFACES.panelDeep p-3`}>
             <div className="flex items-center justify-between gap-2">
               <div className="text-[12px] font-semibold text-white">Workflow Map</div>
               <button
                 type="button"
                 onClick={() => setShowFirstRunGuide(true)}
                 data-testid="help-show-first-run-guide"
-                className={`rounded border ${UI_SURFACES.borderElevated} px-2 py-1 text-[10px] ${UI_SURFACES.textBluePale} ${UI_SURFACES.hoverBgDark}`}
+                className={`rounded border UI_SURFACES.borderElevated px-2 py-1 text-[10px] UI_SURFACES.textBluePale UI_SURFACES.hoverBgDark`}
                 title="Clear the dismissed flag so the next session shows the first-run guide"
               >
                 Show First-Run Guide Again
               </button>
             </div>
-            <ol className={`mt-2 space-y-1 text-[11px] ${UI_SURFACES.textMuted4}`}>
+            <ol className={`mt-2 space-y-1 text-[11px] UI_SURFACES.textMuted4`}>
               {WORKFLOW_STEPS.map((step, index) => (
                 <li key={step}>
                   {index + 1}. {step}
@@ -185,33 +185,33 @@ export function HelpTab() {
             </ol>
           </div>
 
-          <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep} p-3`}>
+          <div className={`rounded-xl border UI_SURFACES.borderDeep UI_SURFACES.panelDeep p-3`}>
             <div className="text-[12px] font-semibold text-white">For Security Teams</div>
             <div className="mt-2 grid gap-2">
               {SECURITY_TEAM_GUIDES.map((guide) => (
                 <div key={guide.title} className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
-                  <div className="text-[11px] font-semibold ${UI_SURFACES.textBody3}">{guide.title}</div>
-                  <div className={`mt-0.5 text-[10px] leading-relaxed ${UI_SURFACES.textMuted4}`}>{guide.detail}</div>
+                  <div className="text-[11px] font-semibold UI_SURFACES.textBody3">{guide.title}</div>
+                  <div className={`mt-0.5 text-[10px] leading-relaxed UI_SURFACES.textMuted4`}>{guide.detail}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep} p-3`}>
+          <div className={`rounded-xl border UI_SURFACES.borderDeep UI_SURFACES.panelDeep p-3`}>
             <div className="text-[12px] font-semibold text-white">Glossary</div>
-            <div className={`mt-2 space-y-1 text-[11px] ${UI_SURFACES.textMuted4}`}>
+            <div className={`mt-2 space-y-1 text-[11px] UI_SURFACES.textMuted4`}>
               {DOMAIN_TERMS.map((entry) => (
                 <div key={entry.term} className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
-                  <div><span className="${UI_SURFACES.textBody3}">{entry.term}:</span> {entry.meaning}</div>
-                  <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textSoftDim}`}>Why it matters: {entry.why}</div>
+                  <div><span className="UI_SURFACES.textBody3">{entry.term}:</span> {entry.meaning}</div>
+                  <div className={`mt-0.5 text-[10px] UI_SURFACES.textSoftDim`}>Why it matters: {entry.why}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep} p-3`}>
+          <div className={`rounded-xl border UI_SURFACES.borderDeep UI_SURFACES.panelDeep p-3`}>
             <div className="text-[12px] font-semibold text-white">Recovery Guidance</div>
-            <ul className={`mt-2 space-y-1 text-[11px] ${UI_SURFACES.textMuted4}`}>
+            <ul className={`mt-2 space-y-1 text-[11px] UI_SURFACES.textMuted4`}>
               <li>• Import error: validate the site twin file and re-import.</li>
               <li>• Low night score: add light coverage or enable IR-capable camera.</li>
               <li>• Single-point failure: reorient or add a backup camera for the critical zone.</li>
@@ -221,20 +221,20 @@ export function HelpTab() {
         </div>
 
         <div className="space-y-3">
-          <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep} p-3`}>
+          <div className={`rounded-xl border UI_SURFACES.borderDeep UI_SURFACES.panelDeep p-3`}>
             <div className="text-[12px] font-semibold text-white">Keyboard Shortcuts</div>
-            <div className="mt-1 text-[10px] uppercase tracking-[0.18em] ${UI_SURFACES.textSoftDim}">
+            <div className="mt-1 text-[10px] uppercase tracking-[0.18em] UI_SURFACES.textSoftDim">
               {toolShortcutSummary()}
             </div>
             <div className="mt-2 space-y-3">
               {SHORTCUT_GROUPS.map((group) => (
                 <div key={group.title} className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
-                  <div className="text-[11px] font-semibold ${UI_SURFACES.textBody3}">{group.title}</div>
+                  <div className="text-[11px] font-semibold UI_SURFACES.textBody3">{group.title}</div>
                   <div className="mt-2 space-y-1">
                     {group.items.map(({ keys, action }) => (
                       <div key={`${group.title}-${keys}`} className="flex items-center justify-between gap-2">
-                        <span className={`text-[10px] ${UI_SURFACES.textMuted4}`}>{action}</span>
-                        <kbd className={`rounded border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-1.5 py-0.5 font-mono text-[10px] ${UI_SURFACES.textBody}`}>
+                        <span className={`text-[10px] UI_SURFACES.textMuted4`}>{action}</span>
+                        <kbd className={`rounded border UI_SURFACES.borderDark UI_SURFACES.card px-1.5 py-0.5 font-mono text-[10px] UI_SURFACES.textBody`}>
                           {keys}
                         </kbd>
                       </div>
@@ -245,12 +245,12 @@ export function HelpTab() {
             </div>
           </div>
 
-          <div className={`rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.panelDeep} p-3`}>
+          <div className={`rounded-xl border UI_SURFACES.borderDeep UI_SURFACES.panelDeep p-3`}>
             <div className="text-[12px] font-semibold text-white">Mode Map</div>
-            <div className={`mt-2 text-[11px] ${UI_SURFACES.textMuted4}`}>
+            <div className={`mt-2 text-[11px] UI_SURFACES.textMuted4`}>
               Use the numbered modes to move between map analysis, camera inspection, wall review, path replay, compare, and report handoff without losing your current scene.
             </div>
-            <div className="mt-2 rounded-lg border border-white/5 bg-white/[0.02] p-2 text-[10px] uppercase tracking-[0.16em] ${UI_SURFACES.textSoftDim}">
+            <div className="mt-2 rounded-lg border border-white/5 bg-white/[0.02] p-2 text-[10px] uppercase tracking-[0.16em] UI_SURFACES.textSoftDim">
               {viewModeSummary()}
             </div>
           </div>

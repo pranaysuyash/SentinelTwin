@@ -163,7 +163,7 @@ export function StatusBar() {
     : `Workflow: ${formatWorkflowLabel(activeWorkflowId)} ${workflowStepNumber}/${workflowTotalSteps}`;
 
   return (
-    <footer className={`flex h-6 flex-shrink-0 select-none items-center gap-4 border-t ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3`}>
+    <footer className={`flex h-6 flex-shrink-0 select-none items-center gap-4 border-t UI_SURFACES.borderPanel UI_SURFACES.panel px-3`}>
       {/* Unsaved / stale indicator */}
       {simulationDirty ? (
         <span className="text-[10px] text-amber-400/80 flex items-center gap-1">
@@ -172,8 +172,8 @@ export function StatusBar() {
         </span>
       ) : null}
 
-      <div className={`flex min-w-0 items-center gap-3 text-[10px] ${UI_SURFACES.textMuted}`}>
-        <span className={`max-w-[22rem] truncate ${UI_SURFACES.textBody}`} title={scene.name}>
+      <div className={`flex min-w-0 items-center gap-3 text-[10px] UI_SURFACES.textMuted`}>
+        <span className={`max-w-[22rem] truncate UI_SURFACES.textBody`} title={scene.name}>
           Scene: {scene.name}
         </span>
         <span className="rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-200">Truth: Live</span>
@@ -181,7 +181,7 @@ export function StatusBar() {
         <span className="whitespace-nowrap" title={workflowStepLabel ?? undefined}>
           {workflowText}
         </span>
-        <span className={`max-w-[18rem] truncate ${UI_SURFACES.textMuted3}`} title={selectionText}>
+        <span className={`max-w-[18rem] truncate UI_SURFACES.textMuted3`} title={selectionText}>
           {selectionText}
         </span>
       </div>
@@ -189,7 +189,7 @@ export function StatusBar() {
       <div className="flex-1" />
 
       {/* Engine status with dot */}
-      <div className={`flex items-center gap-3 text-[10px] ${UI_SURFACES.textMuted}`}>
+      <div className={`flex items-center gap-3 text-[10px] UI_SURFACES.textMuted`}>
         <span className="whitespace-nowrap" title={coverageText}>
           {coverageText}
         </span>
@@ -214,7 +214,7 @@ export function StatusBar() {
         className={`text-[10px] transition-colors ${
           neverRun || simulationDirty
             ? "text-amber-500/70 hover:text-amber-400 cursor-pointer"
-            : `${UI_SURFACES.textMuted} cursor-default`
+            : `UI_SURFACES.textMuted cursor-default`
         } ${running ? "opacity-50" : ""}`}
         title={
           running
@@ -232,21 +232,21 @@ export function StatusBar() {
       {/* Auto recompute toggle */}
       <button type="button"
         onClick={toggleAuto}
-        className={`flex items-center gap-1.5 text-[10px] ${UI_SURFACES.textMuted} transition-colors ${UI_SURFACES.hoverText}`}
+        className={`flex items-center gap-1.5 text-[10px] UI_SURFACES.textMuted transition-colors UI_SURFACES.hoverText`}
       >
         Auto:
-        <span className={autoRC ? "text-green-400" : `${UI_SURFACES.textMuted}`}>{autoRC ? "On" : "Off"}</span>
-        <span className={`h-1.5 w-1.5 rounded-full ${autoRC ? "bg-green-400" : `${UI_SURFACES.textMuted}`}`} />
+        <span className={autoRC ? "text-green-400" : `UI_SURFACES.textMuted`}>{autoRC ? "On" : "Off"}</span>
+        <span className={`h-1.5 w-1.5 rounded-full ${autoRC ? "bg-green-400" : `UI_SURFACES.textMuted`}`} />
       </button>
 
       {/* Mode indicator */}
-      <span className={`flex items-center gap-1.5 text-[10px] ${UI_SURFACES.textMuted}`}>
+      <span className={`flex items-center gap-1.5 text-[10px] UI_SURFACES.textMuted`}>
         <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
         Local
       </span>
 
-      <span className={`text-[10px] ${UI_SURFACES.textMuted}`}>Scale: 1 m/unit</span>
-      <span className={`text-[10px] ${UI_SURFACES.textMuted}`}>Grid: 0.25 m</span>
+      <span className={`text-[10px] UI_SURFACES.textMuted`}>Scale: 1 m/unit</span>
+      <span className={`text-[10px] UI_SURFACES.textMuted`}>Grid: 0.25 m</span>
     </footer>
   );
 }

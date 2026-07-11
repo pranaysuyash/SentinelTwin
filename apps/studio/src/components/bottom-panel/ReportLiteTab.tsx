@@ -570,43 +570,43 @@ export function ReportLiteTab() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Toolbar */}
-      <div className={`{flex items-center justify-between border-b ${UI_SURFACES.borderPanel} px-3 py-1.5}`}>
-        <span className={`text-[10px] ${UI_SURFACES.textSoftMid}`}>
+      <div className={`{flex items-center justify-between border-b UI_SURFACES.borderPanel px-3 py-1.5}`}>
+        <span className={`text-[10px] UI_SURFACES.textSoftMid`}>
           {aiReport ? "AI Report" : "Markdown Report"}
         </span>
         <div className="flex items-center gap-1.5">
-        <div className={`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} p-0.5}`}>
+        <div className={`{flex items-center gap-1 rounded border UI_SURFACES.borderPanel UI_SURFACES.bgDeep p-0.5}`}>
             <button type="button"
               onClick={() => setReportMode("single")}
-              className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "single" ? "${UI_SURFACES.bgPanel} text-white" : "${UI_SURFACES.textMuted5}"}`}
+              className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "single" ? "UI_SURFACES.bgPanel text-white" : "UI_SURFACES.textMuted5"}`}
             >
               Technical
             </button>
             <button type="button"
               onClick={() => setReportMode("plain")}
-              className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "plain" ? "${UI_SURFACES.bgPanel} text-white" : "${UI_SURFACES.textMuted5}"}`}
+              className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "plain" ? "UI_SURFACES.bgPanel text-white" : "UI_SURFACES.textMuted5"}`}
             >
               Plain Language
             </button>
             <button type="button"
               onClick={() => setReportMode("compare")}
-              className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "compare" ? "${UI_SURFACES.bgPanel} text-white" : "${UI_SURFACES.textMuted5}"}`}
+              className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "compare" ? "UI_SURFACES.bgPanel text-white" : "UI_SURFACES.textMuted5"}`}
             >
               Before/After
             </button>
         </div>
-          <div className={`{min-w-[22rem] rounded border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} p-2}`}>
+          <div className={`{min-w-[22rem] rounded border UI_SURFACES.borderPanel UI_SURFACES.bgDeep p-2}`}>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textBody}`}>Catalog</div>
-                <div className={`text-[8px] ${UI_SURFACES.textSoftDim}`}>Saved quick-apply presets and the active standards template.</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] UI_SURFACES.textBody`}>Catalog</div>
+                <div className={`text-[8px] UI_SURFACES.textSoftDim`}>Saved quick-apply presets and the active standards template.</div>
               </div>
               <div className="flex items-center gap-1">
                 <input
                   value={presetNameDraft}
                   onChange={(event) => setPresetNameDraft(event.target.value)}
                   aria-label="Preset name"
-                  className={`w-32 rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody2}`}
+                  className={`w-32 rounded border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textBody2`}
                 />
                 <button
                   type="button"
@@ -630,21 +630,21 @@ export function ReportLiteTab() {
                     className={`min-w-[10rem] rounded px-2 py-1 text-left text-[9px] transition-colors ${
                       selected
                         ? "border border-sky-500/40 bg-sky-500/10 text-sky-100"
-                        : `border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textSoftMuted} ${UI_SURFACES.hoverBorderSubtle} hover:text-white`
+                        : `border UI_SURFACES.borderThin UI_SURFACES.card UI_SURFACES.textSoftMuted UI_SURFACES.hoverBorderSubtle hover:text-white`
                     }`}
                   >
                     <div className="font-semibold uppercase tracking-[0.14em]">{preset.title}</div>
-                    <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoftDim}`}>
+                    <div className={`mt-0.5 text-[8px] UI_SURFACES.textSoftDim`}>
                       {getReportAudienceProfile(preset.audience).label} · {visibility.label} · {template.title}
                     </div>
-                    <div className={`mt-1 text-[8px] ${UI_SURFACES.textSoftDim}`}>{preset.summary}</div>
+                    <div className={`mt-1 text-[8px] UI_SURFACES.textSoftDim`}>{preset.summary}</div>
                   </button>
                 );
               })}
             </div>
             {reportCatalog.some((preset) => preset.isCustom) ? (
-              <div className={`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-2}`}>
-                <div className={`mb-1 text-[8px] uppercase tracking-[0.14em] ${UI_SURFACES.textSoftDim}`}>Saved presets</div>
+              <div className={`{mt-2 border-t UI_SURFACES.borderPanel pt-2}`}>
+                <div className={`mb-1 text-[8px] uppercase tracking-[0.14em] UI_SURFACES.textSoftDim`}>Saved presets</div>
                 <div className="flex flex-wrap gap-1.5">
                   {reportCatalog.filter((preset) => preset.isCustom).map((preset) => {
                     const selected = preset.id === selectedCatalogPreset?.id;
@@ -656,7 +656,7 @@ export function ReportLiteTab() {
                         className={`min-w-[10rem] rounded border px-2 py-1 text-left text-[9px] ${
                           selected
                             ? "border-sky-500/40 bg-sky-500/10 text-sky-100"
-                            : `${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textSoftMuted}`
+                            : `UI_SURFACES.borderThin UI_SURFACES.card UI_SURFACES.textSoftMuted`
                         }`}
                       >
                         <button
@@ -665,10 +665,10 @@ export function ReportLiteTab() {
                           className="w-full text-left"
                         >
                           <div className="font-semibold uppercase tracking-[0.14em]">{preset.title}</div>
-                          <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoftDim}`}>
+                          <div className={`mt-0.5 text-[8px] UI_SURFACES.textSoftDim`}>
                             {getReportAudienceProfile(preset.audience).label} · {visibility.label} · {template.title}
                           </div>
-                          <div className={`mt-1 text-[8px] ${UI_SURFACES.textSoftDim}`}>{preset.summary}</div>
+                          <div className={`mt-1 text-[8px] UI_SURFACES.textSoftDim`}>{preset.summary}</div>
                         </button>
                         <button
                           type="button"
@@ -684,7 +684,7 @@ export function ReportLiteTab() {
               </div>
             ) : null}
           </div>
-          <label className={`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5}}`}>
+          <label className={`{flex items-center gap-1 rounded border UI_SURFACES.borderPanel UI_SURFACES.bgDeep px-2 py-1 text-[9px] UI_SURFACES.textMuted5}`}>
             Template
             <select
               value={reportTemplateId}
@@ -693,7 +693,7 @@ export function ReportLiteTab() {
                 setReportTemplateId(nextTemplateId);
                 syncCatalogSelection(reportAudience, reportVisibility, nextTemplateId);
               }}
-              className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] ${UI_SURFACES.textBody2}`}
+              className={`rounded border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-0.5 text-[9px] UI_SURFACES.textBody2`}
             >
               {availableTemplates.map((template) => (
                 <option key={template.id} value={template.id}>
@@ -702,7 +702,7 @@ export function ReportLiteTab() {
               ))}
             </select>
           </label>
-          <label className={`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5}}`}>
+          <label className={`{flex items-center gap-1 rounded border UI_SURFACES.borderPanel UI_SURFACES.bgDeep px-2 py-1 text-[9px] UI_SURFACES.textMuted5}`}>
             Audience
             <select
               value={reportAudience}
@@ -711,7 +711,7 @@ export function ReportLiteTab() {
                 setReportAudience(nextAudience);
                 syncCatalogSelection(nextAudience, reportVisibility, reportTemplateId);
               }}
-              className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] ${UI_SURFACES.textBody2}`}
+              className={`rounded border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-0.5 text-[9px] UI_SURFACES.textBody2`}
             >
             <option value="operator">Operator</option>
             <option value="consultant">Security Consultant</option>
@@ -723,7 +723,7 @@ export function ReportLiteTab() {
             <option value="privacy_reviewer">Privacy reviewer</option>
           </select>
           </label>
-          <label className={`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5}}`}>
+          <label className={`{flex items-center gap-1 rounded border UI_SURFACES.borderPanel UI_SURFACES.bgDeep px-2 py-1 text-[9px] UI_SURFACES.textMuted5}`}>
             Visibility
             <select
               value={reportVisibility}
@@ -732,21 +732,21 @@ export function ReportLiteTab() {
                 setReportVisibility(nextVisibility);
                 syncCatalogSelection(reportAudience, nextVisibility, reportTemplateId);
               }}
-              className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] ${UI_SURFACES.textBody2}`}
+              className={`rounded border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-0.5 text-[9px] UI_SURFACES.textBody2`}
             >
               <option value="internal">Operator evidence</option>
               <option value="shared">Historical baseline</option>
               <option value="privacy_safe">Privacy safe</option>
             </select>
           </label>
-          <div className={`{flex flex-wrap items-center gap-2 rounded border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5}}`}>
-            <span className={`font-semibold ${UI_SURFACES.textBody}`}>Redactions:</span>
+          <div className={`{flex flex-wrap items-center gap-2 rounded border UI_SURFACES.borderPanel UI_SURFACES.bgDeep px-2 py-1 text-[9px] UI_SURFACES.textMuted5}`}>
+            <span className={`font-semibold UI_SURFACES.textBody`}>Redactions:</span>
             <label className="inline-flex items-center gap-1 cursor-pointer">
               <input
                 type="checkbox"
                 checked={!!redactionPolicy.redactCameraIps}
                 onChange={(e) => setRedactionPolicy((p) => ({ ...p, redactCameraIps: e.target.checked }))}
-                className={`rounded ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-sky-500 focus:ring-0`}
+                className={`rounded UI_SURFACES.borderThin UI_SURFACES.card text-sky-500 focus:ring-0`}
               />
               <span>Camera IPs</span>
             </label>
@@ -755,7 +755,7 @@ export function ReportLiteTab() {
                 type="checkbox"
                 checked={!!redactionPolicy.redactGpsCoordinates}
                 onChange={(e) => setRedactionPolicy((p) => ({ ...p, redactGpsCoordinates: e.target.checked }))}
-                className={`rounded ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-sky-500 focus:ring-0`}
+                className={`rounded UI_SURFACES.borderThin UI_SURFACES.card text-sky-500 focus:ring-0`}
               />
               <span>GPS Coordinates</span>
             </label>
@@ -764,7 +764,7 @@ export function ReportLiteTab() {
                 type="checkbox"
                 checked={!!redactionPolicy.redactPatrolRoutes}
                 onChange={(e) => setRedactionPolicy((p) => ({ ...p, redactPatrolRoutes: e.target.checked }))}
-                className={`rounded ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-sky-500 focus:ring-0`}
+                className={`rounded UI_SURFACES.borderThin UI_SURFACES.card text-sky-500 focus:ring-0`}
               />
               <span>Patrol Routes</span>
             </label>
@@ -773,23 +773,23 @@ export function ReportLiteTab() {
                 type="checkbox"
                 checked={!!redactionPolicy.maskVulnerabilities}
                 onChange={(e) => setRedactionPolicy((p) => ({ ...p, maskVulnerabilities: e.target.checked }))}
-                className={`rounded ${UI_SURFACES.borderThin} ${UI_SURFACES.card} text-sky-500 focus:ring-0`}
+                className={`rounded UI_SURFACES.borderThin UI_SURFACES.card text-sky-500 focus:ring-0`}
               />
               <span>Mask Vulnerabilities</span>
             </label>
           </div>
-          <div className={`{rounded border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5}}`}>
-            <div className={`font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textBody}`}>Audience Policy</div>
-            <div className={`mt-0.5 ${UI_SURFACES.textSoftMid}`}>
+          <div className={`{rounded border UI_SURFACES.borderPanel UI_SURFACES.bgDeep px-2 py-1 text-[9px] UI_SURFACES.textMuted5}`}>
+            <div className={`font-semibold uppercase tracking-[0.14em] UI_SURFACES.textBody`}>Audience Policy</div>
+            <div className={`mt-0.5 UI_SURFACES.textSoftMid`}>
               {audienceProfile.disclosureLevel.replace(/_/g, " ")} · {audienceProfile.disclosureSummary}
             </div>
-            <div className={`mt-1 ${UI_SURFACES.textSoftMid}`}>Visible: {audienceProfile.visibleSections.join(", ")}</div>
-            <div className={`${UI_SURFACES.textSoftMid}`}>Withheld: {audienceProfile.withheldSections.length > 0 ? audienceProfile.withheldSections.join(", ") : "none"}</div>
+            <div className={`mt-1 UI_SURFACES.textSoftMid`}>Visible: {audienceProfile.visibleSections.join(", ")}</div>
+            <div className={`UI_SURFACES.textSoftMid`}>Withheld: {audienceProfile.withheldSections.length > 0 ? audienceProfile.withheldSections.join(", ") : "none"}</div>
           </div>
           <button type="button"
             onClick={handleGenerateAI}
             disabled={isGenerating || !result}
-            className={`{inline-flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:opacity-40}`}
+            className={`{inline-flex items-center gap-1 rounded border UI_SURFACES.borderPanel px-2 py-1 text-[9px] text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:opacity-40}`}
           >
             {isGenerating ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -801,7 +801,7 @@ export function ReportLiteTab() {
           <div className="flex gap-1.5">
             <button type="button"
               onClick={() => { setAiReport(null); }}
-              className={`{rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftMid} transition-colors hover:text-white}`}
+              className={`{rounded border UI_SURFACES.borderPanel px-2 py-1 text-[9px] UI_SURFACES.textSoftMid transition-colors hover:text-white}`}
             >
               Default
             </button>
@@ -821,44 +821,44 @@ export function ReportLiteTab() {
             </button>
             <button type="button"
               onClick={handleExportMarkdown}
-              className={`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white}`}
+              className={`{flex items-center gap-1 rounded border UI_SURFACES.borderPanel px-2 py-1 text-[9px] UI_SURFACES.textMuted5 transition-colors UI_SURFACES.hoverBorder hover:text-white}`}
             >
               <FileText className="h-3 w-3" /> Export Markdown
             </button>
             <button type="button"
               onClick={handleExportHtml}
-              className={`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white}`}
+              className={`{flex items-center gap-1 rounded border UI_SURFACES.borderPanel px-2 py-1 text-[9px] UI_SURFACES.textMuted5 transition-colors UI_SURFACES.hoverBorder hover:text-white}`}
             >
               <Globe className="h-3 w-3" /> Export HTML
             </button>
             <button type="button"
               onClick={handleExportProvenance}
               disabled={!result}
-              className={`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white disabled:opacity-40}`}
+              className={`{flex items-center gap-1 rounded border UI_SURFACES.borderPanel px-2 py-1 text-[9px] UI_SURFACES.textMuted5 transition-colors UI_SURFACES.hoverBorder hover:text-white disabled:opacity-40}`}
             >
               <Database className="h-3 w-3" /> Export Provenance
             </button>
             <button type="button"
               onClick={handlePrint}
-              className={`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white}`}
+              className={`{flex items-center gap-1 rounded border UI_SURFACES.borderPanel px-2 py-1 text-[9px] UI_SURFACES.textMuted5 transition-colors UI_SURFACES.hoverBorder hover:text-white}`}
             >
               <Printer className="h-3 w-3" /> Print
             </button>
             <button type="button"
               onClick={copy}
-              className={`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white}`}
+              className={`{flex items-center gap-1 rounded border UI_SURFACES.borderPanel px-2 py-1 text-[9px] UI_SURFACES.textMuted5 transition-colors UI_SURFACES.hoverBorder hover:text-white}`}
             >
               <Copy className="h-3 w-3" /> Copy
             </button>
             <button type="button"
               onClick={() => void writeClipboardText(installerHandoffMarkdown)}
-              className={`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white}`}
+              className={`{flex items-center gap-1 rounded border UI_SURFACES.borderPanel px-2 py-1 text-[9px] UI_SURFACES.textMuted5 transition-colors UI_SURFACES.hoverBorder hover:text-white}`}
             >
               <Copy className="h-3 w-3" /> Copy Installer Handoff
             </button>
             <button type="button"
               onClick={() => void writeClipboardText(commissioningChecklistMarkdown)}
-              className={`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white}`}
+              className={`{flex items-center gap-1 rounded border UI_SURFACES.borderPanel px-2 py-1 text-[9px] UI_SURFACES.textMuted5 transition-colors UI_SURFACES.hoverBorder hover:text-white}`}
             >
               <Copy className="h-3 w-3" /> Copy Commissioning
             </button>
@@ -876,14 +876,14 @@ export function ReportLiteTab() {
               void copyCompareLink();
             }}
             disabled={reportMode !== "compare" || !snapshotA || !snapshotB}
-              className={`{flex items-center gap-1 rounded border ${UI_SURFACES.borderPanel} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5} transition-colors ${UI_SURFACES.hoverBorder} hover:text-white disabled:opacity-40}`}
+              className={`{flex items-center gap-1 rounded border UI_SURFACES.borderPanel px-2 py-1 text-[9px] UI_SURFACES.textMuted5 transition-colors UI_SURFACES.hoverBorder hover:text-white disabled:opacity-40}`}
             >
               <Copy className="h-3 w-3" /> Copy compare link
             </button>
           </div>
         </div>
       </div>
-      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-1.5 text-[9px] ${UI_SURFACES.textSoftDim}}`}>
+      <div className={`{border-b UI_SURFACES.borderPanel px-3 py-1.5 text-[9px] UI_SURFACES.textSoftDim}`}>
         {reportMode === "compare" ? (
           compareSelectionProvenanceNote ? (
             <span>Compare provenance: {compareSelectionProvenanceNote}</span>
@@ -912,7 +912,7 @@ export function ReportLiteTab() {
             <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-indigo-300">Regulatory Mandates Active</div>
             <div className="grid gap-1.5 text-[10px] text-indigo-200/90">
               {((reportMode === "single" ? singleExportReport : compareExportReport)?.template?.regulatoryMandates ?? []).map((m) => (
-                <div key={`${m.authority}-${m.articleOrSection}`} className={`rounded-lg border border-indigo-500/20 ${UI_SURFACES.card}/80 px-2.5 py-1.5`}>
+                <div key={`${m.authority}-${m.articleOrSection}`} className={`rounded-lg border border-indigo-500/20 UI_SURFACES.card/80 px-2.5 py-1.5`}>
                   <span className="font-semibold text-indigo-200">[{m.authority} {m.articleOrSection}] {m.keyRequirement}</span> · Retention: {m.retentionLimitDays}d
                   {m.mandatoryRedactions.length > 0 ? (
                     <div className="mt-0.5 text-[9px] text-indigo-300/80">Mandatory Redactions: {m.mandatoryRedactions.join(", ")}</div>
@@ -932,38 +932,38 @@ export function ReportLiteTab() {
         ) : null}
         {!result && reportMode === "single" ? (
           <RunSimulationPrompt
-            className={`rounded-xl border border-dashed ${UI_SURFACES.borderDark} ${UI_SURFACES.panel} px-3 py-4`}
+            className={`rounded-xl border border-dashed UI_SURFACES.borderDark UI_SURFACES.panel px-3 py-4`}
             message="Run the shared simulation to generate a report and security outcome."
           />
         ) : null}
         {reportSummary ? (
-          <div className={`{mb-3 rounded-xl border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} p-3}`}>
-            <div className={`{mb-2 flex items-center justify-between gap-2 rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}}`}>
+          <div className={`{mb-3 rounded-xl border UI_SURFACES.borderPanel UI_SURFACES.panel p-3}`}>
+            <div className={`{mb-2 flex items-center justify-between gap-2 rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.bgDeep px-2 py-1.5 text-[9px] UI_SURFACES.textSoftBright}`}>
               <div className="flex items-center gap-2">
-                <span className={`font-semibold uppercase tracking-[0.14em] ${UI_SURFACES.textBody}`}>Truth:</span>
+                <span className={`font-semibold uppercase tracking-[0.14em] UI_SURFACES.textBody`}>Truth:</span>
                 <TruthBadge label="computed" />
               </div>
               <div className="max-w-[28rem] truncate text-right" title={truthLabelDetail("computed")}>{truthLabelDetail("computed")}</div>
             </div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <div>
-                <div className={`text-[9px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted5}`}>Report Summary</div>
-                <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>Four bullet executive summary from the latest run.</div>
-                <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>Audience framing: {audienceProfile.label} · {audienceProfile.framing}</div>
-                <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>Visibility framing: {visibilityProfile.label} · {visibilityProfile.framing}</div>
-                <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>Standards template: {getReportStandardTemplateProfile(reportTemplateId).title} · {getReportStandardTemplateProfile(reportTemplateId).summary}</div>
+                <div className={`text-[9px] font-semibold uppercase tracking-[0.16em] UI_SURFACES.textMuted5`}>Report Summary</div>
+                <div className={`text-[9px] UI_SURFACES.textSoftMid`}>Four bullet executive summary from the latest run.</div>
+                <div className={`text-[9px] UI_SURFACES.textSoftMid`}>Audience framing: {audienceProfile.label} · {audienceProfile.framing}</div>
+                <div className={`text-[9px] UI_SURFACES.textSoftMid`}>Visibility framing: {visibilityProfile.label} · {visibilityProfile.framing}</div>
+                <div className={`text-[9px] UI_SURFACES.textSoftMid`}>Standards template: {getReportStandardTemplateProfile(reportTemplateId).title} · {getReportStandardTemplateProfile(reportTemplateId).summary}</div>
               </div>
               <button
                 type="button"
                 onClick={() => setReportMode("single")}
-                className={`rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textMuted5} transition-colors ${UI_SURFACES.hoverBorderSubtle} hover:text-white`}
+                className={`rounded border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textMuted5 transition-colors UI_SURFACES.hoverBorderSubtle hover:text-white`}
               >
                 Latest Run
               </button>
             </div>
-            <div className={`grid gap-1.5 text-[10px] ${UI_SURFACES.textNearAlt}`}>
+            <div className={`grid gap-1.5 text-[10px] UI_SURFACES.textNearAlt`}>
               {reportSummary.map((line) => (
-                <div key={line.label} className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.card} px-2.5 py-2}`}>
+                <div key={line.label} className={`{rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.card px-2.5 py-2}`}>
                   <span
                     className={`font-semibold ${
                       line.label === "Critical Issue"
@@ -983,18 +983,18 @@ export function ReportLiteTab() {
             </div>
           </div>
         ) : null}
-        <div className={`{mb-3 rounded-xl border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} p-3}`}>
+        <div className={`{mb-3 rounded-xl border UI_SURFACES.borderPanel UI_SURFACES.panel p-3}`}>
           <div className="mb-2 flex items-center justify-between gap-2">
             <div>
-              <div className={`text-[9px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted5}`}>Truth Ladder</div>
-              <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>Node review, source trace, and geometry validity status for the current scene.</div>
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.16em] UI_SURFACES.textMuted5`}>Truth Ladder</div>
+              <div className={`text-[9px] UI_SURFACES.textSoftMid`}>Node review, source trace, and geometry validity status for the current scene.</div>
             </div>
             <div className="flex items-center gap-2">
               <TruthBadge label="inferred" />
               <span className="text-[9px] text-sky-200">{truthLadder.summary}</span>
             </div>
           </div>
-          <div className={`grid gap-1.5 text-[10px] ${UI_SURFACES.textNearAlt} md:grid-cols-2 xl:grid-cols-3`}>
+          <div className={`grid gap-1.5 text-[10px] UI_SURFACES.textNearAlt md:grid-cols-2 xl:grid-cols-3`}>
             {[
               { label: "Nodes", value: truthLadder.nodeCount },
               { label: "Reviewed Nodes", value: `${truthLadder.reviewedNodeCount} (${truthLadder.reviewedCoveragePct.toFixed(1)}%)` },
@@ -1003,29 +1003,29 @@ export function ReportLiteTab() {
               { label: "Suspect Geometry", value: truthLadder.suspectGeometryCount },
               { label: "Invalid Geometry", value: truthLadder.invalidGeometryCount },
             ].map((item) => (
-              <div key={item.label} className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.card} px-2.5 py-2}`}>
+              <div key={item.label} className={`{rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.card px-2.5 py-2}`}>
                 <span className="font-semibold text-sky-300">{item.label}:</span> {item.value}
               </div>
             ))}
           </div>
         </div>
-        <div className={`{mb-3 rounded-xl border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} p-3}`}>
-          <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted5}`}>Infrastructure Estimate</div>
-          <div className={`grid gap-1.5 text-[10px] ${UI_SURFACES.textNearAlt} md:grid-cols-2 xl:grid-cols-4`}>
-            <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.card} px-2.5 py-2}`}><span className="font-semibold text-sky-300">Bandwidth:</span> {infrastructureEstimate.bandwidthMbps} Mbps</div>
-            <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.card} px-2.5 py-2}`}><span className="font-semibold text-sky-300">Storage:</span> {infrastructureEstimate.storageTb} TB / {infrastructureEstimate.retentionDays}d</div>
-            <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.card} px-2.5 py-2}`}><span className="font-semibold text-sky-300">PoE:</span> {infrastructureEstimate.poeEstimatedW}W est / {infrastructureEstimate.poeBudgetW}W budget</div>
-            <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.card} px-2.5 py-2}`}><span className="font-semibold text-sky-300">Cable + NVR:</span> {infrastructureEstimate.cableEstimateM}m · {infrastructureEstimate.nvrChannels}ch</div>
+        <div className={`{mb-3 rounded-xl border UI_SURFACES.borderPanel UI_SURFACES.panel p-3}`}>
+          <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.16em] UI_SURFACES.textMuted5`}>Infrastructure Estimate</div>
+          <div className={`grid gap-1.5 text-[10px] UI_SURFACES.textNearAlt md:grid-cols-2 xl:grid-cols-4`}>
+            <div className={`{rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.card px-2.5 py-2}`}><span className="font-semibold text-sky-300">Bandwidth:</span> {infrastructureEstimate.bandwidthMbps} Mbps</div>
+            <div className={`{rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.card px-2.5 py-2}`}><span className="font-semibold text-sky-300">Storage:</span> {infrastructureEstimate.storageTb} TB / {infrastructureEstimate.retentionDays}d</div>
+            <div className={`{rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.card px-2.5 py-2}`}><span className="font-semibold text-sky-300">PoE:</span> {infrastructureEstimate.poeEstimatedW}W est / {infrastructureEstimate.poeBudgetW}W budget</div>
+            <div className={`{rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.card px-2.5 py-2}`}><span className="font-semibold text-sky-300">Cable + NVR:</span> {infrastructureEstimate.cableEstimateM}m · {infrastructureEstimate.nvrChannels}ch</div>
           </div>
         </div>
-        <div className={`{mb-3 rounded-xl border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} p-3}`}>
-          <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted5}`}>Zone Compliance</div>
+        <div className={`{mb-3 rounded-xl border UI_SURFACES.borderPanel UI_SURFACES.panel p-3}`}>
+          <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.16em] UI_SURFACES.textMuted5`}>Zone Compliance</div>
           {zoneComplianceRows.length === 0 ? (
-            <div className={`text-[10px] ${UI_SURFACES.textMuted5}`}>No critical zones available for compliance summary.</div>
+            <div className={`text-[10px] UI_SURFACES.textMuted5`}>No critical zones available for compliance summary.</div>
           ) : (
-            <div className={`grid gap-1 text-[10px] ${UI_SURFACES.textNearAlt}`}>
+            <div className={`grid gap-1 text-[10px] UI_SURFACES.textNearAlt`}>
               {zoneComplianceRows.map((row) => (
-                <div key={row.id} className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.card} px-2.5 py-2}`}>
+                <div key={row.id} className={`{rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.card px-2.5 py-2}`}>
                   <span className={`font-semibold ${row.pass ? "text-emerald-300" : "text-rose-300"}`}>{row.label}:</span> required {row.required}, actual {row.actual} ({row.status})
                 </div>
               ))}
@@ -1033,32 +1033,32 @@ export function ReportLiteTab() {
           )}
         </div>
         {activePathId ? (
-          <div className={`{mb-3 rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2 text-[10px] ${UI_SURFACES.textMuted5}}`}>
+          <div className={`{mb-3 rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.panel px-3 py-2 text-[10px] UI_SURFACES.textMuted5}`}>
             Route evidence is tied to the selected active path.
           </div>
         ) : (
-          <div className={`{mb-3 rounded-lg border border-dashed ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} px-3 py-2 text-[10px] ${UI_SURFACES.textMuted5}}`}>
+          <div className={`{mb-3 rounded-lg border border-dashed UI_SURFACES.borderPanel UI_SURFACES.panel px-3 py-2 text-[10px] UI_SURFACES.textMuted5}`}>
             Select a path in Scenario / Path to include route evidence in report summaries and exports.
           </div>
         )}
-        <div className={`{mb-3 rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} p-3 text-[10px] ${UI_SURFACES.textNearAlt}}`}>
+        <div className={`{mb-3 rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.panel p-3 text-[10px] UI_SURFACES.textNearAlt}`}>
           Security Outcome: {outcome.summary.status.replace(/_/g, " ")} · Coverage {outcome.summary.coveragePct == null ? "n/a" : `${Math.round(outcome.summary.coveragePct)}%`} · Critical Zones {outcome.summary.criticalZonesPassing}/{outcome.summary.criticalZonesTotal} · Issues {outcome.summary.issueCount}
         </div>
         {reportMode === "compare" ? (
-          <div className={`{mb-3 rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panel} p-3}`}>
-            <div className={`mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted5}`}>Compare Export Context</div>
+          <div className={`{mb-3 rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.panel p-3}`}>
+            <div className={`mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] UI_SURFACES.textMuted5`}>Compare Export Context</div>
             {compareSelectionMissing ? (
-              <div className={`mb-2 rounded-lg border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-2 text-[10px] ${UI_SURFACES.textSoftBright}`}>
+              <div className={`mb-2 rounded-lg border border-dashed UI_SURFACES.border UI_SURFACES.panel px-3 py-2 text-[10px] UI_SURFACES.textSoftBright`}>
                 Select both snapshots to generate compare exports. The report keeps the comparison explicit instead of auto-picking the newest saves.
               </div>
             ) : null}
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                <label className={`text-[9px] ${UI_SURFACES.textSoftMuted}`}>
+                <label className={`text-[9px] UI_SURFACES.textSoftMuted`}>
                   Snapshot A
                   <select
                     value={snapshotA?.id ?? ""}
                     onChange={(event) => setSnapshotAId(event.target.value)}
-                    className={`mt-1 w-full rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] ${UI_SURFACES.textBody2}`}
+                    className={`mt-1 w-full rounded border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-1 text-[10px] UI_SURFACES.textBody2`}
                   >
                     <option value="" disabled>
                       Select snapshot
@@ -1068,12 +1068,12 @@ export function ReportLiteTab() {
                     ))}
                   </select>
                 </label>
-                <label className={`text-[9px] ${UI_SURFACES.textSoftMuted}`}>
+                <label className={`text-[9px] UI_SURFACES.textSoftMuted`}>
                   Snapshot B
                   <select
                     value={snapshotB?.id ?? ""}
                     onChange={(event) => setSnapshotBId(event.target.value)}
-                    className={`mt-1 w-full rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] ${UI_SURFACES.textBody2}`}
+                    className={`mt-1 w-full rounded border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-1 text-[10px] UI_SURFACES.textBody2`}
                   >
                     <option value="" disabled>
                       Select snapshot
@@ -1084,12 +1084,12 @@ export function ReportLiteTab() {
                   </select>
                 </label>
             </div>
-            <div className={`mt-2 text-[9px] ${UI_SURFACES.textMuted5}`}>
+            <div className={`mt-2 text-[9px] UI_SURFACES.textMuted5`}>
               {hasCompareSimulation
                 ? "Compare report includes before/after deltas and zone-level change table."
                 : "Selected snapshots must both have simulation results for compare export."}
             </div>
-            <div className={`mt-1 text-[9px] ${UI_SURFACES.textMuted5}`}>
+            <div className={`mt-1 text-[9px] UI_SURFACES.textMuted5`}>
               {visuals
                 ? "Using captured Compare canvas images as visual evidence."
                 : "No fresh captured Compare canvases found for this pair; fallback generated evidence will be used."}
@@ -1102,7 +1102,7 @@ export function ReportLiteTab() {
             Generating AI report...
           </div>
         ) : (
-          <pre className={`whitespace-pre-wrap font-mono text-[9px] leading-relaxed ${UI_SURFACES.textMuted5}`}>
+          <pre className={`whitespace-pre-wrap font-mono text-[9px] leading-relaxed UI_SURFACES.textMuted5`}>
             {currentReportMarkdown || "Run simulation to generate report."}
           </pre>
         )}

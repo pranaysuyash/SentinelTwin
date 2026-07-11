@@ -38,8 +38,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
-      <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>{title}</div>
+    <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+      <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>{title}</div>
       {children}
     </div>
   );
@@ -65,8 +65,8 @@ function PillButton({
         "rounded-md border px-2 py-1 text-[9px] transition-colors",
         active
           ? "border-sky-500/30 bg-sky-500/10 text-sky-200"
-          : `${UI_SURFACES.borderPanel} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textMuted5} ${UI_SURFACES.hoverBorder} hover:text-white`,
-        disabled && `cursor-not-allowed opacity-50 hover:${UI_SURFACES.borderPanel} ${UI_SURFACES.hoverTextSoft}`,
+          : `UI_SURFACES.borderPanel UI_SURFACES.bgDeep UI_SURFACES.textMuted5 UI_SURFACES.hoverBorder hover:text-white`,
+        disabled && `cursor-not-allowed opacity-50 hover:UI_SURFACES.borderPanel UI_SURFACES.hoverTextSoft`,
       )}
     >
       {children}
@@ -748,25 +748,25 @@ export function GovernanceTab() {
       <div className="min-w-[250px] space-y-2.5">
         <Section title="Current Authority">
           <div className="space-y-1.5 text-[9px]">
-            <div className={`flex items-center justify-between rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-              <span className={`${UI_SURFACES.textSoftBright}`}>Role</span>
+            <div className={`flex items-center justify-between rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
+              <span className={`UI_SURFACES.textSoftBright`}>Role</span>
               <Badge variant="blue">{summary.roleLabel}</Badge>
             </div>
-            <div className={`flex items-center justify-between rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-              <span className={`${UI_SURFACES.textSoftBright}`}>Active member</span>
+            <div className={`flex items-center justify-between rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
+              <span className={`UI_SURFACES.textSoftBright`}>Active member</span>
               <Badge variant="gray">{accessSummary.activeMemberLabel}</Badge>
             </div>
-            <div className={`flex items-center justify-between rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-              <span className={`${UI_SURFACES.textSoftBright}`}>Approval</span>
+            <div className={`flex items-center justify-between rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
+              <span className={`UI_SURFACES.textSoftBright`}>Approval</span>
               <Badge variant={summary.needsApproval ? "amber" : "green"}>{summary.approvalModeLabel}</Badge>
             </div>
-            <div className={`flex items-center justify-between rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-              <span className={`${UI_SURFACES.textSoftBright}`}>Scene status</span>
+            <div className={`flex items-center justify-between rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
+              <span className={`UI_SURFACES.textSoftBright`}>Scene status</span>
               <Badge variant={statusTone(workspaceGovernance.sceneStatus)}>{summary.sceneStatusLabel}</Badge>
             </div>
           </div>
           <div className="mt-2 flex items-center justify-between">
-            <div className="text-[9px] leading-4 ${UI_SURFACES.textMuted2}">
+            <div className="text-[9px] leading-4 UI_SURFACES.textMuted2">
               SentinelTwin treats publish as an auditable control action. If approval is required, publish will convert into a review request until a reviewer or admin approves it.
             </div>
             <TruthBadge label="configured" />
@@ -786,17 +786,17 @@ export function GovernanceTab() {
                 </PillButton>
               ))}
             </div>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[9px] ${UI_SURFACES.textBody2}`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5 text-[9px] UI_SURFACES.textBody2`}>
               <div className="flex items-center justify-between">
-                <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Mode</span>
+                <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Mode</span>
                 <span className="font-semibold">{accessSummary.modeLabel}</span>
               </div>
               <div className="mt-1 flex items-center justify-between">
-                <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Routing</span>
+                <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Routing</span>
                 <span className="font-semibold">{accessSummary.reviewRouteLabel}</span>
               </div>
               <div className="mt-1 flex items-center justify-between">
-                <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Publish</span>
+                <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Publish</span>
                 <span className="font-semibold">{accessSummary.publishRouteLabel}</span>
               </div>
             </div>
@@ -805,25 +805,25 @@ export function GovernanceTab() {
 
         <Section title="Routing Matrix">
           <div className="space-y-1.5">
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[9px] ${UI_SURFACES.textBody2}`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5 text-[9px] UI_SURFACES.textBody2`}>
               <div className="flex items-center justify-between">
-                <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Active route</span>
+                <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Active route</span>
                 <span className="font-semibold">{accessRoutes.activeMemberLabel}</span>
               </div>
               <div className="mt-1 flex items-center justify-between">
-                <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Reviewer target</span>
+                <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Reviewer target</span>
                 <span className="font-semibold">{accessRoutes.requiredReviewerLabel}</span>
               </div>
               <div className="mt-1 flex items-center justify-between">
-                <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Scene posture</span>
+                <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Scene posture</span>
                 <span className="font-semibold">{accessRoutes.hasPrivacyExposure ? "Privacy-sensitive" : "Standard"}</span>
               </div>
             </div>
             <div className="space-y-1.5">
               {accessRoutes.memberRoutes.map((route) => (
-                <div key={route.memberId} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+                <div key={route.memberId} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className={`text-[10px] font-semibold ${UI_SURFACES.textBright}`}>{route.displayName}</div>
+                    <div className={`text-[10px] font-semibold UI_SURFACES.textBright`}>{route.displayName}</div>
                     <Badge variant={route.canPublish ? "green" : route.canReview ? "blue" : "gray"}>{route.routeLabel}</Badge>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
@@ -833,7 +833,7 @@ export function GovernanceTab() {
                     <Badge variant={route.canReview ? "blue" : "gray"}>Review {route.canReview ? "Yes" : "No"}</Badge>
                     <Badge variant={route.canRestore ? "amber" : "gray"}>Restore {route.canRestore ? "Yes" : "No"}</Badge>
                   </div>
-                  <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>{route.reason}</div>
+                  <div className={`mt-1 text-[9px] UI_SURFACES.textSoftBright`}>{route.reason}</div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {route.matchedAttributes.map((attribute) => (
                       <Badge key={attribute} variant="gray">{attribute}</Badge>
@@ -847,20 +847,20 @@ export function GovernanceTab() {
 
         <Section title="Action Gate">
           <div className="space-y-1.5">
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[9px] ${UI_SURFACES.textBody2}`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5 text-[9px] UI_SURFACES.textBody2`}>
               <div className="flex items-center justify-between">
-                <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Route posture</span>
+                <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Route posture</span>
                 <span className="font-semibold">{summary.needsApproval ? "Approval required" : "Open publish"}</span>
               </div>
-              <div className={`mt-1 ${UI_SURFACES.textSoftBright}`}>
+              <div className={`mt-1 UI_SURFACES.textSoftBright`}>
                 {accessSummary.reviewRouteLabel} · {accessSummary.publishRouteLabel}
               </div>
             </div>
             <div className="space-y-1.5">
               {actionGates.map((gate) => (
-                <div key={gate.action} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+                <div key={gate.action} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className={`text-[10px] font-semibold ${UI_SURFACES.textBright}`}>{gate.label}</div>
+                    <div className={`text-[10px] font-semibold UI_SURFACES.textBright`}>{gate.label}</div>
                     <Badge variant={gate.decision.allowed ? "green" : "gray"}>{gate.decision.allowed ? "Allowed" : "Blocked"}</Badge>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
@@ -871,7 +871,7 @@ export function GovernanceTab() {
                       <Badge key={`${gate.action}-${attribute}`} variant="gray">{attribute}</Badge>
                     ))}
                   </div>
-                  <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>{gate.decision.reason}</div>
+                  <div className={`mt-1 text-[9px] UI_SURFACES.textSoftBright`}>{gate.decision.reason}</div>
                 </div>
               ))}
             </div>
@@ -928,25 +928,25 @@ export function GovernanceTab() {
             </PillButton>
           </div>
           <div className="mt-2 grid gap-1.5 md:grid-cols-3">
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-              <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Review owner</div>
-              <div className={`mt-0.5 text-[9px] font-semibold ${UI_SURFACES.textBody2}`}>{summary.reviewerLabel ?? "None"}</div>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+              <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Review owner</div>
+              <div className={`mt-0.5 text-[9px] font-semibold UI_SURFACES.textBody2`}>{summary.reviewerLabel ?? "None"}</div>
             </div>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-              <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Review age</div>
-              <div className={`mt-0.5 text-[9px] font-semibold ${UI_SURFACES.textBody2}`}>{summary.reviewAgeLabel ?? "—"}</div>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+              <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Review age</div>
+              <div className={`mt-0.5 text-[9px] font-semibold UI_SURFACES.textBody2`}>{summary.reviewAgeLabel ?? "—"}</div>
             </div>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-              <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Scene</div>
-              <div className={`mt-0.5 text-[9px] font-semibold ${UI_SURFACES.textBody2}`}>{scene.name || "Untitled Scene"}</div>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+              <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Scene</div>
+              <div className={`mt-0.5 text-[9px] font-semibold UI_SURFACES.textBody2`}>{scene.name || "Untitled Scene"}</div>
             </div>
           </div>
-          <div className={`mt-2 rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[9px] ${UI_SURFACES.textBody2}`}>
+          <div className={`mt-2 rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5 text-[9px] UI_SURFACES.textBody2`}>
             <div className="flex items-center justify-between">
-              <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Publish route</span>
+              <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Publish route</span>
               <span className="font-semibold">{publishDecision.requiredReviewerRole?.replace(/_/g, " ") ?? "None"}</span>
             </div>
-            <div className={`mt-1 ${UI_SURFACES.textSoftBright}`}>{publishDecision.reason}</div>
+            <div className={`mt-1 UI_SURFACES.textSoftBright`}>{publishDecision.reason}</div>
           </div>
         </Section>
 
@@ -957,13 +957,13 @@ export function GovernanceTab() {
               onChange={(event) => setAnnotation(event.target.value)}
               rows={3}
               placeholder="Write a review note or approval comment..."
-              className={`w-full rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[10px] ${UI_SURFACES.textNear} outline-none transition-colors placeholder:${UI_SURFACES.textDimMid} focus:border-sky-400/40`}
+              className={`w-full rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.bgDeep px-2 py-1.5 text-[10px] UI_SURFACES.textNear outline-none transition-colors placeholder:UI_SURFACES.textDimMid focus:border-sky-400/40`}
             />
             <div className="flex items-center gap-1.5">
               <PillButton active={false} onClick={submitAnnotation}>
                 Add note
               </PillButton>
-              <div className="text-[9px] ${UI_SURFACES.textMuted2}">
+              <div className="text-[9px] UI_SURFACES.textMuted2">
                 Notes become evidence events and stay in the audit trail.
               </div>
             </div>
@@ -971,70 +971,70 @@ export function GovernanceTab() {
         </Section>
 
         <Section title="Governance Trail">
-          <div className={`space-y-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+          <div className={`space-y-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
               {governanceTrail.latestEvent
                 ? `${governanceTrail.totalEvents} governance events recorded`
                 : "No governance events recorded yet."}
             </div>
             <div className="grid grid-cols-3 gap-1.5">
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Latest action</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{governanceTrail.latestEvent?.title ?? "None"}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Latest action</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{governanceTrail.latestEvent?.title ?? "None"}</div>
               </div>
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Review requests</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{governanceTrail.requestCount}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Review requests</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{governanceTrail.requestCount}</div>
               </div>
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Approvals</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{governanceTrail.approvalCount}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Approvals</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{governanceTrail.approvalCount}</div>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-1.5">
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Rejections</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{governanceTrail.rejectionCount}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Rejections</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{governanceTrail.rejectionCount}</div>
               </div>
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Annotations</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{governanceTrail.annotationCount}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Annotations</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{governanceTrail.annotationCount}</div>
               </div>
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Policy changes</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{governanceTrail.policyChangeCount}</div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Approval routes</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{governanceTrail.routeCount}</div>
-              </div>
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Identity conflict resolutions</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{governanceTrail.conflictResolutionCount}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Policy changes</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{governanceTrail.policyChangeCount}</div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-1.5">
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Latest route</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{latestApprovalRouteEvent?.title ?? "None"}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Approval routes</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{governanceTrail.routeCount}</div>
               </div>
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Latest conflict</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{latestIdentityConflictEvent?.title ?? "None"}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Identity conflict resolutions</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{governanceTrail.conflictResolutionCount}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Latest route</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{latestApprovalRouteEvent?.title ?? "None"}</div>
+              </div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Latest conflict</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{latestIdentityConflictEvent?.title ?? "None"}</div>
               </div>
             </div>
             <div className="space-y-1.5">
               {governanceTrail.recentEvents.length > 0 ? governanceTrail.recentEvents.map((event) => (
-                <div key={event.id} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-3 py-2`}>
+                <div key={event.id} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-3 py-2`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className={`text-[10px] font-semibold ${UI_SURFACES.textBright}`}>{event.title}</div>
+                    <div className={`text-[10px] font-semibold UI_SURFACES.textBright`}>{event.title}</div>
                     <Badge variant={event.kind === "scene_review_approved" || event.kind === "scene_published" ? "green" : event.kind === "scene_review_rejected" ? "red" : event.kind === "scene_review_requested" ? "amber" : "blue"}>
                       {event.branchLabel ?? event.lifecycleStage ?? "review"}
                     </Badge>
                   </div>
-                  <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>{event.details}</div>
+                  <div className={`mt-1 text-[9px] UI_SURFACES.textSoftBright`}>{event.details}</div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     <Badge variant="gray">{event.kind.replace(/_/g, " ")}</Badge>
                     <Badge variant="gray">{new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
@@ -1042,7 +1042,7 @@ export function GovernanceTab() {
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed UI_SURFACES.border UI_SURFACES.panel px-3 py-3 text-[10px] UI_SURFACES.textSoftDim`}>
                   No governance trail yet. Request review, add notes, or change approval mode to create an auditable trail.
                 </div>
               )}
@@ -1051,11 +1051,11 @@ export function GovernanceTab() {
         </Section>
 
         <Section title="Approval Routing">
-          <div className={`space-y-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+          <div className={`space-y-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
               Resolve publish routing against the live workspace and the latest archived membership snapshot before approval crosses the control plane.
             </div>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
               Paste a remote approval webhook URL to fan out the resolved route. Leave it blank to keep the route local and archived.
             </div>
             <input
@@ -1063,7 +1063,7 @@ export function GovernanceTab() {
               value={approvalRouteEndpointDraft}
               onChange={(event) => setApprovalRouteEndpointDraft(event.target.value)}
               placeholder="https://example.com/approval-webhook"
-              className={`w-full rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textBody2} outline-none placeholder:${UI_SURFACES.textDimMid} focus:border-sky-400/40`}
+              className={`w-full rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1 text-[9px] UI_SURFACES.textBody2 outline-none placeholder:UI_SURFACES.textDimMid focus:border-sky-400/40`}
             />
             <div className="flex flex-wrap gap-1.5">
               <button
@@ -1076,14 +1076,14 @@ export function GovernanceTab() {
               <button
                 type="button"
                 onClick={() => setApprovalRouteArchiveReport(null)}
-                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
+                className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`}
               >
                 Clear Route Result
               </button>
               <button
                 type="button"
                 onClick={() => void refreshApprovalRouteArchive()}
-                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
+                className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`}
               >
                 {remoteApprovalRouteHistoryLoading ? "Refreshing..." : "Refresh Route Archive"}
               </button>
@@ -1093,91 +1093,91 @@ export function GovernanceTab() {
                 {approvalRouteArchiveError}
               </div>
             ) : null}
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[9px] ${UI_SURFACES.textBody2}`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5 text-[9px] UI_SURFACES.textBody2`}>
               <div className="flex items-center justify-between">
-                <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Route status</span>
+                <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Route status</span>
                 <Badge variant={approvalRoute.routeStatus === "reconcile_before_route" ? "amber" : approvalRoute.routeStatus === "review_required" ? "blue" : "green"}>
                   {approvalRoute.routeStatus.replace(/_/g, " ")}
                 </Badge>
               </div>
-              <div className={`mt-1 font-semibold ${UI_SURFACES.textBright}`}>{approvalRoute.routeLabel}</div>
+              <div className={`mt-1 font-semibold UI_SURFACES.textBright`}>{approvalRoute.routeLabel}</div>
               <div className="mt-1">
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Route reason</div>
-                <div className={`mt-0.5 ${UI_SURFACES.textSoftBright}`}>{approvalRoute.routeReason}</div>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Route reason</div>
+                <div className={`mt-0.5 UI_SURFACES.textSoftBright`}>{approvalRoute.routeReason}</div>
               </div>
               <div className="mt-1.5 grid grid-cols-2 gap-1.5">
                 <div>
-                  <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Route key</div>
-                  <div className={`mt-0.5 break-all font-mono text-[9px] ${UI_SURFACES.textBody2}`}>{approvalRoute.routeKey}</div>
+                  <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Route key</div>
+                  <div className={`mt-0.5 break-all font-mono text-[9px] UI_SURFACES.textBody2`}>{approvalRoute.routeKey}</div>
                 </div>
                 <div>
-                  <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Route scope</div>
-                  <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{approvalRoute.routeScope}</div>
+                  <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Route scope</div>
+                  <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{approvalRoute.routeScope}</div>
                 </div>
               </div>
-              <div className={`mt-1.5 rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Route source</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{approvalRoute.routeSyncLabel}</div>
-                <div className={`mt-0.5 ${UI_SURFACES.textSoftBright}`}>{approvalRoute.routeSyncReason}</div>
+              <div className={`mt-1.5 rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Route source</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{approvalRoute.routeSyncLabel}</div>
+                <div className={`mt-0.5 UI_SURFACES.textSoftBright`}>{approvalRoute.routeSyncReason}</div>
               </div>
               <div className="mt-1">
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Active member eligibility</div>
-                <div className={`mt-0.5 ${UI_SURFACES.textSoftBright}`}>{approvalRoute.activeMemberReason}</div>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Active member eligibility</div>
+                <div className={`mt-0.5 UI_SURFACES.textSoftBright`}>{approvalRoute.activeMemberReason}</div>
               </div>
             </div>
             {approvalRouteArchiveReport ? (
               <div className="space-y-1.5">
-                <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+                <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
                   {approvalRouteArchiveReport.summary}
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archive status</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{approvalRouteArchiveReport.archiveStatus}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archive status</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{approvalRouteArchiveReport.archiveStatus}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Delivered</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{approvalRouteArchiveReport.deliveredCount}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Delivered</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{approvalRouteArchiveReport.deliveredCount}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Queued</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{approvalRouteArchiveReport.queuedCount}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Queued</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{approvalRouteArchiveReport.queuedCount}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Failed</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{approvalRouteArchiveReport.failedCount}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Failed</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{approvalRouteArchiveReport.failedCount}</div>
                   </div>
                 </div>
               </div>
             ) : null}
             <div className="grid grid-cols-2 gap-1.5">
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Target reviewer</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{approvalRoute.targetReviewerLabel}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Target reviewer</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{approvalRoute.targetReviewerLabel}</div>
               </div>
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Latest archived snapshot</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{latestWorkspaceMembershipArchive?.sceneName ?? "No archived snapshot"}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Latest archived snapshot</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{latestWorkspaceMembershipArchive?.sceneName ?? "No archived snapshot"}</div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-1.5">
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Current policy</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{approvalRoute.currentPolicyLabel}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Current policy</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{approvalRoute.currentPolicyLabel}</div>
               </div>
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archived policy</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{approvalRoute.archivedPolicyLabel}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archived policy</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{approvalRoute.archivedPolicyLabel}</div>
               </div>
             </div>
             <div className="space-y-1.5">
               {remoteApprovalRouteHistory.length > 0 ? remoteApprovalRouteHistory.slice(0, 3).map((record) => (
-                <div key={`${record.sceneName}-${record.storedAt}`} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-3 py-2`}>
+                <div key={`${record.sceneName}-${record.storedAt}`} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-3 py-2`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className={`text-[10px] font-semibold ${UI_SURFACES.textBright}`}>{record.sceneName}</div>
+                  <div className={`text-[10px] font-semibold UI_SURFACES.textBright`}>{record.sceneName}</div>
                   <Badge variant={record.archiveStatus === "server archive" ? "green" : "amber"}>{record.archiveStatus}</Badge>
                 </div>
-                <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>{record.summary}</div>
+                <div className={`mt-1 text-[9px] UI_SURFACES.textSoftBright`}>{record.summary}</div>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   <Badge variant="gray">{record.approvalRoute.routeStatus.replace(/_/g, " ")}</Badge>
                   <Badge variant="gray">{record.approvalRoute.routeScope}</Badge>
@@ -1185,24 +1185,24 @@ export function GovernanceTab() {
                 </div>
               </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed UI_SURFACES.border UI_SURFACES.panel px-3 py-3 text-[10px] UI_SURFACES.textSoftDim`}>
                   No approval route archive yet. Resolve a route to create the first record.
                 </div>
               )}
             </div>
             <div className="grid grid-cols-2 gap-1.5">
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Active member</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{approvalRoute.activeMemberLabel}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Active member</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{approvalRoute.activeMemberLabel}</div>
               </div>
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archived member</div>
-                <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{approvalRoute.archivedMemberLabel}</div>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archived member</div>
+                <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{approvalRoute.archivedMemberLabel}</div>
               </div>
             </div>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
               <div className="flex items-center justify-between">
-                <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Membership drift</span>
+                <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Membership drift</span>
                 <Badge variant={approvalRoute.drift ? "amber" : "green"}>{approvalRoute.drift ? "Detected" : "Aligned"}</Badge>
               </div>
               <div className="mt-1 flex flex-wrap gap-1.5">
@@ -1216,11 +1216,11 @@ export function GovernanceTab() {
         </Section>
 
         <Section title="Governance Handoff">
-          <div className={`space-y-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+          <div className={`space-y-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
               Dispatch the latest approval trail into the governance archive so remote approval routing can be tested against a canonical queue.
             </div>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
               Paste a remote webhook URL to exercise actual fan-out. Leave it blank to keep the run local and queued.
             </div>
             <input
@@ -1228,7 +1228,7 @@ export function GovernanceTab() {
               value={governanceArchiveEndpointDraft}
               onChange={(event) => setGovernanceArchiveEndpointDraft(event.target.value)}
               placeholder="https://example.com/governance-webhook"
-              className={`w-full rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textBody2} outline-none placeholder:${UI_SURFACES.textDimMid} focus:border-sky-400/40`}
+              className={`w-full rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1 text-[9px] UI_SURFACES.textBody2 outline-none placeholder:UI_SURFACES.textDimMid focus:border-sky-400/40`}
             />
             <div className="flex flex-wrap gap-1.5">
               <button
@@ -1241,14 +1241,14 @@ export function GovernanceTab() {
               <button
                 type="button"
                 onClick={() => setGovernanceArchiveReport(null)}
-                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
+                className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`}
               >
                 Clear Handoff Result
               </button>
               <button
                 type="button"
                 onClick={() => void refreshGovernanceArchive()}
-                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
+                className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`}
               >
                 {remoteGovernanceArchiveHistoryLoading ? "Refreshing..." : "Refresh Governance Archive"}
               </button>
@@ -1260,25 +1260,25 @@ export function GovernanceTab() {
             ) : null}
             {governanceArchiveReport ? (
               <div className="space-y-1.5">
-                <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+                <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
                   {governanceArchiveReport.summary}
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archive status</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{governanceArchiveReport.archiveStatus}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archive status</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{governanceArchiveReport.archiveStatus}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Delivered</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{governanceArchiveReport.deliveredCount}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Delivered</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{governanceArchiveReport.deliveredCount}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Queued</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{governanceArchiveReport.queuedCount}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Queued</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{governanceArchiveReport.queuedCount}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Failed</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{governanceArchiveReport.failedCount}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Failed</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{governanceArchiveReport.failedCount}</div>
                   </div>
                 </div>
               </div>
@@ -1290,12 +1290,12 @@ export function GovernanceTab() {
             ) : null}
             <div className="space-y-1.5">
               {remoteGovernanceArchiveHistory.length > 0 ? remoteGovernanceArchiveHistory.slice(0, 3).map((record) => (
-                <div key={`${record.storedAt}-${record.historyId}-${record.storedAt}`} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-3 py-2`}>
+                <div key={`${record.storedAt}-${record.historyId}-${record.storedAt}`} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-3 py-2`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className={`text-[10px] font-semibold ${UI_SURFACES.textBright}`}>{record.sceneName ?? "Untitled scene"}</div>
+                    <div className={`text-[10px] font-semibold UI_SURFACES.textBright`}>{record.sceneName ?? "Untitled scene"}</div>
                     <Badge variant={record.archiveStatus === "server archive" ? "green" : "amber"}>{record.archiveStatus}</Badge>
                   </div>
-                  <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>{record.summary}</div>
+                  <div className={`mt-1 text-[9px] UI_SURFACES.textSoftBright`}>{record.summary}</div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     <Badge variant="gray">{record.deliveredCount} delivered</Badge>
                     <Badge variant="gray">{record.queuedCount} queued</Badge>
@@ -1304,7 +1304,7 @@ export function GovernanceTab() {
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed UI_SURFACES.border UI_SURFACES.panel px-3 py-3 text-[10px] UI_SURFACES.textSoftDim`}>
                   No governance archive yet. Dispatch a review trail to create the routing history.
                 </div>
               )}
@@ -1313,11 +1313,11 @@ export function GovernanceTab() {
         </Section>
 
         <Section title="Workspace Membership Handoff">
-          <div className={`space-y-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+          <div className={`space-y-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
               Archive the current workspace roster, active member, and routing policy so backend identity can be exercised as a canonical membership record.
             </div>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
               Paste a remote webhook URL to exercise actual membership fan-out. Leave it blank to keep the run local and queued.
             </div>
             <input
@@ -1325,7 +1325,7 @@ export function GovernanceTab() {
               value={workspaceMembershipArchiveEndpointDraft}
               onChange={(event) => setWorkspaceMembershipArchiveEndpointDraft(event.target.value)}
               placeholder="https://example.com/membership-webhook"
-              className={`w-full rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textBody2} outline-none placeholder:${UI_SURFACES.textDimMid} focus:border-sky-400/40`}
+              className={`w-full rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1 text-[9px] UI_SURFACES.textBody2 outline-none placeholder:UI_SURFACES.textDimMid focus:border-sky-400/40`}
             />
             <div className="flex flex-wrap gap-1.5">
               <button
@@ -1338,14 +1338,14 @@ export function GovernanceTab() {
               <button
                 type="button"
                 onClick={() => setWorkspaceMembershipArchiveReport(null)}
-                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
+                className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`}
               >
                 Clear Membership Result
               </button>
               <button
                 type="button"
                 onClick={() => void refreshWorkspaceMembershipArchive()}
-                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
+                className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`}
               >
                 {remoteWorkspaceMembershipArchiveHistoryLoading ? "Refreshing..." : "Refresh Membership Archive"}
               </button>
@@ -1370,43 +1370,43 @@ export function GovernanceTab() {
             ) : null}
             {workspaceMembershipArchiveReport ? (
               <div className="space-y-1.5">
-                <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+                <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
                   {workspaceMembershipArchiveReport.summary}
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archive status</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{workspaceMembershipArchiveReport.archiveStatus}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archive status</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{workspaceMembershipArchiveReport.archiveStatus}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Active member</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{workspaceMembershipArchiveReport.activeMemberLabel}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Active member</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{workspaceMembershipArchiveReport.activeMemberLabel}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Team size</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{workspaceMembershipArchiveReport.teamSize}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Team size</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{workspaceMembershipArchiveReport.teamSize}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Policy</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{workspaceMembershipArchiveReport.policyMode === "shared" ? "Shared workspace" : "Single-user workspace"}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Policy</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{workspaceMembershipArchiveReport.policyMode === "shared" ? "Shared workspace" : "Single-user workspace"}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archived active member</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{workspaceMembershipArchiveReport.activeMemberLabel}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archived active member</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{workspaceMembershipArchiveReport.activeMemberLabel}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archived team size</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{workspaceMembershipArchiveReport.workspaceAccessState.members.length}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archived team size</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{workspaceMembershipArchiveReport.workspaceAccessState.members.length}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archived policy</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{workspaceMembershipArchiveReport.workspaceAccessState.policy.mode === "shared" ? "Shared workspace" : "Single-user workspace"}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archived policy</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{workspaceMembershipArchiveReport.workspaceAccessState.policy.mode === "shared" ? "Shared workspace" : "Single-user workspace"}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archived route</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{workspaceMembershipArchiveReport.approvalRoute.routeStatus.replace(/_/g, " ")}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archived route</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{workspaceMembershipArchiveReport.approvalRoute.routeStatus.replace(/_/g, " ")}</div>
                   </div>
                 </div>
               </div>
@@ -1418,12 +1418,12 @@ export function GovernanceTab() {
             ) : null}
             <div className="space-y-1.5">
               {latestWorkspaceMembershipArchive ? (
-                <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-3 py-2`}>
+                <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-3 py-2`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className={`text-[10px] font-semibold ${UI_SURFACES.textBright}`}>Latest membership snapshot</div>
+                    <div className={`text-[10px] font-semibold UI_SURFACES.textBright`}>Latest membership snapshot</div>
                     <Badge variant={latestWorkspaceMembershipArchive.archiveStatus === "server archive" ? "green" : "amber"}>{latestWorkspaceMembershipArchive.archiveStatus}</Badge>
                   </div>
-                  <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>{latestWorkspaceMembershipArchive.summary}</div>
+                  <div className={`mt-1 text-[9px] UI_SURFACES.textSoftBright`}>{latestWorkspaceMembershipArchive.summary}</div>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   <Badge variant="gray">{latestWorkspaceMembershipArchive.activeMemberLabel}</Badge>
                   <Badge variant="gray">{latestWorkspaceMembershipArchive.workspaceAccessState.members.length} members</Badge>
@@ -1433,26 +1433,26 @@ export function GovernanceTab() {
                   </Badge>
                   <Badge variant="gray">{new Date(latestWorkspaceMembershipArchive.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
                 </div>
-                <div className={`mt-2 rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-                  <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archived route key</div>
-                  <div className={`mt-0.5 break-all font-mono text-[9px] ${UI_SURFACES.textBody2}`}>{latestWorkspaceMembershipArchive.approvalRoute.routeKey}</div>
+                <div className={`mt-2 rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1 text-[9px] UI_SURFACES.textSoftBright`}>
+                  <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archived route key</div>
+                  <div className={`mt-0.5 break-all font-mono text-[9px] UI_SURFACES.textBody2`}>{latestWorkspaceMembershipArchive.approvalRoute.routeKey}</div>
                 </div>
-                <div className={`mt-2 rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>
+                <div className={`mt-2 rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1 text-[9px] UI_SURFACES.textSoftBright`}>
                   Approval route: {latestWorkspaceMembershipArchive.approvalRoute.routeLabel} · {latestWorkspaceMembershipArchive.approvalRoute.routeReason}
                 </div>
 	                  {membershipDrift ? (
 	                    <div className="mt-2 grid grid-cols-3 gap-1.5">
-                      <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1`}>
-                        <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Active member drift</div>
-                        <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{membershipDrift.activeMemberChanged ? "Changed" : "Matched"}</div>
+                      <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1`}>
+                        <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Active member drift</div>
+                        <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{membershipDrift.activeMemberChanged ? "Changed" : "Matched"}</div>
                       </div>
-                      <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1`}>
-                        <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Team size drift</div>
-                        <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{membershipDrift.teamSizeChanged ? "Changed" : "Matched"}</div>
+                      <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1`}>
+                        <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Team size drift</div>
+                        <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{membershipDrift.teamSizeChanged ? "Changed" : "Matched"}</div>
                       </div>
-                      <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1`}>
-                        <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Policy drift</div>
-                        <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{membershipDrift.policyChanged ? "Changed" : "Matched"}</div>
+                      <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1`}>
+                        <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Policy drift</div>
+                        <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{membershipDrift.policyChanged ? "Changed" : "Matched"}</div>
 	                      </div>
 	                    </div>
 	                  ) : null}
@@ -1464,25 +1464,25 @@ export function GovernanceTab() {
 	                </div>
 	              ) : null}
               {remoteWorkspaceMembershipArchiveHistory.length > 0 ? remoteWorkspaceMembershipArchiveHistory.slice(0, 3).map((record) => (
-                <div key={`${record.storedAt}-${record.historyId}-${record.storedAt}`} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-3 py-2`}>
+                <div key={`${record.storedAt}-${record.historyId}-${record.storedAt}`} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-3 py-2`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className={`text-[10px] font-semibold ${UI_SURFACES.textBright}`}>{record.sceneName ?? "Untitled scene"}</div>
+                    <div className={`text-[10px] font-semibold UI_SURFACES.textBright`}>{record.sceneName ?? "Untitled scene"}</div>
                     <Badge variant={record.archiveStatus === "server archive" ? "green" : "amber"}>{record.archiveStatus}</Badge>
                   </div>
-                  <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>{record.summary}</div>
+                  <div className={`mt-1 text-[9px] UI_SURFACES.textSoftBright`}>{record.summary}</div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     <Badge variant="gray">{record.activeMemberLabel}</Badge>
                     <Badge variant="gray">{record.teamSize} members</Badge>
                     <Badge variant="gray">{record.policyMode === "shared" ? "shared" : "single-user"}</Badge>
                     <Badge variant="gray">{new Date(record.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
                   </div>
-                  <div className={`mt-1 rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archived route key</div>
-                    <div className={`mt-0.5 break-all font-mono text-[9px] ${UI_SURFACES.textBody2}`}>{record.approvalRoute.routeKey}</div>
+                  <div className={`mt-1 rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1 text-[9px] UI_SURFACES.textSoftBright`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archived route key</div>
+                    <div className={`mt-0.5 break-all font-mono text-[9px] UI_SURFACES.textBody2`}>{record.approvalRoute.routeKey}</div>
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed UI_SURFACES.border UI_SURFACES.panel px-3 py-3 text-[10px] UI_SURFACES.textSoftDim`}>
                   No membership archive yet. Dispatch a workspace roster to create the backend identity record.
                 </div>
               )}
@@ -1491,11 +1491,11 @@ export function GovernanceTab() {
         </Section>
 
         <Section title="Identity Conflict Resolution">
-          <div className={`space-y-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+          <div className={`space-y-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
               Resolve the live workspace identity drift against the latest membership snapshot so remote shared-identity conflict handling has a canonical control-plane record.
             </div>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
               Paste a remote webhook URL to exercise actual identity-conflict fan-out. Leave it blank to keep the run local and queued.
             </div>
             <input
@@ -1503,7 +1503,7 @@ export function GovernanceTab() {
               value={identityConflictEndpointDraft}
               onChange={(event) => setIdentityConflictEndpointDraft(event.target.value)}
               placeholder="https://example.com/identity-conflict-webhook"
-              className={`w-full rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textBody2} outline-none placeholder:${UI_SURFACES.textDimMid} focus:border-sky-400/40`}
+              className={`w-full rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1 text-[9px] UI_SURFACES.textBody2 outline-none placeholder:UI_SURFACES.textDimMid focus:border-sky-400/40`}
             />
             <div className="flex flex-wrap gap-1.5">
               <button
@@ -1519,14 +1519,14 @@ export function GovernanceTab() {
                   setIdentityConflictArchiveReport(null);
                   setSelectedIdentityConflictStoredAt(null);
                 }}
-                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
+                className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`}
               >
                 Clear Conflict Result
               </button>
               <button
                 type="button"
                 onClick={() => void refreshIdentityConflictArchive()}
-                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
+                className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`}
               >
                 {remoteIdentityConflictHistoryLoading ? "Refreshing..." : "Refresh Conflict Archive"}
               </button>
@@ -1538,72 +1538,72 @@ export function GovernanceTab() {
             ) : null}
             {identityConflictArchiveReport ? (
               <div className="space-y-1.5">
-                <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+                <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
                   {identityConflictArchiveReport.summary}
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archive status</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.archiveStatus}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archive status</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.archiveStatus}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Conflict status</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.conflictStatus.replace(/_/g, " ")}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Conflict status</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.conflictStatus.replace(/_/g, " ")}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Route</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.approvalRoute.routeStatus.replace(/_/g, " ")}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Route</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.approvalRoute.routeStatus.replace(/_/g, " ")}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Privacy</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.hasPrivacyExposure ? "Sensitive" : "Standard"}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Privacy</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.hasPrivacyExposure ? "Sensitive" : "Standard"}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Resolution</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.resolutionLabel}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Resolution</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.resolutionLabel}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Recommended action</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.recommendedAction}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Recommended action</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.recommendedAction}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Active member</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.approvalRoute.activeMemberLabel}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Active member</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.approvalRoute.activeMemberLabel}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Target reviewer</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.approvalRoute.targetReviewerLabel}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Target reviewer</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.approvalRoute.targetReviewerLabel}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Delivered</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.deliveredCount}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Delivered</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.deliveredCount}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Queued / failed</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.queuedCount} / {identityConflictArchiveReport.failedCount}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Queued / failed</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.queuedCount} / {identityConflictArchiveReport.failedCount}</div>
                   </div>
                 </div>
-                <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-                  <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Conflict route key</div>
-                  <div className={`mt-0.5 break-all font-mono text-[9px] ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.approvalRoute.routeKey}</div>
+                <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
+                  <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Conflict route key</div>
+                  <div className={`mt-0.5 break-all font-mono text-[9px] UI_SURFACES.textBody2`}>{identityConflictArchiveReport.approvalRoute.routeKey}</div>
                 </div>
                 {identityConflictArchiveReport.membershipDrift ? (
                   <div className="grid grid-cols-3 gap-1.5">
-                    <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1`}>
-                      <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Active member drift</div>
-                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.membershipDrift.activeMemberChanged ? "Changed" : "Matched"}</div>
+                    <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1`}>
+                      <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Active member drift</div>
+                      <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.membershipDrift.activeMemberChanged ? "Changed" : "Matched"}</div>
                     </div>
-                    <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1`}>
-                      <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Team size drift</div>
-                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.membershipDrift.teamSizeChanged ? "Changed" : "Matched"}</div>
+                    <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1`}>
+                      <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Team size drift</div>
+                      <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.membershipDrift.teamSizeChanged ? "Changed" : "Matched"}</div>
                     </div>
-                    <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1`}>
-                      <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Policy drift</div>
-                      <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictArchiveReport.membershipDrift.policyChanged ? "Changed" : "Matched"}</div>
+                    <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1`}>
+                      <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Policy drift</div>
+                      <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictArchiveReport.membershipDrift.policyChanged ? "Changed" : "Matched"}</div>
                     </div>
                   </div>
                 ) : null}
@@ -1613,8 +1613,8 @@ export function GovernanceTab() {
               <div className="space-y-1.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Conflict Diff</div>
-                    <div className={`text-[9px] ${UI_SURFACES.textSoftBright}`}>{selectedIdentityConflictRecord.sceneName}</div>
+                    <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Conflict Diff</div>
+                    <div className={`text-[9px] UI_SURFACES.textSoftBright`}>{selectedIdentityConflictRecord.sceneName}</div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     <button
@@ -1623,7 +1623,7 @@ export function GovernanceTab() {
                         setSelectedIdentityConflictStoredAt(null);
                         setIdentityConflictReplayReport(null);
                       }}
-                      className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
+                      className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`}
                     >
                       View latest diff
                     </button>
@@ -1634,7 +1634,7 @@ export function GovernanceTab() {
                           setSelectedIdentityConflictStoredAt(null);
                           setIdentityConflictReplayReport(null);
                         }}
-                        className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
+                        className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`}
                       >
                         Clear diff selection
                       </button>
@@ -1654,54 +1654,54 @@ export function GovernanceTab() {
                     </button>
                   </div>
                 </div>
-                <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
+                <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
                   {selectedIdentityConflictRecord.conflictDiff.changedCount > 0
                     ? `${selectedIdentityConflictRecord.conflictDiff.changedCount} field${selectedIdentityConflictRecord.conflictDiff.changedCount === 1 ? "" : "s"} differ between the live workspace and the archived identity snapshot.`
                     : "The live workspace matches the selected archived identity snapshot."}
                 </div>
                 <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Current member</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{selectedIdentityConflictRecord.conflictDiff.currentMemberLabel}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Current member</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{selectedIdentityConflictRecord.conflictDiff.currentMemberLabel}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archived member</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{selectedIdentityConflictRecord.conflictDiff.archivedMemberLabel}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archived member</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{selectedIdentityConflictRecord.conflictDiff.archivedMemberLabel}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Current policy</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{selectedIdentityConflictRecord.conflictDiff.currentPolicyLabel}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Current policy</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{selectedIdentityConflictRecord.conflictDiff.currentPolicyLabel}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archived policy</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{selectedIdentityConflictRecord.conflictDiff.archivedPolicyLabel}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archived policy</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{selectedIdentityConflictRecord.conflictDiff.archivedPolicyLabel}</div>
                   </div>
                 </div>
                 <div className="grid gap-1.5 md:grid-cols-2">
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Route</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{selectedIdentityConflictRecord.conflictDiff.routeLabel}</div>
-                    <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>{selectedIdentityConflictRecord.conflictDiff.routeReason}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Route</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{selectedIdentityConflictRecord.conflictDiff.routeLabel}</div>
+                    <div className={`mt-0.5 text-[9px] UI_SURFACES.textSoftBright`}>{selectedIdentityConflictRecord.conflictDiff.routeReason}</div>
                   </div>
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1.5`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Resolution</div>
-                    <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{selectedIdentityConflictRecord.conflictDiff.resolutionLabel}</div>
-                    <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>{selectedIdentityConflictRecord.conflictDiff.resolutionReason}</div>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1.5`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Resolution</div>
+                    <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{selectedIdentityConflictRecord.conflictDiff.resolutionLabel}</div>
+                    <div className={`mt-0.5 text-[9px] UI_SURFACES.textSoftBright`}>{selectedIdentityConflictRecord.conflictDiff.resolutionReason}</div>
                   </div>
                 </div>
                 <div className="space-y-1">
                   {selectedIdentityConflictRecord.conflictDiff.rows.map((row: { label: string; currentValue: string; archivedValue: string; changed: boolean }) => (
                     <div key={row.label} className={cn(
                       "grid grid-cols-[1fr_1fr_auto] gap-1.5 rounded-md border px-2 py-1.5 text-[9px]",
-                      row.changed ? "border-amber-500/20 bg-amber-500/5" : "${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep}",
+                      row.changed ? "border-amber-500/20 bg-amber-500/5" : "UI_SURFACES.borderFaint UI_SURFACES.bgDeep",
                     )}>
                       <div>
-                        <div className={`uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>{row.label}</div>
-                        <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{row.currentValue}</div>
+                        <div className={`uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>{row.label}</div>
+                        <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{row.currentValue}</div>
                       </div>
                       <div>
-                        <div className={`uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Archived</div>
-                        <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{row.archivedValue}</div>
+                        <div className={`uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archived</div>
+                        <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{row.archivedValue}</div>
                       </div>
                       <div className="flex items-start justify-end">
                         <Badge variant={row.changed ? "amber" : "green"}>{row.changed ? "Changed" : "Matched"}</Badge>
@@ -1709,12 +1709,12 @@ export function GovernanceTab() {
                     </div>
                   ))}
                 </div>
-                <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
+                <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
                   {selectedIdentityConflictRecord.conflictDiff.recommendedAction}
                 </div>
-                <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-                  <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Conflict route key</div>
-                  <div className={`mt-0.5 break-all font-mono text-[9px] ${UI_SURFACES.textBody2}`}>{selectedIdentityConflictRecord.conflictDiff.routeKey}</div>
+                <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
+                  <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Conflict route key</div>
+                  <div className={`mt-0.5 break-all font-mono text-[9px] UI_SURFACES.textBody2`}>{selectedIdentityConflictRecord.conflictDiff.routeKey}</div>
                 </div>
                 {identityConflictReplayError ? (
                   <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-[9px] text-rose-200">
@@ -1729,32 +1729,32 @@ export function GovernanceTab() {
                         {identityConflictReplayReport.conflictStatus.replace(/_/g, " ")}
                       </Badge>
                     </div>
-                    <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textBody2}`}>
+                    <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1 text-[9px] UI_SURFACES.textBody2`}>
                       {identityConflictReplayReport.summary}
                     </div>
                     <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
-                      <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                        <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Route</div>
-                        <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictReplayReport.approvalRoute.routeLabel}</div>
+                      <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                        <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Route</div>
+                        <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictReplayReport.approvalRoute.routeLabel}</div>
                       </div>
-                      <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                        <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Resolution</div>
-                        <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictReplayReport.resolutionLabel}</div>
+                      <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                        <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Resolution</div>
+                        <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictReplayReport.resolutionLabel}</div>
                       </div>
-                      <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                        <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Delivered</div>
-                        <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictReplayReport.deliveredCount}</div>
+                      <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                        <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Delivered</div>
+                        <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictReplayReport.deliveredCount}</div>
                       </div>
-                      <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
-                        <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Queued / failed</div>
-                        <div className={`mt-0.5 font-semibold ${UI_SURFACES.textBody2}`}>{identityConflictReplayReport.queuedCount} / {identityConflictReplayReport.failedCount}</div>
+                      <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
+                        <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Queued / failed</div>
+                        <div className={`mt-0.5 font-semibold UI_SURFACES.textBody2`}>{identityConflictReplayReport.queuedCount} / {identityConflictReplayReport.failedCount}</div>
                       </div>
                     </div>
-                    <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-                      <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Replay route key</div>
-                      <div className={`mt-0.5 break-all font-mono text-[9px] ${UI_SURFACES.textBody2}`}>{identityConflictReplayReport.approvalRoute.routeKey}</div>
+                    <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
+                      <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Replay route key</div>
+                      <div className={`mt-0.5 break-all font-mono text-[9px] UI_SURFACES.textBody2`}>{identityConflictReplayReport.approvalRoute.routeKey}</div>
                     </div>
-                    <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>
+                    <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1 text-[9px] UI_SURFACES.textSoftBright`}>
                       Replayed against the current workspace state using the archived snapshot from the selected conflict.
                     </div>
                   </div>
@@ -1768,12 +1768,12 @@ export function GovernanceTab() {
             ) : null}
             <div className="space-y-1.5">
               {remoteIdentityConflictHistory.length > 0 ? remoteIdentityConflictHistory.slice(0, 3).map((record) => (
-                <div key={`${record.storedAt}-${record.sceneName}-${record.storedAt}`} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-3 py-2`}>
+                <div key={`${record.storedAt}-${record.sceneName}-${record.storedAt}`} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-3 py-2`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className={`text-[10px] font-semibold ${UI_SURFACES.textBright}`}>{record.sceneName ?? "Untitled scene"}</div>
+                    <div className={`text-[10px] font-semibold UI_SURFACES.textBright`}>{record.sceneName ?? "Untitled scene"}</div>
                     <Badge variant={record.archiveStatus === "server archive" ? "green" : "amber"}>{record.archiveStatus}</Badge>
                   </div>
-                  <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>{record.summary}</div>
+                  <div className={`mt-1 text-[9px] UI_SURFACES.textSoftBright`}>{record.summary}</div>
                   <div className="mt-1">
                     <button
                       type="button"
@@ -1785,7 +1785,7 @@ export function GovernanceTab() {
                         "rounded-md border px-2 py-1 text-[9px] transition-colors",
                         selectedIdentityConflictStoredAt === record.storedAt
                           ? "border-sky-500/30 bg-sky-500/10 text-sky-100"
-                          : `${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`,
+                          : `UI_SURFACES.borderSubtle UI_SURFACES.card UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`,
                       )}
                     >
                       View diff
@@ -1803,13 +1803,13 @@ export function GovernanceTab() {
                     <Badge variant="gray">{new Date(record.receivedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
                     <Badge variant="gray">{new Date(record.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
                   </div>
-                  <div className={`mt-1 rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-                    <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Conflict route key</div>
-                    <div className={`mt-0.5 break-all font-mono text-[9px] ${UI_SURFACES.textBody2}`}>{record.approvalRoute.routeKey}</div>
+                  <div className={`mt-1 rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1 text-[9px] UI_SURFACES.textSoftBright`}>
+                    <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Conflict route key</div>
+                    <div className={`mt-0.5 break-all font-mono text-[9px] UI_SURFACES.textBody2`}>{record.approvalRoute.routeKey}</div>
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed UI_SURFACES.border UI_SURFACES.panel px-3 py-3 text-[10px] UI_SURFACES.textSoftDim`}>
                   No identity conflict resolution yet. Resolve one to create the remote shared-identity record.
                 </div>
               )}
@@ -1818,8 +1818,8 @@ export function GovernanceTab() {
         </Section>
 
         <Section title="Control Plane Snapshot">
-          <div className={`space-y-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+          <div className={`space-y-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
               Capture the current workspace access, governance, and account profile into the shared control-plane archive.
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -1833,7 +1833,7 @@ export function GovernanceTab() {
               <button
                 type="button"
                 onClick={() => void refreshWorkspaceControlPlane()}
-                className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 text-[9px] ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
+                className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1 text-[9px] UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`}
               >
                 {workspaceControlPlaneLoading ? "Refreshing..." : "Refresh Control Plane"}
               </button>
@@ -1844,16 +1844,16 @@ export function GovernanceTab() {
               </div>
             ) : null}
             {workspaceControlPlaneReport ? (
-              <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+              <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
                 Captured {workspaceControlPlaneReport.snapshot.sceneName} at{" "}
                 {new Date(workspaceControlPlaneReport.snapshot.capturedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}. History size: {workspaceControlPlaneReport.historyCount}.
               </div>
             ) : null}
             <div className="space-y-1.5">
               {workspaceControlPlaneHistory.length > 0 ? workspaceControlPlaneHistory.slice(0, 3).map((record) => (
-                <div key={record.id} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-3 py-2`}>
+                <div key={record.id} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-3 py-2`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className={`text-[10px] font-semibold ${UI_SURFACES.textBright}`}>{record.sceneName}</div>
+                    <div className={`text-[10px] font-semibold UI_SURFACES.textBright`}>{record.sceneName}</div>
                     <Badge variant="gray">{record.source}</Badge>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
@@ -1864,7 +1864,7 @@ export function GovernanceTab() {
                   </div>
                 </div>
               )) : (
-                <div className={`rounded-md border border-dashed ${UI_SURFACES.border} ${UI_SURFACES.panel} px-3 py-3 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+                <div className={`rounded-md border border-dashed UI_SURFACES.border UI_SURFACES.panel px-3 py-3 text-[10px] UI_SURFACES.textSoftDim`}>
                   No control-plane snapshots yet. Capture the workspace state to create the first record.
                 </div>
               )}
@@ -1874,33 +1874,33 @@ export function GovernanceTab() {
 
         <Section title="Access Rules">
           <div className="grid gap-1.5 md:grid-cols-2">
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[9px] ${UI_SURFACES.textBody2}`}>
-              <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Can approve</div>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5 text-[9px] UI_SURFACES.textBody2`}>
+              <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Can approve</div>
               <div className="mt-0.5 font-semibold">{approveDecision.allowed ? "Yes" : "No"}</div>
             </div>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[9px] ${UI_SURFACES.textBody2}`}>
-              <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Can publish</div>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5 text-[9px] UI_SURFACES.textBody2`}>
+              <div className={`text-[8px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Can publish</div>
               <div className="mt-0.5 font-semibold">{canPublish ? "Yes" : "No"}</div>
             </div>
           </div>
         </Section>
 
         <Section title="Workspace Branch Sync">
-          <div className={`space-y-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+          <div className={`space-y-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
               Compare the current branch against the latest exported operational archive, then resolve whether the workspace is same, fast-forward, or diverged.
             </div>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5 text-[9px] ${UI_SURFACES.textBody2}`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5 text-[9px] UI_SURFACES.textBody2`}>
               <div className="flex items-center justify-between gap-2">
-                <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Latest archive</span>
+                <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Latest archive</span>
                 <span className="font-semibold">{latestOperationalEvidenceArchive?.archive.scene.name ?? "No archive"}</span>
               </div>
               <div className="mt-1 flex items-center justify-between gap-2">
-                <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Restore branch</span>
+                <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Restore branch</span>
                 <span className="font-semibold">{latestOperationalEvidenceArchive?.restoreBranch ?? "n/a"}</span>
               </div>
               <div className="mt-1 flex items-center justify-between gap-2">
-                <span className={`${UI_SURFACES.textDimMid} uppercase tracking-[0.18em]`}>Event count</span>
+                <span className={`UI_SURFACES.textDimMid uppercase tracking-[0.18em]`}>Event count</span>
                 <span className="font-semibold">{latestOperationalEvidenceArchive?.archive.operationalEvidenceEvents.length ?? 0}</span>
               </div>
             </div>
@@ -1928,7 +1928,7 @@ export function GovernanceTab() {
                 <button
                   type="button"
                   onClick={() => setSyncConflictReport(null)}
-                  className={`rounded-md border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1 ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorder} hover:text-white`}
+                  className={`rounded-md border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1 UI_SURFACES.textBody UI_SURFACES.hoverBorder hover:text-white`}
                 >
                   Clear Sync Report
                 </button>
@@ -1943,10 +1943,10 @@ export function GovernanceTab() {
                     {syncConflictReport.status.replace(/_/g, " ")}
                   </Badge>
                 </div>
-                <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textBody2}`}>
+                <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1 text-[9px] UI_SURFACES.textBody2`}>
                   {syncConflictReport.recommendation}
                 </div>
-                <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>
+                <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1 text-[9px] UI_SURFACES.textSoftBright`}>
                   {latestOperationalEvidenceArchive
                     ? `Current branch compared to ${latestOperationalEvidenceArchive.archive.scene.name} (${latestOperationalEvidenceArchive.restoreBranch}).`
                     : "No archived operational evidence branch is available yet."}

@@ -29,9 +29,9 @@ export function EntryPointInspector() {
 
   return (
     <>
-      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-b UI_SURFACES.borderPanel px-3 py-3}`}>
         <div className="text-[12px] font-semibold text-white">{entryPoint.label}</div>
-        <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Entry Point</div>
+        <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Entry Point</div>
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
@@ -64,19 +64,19 @@ export function EntryPointInspector() {
           {nearbyPaths.length > 0 ? (
             <div className="space-y-1">
               {nearbyPaths.map((p) => (
-                <div key={p.id} className={`flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderFaint} py-1.5 last:border-0`}>
-                  <span className={`text-[10px] ${UI_SURFACES.textBody}`}>{p.label}</span>
-                  <span className={`text-[9px] capitalize ${UI_SURFACES.textDimMid}`}>{p.intent}</span>
+                <div key={p.id} className={`flex items-center justify-between gap-2 border-b UI_SURFACES.borderFaint py-1.5 last:border-0`}>
+                  <span className={`text-[10px] UI_SURFACES.textBody`}>{p.label}</span>
+                  <span className={`text-[9px] capitalize UI_SURFACES.textDimMid`}>{p.intent}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className={`text-[10px] ${UI_SURFACES.textMuted}`}>No paths start or end within 2.5 m of this entry point.</p>
+            <p className={`text-[10px] UI_SURFACES.textMuted`}>No paths start or end within 2.5 m of this entry point.</p>
           )}
         </SectionCard>
       </div>
 
-      <div className={`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-t UI_SURFACES.borderPanel px-3 py-3}`}>
         <button
           type="button"
           onClick={() => removeNode(entryPoint.id)}

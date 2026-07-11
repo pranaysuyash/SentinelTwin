@@ -28,17 +28,17 @@ function ExposureBreakdown({ exposure }: { exposure: Record<string, number> }) {
   const maxExposure = Math.max(...keys.map((k) => exposure[k] ?? 0), 1);
 
   return (
-    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
-      <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Evidence Quality Along Route</div>
+    <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+      <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Evidence Quality Along Route</div>
       <div className="space-y-2">
         {keys.map((key) => (
           <div key={key}>
             <div className="mb-0.5 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: QUALITY_COLOR[key] }} />
-                <span className={`text-[9px] uppercase tracking-[0.05em] ${UI_SURFACES.textSoftBright}`}>{key}</span>
+                <span className={`text-[9px] uppercase tracking-[0.05em] UI_SURFACES.textSoftBright`}>{key}</span>
               </div>
-              <span className={`text-[9px] font-mono ${UI_SURFACES.textDimMid}`}>{(exposure[key] ?? 0).toFixed(1)}s</span>
+              <span className={`text-[9px] font-mono UI_SURFACES.textDimMid`}>{(exposure[key] ?? 0).toFixed(1)}s</span>
             </div>
             <ExposureBar color={QUALITY_COLOR[key]} valuePct={((exposure[key] ?? 0) / maxExposure) * 100} />
           </div>
@@ -66,7 +66,7 @@ function DetailList({
   return (
     <div className="space-y-1">
       {items.map((item) => (
-        <div key={item} className={`flex items-center gap-1.5 text-[10px] ${UI_SURFACES.textSoftMuted}`}>
+        <div key={item} className={`flex items-center gap-1.5 text-[10px] UI_SURFACES.textSoftMuted`}>
           <span className="flex-shrink-0">{icon}</span>
           <span>{item}</span>
         </div>
@@ -100,8 +100,8 @@ export function ThreatAnalysisPanel() {
           <TruthBadge label="simulated" />
           <ShieldAlert className="h-4 w-4 shrink-0 text-rose-400" />
           <div className="min-w-0">
-            <span className={`block text-[11px] font-semibold ${UI_SURFACES.textBody}`}>Route Exposure Review</span>
-            <span className={`block text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>
+            <span className={`block text-[11px] font-semibold UI_SURFACES.textBody`}>Route Exposure Review</span>
+            <span className={`block text-[8px] uppercase tracking-[0.16em] UI_SURFACES.textDimMid`}>
               Recomputes the current site twin and refreshes authorized route visibility
             </span>
           </div>
@@ -109,7 +109,7 @@ export function ThreatAnalysisPanel() {
         <button type="button"
           onClick={runSimulation}
           disabled={simulationRunning}
-          className={`inline-flex items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-3 py-1.5 text-[10px] font-medium text-rose-300 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60`}
+          className={`inline-flex items-center gap-1.5 rounded-lg border UI_SURFACES.borderThin UI_SURFACES.card px-3 py-1.5 text-[10px] font-medium text-rose-300 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60`}
         >
           {simulationRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
           {simulationRunning ? "Reviewing..." : "Run Route Review"}
@@ -118,12 +118,12 @@ export function ThreatAnalysisPanel() {
 
       {!failurePath ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3">
-          <Target className={`h-8 w-8 ${UI_SURFACES.textDim}`} />
-          <p className={`max-w-[240px] text-center text-[10px] leading-relaxed ${UI_SURFACES.textDimMid}`}>
+          <Target className={`h-8 w-8 UI_SURFACES.textDim`} />
+          <p className={`max-w-[240px] text-center text-[10px] leading-relaxed UI_SURFACES.textDimMid`}>
             Run the simulation to review route exposure, uncovered sections, and reachable critical zones.
           </p>
           {!result && (
-            <p className={`text-center text-[9px] ${UI_SURFACES.textDim}`}>
+            <p className={`text-center text-[9px] UI_SURFACES.textDim`}>
               No route review yet. Use the button above or &quot;Run Review&quot; in the status bar.
             </p>
           )}
@@ -185,8 +185,8 @@ export function ThreatAnalysisPanel() {
           <ExposureBreakdown exposure={failurePath.detectionQualityExposure} />
 
           <div className="grid grid-cols-2 gap-1.5">
-            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
-              <div className={`mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
+            <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+              <div className={`mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>
                 <EyeOff className="h-3 w-3 text-amber-400" />
                 Uncovered Route Sections
               </div>
@@ -198,8 +198,8 @@ export function ThreatAnalysisPanel() {
               />
             </div>
 
-            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
-              <div className={`mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
+            <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+              <div className={`mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>
                 <EyeOff className="h-3 w-3 text-rose-400" />
                 Cameras Missing This Route
               </div>
@@ -211,8 +211,8 @@ export function ThreatAnalysisPanel() {
             </div>
           </div>
 
-          <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
-            <div className={`mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
+          <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+            <div className={`mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>
               <Target className="h-3 w-3 text-red-400" />
               Critical Zones Reachable
             </div>
@@ -233,18 +233,18 @@ export function ThreatAnalysisPanel() {
           </div>
 
           {failurePath.failureReason && (
-            <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
-              <div className={`mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Coverage Finding</div>
+            <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+              <div className={`mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Coverage Finding</div>
               <p className="text-[10px] leading-relaxed text-amber-300/80">{failurePath.failureReason}</p>
             </div>
           )}
 
-          <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+          <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
             <div className="mb-1.5 flex items-center justify-between">
-              <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Route Visibility Ribbon</span>
-              <span className={`text-[8px] ${UI_SURFACES.textDimMid}`}>{failurePath.waypoints.length} waypoints</span>
+              <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Route Visibility Ribbon</span>
+              <span className={`text-[8px] UI_SURFACES.textDimMid`}>{failurePath.waypoints.length} waypoints</span>
             </div>
-            <div className={`flex h-3 overflow-hidden rounded-full border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card}`}>
+            <div className={`flex h-3 overflow-hidden rounded-full border UI_SURFACES.borderSubtle UI_SURFACES.card`}>
               {failurePath.waypoints.map((wp) => (
                 <div
                   key={`${wp.timeS}-${wp.position[0]}-${wp.position[1]}`}
@@ -257,7 +257,7 @@ export function ThreatAnalysisPanel() {
                 />
               ))}
             </div>
-            <div className={`mt-1 flex items-center justify-between text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>
+            <div className={`mt-1 flex items-center justify-between text-[8px] uppercase tracking-[0.16em] UI_SURFACES.textDimMid`}>
               <span>Entry</span>
               <span>Target</span>
             </div>

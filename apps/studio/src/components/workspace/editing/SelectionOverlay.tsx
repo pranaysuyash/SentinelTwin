@@ -19,7 +19,7 @@ export function SelectionOverlay({ center, label, showSnap = false }: {
       </mesh>
       {label ? (
         <SceneHtml position={[center[0], 0.09, center[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-          <div className={`rounded-md border ${UI_SURFACES.borderElevated} ${UI_SURFACES.panel}/90 px-2 py-0.5 text-[8px] font-semibold ${UI_SURFACES.textBody2} shadow-[0_8px_20px_rgba(0,0,0,0.22)]`}>
+          <div className={`rounded-md border UI_SURFACES.borderElevated UI_SURFACES.panel/90 px-2 py-0.5 text-[8px] font-semibold UI_SURFACES.textBody2 shadow-[0_8px_20px_rgba(0,0,0,0.22)]`}>
             {label}
           </div>
         </SceneHtml>

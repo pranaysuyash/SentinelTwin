@@ -130,7 +130,7 @@ export function WorkspacePresetSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className={`flex h-7 min-w-[126px] items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2.5 text-[11px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverText}`}
+        className={`flex h-7 min-w-[126px] items-center gap-1.5 rounded-lg border UI_SURFACES.borderThin UI_SURFACES.card px-2.5 text-[11px] font-medium UI_SURFACES.textBody transition-colors UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverText`}
       >
         {active.icon}
         <span>{active.label}</span>
@@ -139,15 +139,15 @@ export function WorkspacePresetSwitcher() {
             Modified
           </span>
         ) : null}
-        <ChevronDown className={`h-3 w-3 ${UI_SURFACES.textDimMid}`} />
+        <ChevronDown className={`h-3 w-3 UI_SURFACES.textDimMid`} />
       </button>
 
       {open ? (
         <div
-          className={`absolute right-0 top-full z-50 mt-1 w-72 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-1.5 shadow-2xl shadow-black/35`}
+          className={`absolute right-0 top-full z-50 mt-1 w-72 rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.bgDeep p-1.5 shadow-2xl shadow-black/35`}
           onMouseLeave={() => setOpen(false)}
         >
-          <div className={`px-2 py-1 text-[9px] uppercase tracking-[0.22em] ${UI_SURFACES.textDimMid}`}>
+          <div className={`px-2 py-1 text-[9px] uppercase tracking-[0.22em] UI_SURFACES.textDimMid`}>
             Workspaces
           </div>
           <div className="grid gap-1">
@@ -165,21 +165,21 @@ export function WorkspacePresetSwitcher() {
                   setOpen(false);
                 }}
                 className={cn(
-                  "flex items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${UI_SURFACES.hoverBgMuted}",
-                  current.workspacePreset === entry.id ? "${UI_SURFACES.hoverBgMuted} text-emerald-300" : "${UI_SURFACES.textBody}",
+                  "flex items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors UI_SURFACES.hoverBgMuted",
+                  current.workspacePreset === entry.id ? "UI_SURFACES.hoverBgMuted text-emerald-300" : "UI_SURFACES.textBody",
                 )}
               >
-                <span className="mt-0.5 ${UI_SURFACES.textMuted3}">{entry.icon}</span>
+                <span className="mt-0.5 UI_SURFACES.textMuted3">{entry.icon}</span>
                 <span className="min-w-0">
                   <span className="block text-[11px] font-medium">{entry.label}</span>
-                  <span className="block text-[9px] leading-snug ${UI_SURFACES.textSoftMid}">{entry.hint}</span>
+                  <span className="block text-[9px] leading-snug UI_SURFACES.textSoftMid">{entry.hint}</span>
                 </span>
               </button>
             ))}
           </div>
 
-          <div className={`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-2}`}>
-            <div className={`px-2 py-1 text-[9px] uppercase tracking-[0.22em] ${UI_SURFACES.textDimMid}`}>
+          <div className={`{mt-2 border-t UI_SURFACES.borderPanel pt-2}`}>
+            <div className={`px-2 py-1 text-[9px] uppercase tracking-[0.22em] UI_SURFACES.textDimMid`}>
               Layout actions
             </div>
             <div className="grid gap-1">
@@ -189,7 +189,7 @@ export function WorkspacePresetSwitcher() {
                   setViewSettingsOpen(true);
                   setOpen(false);
                 }}
-                className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textBody transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <SlidersHorizontal className="h-3.5 w-3.5 text-sky-300" />
                 Customize current layout...
@@ -204,7 +204,7 @@ export function WorkspacePresetSwitcher() {
                   }
                   setOpen(false);
                 }}
-                className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverText}`}
+                className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] UI_SURFACES.textBody transition-colors UI_SURFACES.hoverBgMuted UI_SURFACES.hoverText`}
               >
                 <RotateCcw className="h-3.5 w-3.5 text-emerald-300" />
                 Reset current preset
@@ -212,31 +212,31 @@ export function WorkspacePresetSwitcher() {
             </div>
           </div>
 
-          <div className={`{mt-2 border-t ${UI_SURFACES.borderPanel} pt-2}`}>
-            <div className={`px-2 py-1 text-[9px] uppercase tracking-[0.22em] ${UI_SURFACES.textDimMid}`}>
+          <div className={`{mt-2 border-t UI_SURFACES.borderPanel pt-2}`}>
+            <div className={`px-2 py-1 text-[9px] uppercase tracking-[0.22em] UI_SURFACES.textDimMid`}>
               Saved layouts
             </div>
             {savedLayouts.length > 0 ? (
               <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
                 {savedLayouts.map((layout) => (
-                  <div key={layout.id} className={`flex items-center gap-1 rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-1.5`}>
+                  <div key={layout.id} className={`flex items-center gap-1 rounded-lg border UI_SURFACES.borderSubtle UI_SURFACES.panel px-2 py-1.5`}>
                     <button
                       type="button"
                       onClick={() => {
                         applySavedLayout(layout.id);
                         setOpen(false);
                       }}
-                      className={`min-w-0 flex-1 text-left text-[11px] ${UI_SURFACES.textNear} transition-colors ${UI_SURFACES.hoverText}`}
+                      className={`min-w-0 flex-1 text-left text-[11px] UI_SURFACES.textNear transition-colors UI_SURFACES.hoverText`}
                     >
                       <span className="block truncate font-medium">{layout.name}</span>
-                      <span className="block truncate text-[9px] ${UI_SURFACES.textSoftMid}">
+                      <span className="block truncate text-[9px] UI_SURFACES.textSoftMid">
                         {layout.workspacePreset.replace(/_/g, " ")} · {layout.viewMode.replace(/_/g, " ")}
                       </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => deleteSavedLayout(layout.id)}
-                      className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} ${UI_SURFACES.textSoftBright} transition-colors hover:border-red-400/25 hover:text-red-200`}
+                      className={`inline-flex h-6 w-6 items-center justify-center rounded-md border UI_SURFACES.borderThin UI_SURFACES.card UI_SURFACES.textSoftBright transition-colors hover:border-red-400/25 hover:text-red-200`}
                       title={`Delete ${layout.name}`}
                     >
                       <Trash2 className="h-3 w-3" />
@@ -245,7 +245,7 @@ export function WorkspacePresetSwitcher() {
                 ))}
               </div>
             ) : (
-              <div className={`rounded-lg border border-dashed ${UI_SURFACES.borderStandard} px-2.5 py-2 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+              <div className={`rounded-lg border border-dashed UI_SURFACES.borderStandard px-2.5 py-2 text-[10px] UI_SURFACES.textSoftDim`}>
                 No custom layouts saved yet.
               </div>
             )}

@@ -24,14 +24,14 @@ export function IssueCard({
   const [showWhy, setShowWhy] = useState(false);
 
   return (
-    <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeep} p-2.5`}>
+    <div className={`rounded-lg border UI_SURFACES.borderSubtle UI_SURFACES.panelDeep p-2.5`}>
       <div className="flex items-center gap-2">
         <span className={`rounded border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] ${severityTone(issue.severity)}`}>
           {issue.severity}
         </span>
-        <span className={`text-[8px] uppercase tracking-[0.12em] ${UI_SURFACES.textMuted2}`}>{issue.category.replace(/_/g, " ")}</span>
+        <span className={`text-[8px] uppercase tracking-[0.12em] UI_SURFACES.textMuted2`}>{issue.category.replace(/_/g, " ")}</span>
       </div>
-      <div className={`mt-1 text-[10px] ${UI_SURFACES.textBody2}`}>{issue.productExplanation}</div>
+      <div className={`mt-1 text-[10px] UI_SURFACES.textBody2`}>{issue.productExplanation}</div>
       <div className="mt-2 flex flex-wrap gap-1">
         {onFocusZone
           ? issue.affectedZones.slice(0, 2).map((zoneId) => (
@@ -39,7 +39,7 @@ export function IssueCard({
                 key={zoneId}
                 type="button"
                 onClick={() => onFocusZone(zoneId)}
-                className={`rounded border ${UI_SURFACES.borderHover} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] ${UI_SURFACES.textMuted4} hover:text-white`}
+                className={`rounded border UI_SURFACES.borderHover UI_SURFACES.card px-1.5 py-0.5 text-[8px] UI_SURFACES.textMuted4 hover:text-white`}
               >
                 Focus in Scene
               </button>
@@ -51,7 +51,7 @@ export function IssueCard({
                 key={cameraId}
                 type="button"
                 onClick={() => onViewCamera(cameraId)}
-                className={`rounded border ${UI_SURFACES.borderHover} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] text-[#9dd6ff] hover:text-white`}
+                className={`rounded border UI_SURFACES.borderHover UI_SURFACES.card px-1.5 py-0.5 text-[8px] text-[#9dd6ff] hover:text-white`}
               >
                 View Camera
               </button>
@@ -60,18 +60,18 @@ export function IssueCard({
         <button
           type="button"
           onClick={() => setShowWhy((value) => !value)}
-          className={`rounded border ${UI_SURFACES.borderHover} ${UI_SURFACES.card} px-1.5 py-0.5 text-[8px] ${UI_SURFACES.textBody} hover:text-white`}
+          className={`rounded border UI_SURFACES.borderHover UI_SURFACES.card px-1.5 py-0.5 text-[8px] UI_SURFACES.textBody hover:text-white`}
         >
           Why?
         </button>
       </div>
       {showWhy ? (
-        <div className={`mt-2 rounded border ${UI_SURFACES.borderHover} ${UI_SURFACES.panelDeep} px-2 py-1.5 text-[9px] ${UI_SURFACES.textMuted4}`}>
+        <div className={`mt-2 rounded border UI_SURFACES.borderHover UI_SURFACES.panelDeep px-2 py-1.5 text-[9px] UI_SURFACES.textMuted4`}>
           <div>Category: {issue.category.replace(/_/g, " ")}</div>
           <div>Severity: {issue.severity}</div>
           <div>Affected zones: {issue.affectedZones.length > 0 ? issue.affectedZones.join(", ") : "none mapped"}</div>
           <div>Affected cameras: {issue.affectedCameras.length > 0 ? issue.affectedCameras.join(", ") : "none mapped"}</div>
-          <div className={`mt-1 ${UI_SURFACES.textMuted3}`}>Technical: {issue.description}</div>
+          <div className={`mt-1 UI_SURFACES.textMuted3`}>Technical: {issue.description}</div>
         </div>
       ) : null}
     </div>

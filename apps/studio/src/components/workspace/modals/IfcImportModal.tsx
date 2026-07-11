@@ -212,17 +212,17 @@ export function IfcImportModal() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="ifc-import-title"
-        className={`flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border ${UI_SURFACES.borderThin} ${UI_SURFACES.panel} shadow-2xl shadow-black/50`}
+        className={`flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border UI_SURFACES.borderThin UI_SURFACES.panel shadow-2xl shadow-black/50`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className={`flex items-center justify-between border-b ${UI_SURFACES.borderSubtle} px-6 py-4`}>
+        <div className={`flex items-center justify-between border-b UI_SURFACES.borderSubtle px-6 py-4`}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/12 text-emerald-300">
               <Building2 className="h-5 w-5" />
             </div>
             <div>
-              <div className={`text-xs font-semibold uppercase tracking-[0.24em] ${UI_SURFACES.textSoftDim}`}>
+              <div className={`text-xs font-semibold uppercase tracking-[0.24em] UI_SURFACES.textSoftDim`}>
                 Pillar 1 · Structural Import Pipeline
               </div>
               <h2 id="ifc-import-title" className="text-lg font-semibold text-white">
@@ -233,7 +233,7 @@ export function IfcImportModal() {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className={`rounded-xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.hoverBgSubtle} p-2 ${UI_SURFACES.textSoftDim} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText}`}
+            className={`rounded-xl border UI_SURFACES.borderStandard UI_SURFACES.hoverBgSubtle p-2 UI_SURFACES.textSoftDim transition-colors UI_SURFACES.hoverBorderBright UI_SURFACES.hoverText`}
           >
             <X className="h-4 w-4" />
           </button>
@@ -243,7 +243,7 @@ export function IfcImportModal() {
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* File Upload OR Paste Area */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-[22px] border border-dashed ${UI_SURFACES.borderStrong} ${UI_SURFACES.bgDeep} p-5 flex flex-col items-center justify-center text-center">
+            <div className="rounded-[22px] border border-dashed UI_SURFACES.borderStrong UI_SURFACES.bgDeep p-5 flex flex-col items-center justify-center text-center">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -255,7 +255,7 @@ export function IfcImportModal() {
                 <Upload className="h-6 w-6" />
               </div>
               <div className="text-sm font-semibold text-white">Select IFC or STEP File</div>
-              <div className={`mt-1 text-xs ${UI_SURFACES.textMuted5}`}>
+              <div className={`mt-1 text-xs UI_SURFACES.textMuted5`}>
                 Upload CAD/BIM structural models (`.ifc`, `.step`, `.stp`) to auto-extract storeys and walls.
               </div>
               <button
@@ -274,7 +274,7 @@ export function IfcImportModal() {
             </div>
 
             <div className="flex flex-col">
-              <label className={`text-xs font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textSoftDim} mb-2 flex items-center gap-1.5`}>
+              <label className={`text-xs font-semibold uppercase tracking-[0.16em] UI_SURFACES.textSoftDim mb-2 flex items-center gap-1.5`}>
                 <FileText className="h-3.5 w-3.5 text-cyan-300" />
                 Or Paste STEP / IFC ASCII Stream
               </label>
@@ -285,7 +285,7 @@ export function IfcImportModal() {
                   if (fileName) setFileName(null);
                 }}
                 placeholder="ISO-10303-21;&#10;HEADER;&#10;FILE_DESCRIPTION(('ViewDefinition [CoordinationView]'),'2;1');&#10;..."
-                className={`flex-1 min-h-[140px] rounded-[22px] border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} p-3 font-mono text-xs ${UI_SURFACES.textNear} placeholder-[#47536d] focus:border-emerald-400/40 focus:outline-none`}
+                className={`flex-1 min-h-[140px] rounded-[22px] border UI_SURFACES.borderStandard UI_SURFACES.panel p-3 font-mono text-xs UI_SURFACES.textNear placeholder-[#47536d] focus:border-emerald-400/40 focus:outline-none`}
               />
             </div>
           </div>
@@ -305,13 +305,13 @@ export function IfcImportModal() {
           )}
 
           {/* Material & Elevation Configuration */}
-          <div className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-5 space-y-4`}>
+          <div className={`rounded-[24px] border UI_SURFACES.borderSubtle UI_SURFACES.bgDeep p-5 space-y-4`}>
             <div className="flex items-center justify-between">
-              <div className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textSoftDim}`}>
+              <div className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] UI_SURFACES.textSoftDim`}>
                 <Radio className="h-4 w-4 text-emerald-400" />
                 Default Wall Material & RF Attenuation Penalty
               </div>
-              <span className={`text-[11px] ${UI_SURFACES.textMuted5}`}>
+              <span className={`text-[11px] UI_SURFACES.textMuted5`}>
                 Assigned to all parsed IFC walls for DORI / OODPCVS line-of-sight raycasting
               </span>
             </div>
@@ -326,7 +326,7 @@ export function IfcImportModal() {
                     "flex flex-col rounded-2xl border p-3 text-left transition-colors",
                     defaultMaterial === opt.id
                       ? "border-emerald-400/50 bg-emerald-500/15 text-white shadow-lg shadow-emerald-950/40"
-                      : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderBright}"
+                      : "UI_SURFACES.borderStandard UI_SURFACES.panel UI_SURFACES.textBody UI_SURFACES.hoverBorderBright"
                   )}
                 >
                   <div className="text-xs font-semibold flex items-center justify-between">
@@ -335,7 +335,7 @@ export function IfcImportModal() {
                       {opt.rfAttenuationDb} dB
                     </span>
                   </div>
-                  <div className={`mt-1.5 text-[10px] leading-relaxed ${UI_SURFACES.textMuted5}`}>
+                  <div className={`mt-1.5 text-[10px] leading-relaxed UI_SURFACES.textMuted5`}>
                     {opt.description}
                   </div>
                 </button>
@@ -344,7 +344,7 @@ export function IfcImportModal() {
 
             <div className="grid grid-cols-2 gap-4 pt-2">
               <div>
-                <label className={`text-[11px] font-semibold uppercase tracking-wider ${UI_SURFACES.textSoftDim} block mb-1`}>
+                <label className={`text-[11px] font-semibold uppercase tracking-wider UI_SURFACES.textSoftDim block mb-1`}>
                   Default Wall Height (Meters)
                 </label>
                 <input
@@ -354,11 +354,11 @@ export function IfcImportModal() {
                   max="50"
                   value={defaultWallHeight}
                   onChange={(e) => setDefaultWallHeight(parseFloat(e.target.value) || 3.0)}
-                  className={`w-full rounded-xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-3 py-2 text-xs font-mono text-white focus:border-emerald-400/40 focus:outline-none`}
+                  className={`w-full rounded-xl border UI_SURFACES.borderStandard UI_SURFACES.panel px-3 py-2 text-xs font-mono text-white focus:border-emerald-400/40 focus:outline-none`}
                 />
               </div>
               <div>
-                <label className={`text-[11px] font-semibold uppercase tracking-wider ${UI_SURFACES.textSoftDim} block mb-1`}>
+                <label className={`text-[11px] font-semibold uppercase tracking-wider UI_SURFACES.textSoftDim block mb-1`}>
                   Base Level Elevation (Meters)
                 </label>
                 <input
@@ -366,7 +366,7 @@ export function IfcImportModal() {
                   step="0.1"
                   value={defaultElevation}
                   onChange={(e) => setDefaultElevation(parseFloat(e.target.value) || 0.0)}
-                  className={`w-full rounded-xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} px-3 py-2 text-xs font-mono text-white focus:border-emerald-400/40 focus:outline-none`}
+                  className={`w-full rounded-xl border UI_SURFACES.borderStandard UI_SURFACES.panel px-3 py-2 text-xs font-mono text-white focus:border-emerald-400/40 focus:outline-none`}
                 />
               </div>
             </div>
@@ -378,23 +378,23 @@ export function IfcImportModal() {
               Parsing failed: {parseResult.error}
             </div>
           ) : parsedScene ? (
-            <div className={`rounded-[24px] border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} p-5 space-y-4`}>
-              <div className={`flex items-center justify-between border-b ${UI_SURFACES.borderSubtle} pb-3`}>
+            <div className={`rounded-[24px] border UI_SURFACES.borderSubtle UI_SURFACES.bgDeep p-5 space-y-4`}>
+              <div className={`flex items-center justify-between border-b UI_SURFACES.borderSubtle pb-3`}>
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
                   <Layers className="h-4 w-4" />
                   Extracted Geometry Summary
                 </div>
-                <div className="flex items-center gap-3 font-mono text-xs ${UI_SURFACES.textMuted4}">
-                  <span className="rounded-lg ${UI_SURFACES.hoverBgMuted} px-2 py-1">
+                <div className="flex items-center gap-3 font-mono text-xs UI_SURFACES.textMuted4">
+                  <span className="rounded-lg UI_SURFACES.hoverBgMuted px-2 py-1">
                     Storeys: <strong className="text-white">{levels.length}</strong>
                   </span>
-                  <span className="rounded-lg ${UI_SURFACES.hoverBgMuted} px-2 py-1">
+                  <span className="rounded-lg UI_SURFACES.hoverBgMuted px-2 py-1">
                     Walls: <strong className="text-white">{parsedScene.walls.length}</strong>
                   </span>
-                  <span className="rounded-lg ${UI_SURFACES.hoverBgMuted} px-2 py-1">
+                  <span className="rounded-lg UI_SURFACES.hoverBgMuted px-2 py-1">
                     Doors: <strong className="text-white">{parsedScene.doors?.length || 0}</strong>
                   </span>
-                  <span className="rounded-lg ${UI_SURFACES.hoverBgMuted} px-2 py-1">
+                  <span className="rounded-lg UI_SURFACES.hoverBgMuted px-2 py-1">
                     Windows: <strong className="text-white">{parsedScene.windows?.length || 0}</strong>
                   </span>
                 </div>
@@ -403,7 +403,7 @@ export function IfcImportModal() {
               {/* Level Filtering Table */}
               {levels.length > 0 ? (
                 <div className="space-y-2">
-                  <div className={`flex items-center justify-between text-xs ${UI_SURFACES.textSoftBright}`}>
+                  <div className={`flex items-center justify-between text-xs UI_SURFACES.textSoftBright`}>
                     <span className="font-semibold">Select Building Levels to Import:</span>
                     <button
                       type="button"
@@ -426,23 +426,23 @@ export function IfcImportModal() {
                             "flex items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors",
                             isSelected
                               ? "border-emerald-400/40 bg-emerald-500/12 text-white"
-                              : "${UI_SURFACES.borderStandard} ${UI_SURFACES.panel} ${UI_SURFACES.textMuted5}"
+                              : "UI_SURFACES.borderStandard UI_SURFACES.panel UI_SURFACES.textMuted5"
                           )}
                         >
                           <div className="flex items-center gap-2.5">
                             {isSelected ? (
                               <CheckSquare className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                             ) : (
-                              <Square className="h-4 w-4 ${UI_SURFACES.textMuted} flex-shrink-0" />
+                              <Square className="h-4 w-4 UI_SURFACES.textMuted flex-shrink-0" />
                             )}
                             <div>
                               <div className="text-xs font-semibold text-white">{lvl.name}</div>
-                              <div className={`text-[10px] font-mono ${UI_SURFACES.textMuted5}`}>
+                              <div className={`text-[10px] font-mono UI_SURFACES.textMuted5`}>
                                 Elev: {lvl.elevation}m · H: {lvl.height ?? "—"}m
                               </div>
                             </div>
                           </div>
-                          <span className="text-[10px] font-mono rounded bg-black/30 px-2 py-0.5 ${UI_SURFACES.textMuted4}">
+                          <span className="text-[10px] font-mono rounded bg-black/30 px-2 py-0.5 UI_SURFACES.textMuted4">
                             {wallCount} walls
                           </span>
                         </button>
@@ -451,7 +451,7 @@ export function IfcImportModal() {
                   </div>
                 </div>
               ) : (
-                <div className={`text-xs ${UI_SURFACES.textMuted5} italic`}>
+                <div className={`text-xs UI_SURFACES.textMuted5 italic`}>
                   No explicit `IFCBUILDINGSTOREY` entities found. All walls mapped to default Level 0 (`{defaultElevation}m`).
                 </div>
               )}
@@ -460,8 +460,8 @@ export function IfcImportModal() {
         </div>
 
         {/* Footer */}
-        <div className={`flex items-center justify-between border-t ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panelDeepAlt} px-6 py-4`}>
-          <div className={`text-xs ${UI_SURFACES.textMuted5}`}>
+        <div className={`flex items-center justify-between border-t UI_SURFACES.borderSubtle UI_SURFACES.panelDeepAlt px-6 py-4`}>
+          <div className={`text-xs UI_SURFACES.textMuted5`}>
             {filteredScene ? (
               <span>
                 Ready to import <strong className="text-white">{filteredScene.walls.length}</strong> walls across{" "}
@@ -475,7 +475,7 @@ export function IfcImportModal() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className={`rounded-xl border ${UI_SURFACES.borderStandard} ${UI_SURFACES.hoverBgSubtle} px-4 py-2 text-xs font-semibold ${UI_SURFACES.textBody} ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverText} transition-colors`}
+              className={`rounded-xl border UI_SURFACES.borderStandard UI_SURFACES.hoverBgSubtle px-4 py-2 text-xs font-semibold UI_SURFACES.textBody UI_SURFACES.hoverBorderBright UI_SURFACES.hoverText transition-colors`}
             >
               Cancel
             </button>
@@ -487,7 +487,7 @@ export function IfcImportModal() {
                 "rounded-xl border px-4 py-2 text-xs font-semibold transition-colors",
                 filteredScene
                   ? "border-cyan-400/30 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25"
-                  : "${UI_SURFACES.borderStandard} ${UI_SURFACES.card} ${UI_SURFACES.textDimMid} cursor-not-allowed"
+                  : "UI_SURFACES.borderStandard UI_SURFACES.card UI_SURFACES.textDimMid cursor-not-allowed"
               )}
             >
               Merge into Current Scene
@@ -500,7 +500,7 @@ export function IfcImportModal() {
                 "rounded-xl border px-4 py-2 text-xs font-semibold transition-colors",
                 filteredScene
                   ? "border-emerald-400/30 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30 shadow-lg shadow-emerald-950/50"
-                  : "${UI_SURFACES.borderStandard} ${UI_SURFACES.card} ${UI_SURFACES.textDimMid} cursor-not-allowed"
+                  : "UI_SURFACES.borderStandard UI_SURFACES.card UI_SURFACES.textDimMid cursor-not-allowed"
               )}
             >
               Import as New Scene

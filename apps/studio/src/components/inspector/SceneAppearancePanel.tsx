@@ -70,7 +70,7 @@ export function SceneAppearancePanel() {
 
   return (
     <>
-      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-b UI_SURFACES.borderPanel px-3 py-3}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/12">
@@ -78,14 +78,14 @@ export function SceneAppearancePanel() {
             </div>
             <div>
               <div className="text-[12px] font-semibold text-white">Scene Appearance</div>
-              <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
+              <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>
                 Lighting · Materials · Environment
               </div>
             </div>
           </div>
           <Badge variant="gray">Visual only</Badge>
         </div>
-        <div className={`mt-2 text-[9px] leading-relaxed ${UI_SURFACES.textDimMid}`}>
+        <div className={`mt-2 text-[9px] leading-relaxed UI_SURFACES.textDimMid`}>
           Customizes how the scene renders. Coverage simulation is never affected.
           Select an object in the canvas to edit its own finish instead.
         </div>
@@ -99,7 +99,7 @@ export function SceneAppearancePanel() {
               <button
                 type="button"
                 onClick={() => updateSceneAppearance({ lighting: { [envMode]: undefined } })}
-                className={`rounded px-1.5 py-0.5 text-[9px] ${UI_SURFACES.textDimMid} transition-colors ${UI_SURFACES.hoverTextSoft}`}
+                className={`rounded px-1.5 py-0.5 text-[9px] UI_SURFACES.textDimMid transition-colors UI_SURFACES.hoverTextSoft`}
                 title={`Reset ${ENV_MODE_LABEL[envMode] ?? envMode} lighting to defaults`}
               >
                 Reset
@@ -175,7 +175,7 @@ export function SceneAppearancePanel() {
               onChange={(value) => patchLighting({ practicalIntensity: value / 100 })}
             />
           ) : null}
-          <div className="pt-1 text-[8px] leading-relaxed ${UI_SURFACES.textMuted}">
+          <div className="pt-1 text-[8px] leading-relaxed UI_SURFACES.textMuted">
             Edits apply to the active environment mode ({ENV_MODE_LABEL[envMode] ?? envMode}).
             Switch modes in the top bar to tune the others.
           </div>
@@ -275,7 +275,7 @@ export function SceneAppearancePanel() {
                 surfaces: undefined,
               })
             }
-            className={`flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.card} text-[10px] font-medium ${UI_SURFACES.textBody} transition-colors ${UI_SURFACES.hoverBorderBright} ${UI_SURFACES.hoverBgDark}`}
+            className={`flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border UI_SURFACES.border UI_SURFACES.card text-[10px] font-medium UI_SURFACES.textBody transition-colors UI_SURFACES.hoverBorderBright UI_SURFACES.hoverBgDark`}
           >
             Reset All Appearance Customization
           </button>

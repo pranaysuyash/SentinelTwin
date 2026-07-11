@@ -98,7 +98,7 @@ export function ObstructionInspector() {
 
   return (
     <>
-      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-b UI_SURFACES.borderPanel px-3 py-3}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/12">
@@ -106,7 +106,7 @@ export function ObstructionInspector() {
             </div>
             <div>
               <div className="text-[12px] font-semibold text-white">{obs.label}</div>
-              <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>{obs.obstructionType}</div>
+              <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>{obs.obstructionType}</div>
             </div>
           </div>
           <Badge variant={obs.movable ? "green" : "gray"} dot>
@@ -220,7 +220,7 @@ export function ObstructionInspector() {
         />
       </div>
 
-      <div className={`{border-t ${UI_SURFACES.borderPanel} px-3 py-3 space-y-2}`}>
+      <div className={`{border-t UI_SURFACES.borderPanel px-3 py-3 space-y-2}`}>
         <button
           type="button"
           onClick={() => isRunningForThis ? clearCounterfactual() : runCounterfactual(obs.id)}
@@ -231,28 +231,28 @@ export function ObstructionInspector() {
         </button>
 
         {delta && (
-          <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeepAlt} p-2.5 space-y-1.5}`}>
-            <div className={`text-[9px] font-semibold uppercase tracking-widest ${UI_SURFACES.textDim} mb-2`}>
+          <div className={`{rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.panelDeepAlt p-2.5 space-y-1.5}`}>
+            <div className={`text-[9px] font-semibold uppercase tracking-widest UI_SURFACES.textDim mb-2`}>
               If removed — delta vs current
             </div>
             <div className="grid grid-cols-3 gap-1.5">
-              <div className={`flex flex-col items-center rounded ${UI_SURFACES.panelDeep} p-1.5`}>
+              <div className={`flex flex-col items-center rounded UI_SURFACES.panelDeep p-1.5`}>
                 <span className={`text-[13px] font-bold ${delta.coverage >= 0 ? "text-green-400" : "text-red-400"}`}>
                   {delta.coverage > 0 ? "+" : ""}{delta.coverage.toFixed(1)}%
                 </span>
-                <span className={`text-[8px] ${UI_SURFACES.textMuted} mt-0.5`}>coverage</span>
+                <span className={`text-[8px] UI_SURFACES.textMuted mt-0.5`}>coverage</span>
               </div>
-              <div className={`flex flex-col items-center rounded ${UI_SURFACES.panelDeep} p-1.5`}>
+              <div className={`flex flex-col items-center rounded UI_SURFACES.panelDeep p-1.5`}>
                 <span className={`text-[13px] font-bold ${delta.blindspot >= 0 ? "text-green-400" : "text-red-400"}`}>
                   {delta.blindspot > 0 ? "-" : "+"}{Math.abs(delta.blindspot).toFixed(1)}%
                 </span>
-                <span className={`text-[8px] ${UI_SURFACES.textMuted} mt-0.5`}>blindspot</span>
+                <span className={`text-[8px] UI_SURFACES.textMuted mt-0.5`}>blindspot</span>
               </div>
-              <div className={`flex flex-col items-center rounded ${UI_SURFACES.panelDeep} p-1.5`}>
+              <div className={`flex flex-col items-center rounded UI_SURFACES.panelDeep p-1.5`}>
                 <span className={`text-[13px] font-bold ${delta.recognition >= 0 ? "text-green-400" : "text-red-400"}`}>
                   {delta.recognition > 0 ? "+" : ""}{delta.recognition.toFixed(1)}%
                 </span>
-                <span className={`text-[8px] ${UI_SURFACES.textMuted} mt-0.5`}>recognition</span>
+                <span className={`text-[8px] UI_SURFACES.textMuted mt-0.5`}>recognition</span>
               </div>
             </div>
             {delta.zoneFlips.length > 0 && (
@@ -260,15 +260,15 @@ export function ObstructionInspector() {
                 {delta.zoneFlips.map((z) => (
                   <div key={z.zoneId} className="flex items-center gap-1.5 text-[9px]">
                     <span className="text-red-400">✗ FAIL</span>
-                    <span className={`${UI_SURFACES.textMuted}`}>→</span>
+                    <span className={`UI_SURFACES.textMuted`}>→</span>
                     <span className="text-green-400">✓ PASS</span>
-                    <span className={`${UI_SURFACES.textMuted5}`}>{z.label ?? z.zoneId}</span>
+                    <span className={`UI_SURFACES.textMuted5`}>{z.label ?? z.zoneId}</span>
                   </div>
                 ))}
               </div>
             )}
             {delta.zoneFlips.length === 0 && delta.coverage < 0.5 && delta.blindspot < 0.5 && (
-              <div className={`text-[9px] ${UI_SURFACES.textMuted} text-center pt-1`}>
+              <div className={`text-[9px] UI_SURFACES.textMuted text-center pt-1`}>
                 Minimal impact — obstruction may not be blocking critical sightlines
               </div>
             )}

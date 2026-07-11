@@ -26,9 +26,9 @@ export function BollardInspector() {
 
   return (
     <>
-      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-b UI_SURFACES.borderPanel px-3 py-3}`}>
         <div className="text-[12px] font-semibold text-white">{bollard.label}</div>
-        <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Bollard Line · {lengthM.toFixed(2)}m</div>
+        <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Bollard Line · {lengthM.toFixed(2)}m</div>
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
@@ -71,7 +71,7 @@ export function BollardInspector() {
           />
         </SectionCard>
 
-        <div className="rounded ${UI_SURFACES.borderFaint} px-2.5 py-2 text-[10px] ${UI_SURFACES.textMuted2}">
+        <div className="rounded UI_SURFACES.borderFaint px-2.5 py-2 text-[10px] UI_SURFACES.textMuted2">
           Bollard lines block vehicle-class threats. The current pedestrian adversarial model routes around them. Vehicle threat modelling arrives in V0.3.
         </div>
 

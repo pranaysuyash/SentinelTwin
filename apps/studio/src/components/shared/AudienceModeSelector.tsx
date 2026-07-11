@@ -36,7 +36,7 @@ export function AudienceModeSelector({
 }: AudienceModeSelectorProps) {
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <label className={`text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted}`}>
+      <label className={`text-[9px] font-semibold uppercase tracking-[0.2em] UI_SURFACES.textMuted`}>
         Report Audience
       </label>
       <div className="relative">
@@ -45,8 +45,8 @@ export function AudienceModeSelector({
           value={value}
           onChange={(e) => onChange(e.target.value as AudienceMode)}
           className={cn(
-            "w-full appearance-none rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeep}",
-            "px-2.5 py-1.5 pr-7 text-[11px] ${UI_SURFACES.textBody}",
+            "w-full appearance-none rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.panelDeep",
+            "px-2.5 py-1.5 pr-7 text-[11px] UI_SURFACES.textBody",
             "focus:outline-none focus:ring-1 focus:ring-blue-500/40",
             "cursor-pointer",
           )}
@@ -57,10 +57,10 @@ export function AudienceModeSelector({
             </option>
           ))}
         </select>
-        <ChevronDown className={`pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 ${UI_SURFACES.textMuted}`} />
+        <ChevronDown className={`pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 UI_SURFACES.textMuted`} />
       </div>
       {showDescription && (
-        <p className={`text-[9px] leading-relaxed ${UI_SURFACES.textMuted}`}>
+        <p className={`text-[9px] leading-relaxed UI_SURFACES.textMuted`}>
           {audienceModeDescription(value)}
         </p>
       )}

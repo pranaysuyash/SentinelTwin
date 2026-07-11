@@ -151,7 +151,7 @@ export function CoverageLegend() {
   const [showFilters, setShowFilters] = useState(false);
 
   return (
-    <div className={`absolute left-3 top-3 z-10 w-[240px] rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/90 px-3 py-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.28)]`}>
+    <div className={`absolute left-3 top-3 z-10 w-[240px] rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel/90 px-3 py-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.28)]`}>
       {/* Header row with collapse toggle */}
       <div className="flex items-center justify-between mb-1.5">
         <button
@@ -160,7 +160,7 @@ export function CoverageLegend() {
           aria-expanded={!collapsed}
           aria-controls="coverage-legend-body"
           aria-label={`${collapsed ? "Expand" : "Collapse"} coverage legend`}
-          className={`flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.22em] ${UI_SURFACES.textMuted} transition-colors hover:text-sky-300`}
+          className={`flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.22em] UI_SURFACES.textMuted transition-colors hover:text-sky-300`}
           style={collapsed ? undefined : { color: MAP_COLORS.viewport }}
         >
           {collapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -175,7 +175,7 @@ export function CoverageLegend() {
           aria-expanded={showFilters}
           aria-controls="coverage-legend-filters"
           aria-label={`${showFilters ? "Hide" : "Show"} overlay filters and density`}
-          className={`rounded p-0.5 transition-colors ${showFilters ? "text-sky-300" : "${UI_SURFACES.textDim} ${UI_SURFACES.hoverTextSoft}"}`}
+          className={`rounded p-0.5 transition-colors ${showFilters ? "text-sky-300" : "UI_SURFACES.textDim UI_SURFACES.hoverTextSoft"}`}
           style={showFilters ? { color: MAP_COLORS.viewport } : undefined}
           title="Overlay filters & density"
         >
@@ -188,7 +188,7 @@ export function CoverageLegend() {
         <div id="coverage-legend-body">
           {/* Mode toggle grid — only when simulation data is present */}
           {hasResult ? (
-            <div className={`mb-2 grid grid-cols-3 gap-0.5 rounded-md overflow-hidden border ${UI_SURFACES.borderDark}`}>
+            <div className={`mb-2 grid grid-cols-3 gap-0.5 rounded-md overflow-hidden border UI_SURFACES.borderDark`}>
               {MODE_ORDER.map((mode) => {
                 const config = MODE_CONFIG[mode];
                 const isActive = heatmapMode === config.mode;
@@ -211,7 +211,7 @@ export function CoverageLegend() {
             </div>
           ) : null}
 
-          <div className={`mb-2 rounded-lg border ${UI_SURFACES.borderSubtle} bg-white/[0.025] px-2 py-1.5 text-[9px] leading-4 ${UI_SURFACES.textMuted3}`}>
+          <div className={`mb-2 rounded-lg border UI_SURFACES.borderSubtle bg-white/[0.025] px-2 py-1.5 text-[9px] leading-4 UI_SURFACES.textMuted3`}>
             {activeConfig.description}
           </div>
 
@@ -221,15 +221,15 @@ export function CoverageLegend() {
               <div key={label} className="flex items-start gap-2">
                 <span className="mt-0.5 h-3 w-3 flex-shrink-0 rounded-sm" style={{ backgroundColor: color, opacity: 0.9 }} />
                 <div className="min-w-0 flex-1 leading-none">
-                  <div className={`text-[10px] ${UI_SURFACES.textBody}`}>{range}</div>
-                  <div className={`mt-1 text-[8px] ${UI_SURFACES.textSoftMid}`}>{label} &middot; {detail}</div>
+                  <div className={`text-[10px] UI_SURFACES.textBody`}>{range}</div>
+                  <div className={`mt-1 text-[8px] UI_SURFACES.textSoftMid`}>{label} &middot; {detail}</div>
                 </div>
               </div>
             ))}
           </div>
 
           {activeConfig.legendNote && (
-            <div className={`mt-2 border-t ${UI_SURFACES.borderSubtle} pt-1.5 text-[8px] ${UI_SURFACES.textMuted} leading-tight`}>
+            <div className={`mt-2 border-t UI_SURFACES.borderSubtle pt-1.5 text-[8px] UI_SURFACES.textMuted leading-tight`}>
               {activeConfig.legendNote}
             </div>
           )}
@@ -238,10 +238,10 @@ export function CoverageLegend() {
 
       {/* Expandable filter & density panel */}
       {showFilters && (
-        <div id="coverage-legend-filters" className={`mt-2 border-t ${UI_SURFACES.borderSubtle} pt-2 space-y-2`}>
+        <div id="coverage-legend-filters" className={`mt-2 border-t UI_SURFACES.borderSubtle pt-2 space-y-2`}>
           {/* Density mode selector */}
           <div>
-            <div className={`flex items-center gap-1 mb-1.5 text-[8px] font-semibold uppercase tracking-wider ${UI_SURFACES.textMuted}`}>
+            <div className={`flex items-center gap-1 mb-1.5 text-[8px] font-semibold uppercase tracking-wider UI_SURFACES.textMuted`}>
               <Layers className="h-2.5 w-2.5" />
               Density
             </div>
@@ -254,8 +254,8 @@ export function CoverageLegend() {
                   aria-pressed={overlayDensity === opt.value}
                   className={`flex-1 py-0.5 text-[8px] font-medium rounded transition-colors ${
                     overlayDensity === opt.value
-                      ? "${UI_SURFACES.borderStandard} text-sky-300"
-                      : "${UI_SURFACES.textDim} ${UI_SURFACES.hoverTextSoft} ${UI_SURFACES.borderFaint}"
+                      ? "UI_SURFACES.borderStandard text-sky-300"
+                      : "UI_SURFACES.textDim UI_SURFACES.hoverTextSoft UI_SURFACES.borderFaint"
                   }`}
                   style={overlayDensity === opt.value ? { backgroundColor: MAP_COLORS.panelFillAlt, color: MAP_COLORS.viewport } : undefined}
                 >
@@ -267,7 +267,7 @@ export function CoverageLegend() {
 
           {/* Overlay filter toggles */}
           <div>
-            <div className={`flex items-center gap-1 mb-1 text-[8px] font-semibold uppercase tracking-wider ${UI_SURFACES.textMuted}`}>
+            <div className={`flex items-center gap-1 mb-1 text-[8px] font-semibold uppercase tracking-wider UI_SURFACES.textMuted`}>
               <Filter className="h-2.5 w-2.5" />
               Overlays
             </div>
@@ -281,10 +281,10 @@ export function CoverageLegend() {
                     type="checkbox"
                     checked={overlayFilters[opt.id]}
                     onChange={(e) => setOverlayFilter(opt.id, e.target.checked)}
-                    className={`h-2.5 w-2.5 rounded ${UI_SURFACES.borderDark} ${UI_SURFACES.hoverBgMuted} accent-[#3b82f6] cursor-pointer`}
+                    className={`h-2.5 w-2.5 rounded UI_SURFACES.borderDark UI_SURFACES.hoverBgMuted accent-[#3b82f6] cursor-pointer`}
                   />
                   <span className={`text-[9px] transition-colors ${
-                    overlayFilters[opt.id] ? `${UI_SURFACES.textBody}` : "${UI_SURFACES.textDim}"
+                    overlayFilters[opt.id] ? `UI_SURFACES.textBody` : "UI_SURFACES.textDim"
                   }`}>
                     {opt.label}
                   </span>

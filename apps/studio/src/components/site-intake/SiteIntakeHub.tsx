@@ -313,11 +313,11 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
   const selected = SOURCES.find((s) => s.id === selectedId) ?? SOURCES[0];
 
   return (
-    <div className="flex h-screen w-full overflow-hidden ${UI_SURFACES.panel} text-white">
+    <div className="flex h-screen w-full overflow-hidden UI_SURFACES.panel text-white">
       {/* ── Left nav ───────────────────────────────────────────────────── */}
-      <aside className={`flex w-[220px] flex-none flex-col border-r ${UI_SURFACES.borderFaint} ${UI_SURFACES.panelDeepAlt}`}>
+      <aside className={`flex w-[220px] flex-none flex-col border-r UI_SURFACES.borderFaint UI_SURFACES.panelDeepAlt`}>
         {/* Logo */}
-        <div className={`flex items-center gap-2.5 border-b ${UI_SURFACES.borderFaint} px-5 py-4`}>
+        <div className={`flex items-center gap-2.5 border-b UI_SURFACES.borderFaint px-5 py-4`}>
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15 ring-1 ring-emerald-500/25">
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
           </div>
@@ -339,7 +339,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                     "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] transition-colors",
                     item.active
                       ? "bg-sky-500/10 text-sky-300 ring-1 ring-sky-500/20"
-                      : "${UI_SURFACES.textMuted2} hover:bg-white/4 hover:${UI_SURFACES.textBody}",
+                      : "UI_SURFACES.textMuted2 hover:bg-white/4 hover:UI_SURFACES.textBody",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4 flex-none" />
@@ -351,13 +351,13 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
         </nav>
 
         {/* Reference demo */}
-        <div className={`border-t ${UI_SURFACES.borderFaint} p-3`}>
-          <div className={`rounded-xl border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} p-3`}>
-            <div className={`mb-1 text-[10px] font-semibold uppercase tracking-[0.15em] ${UI_SURFACES.textMuted}`}>
+        <div className={`border-t UI_SURFACES.borderFaint p-3`}>
+          <div className={`rounded-xl border UI_SURFACES.borderFaint UI_SURFACES.bgDeep p-3`}>
+            <div className={`mb-1 text-[10px] font-semibold uppercase tracking-[0.15em] UI_SURFACES.textMuted`}>
               Reference Scenes
             </div>
             <div className="text-[12px] font-medium text-white">Reference Demo</div>
-            <p className="mt-0.5 text-[11px] leading-4 ${UI_SURFACES.textMuted7}">
+            <p className="mt-0.5 text-[11px] leading-4 UI_SURFACES.textMuted7">
               Small retail shop example
             </p>
             <button
@@ -396,13 +396,13 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                       className={[
                         "group relative flex flex-col justify-between rounded-2xl border p-4 text-left transition-all",
                         isSelected
-                          ? `${UI_SURFACES.hoverBgSubtle} border-sky-500/50 shadow-[0_0_24px_rgba(14,165,233,0.12)] ${card.accent.border}`
-                          : "${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverBgSubtle}",
+                          ? `UI_SURFACES.hoverBgSubtle border-sky-500/50 shadow-[0_0_24px_rgba(14,165,233,0.12)] ${card.accent.border}`
+                          : "UI_SURFACES.borderFaint UI_SURFACES.bgDeep UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverBgSubtle",
                       ].join(" ")}
                     >
                       <div className="flex items-start gap-3.5">
                         <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl transition-colors ${isSelected ? card.accent.iconBg : "bg-white/5 group-hover:bg-white/10"}`}>
-                          <Icon className={`h-5 w-5 ${isSelected ? card.accent.iconColor : "${UI_SURFACES.textSoftBright} group-hover:text-white"}`} />
+                          <Icon className={`h-5 w-5 ${isSelected ? card.accent.iconColor : "UI_SURFACES.textSoftBright group-hover:text-white"}`} />
                         </div>
                         <div className="min-w-0 flex-1 pr-5">
                           <div className="flex flex-wrap items-center gap-2">
@@ -440,12 +440,12 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                         </div>
                       </div>
 
-                      <p className={`mt-3 text-[13px] leading-5 ${UI_SURFACES.textSoftBright}`}>{card.description}</p>
+                      <p className={`mt-3 text-[13px] leading-5 UI_SURFACES.textSoftBright`}>{card.description}</p>
 
-                      <div className={`mt-3 flex items-center gap-3 border-t ${UI_SURFACES.borderFaint} pt-3 text-[11px] ${UI_SURFACES.textMuted}`}>
-                        <span>Output: <span className={`${UI_SURFACES.textSoftBright}`}>{card.output}</span></span>
-                        <span className="${UI_SURFACES.hoverBorder}">·</span>
-                        <span>Review: <span className={`${UI_SURFACES.textSoftBright}`}>{card.review}</span></span>
+                      <div className={`mt-3 flex items-center gap-3 border-t UI_SURFACES.borderFaint pt-3 text-[11px] UI_SURFACES.textMuted`}>
+                        <span>Output: <span className={`UI_SURFACES.textSoftBright`}>{card.output}</span></span>
+                        <span className="UI_SURFACES.hoverBorder">·</span>
+                        <span>Review: <span className={`UI_SURFACES.textSoftBright`}>{card.review}</span></span>
                       </div>
                     </button>
                   );
@@ -454,14 +454,14 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
 
               {/* Detail panel */}
               <aside className="w-[340px] flex-none">
-                <div className={`sticky top-0 rounded-2xl border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} p-5`}>
+                <div className={`sticky top-0 rounded-2xl border UI_SURFACES.borderFaint UI_SURFACES.bgDeep p-5`}>
                   <div className="flex items-start gap-3">
                     <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl ${selected.accent.iconBg}`}>
                       <selected.icon className={`h-5 w-5 ${selected.accent.iconColor}`} />
                     </div>
                     <div>
                       <div className="text-[16px] font-semibold text-white">{selected.title}</div>
-                      <div className="mt-1 flex items-center gap-2 text-[12px] ${UI_SURFACES.textMuted7}">
+                      <div className="mt-1 flex items-center gap-2 text-[12px] UI_SURFACES.textMuted7">
                         <span className="inline-flex items-center gap-1">
                           {selected.capabilityIds.map((cid) => {
                             const cap = getCapabilityStatus(cid);
@@ -489,17 +489,17 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                     </div>
                   </div>
 
-                  <p className={`mt-4 text-[13px] leading-5 ${UI_SURFACES.textMuted3}`}>
+                  <p className={`mt-4 text-[13px] leading-5 UI_SURFACES.textMuted3`}>
                     {selected.detail.headline}
                   </p>
 
                   <div className="mt-5">
-                    <div className={`mb-3 text-[11px] font-semibold uppercase tracking-[0.13em] ${UI_SURFACES.textMuted}`}>
+                    <div className={`mb-3 text-[11px] font-semibold uppercase tracking-[0.13em] UI_SURFACES.textMuted`}>
                       What you&apos;ll do
                     </div>
                     <ol className="space-y-2">
                       {selected.detail.steps.map((step, i) => (
-                        <li key={step} className={`flex items-start gap-3 text-[13px] ${UI_SURFACES.textMuted3}`}>
+                        <li key={step} className={`flex items-start gap-3 text-[13px] UI_SURFACES.textMuted3`}>
                           <span className="mt-px flex h-5 w-5 flex-none items-center justify-center rounded-full bg-sky-500/10 text-[11px] font-semibold text-sky-400 ring-1 ring-sky-500/20">
                             {i + 1}
                           </span>
@@ -519,7 +519,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                       </div>
                       <ul className="space-y-1.5">
                         {selected.detail.limitations.map((limitation) => (
-                          <li key={limitation} className="flex items-start gap-2 text-[12px] leading-5 ${UI_SURFACES.textMuted5}">
+                          <li key={limitation} className="flex items-start gap-2 text-[12px] leading-5 UI_SURFACES.textMuted5">
                             <span className="mt-1.5 h-1 w-1 flex-none rounded-full bg-amber-500/60" />
                             <span>{limitation}</span>
                           </li>
@@ -548,7 +548,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                       <a
                         href={SAMPLE_SECURITY_SCENE_IMPORT_URL}
                         download="sample-security-scene-import.json"
-                        className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderFaint} bg-white/[0.02] text-[12px] ${UI_SURFACES.textSoftBright} transition-colors hover:bg-white/[0.04] hover:text-white`}
+                        className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border UI_SURFACES.borderFaint bg-white/[0.02] text-[12px] UI_SURFACES.textSoftBright transition-colors hover:bg-white/[0.04] hover:text-white`}
                       >
                         <FileUp className="h-3.5 w-3.5" />
                         Sample JSON
@@ -556,7 +556,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                       <a
                         href={JEWELRY_STORE_SITE_TWIN_IMPORT_URL}
                         download="jewelry-store-site-twin.json"
-                        className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border ${UI_SURFACES.borderFaint} bg-white/[0.02] text-[12px] ${UI_SURFACES.textSoftBright} transition-colors hover:bg-white/[0.04] hover:text-white`}
+                        className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border UI_SURFACES.borderFaint bg-white/[0.02] text-[12px] UI_SURFACES.textSoftBright transition-colors hover:bg-white/[0.04] hover:text-white`}
                       >
                         <FileUp className="h-3.5 w-3.5" />
                         Jewelry sample
@@ -564,8 +564,8 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                     </div>
                   )}
 
-                  <div className={`mt-4 rounded-xl border ${UI_SURFACES.borderFaint} bg-white/[0.02] p-3`}>
-                    <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted}`}>
+                  <div className={`mt-4 rounded-xl border UI_SURFACES.borderFaint bg-white/[0.02] p-3`}>
+                    <div className={`mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textMuted`}>
                       Capability Status
                     </div>
                     <div className="space-y-1.5">
@@ -574,7 +574,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                         if (!cap) return null;
                         return (
                           <div key={cid} className="flex items-center justify-between">
-                            <span className={`text-[11px] ${UI_SURFACES.textSoftBright}`}>{cap.label}</span>
+                            <span className={`text-[11px] UI_SURFACES.textSoftBright`}>{cap.label}</span>
                             <span className={[
                               "rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em]",
                               cap.level === "Available"
@@ -589,7 +589,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                         );
                       })}
                     </div>
-                    <p className="mt-2 text-[10px] leading-4 ${UI_SURFACES.textDim}">
+                    <p className="mt-2 text-[10px] leading-4 UI_SURFACES.textDim">
                       Local-only mode is available. Cloud-backed AI actions are explicitly labeled before use.
                     </p>
                   </div>
@@ -601,7 +601,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
             {props.recentSites.length > 0 && (
               <div className="mt-6">
                 <div className="mb-3 flex items-center justify-between">
-                  <div className={`text-[12px] font-semibold uppercase tracking-[0.12em] ${UI_SURFACES.textMuted}`}>
+                  <div className={`text-[12px] font-semibold uppercase tracking-[0.12em] UI_SURFACES.textMuted`}>
                     Recent Site Twins
                   </div>
                   <button
@@ -622,14 +622,14 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                           ? props.onOpenRecentSite(site.id)
                           : props.onEnterStudio()
                       }
-                      className={`group flex w-[240px] flex-none items-center gap-3 rounded-xl border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} p-3 text-left transition-all ${UI_SURFACES.hoverBorderSubtle} ${UI_SURFACES.hoverBgSubtle}`}
+                      className={`group flex w-[240px] flex-none items-center gap-3 rounded-xl border UI_SURFACES.borderFaint UI_SURFACES.bgDeep p-3 text-left transition-all UI_SURFACES.hoverBorderSubtle UI_SURFACES.hoverBgSubtle`}
                     >
                       <div className="flex h-[60px] w-[90px] flex-none items-center justify-center rounded-lg bg-gradient-to-br from-sky-500/10 to-slate-700/10 ring-1 ring-white/5">
-                        <ShieldCheck className="h-5 w-5 ${UI_SURFACES.borderStrong}" />
+                        <ShieldCheck className="h-5 w-5 UI_SURFACES.borderStrong" />
                       </div>
                       <div className="min-w-0">
                         <div className="truncate text-[13px] font-medium text-white">{site.name}</div>
-                        <div className={`mt-0.5 text-[11px] ${UI_SURFACES.textMuted}`}>{site.updatedLabel}</div>
+                        <div className={`mt-0.5 text-[11px] UI_SURFACES.textMuted`}>{site.updatedLabel}</div>
                         <div className={`mt-1.5 flex items-center gap-1.5 text-[11px] font-medium ${riskColor[site.riskLabel]}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${riskDot[site.riskLabel]}`} />
                           {site.riskLabel}
@@ -642,14 +642,14 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                   <button
                     type="button"
                     onClick={props.onImportJson}
-                    className={`flex w-[240px] flex-none items-center gap-3 rounded-xl border border-dashed ${UI_SURFACES.borderFaint} bg-transparent p-3 text-left transition-all hover:border-sky-500/20 hover:bg-sky-500/4`}
+                    className={`flex w-[240px] flex-none items-center gap-3 rounded-xl border border-dashed UI_SURFACES.borderFaint bg-transparent p-3 text-left transition-all hover:border-sky-500/20 hover:bg-sky-500/4`}
                   >
-                    <div className={`flex h-[60px] w-[90px] flex-none items-center justify-center rounded-lg border border-dashed ${UI_SURFACES.borderFaint}`}>
-                      <FileUp className="h-5 w-5 ${UI_SURFACES.borderStrong}" />
+                    <div className={`flex h-[60px] w-[90px] flex-none items-center justify-center rounded-lg border border-dashed UI_SURFACES.borderFaint`}>
+                      <FileUp className="h-5 w-5 UI_SURFACES.borderStrong" />
                     </div>
                     <div>
-                      <div className={`text-[13px] font-medium ${UI_SURFACES.textSoftBright}`}>Quick Import</div>
-                      <div className={`mt-0.5 text-[11px] ${UI_SURFACES.textMuted}`}>Import site twin JSON</div>
+                      <div className={`text-[13px] font-medium UI_SURFACES.textSoftBright`}>Quick Import</div>
+                      <div className={`mt-0.5 text-[11px] UI_SURFACES.textMuted`}>Import site twin JSON</div>
                     </div>
                   </button>
                 </div>

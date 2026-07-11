@@ -21,27 +21,27 @@ export function AssumptionDisclosure({
   const hasDetails = (model && model.assumptions.length > 0) || hasLimitations || hasMissing;
 
   return (
-    <section className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-3`}>
+    <section className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-3`}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <h3 className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textMuted3}`}>Evidence and Assumptions</h3>
+          <h3 className={`text-[10px] font-semibold uppercase tracking-[0.16em] UI_SURFACES.textMuted3`}>Evidence and Assumptions</h3>
           <ExplainBadge text="Planning assumptions behind this security outcome and limitations of the simulation." />
         </div>
         {hasDetails ? (
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className={`text-[9px] ${UI_SURFACES.textSoftMid} ${UI_SURFACES.hoverTextSoft}`}
+            className={`text-[9px] UI_SURFACES.textSoftMid UI_SURFACES.hoverTextSoft`}
           >
             {expanded ? "Collapse" : "Details"}
           </button>
         ) : null}
       </div>
 
-      <div className={`mt-2 text-[10px] ${UI_SURFACES.textNear}`}>
+      <div className={`mt-2 text-[10px] UI_SURFACES.textNear`}>
         {assumptions.doriStandard === "oodpcvs_2025" ? "OODPCVS 2025" : "DORI 2014"} · Person {assumptions.personHeightM}m · Time {assumptions.timeOfDay}
       </div>
-      <div className={`mt-1 text-[10px] ${UI_SURFACES.textSoftDim}`}>
+      <div className={`mt-1 text-[10px] UI_SURFACES.textSoftDim`}>
         Simulation outputs are planning indicators under stated assumptions, not forensic guarantees.
       </div>
 
@@ -49,11 +49,11 @@ export function AssumptionDisclosure({
         <div className="mt-3 space-y-3">
           {model.assumptions.length > 0 ? (
             <div className="space-y-1">
-              <div className={`text-[9px] font-semibold uppercase tracking-[0.12em] ${UI_SURFACES.textMuted3}`}>Active Assumptions</div>
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.12em] UI_SURFACES.textMuted3`}>Active Assumptions</div>
               {model.assumptions.map((entry, idx) => (
-                <div key={idx} className={`text-[10px] ${UI_SURFACES.textSoftMuted}`}>
-                  <span className={`${UI_SURFACES.textNear}`}>{entry.label}:</span> {entry.value}
-                  <span className={`${UI_SURFACES.textSoftMid}`}> — {entry.impact}</span>
+                <div key={idx} className={`text-[10px] UI_SURFACES.textSoftMuted`}>
+                  <span className={`UI_SURFACES.textNear`}>{entry.label}:</span> {entry.value}
+                  <span className={`UI_SURFACES.textSoftMid`}> — {entry.impact}</span>
                 </div>
               ))}
             </div>
@@ -61,9 +61,9 @@ export function AssumptionDisclosure({
 
           {hasLimitations ? (
             <div className="space-y-1">
-              <div className={`text-[9px] font-semibold uppercase tracking-[0.12em] ${UI_SURFACES.textMuted3}`}>Limitations</div>
+              <div className={`text-[9px] font-semibold uppercase tracking-[0.12em] UI_SURFACES.textMuted3`}>Limitations</div>
               {model.limitations.map((lim, idx) => (
-                <div key={idx} className={`text-[10px] ${UI_SURFACES.textSoftDim}`}>{lim}</div>
+                <div key={idx} className={`text-[10px] UI_SURFACES.textSoftDim`}>{lim}</div>
               ))}
             </div>
           ) : null}

@@ -59,7 +59,7 @@ export function AssumptionsTab() {
 
         {/* Time of Day */}
         <div>
-          <div className={`text-[9px] font-semibold ${UI_SURFACES.textDim} uppercase tracking-widest mb-1.5`}>Time of Day</div>
+          <div className={`text-[9px] font-semibold UI_SURFACES.textDim uppercase tracking-widest mb-1.5`}>Time of Day</div>
           <div className="flex gap-1">
             {(["day", "night", "custom"] as const).map((t) => (
               <button type="button"
@@ -68,7 +68,7 @@ export function AssumptionsTab() {
                 className={`flex-1 py-1 text-[10px] rounded transition-colors capitalize ${
                   assumptions.timeOfDay === t
                     ? "bg-blue-600/30 border border-blue-500/40 text-blue-300"
-                    : `${UI_SURFACES.panelDeep} border ${UI_SURFACES.borderPanel} ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverTextSoft}`
+                    : `UI_SURFACES.panelDeep border UI_SURFACES.borderPanel UI_SURFACES.textDimMid UI_SURFACES.hoverTextSoft`
                 }`}
               >
                 {t}
@@ -79,7 +79,7 @@ export function AssumptionsTab() {
 
         {/* Interior Light Level */}
         <div>
-          <div className={`text-[9px] font-semibold ${UI_SURFACES.textDim} uppercase tracking-widest mb-1.5`}>Interior Light</div>
+          <div className={`text-[9px] font-semibold UI_SURFACES.textDim uppercase tracking-widest mb-1.5`}>Interior Light</div>
           <div className="flex gap-1">
             {(["dark", "dim", "normal", "bright"] as const).map((lvl) => (
               <button type="button"
@@ -88,7 +88,7 @@ export function AssumptionsTab() {
                 className={`flex-1 py-1 text-[9px] rounded transition-colors capitalize ${
                   assumptions.interiorLightLevel === lvl
                     ? "bg-amber-600/30 border border-amber-500/40 text-amber-300"
-                    : `${UI_SURFACES.panelDeep} border ${UI_SURFACES.borderPanel} ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverTextSoft}`
+                    : `UI_SURFACES.panelDeep border UI_SURFACES.borderPanel UI_SURFACES.textDimMid UI_SURFACES.hoverTextSoft`
                 }`}
               >
                 {lvl}
@@ -99,7 +99,7 @@ export function AssumptionsTab() {
 
         {/* Quality Standard */}
         <div>
-          <div className={`text-[9px] font-semibold ${UI_SURFACES.textDim} uppercase tracking-widest mb-1.5`}>Coverage Standard</div>
+          <div className={`text-[9px] font-semibold UI_SURFACES.textDim uppercase tracking-widest mb-1.5`}>Coverage Standard</div>
           <div className="flex gap-1">
             {(["dori_2014", "oodpcvs_2025"] as const).map((std) => (
               <button type="button"
@@ -108,7 +108,7 @@ export function AssumptionsTab() {
                 className={`flex-1 py-1 text-[9px] rounded transition-colors ${
                   assumptions.doriStandard === std
                     ? "bg-green-600/30 border border-green-500/40 text-green-300"
-                    : `${UI_SURFACES.panelDeep} border ${UI_SURFACES.borderPanel} ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverTextSoft}`
+                    : `UI_SURFACES.panelDeep border UI_SURFACES.borderPanel UI_SURFACES.textDimMid UI_SURFACES.hoverTextSoft`
                 }`}
               >
                 {std === "dori_2014" ? "2014 (legacy)" : "2025 (latest)"}
@@ -119,16 +119,16 @@ export function AssumptionsTab() {
 
         {/* PPM Thresholds */}
         <div>
-          <div className={`text-[9px] font-semibold ${UI_SURFACES.textDim} uppercase tracking-widest mb-1.5`}>
-            Resolution thresholds <span className="font-normal normal-case text-[7px] ${UI_SURFACES.hoverBorderSubtle}">(px/m)</span>
+          <div className={`text-[9px] font-semibold UI_SURFACES.textDim uppercase tracking-widest mb-1.5`}>
+            Resolution thresholds <span className="font-normal normal-case text-[7px] UI_SURFACES.hoverBorderSubtle">(px/m)</span>
           </div>
           {assumptions.doriStandard === "oodpcvs_2025" ? (
             <div className="grid grid-cols-4 gap-1">
-              <div className={`col-span-4 text-[8px] ${UI_SURFACES.textMuted} mb-1`}>Levels from IEC 62676-4:2025</div>
+              <div className={`col-span-4 text-[8px] UI_SURFACES.textMuted mb-1`}>Levels from IEC 62676-4:2025</div>
               {OODPCVS_DISPLAY_THRESHOLDS.map(({ level, ppm }) => (
                 <div key={level} className="text-center">
-                  <div className={`text-[8px] ${UI_SURFACES.textMuted} capitalize mb-0.5`}>{level}</div>
-                  <div className={`{text-[10px] font-mono font-semibold ${UI_SURFACES.textNearAlt} ${UI_SURFACES.panelDeep} border ${UI_SURFACES.borderPanel} rounded px-1 py-0.5}`}>
+                  <div className={`text-[8px] UI_SURFACES.textMuted capitalize mb-0.5`}>{level}</div>
+                  <div className={`{text-[10px] font-mono font-semibold UI_SURFACES.textNearAlt UI_SURFACES.panelDeep border UI_SURFACES.borderPanel rounded px-1 py-0.5}`}>
                     {ppm}
                   </div>
                 </div>
@@ -138,8 +138,8 @@ export function AssumptionsTab() {
             <div className="grid grid-cols-4 gap-1">
               {(["detection", "observation", "recognition", "identification"] as const).map((level) => (
                 <div key={level} className="text-center">
-                  <div className={`text-[8px] ${UI_SURFACES.textMuted} capitalize mb-0.5`}>{level}</div>
-                  <div className={`{text-[10px] font-mono font-semibold ${UI_SURFACES.textNearAlt} ${UI_SURFACES.panelDeep} border ${UI_SURFACES.borderPanel} rounded px-1 py-0.5}`}>
+                  <div className={`text-[8px] UI_SURFACES.textMuted capitalize mb-0.5`}>{level}</div>
+                  <div className={`{text-[10px] font-mono font-semibold UI_SURFACES.textNearAlt UI_SURFACES.panelDeep border UI_SURFACES.borderPanel rounded px-1 py-0.5}`}>
                     {assumptions.pixelsPerMeter[level]}
                   </div>
                 </div>
@@ -150,9 +150,9 @@ export function AssumptionsTab() {
 
         {/* Night Penalty */}
         <div>
-          <div className={`text-[9px] font-semibold ${UI_SURFACES.textDim} uppercase tracking-widest mb-1.5`}>
+          <div className={`text-[9px] font-semibold UI_SURFACES.textDim uppercase tracking-widest mb-1.5`}>
             Night-time visibility
-            <span className={`ml-1.5 normal-case text-[7px] font-normal ${UI_SURFACES.textDim}`}>(Night Penalty Mode)</span>
+            <span className={`ml-1.5 normal-case text-[7px] font-normal UI_SURFACES.textDim`}>(Night Penalty Mode)</span>
           </div>
           <div className="flex gap-1">
             {(["none", "simple", "detailed"] as const).map((mode) => (
@@ -162,7 +162,7 @@ export function AssumptionsTab() {
                 className={`flex-1 py-1 text-[9px] rounded transition-colors ${
                   assumptions.nightPenaltyMode === mode
                     ? "bg-purple-600/30 border border-purple-500/40 text-purple-300"
-                    : `${UI_SURFACES.panelDeep} border ${UI_SURFACES.borderPanel} ${UI_SURFACES.textDimMid} ${UI_SURFACES.hoverTextSoft}`
+                    : `UI_SURFACES.panelDeep border UI_SURFACES.borderPanel UI_SURFACES.textDimMid UI_SURFACES.hoverTextSoft`
                 }`}
               >
                 {mode === "none" ? "Off" : mode === "simple" ? "Basic" : "Full model"}
@@ -173,11 +173,11 @@ export function AssumptionsTab() {
 
         {/* Numeric fields */}
         <div>
-          <div className={`text-[9px] font-semibold ${UI_SURFACES.textDim} uppercase tracking-widest mb-1.5`}>Scene Parameters</div>
+          <div className={`text-[9px] font-semibold UI_SURFACES.textDim uppercase tracking-widest mb-1.5`}>Scene Parameters</div>
           <div className="grid grid-cols-2 gap-2">
             {(["wallHeightM", "personHeightM", "vehicleHeightM"] as const).map((field) => (
               <label key={field} className="flex flex-col gap-0.5">
-                <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>{FIELD_LABEL[field]}</span>
+                <span className={`text-[8px] UI_SURFACES.textMuted`}>{FIELD_LABEL[field]}</span>
                 <input
                   type="number"
                   step="0.1"
@@ -187,13 +187,13 @@ export function AssumptionsTab() {
                     const v = parseFloat(e.target.value);
                     if (!isNaN(v) && v > 0) update(field, v as SimulationAssumptions[typeof field]);
                   }}
-                  className={`{w-full ${UI_SURFACES.panelDeep} border ${UI_SURFACES.borderPanel} rounded px-1.5 py-0.5 text-[10px] font-mono ${UI_SURFACES.textNearAlt} focus:outline-none focus:border-blue-500/50}`}
+                  className={`{w-full UI_SURFACES.panelDeep border UI_SURFACES.borderPanel rounded px-1.5 py-0.5 text-[10px] font-mono UI_SURFACES.textNearAlt focus:outline-none focus:border-blue-500/50}`}
                 />
               </label>
             ))}
             {assumptions.timeOfDay !== "day" && (
               <label className="flex flex-col gap-0.5">
-                <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>{FIELD_LABEL.exteriorLightLux}</span>
+                <span className={`text-[8px] UI_SURFACES.textMuted`}>{FIELD_LABEL.exteriorLightLux}</span>
                 <input
                   type="number"
                   step="1"
@@ -203,7 +203,7 @@ export function AssumptionsTab() {
                     const v = parseFloat(e.target.value);
                     if (!isNaN(v) && v >= 0) update("exteriorLightLux", v);
                   }}
-                  className={`{w-full ${UI_SURFACES.panelDeep} border ${UI_SURFACES.borderPanel} rounded px-1.5 py-0.5 text-[10px] font-mono ${UI_SURFACES.textNearAlt} focus:outline-none focus:border-blue-500/50}`}
+                  className={`{w-full UI_SURFACES.panelDeep border UI_SURFACES.borderPanel rounded px-1.5 py-0.5 text-[10px] font-mono UI_SURFACES.textNearAlt focus:outline-none focus:border-blue-500/50}`}
                 />
               </label>
             )}
@@ -212,14 +212,14 @@ export function AssumptionsTab() {
 
         {/* Environmental Effects */}
         <div>
-          <div className={`text-[9px] font-semibold ${UI_SURFACES.textDim} uppercase tracking-widest mb-1.5`}>Environmental Effects</div>
+          <div className={`text-[9px] font-semibold UI_SURFACES.textDim uppercase tracking-widest mb-1.5`}>Environmental Effects</div>
           <div className="grid grid-cols-2 gap-2">
             <label className="flex flex-col gap-0.5">
-              <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Backlight</span>
+              <span className={`text-[8px] UI_SURFACES.textMuted`}>Backlight</span>
               <select
                 value={assumptions.backlightIntensity ?? "none"}
                 onChange={(e) => update("backlightIntensity", e.target.value as typeof assumptions.backlightIntensity)}
-                className={`{w-full rounded border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeep} px-1.5 py-0.5 text-[10px] capitalize ${UI_SURFACES.textNearAlt} outline-none focus:border-blue-500/40}`}
+                className={`{w-full rounded border UI_SURFACES.borderPanel UI_SURFACES.panelDeep px-1.5 py-0.5 text-[10px] capitalize UI_SURFACES.textNearAlt outline-none focus:border-blue-500/40}`}
               >
                 <option value="none">None</option>
                 <option value="low">Low</option>
@@ -228,11 +228,11 @@ export function AssumptionsTab() {
               </select>
             </label>
             <label className="flex flex-col gap-0.5">
-              <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Glare</span>
+              <span className={`text-[8px] UI_SURFACES.textMuted`}>Glare</span>
               <select
                 value={assumptions.glareIntensity ?? "none"}
                 onChange={(e) => update("glareIntensity", e.target.value as typeof assumptions.glareIntensity)}
-                className={`{w-full rounded border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeep} px-1.5 py-0.5 text-[10px] capitalize ${UI_SURFACES.textNearAlt} outline-none focus:border-blue-500/40}`}
+                className={`{w-full rounded border UI_SURFACES.borderPanel UI_SURFACES.panelDeep px-1.5 py-0.5 text-[10px] capitalize UI_SURFACES.textNearAlt outline-none focus:border-blue-500/40}`}
               >
                 <option value="none">None</option>
                 <option value="low">Low</option>
@@ -240,8 +240,8 @@ export function AssumptionsTab() {
                 <option value="high">High</option>
               </select>
             </label>
-            <label className={`{flex items-center gap-2 col-span-2 rounded border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeep} px-2 py-1.5}`}>
-              <span className={`text-[8px] ${UI_SURFACES.textMuted}`}>Overexposed Zones</span>
+            <label className={`{flex items-center gap-2 col-span-2 rounded border UI_SURFACES.borderPanel UI_SURFACES.panelDeep px-2 py-1.5}`}>
+              <span className={`text-[8px] UI_SURFACES.textMuted`}>Overexposed Zones</span>
               <input
                 type="checkbox"
                 checked={assumptions.overexposedZones ?? false}

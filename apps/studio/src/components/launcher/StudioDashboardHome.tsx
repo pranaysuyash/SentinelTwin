@@ -1039,7 +1039,7 @@ export function StudioDashboardHome({
             {dashboardViewMenuOpen ? (
               <div
                 id="dashboard-view-menu"
-                className="absolute right-0 top-full z-50 mt-2 w-[300px] overflow-hidden rounded-xl border border-[color:var(--st-border)] ${UI_SURFACES.bgDeep} p-2 shadow-[0_24px_70px_rgba(0,0,0,0.45)]"
+                className="absolute right-0 top-full z-50 mt-2 w-[300px] overflow-hidden rounded-xl border border-[color:var(--st-border)] UI_SURFACES.bgDeep p-2 shadow-[0_24px_70px_rgba(0,0,0,0.45)]"
               >
                 <div className="flex items-center justify-between border-b border-white/10 px-2 pb-2">
                   <div>
@@ -1148,12 +1148,12 @@ export function StudioDashboardHome({
                       aria-current={isActive ? "page" : undefined}
                       disabled={!navActionByKey[item.key]}
                     >
-                      {item.key === "home" ? <MapIcon className={cn("h-4 w-4", isActive ? "text-emerald-300" : "${UI_SURFACES.textNearAlt}")} /> : null}
-                      {item.key === "projects" ? <FolderOpen className={cn("h-4 w-4", isActive ? "text-emerald-300" : "${UI_SURFACES.textNearAlt}")} /> : null}
-                      {item.key === "reference_sites" ? <LayoutDashboard className={cn("h-4 w-4", isActive ? "text-emerald-300" : "${UI_SURFACES.textNearAlt}")} /> : null}
-                      {item.key === "report" ? <FileText className={cn("h-4 w-4", isActive ? "text-emerald-300" : "${UI_SURFACES.textNearAlt}")} /> : null}
-                      {item.key === "docs" ? <FileText className={cn("h-4 w-4", isActive ? "text-emerald-300" : "${UI_SURFACES.textNearAlt}")} /> : null}
-                      {item.key === "settings" ? <Settings2 className={cn("h-4 w-4", isActive ? "text-emerald-300" : "${UI_SURFACES.textNearAlt}")} /> : null}
+                      {item.key === "home" ? <MapIcon className={cn("h-4 w-4", isActive ? "text-emerald-300" : "UI_SURFACES.textNearAlt")} /> : null}
+                      {item.key === "projects" ? <FolderOpen className={cn("h-4 w-4", isActive ? "text-emerald-300" : "UI_SURFACES.textNearAlt")} /> : null}
+                      {item.key === "reference_sites" ? <LayoutDashboard className={cn("h-4 w-4", isActive ? "text-emerald-300" : "UI_SURFACES.textNearAlt")} /> : null}
+                      {item.key === "report" ? <FileText className={cn("h-4 w-4", isActive ? "text-emerald-300" : "UI_SURFACES.textNearAlt")} /> : null}
+                      {item.key === "docs" ? <FileText className={cn("h-4 w-4", isActive ? "text-emerald-300" : "UI_SURFACES.textNearAlt")} /> : null}
+                      {item.key === "settings" ? <Settings2 className={cn("h-4 w-4", isActive ? "text-emerald-300" : "UI_SURFACES.textNearAlt")} /> : null}
                       <span className="flex-1">
                         <span className="block">{item.label}</span>
                         {item.key === "projects" && isActive ? <span className="block text-[10px] font-normal text-emerald-100/70">Workspace library open</span> : null}
@@ -1174,14 +1174,14 @@ export function StudioDashboardHome({
                     key={item.key}
                     type="button"
                     onClick={modeActionByKey[item.key]}
-                    className={`flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-sm ${UI_SURFACES.textBody} transition-all duration-150 ease-out hover:bg-white/[0.04] hover:text-white`}
+                    className={`flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-sm UI_SURFACES.textBody transition-all duration-150 ease-out hover:bg-white/[0.04] hover:text-white`}
                   >
                     {item.key === "coverage" ? <MapIcon className="h-4 w-4 text-emerald-300" /> : null}
-                    {item.key === "camera_view" ? <Camera className={`h-4 w-4 ${UI_SURFACES.textNearAlt}`} /> : null}
-                    {item.key === "camera_wall" ? <LayoutDashboard className={`h-4 w-4 ${UI_SURFACES.textNearAlt}`} /> : null}
-                    {item.key === "path_replay" ? <Play className={`h-4 w-4 ${UI_SURFACES.textNearAlt}`} /> : null}
-                    {item.key === "compare" ? <Layers3 className={`h-4 w-4 ${UI_SURFACES.textNearAlt}`} /> : null}
-                    {item.key === "report_lite" ? <FileText className={`h-4 w-4 ${UI_SURFACES.textNearAlt}`} /> : null}
+                    {item.key === "camera_view" ? <Camera className={`h-4 w-4 UI_SURFACES.textNearAlt`} /> : null}
+                    {item.key === "camera_wall" ? <LayoutDashboard className={`h-4 w-4 UI_SURFACES.textNearAlt`} /> : null}
+                    {item.key === "path_replay" ? <Play className={`h-4 w-4 UI_SURFACES.textNearAlt`} /> : null}
+                    {item.key === "compare" ? <Layers3 className={`h-4 w-4 UI_SURFACES.textNearAlt`} /> : null}
+                    {item.key === "report_lite" ? <FileText className={`h-4 w-4 UI_SURFACES.textNearAlt`} /> : null}
                     <span>
                       <span className="block">{item.label}</span>
                       <span className="block text-[11px] text-[color:var(--st-muted)]">{item.detail}</span>
@@ -1286,18 +1286,18 @@ export function StudioDashboardHome({
                   previewMode === "3d" ? "[transform:perspective(1800px)_rotateX(8deg)] [transform-origin:center_top]" : "",
                 )}>
                   <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} activePathId={outcomeActivePathId} hydrated={hydrated} />
-                  <div className={`pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2 rounded-xl border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/88 px-3 py-1.5 text-[10px] ${UI_SURFACES.textBody}`}>
+                  <div className={`pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2 rounded-xl border UI_SURFACES.borderDark UI_SURFACES.bgDeep/88 px-3 py-1.5 text-[10px] UI_SURFACES.textBody`}>
                     <Compass className="h-3.5 w-3.5 text-cyan-300" />
                     <span className="font-semibold">N</span>
-                    <span className={`${UI_SURFACES.textMuted3}`}>Top view</span>
+                    <span className={`UI_SURFACES.textMuted3`}>Top view</span>
                   </div>
-                  <div className="absolute left-3 top-3 z-20 inline-flex rounded-xl border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/88 p-1">
+                  <div className="absolute left-3 top-3 z-20 inline-flex rounded-xl border UI_SURFACES.borderDark UI_SURFACES.bgDeep/88 p-1">
                     <button
                       type="button"
                       onClick={() => setPreviewMode("2d")}
                       className={cn(
                         "rounded-md px-2 py-1 text-[10px] transition-colors",
-                        previewMode === "2d" ? "bg-cyan-500/25 text-cyan-100" : "${UI_SURFACES.textMuted3} hover:text-white",
+                        previewMode === "2d" ? "bg-cyan-500/25 text-cyan-100" : "UI_SURFACES.textMuted3 hover:text-white",
                       )}
                     >
                       2D
@@ -1307,16 +1307,16 @@ export function StudioDashboardHome({
                       onClick={() => setPreviewMode("3d")}
                       className={cn(
                         "rounded-md px-2 py-1 text-[10px] transition-colors",
-                        previewMode === "3d" ? "bg-cyan-500/25 text-cyan-100" : "${UI_SURFACES.textMuted3} hover:text-white",
+                        previewMode === "3d" ? "bg-cyan-500/25 text-cyan-100" : "UI_SURFACES.textMuted3 hover:text-white",
                       )}
                     >
                       Tilted
                     </button>
                   </div>
-                  <div className="absolute bottom-3 left-3 z-20 w-[220px] rounded-xl border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 px-3 py-2 text-[10px] ${UI_SURFACES.textBody}">
-                    <div className={`text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted3}`}>Coverage (PPM)</div>
+                  <div className="absolute bottom-3 left-3 z-20 w-[220px] rounded-xl border UI_SURFACES.borderDark UI_SURFACES.bgDeep/90 px-3 py-2 text-[10px] UI_SURFACES.textBody">
+                    <div className={`text-[9px] font-semibold uppercase tracking-[0.2em] UI_SURFACES.textMuted3`}>Coverage (PPM)</div>
                     <div className="mt-1 grid grid-cols-[12px_1fr] items-center gap-x-2 gap-y-1">
-                      <span className="h-2.5 w-2.5 rounded-sm ${UI_SURFACES.bgInfoLight}" />
+                      <span className="h-2.5 w-2.5 rounded-sm UI_SURFACES.bgInfoLight" />
                       <span>250+ Identification</span>
                       <span className="h-2.5 w-2.5 rounded-sm bg-[#22c55e]" />
                       <span>125-250 Recognition</span>
@@ -1504,7 +1504,7 @@ export function StudioDashboardHome({
                 <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-200">
                   {footerPanel === "feedback" ? "Feedback Handoff" : "Command Center Help"}
                 </div>
-                <div className="mt-1 max-w-3xl text-xs ${UI_SURFACES.textBody}">
+                <div className="mt-1 max-w-3xl text-xs UI_SURFACES.textBody">
                   {footerPanel === "feedback"
                     ? "Capture product feedback from the current site twin, then open Settings or Studio to adjust the relevant workflow."
                     : "Use Create Site Twin for new/imported sites, Security Twin Studio for editing, Audit Reports for exports, and Reference Sites for seeded examples."}
@@ -1536,7 +1536,7 @@ export function StudioDashboardHome({
               </div>
             </div>
             {footerPanel === "feedback" ? (
-              <div className="mt-3 overflow-hidden rounded-xl border border-white/10 ${UI_SURFACES.panelDeepAlt}">
+              <div className="mt-3 overflow-hidden rounded-xl border border-white/10 UI_SURFACES.panelDeepAlt">
                 {feedbackEmbedUrl ? (
                   <iframe
                     title="SentinelTwin feedback form"
@@ -1545,7 +1545,7 @@ export function StudioDashboardHome({
                     loading="lazy"
                   />
                 ) : (
-                  <div className="px-3 py-3 text-xs leading-5 ${UI_SURFACES.textBody}">
+                  <div className="px-3 py-3 text-xs leading-5 UI_SURFACES.textBody">
                     Add a Google Forms URL with <span className="font-mono text-sky-200">NEXT_PUBLIC_SENTINELTWIN_FEEDBACK_FORM_URL</span> to embed the live feedback form here.
                   </div>
                 )}

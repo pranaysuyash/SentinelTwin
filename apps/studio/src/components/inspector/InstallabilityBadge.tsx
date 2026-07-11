@@ -54,7 +54,7 @@ export function InstallabilityBadge({ result, className }: InstallabilityBadgePr
       </span>
 
       {/* Tooltip */}
-      <div className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} px-3 py-2.5 text-[10px] leading-relaxed opacity-0 shadow-lg transition-opacity group-hover:opacity-100`}>
+      <div className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.bgDeep px-3 py-2.5 text-[10px] leading-relaxed opacity-0 shadow-lg transition-opacity group-hover:opacity-100`}>
         {/* Status line */}
         <div className="mb-1.5 flex items-center gap-1.5">
           {icon}
@@ -79,7 +79,7 @@ export function InstallabilityBadge({ result, className }: InstallabilityBadgePr
               ) : (
                 <CircleX className="h-2.5 w-2.5 text-red-400" />
               )}
-              <span className={cn("text-[9px]", result[key] ? "${UI_SURFACES.textSoftBright}" : "${UI_SURFACES.textBody}")}>
+              <span className={cn("text-[9px]", result[key] ? "UI_SURFACES.textSoftBright" : "UI_SURFACES.textBody")}>
                 {checkLabel}
               </span>
             </div>
@@ -94,7 +94,7 @@ export function InstallabilityBadge({ result, className }: InstallabilityBadgePr
             </div>
             <ul className="space-y-0.5">
               {warnings.map((w, index) => (
-                <li key={`w-${index}`} className="flex items-start gap-1 text-[8px] ${UI_SURFACES.textSoftBright}">
+                <li key={`w-${index}`} className="flex items-start gap-1 text-[8px] UI_SURFACES.textSoftBright">
                   <span className="mt-0.5 text-amber-400">•</span>
                   {w}
                 </li>
@@ -111,7 +111,7 @@ export function InstallabilityBadge({ result, className }: InstallabilityBadgePr
             </div>
             <ul className="space-y-0.5">
               {suggestions.map((s, index) => (
-                <li key={`s-${index}`} className="flex items-start gap-1 text-[8px] ${UI_SURFACES.textSoftBright}">
+                <li key={`s-${index}`} className="flex items-start gap-1 text-[8px] UI_SURFACES.textSoftBright">
                   <span className="mt-0.5 text-blue-400">→</span>
                   {s}
                 </li>
@@ -121,7 +121,7 @@ export function InstallabilityBadge({ result, className }: InstallabilityBadgePr
         )}
 
         {/* Arrow */}
-        <div className={`absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-b border-r ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep}`} />
+        <div className={`absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-b border-r UI_SURFACES.borderSubtle UI_SURFACES.bgDeep`} />
       </div>
     </div>
   );

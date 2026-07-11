@@ -268,7 +268,7 @@ export function MapCanvas({
       <svg
         width={width}
         height={height}
-        className="`{block rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeepAlt}}`"
+        className="`{block rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.panelDeepAlt}`"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

@@ -78,8 +78,8 @@ export function PlacementPreviewPanel() {
   const theme = ENVIRONMENT_THEMES[environmentMode] ?? ENVIRONMENT_THEMES.day;
 
   return (
-    <div className={`pointer-events-none absolute bottom-16 right-3 z-20 w-[260px] overflow-hidden rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel}/96 shadow-2xl shadow-black/45`}>
-      <div className={`flex items-center justify-between gap-2 border-b ${UI_SURFACES.borderPanel} px-2.5 py-1.5`}>
+    <div className={`pointer-events-none absolute bottom-16 right-3 z-20 w-[260px] overflow-hidden rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel/96 shadow-2xl shadow-black/45`}>
+      <div className={`flex items-center justify-between gap-2 border-b UI_SURFACES.borderPanel px-2.5 py-1.5`}>
         <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-sky-200">
           <Video className="h-3 w-3" />
           Camera Preview
@@ -102,11 +102,11 @@ export function PlacementPreviewPanel() {
           Simulated render
         </div>
       </div>
-      <div className={`flex items-center justify-between gap-2 px-2.5 py-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
+      <div className={`flex items-center justify-between gap-2 px-2.5 py-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
         <span>
           {pose.x.toFixed(1)}, {pose.z.toFixed(1)}m · {pose.yawDeg}° · FOV {pose.fovDeg}°
         </span>
-        <span className={`truncate ${UI_SURFACES.textSoftMid}`}>{preset ? preset.label : "Default optics"}</span>
+        <span className={`truncate UI_SURFACES.textSoftMid`}>{preset ? preset.label : "Default optics"}</span>
       </div>
     </div>
   );

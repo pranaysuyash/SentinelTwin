@@ -18,7 +18,7 @@ export function NodeHistoryTab({ nodeId }: { nodeId: string }) {
 
   if (nodeEvents.length === 0) {
     return (
-      <div className={`flex h-full items-center justify-center p-4 text-center text-[11px] ${UI_SURFACES.textSoftMid}`}>
+      <div className={`flex h-full items-center justify-center p-4 text-center text-[11px] UI_SURFACES.textSoftMid`}>
         No history available for this node.
       </div>
     );
@@ -35,7 +35,7 @@ export function NodeHistoryTab({ nodeId }: { nodeId: string }) {
 
   return (
     <div className="space-y-2.5 p-3">
-      <div className="mb-2 text-[10px] uppercase tracking-[0.14em] ${UI_SURFACES.textSoftMid} flex items-center gap-1.5">
+      <div className="mb-2 text-[10px] uppercase tracking-[0.14em] UI_SURFACES.textSoftMid flex items-center gap-1.5">
         <History className="w-3.5 h-3.5" />
         Node Evidence History
       </div>
@@ -43,22 +43,22 @@ export function NodeHistoryTab({ nodeId }: { nodeId: string }) {
       {nodeEvents.map((event, i) => (
         <SectionCard key={event.id} title={event.title}>
           <div className="flex justify-between items-start mb-2">
-            <div className="text-[10px] ${UI_SURFACES.textMuted5} flex items-center gap-1">
+            <div className="text-[10px] UI_SURFACES.textMuted5 flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {new Date(event.timestamp).toLocaleString()}
             </div>
             <Badge variant="blue">{event.kind}</Badge>
           </div>
           
-          <div className={`text-[11px] ${UI_SURFACES.textBody} mb-3`}>
+          <div className={`text-[11px] UI_SURFACES.textBody mb-3`}>
             {event.details}
           </div>
 
-          <div className={`{flex justify-end border-t ${UI_SURFACES.borderPanel} pt-2 mt-2}`}>
+          <div className={`{flex justify-end border-t UI_SURFACES.borderPanel pt-2 mt-2}`}>
              <button
                 type="button"
                 onClick={() => handleRestore(event.id, event.title)}
-                className={`flex items-center gap-1 text-[10px] ${UI_SURFACES.textAccent} hover:${UI_SURFACES.textInfoLight} transition-colors`}
+                className={`flex items-center gap-1 text-[10px] UI_SURFACES.textAccent hover:UI_SURFACES.textInfoLight transition-colors`}
               >
                 <RotateCcw className="w-3 h-3" />
                 Restore Scene to This Point

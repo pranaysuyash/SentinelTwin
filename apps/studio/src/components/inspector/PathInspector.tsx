@@ -29,9 +29,9 @@ export function PathInspector() {
 
   return (
     <>
-      <div className={`{border-b ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-b UI_SURFACES.borderPanel px-3 py-3}`}>
         <div className="text-[12px] font-semibold text-white">{path.label}</div>
-        <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
+        <div className={`text-[9px] uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>
           Path · {lengthM.toFixed(2)}m · {estimatedTimeS.toFixed(1)}s
         </div>
       </div>
@@ -95,9 +95,9 @@ export function PathInspector() {
         <SectionCard title="Waypoints">
           <div className="space-y-2">
             {path.points.map((point, index) => (
-              <div key={`${path.id}-${index}`} className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} p-2`}>
+              <div key={`${path.id}-${index}`} className={`rounded-lg border UI_SURFACES.borderSubtle UI_SURFACES.card p-2`}>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>Point {index + 1}</div>
+                  <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Point {index + 1}</div>
                   {path.points.length > 2 ? (
                     <button
                       type="button"
@@ -166,7 +166,7 @@ export function PathInspector() {
         </SectionCard>
       </div>
 
-      <div className={`{border-t ${UI_SURFACES.borderPanel} px-3 py-3}`}>
+      <div className={`{border-t UI_SURFACES.borderPanel px-3 py-3}`}>
         <button
           type="button"
           onClick={() => removeNode(path.id)}

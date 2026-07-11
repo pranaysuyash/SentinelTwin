@@ -197,8 +197,8 @@ export default function StudioShell() {
 
   if (!hydrated) {
     return (
-      <div className={`flex h-screen items-center justify-center ${UI_SURFACES.page} ${UI_SURFACES.textSoftMuted}`}>
-        <div className="rounded-xl border ${UI_SURFACES.borderDeep} ${UI_SURFACES.bgDeep} px-4 py-3 text-[11px] uppercase tracking-[0.28em] text-sky-100">
+      <div className={`flex h-screen items-center justify-center UI_SURFACES.page UI_SURFACES.textSoftMuted`}>
+        <div className="rounded-xl border UI_SURFACES.borderDeep UI_SURFACES.bgDeep px-4 py-3 text-[11px] uppercase tracking-[0.28em] text-sky-100">
           Loading Studio
         </div>
       </div>
@@ -207,7 +207,7 @@ export default function StudioShell() {
 
   return (
     <MotionConfig reducedMotion="user">
-    <div className={`h-screen flex flex-col overflow-hidden ${UI_SURFACES.panelDeepAlt} ${UI_SURFACES.textBody3}`}>
+    <div className={`h-screen flex flex-col overflow-hidden UI_SURFACES.panelDeepAlt UI_SURFACES.textBody3`}>
       <TopBar />
       <AutosaveRecoveryBanner />
       {studioBypassMode ? (

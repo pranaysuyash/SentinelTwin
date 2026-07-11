@@ -26,13 +26,13 @@ export function CameraStatusSummaryPanel() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* Left: Camera Status Table */}
-      <div className={`{flex flex-1 min-w-0 flex-col overflow-hidden border-r ${UI_SURFACES.borderPanel}}`}>
-        <div className={`{flex items-center gap-2 border-b ${UI_SURFACES.borderPanel} px-3 py-1.5}`}>
+      <div className={`{flex flex-1 min-w-0 flex-col overflow-hidden border-r UI_SURFACES.borderPanel}`}>
+        <div className={`{flex items-center gap-2 border-b UI_SURFACES.borderPanel px-3 py-1.5}`}>
           <TruthBadge label="simulated" />
-          <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted7}`}>
+          <span className={`text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textMuted7`}>
             Camera Status Summary
           </span>
-          <span className={`ml-auto text-[9px] ${UI_SURFACES.textDim}`}>
+          <span className={`ml-auto text-[9px] UI_SURFACES.textDim`}>
             {activeCams} active · {offlineCams} offline
           </span>
         </div>
@@ -44,12 +44,12 @@ export function CameraStatusSummaryPanel() {
             />
           ) : (
             <table className="w-full text-[10px] border-collapse">
-            <thead className={`sticky top-0 ${UI_SURFACES.panel}`}>
+            <thead className={`sticky top-0 UI_SURFACES.panel`}>
               <tr>
                 {["Tag", "Status", "Quality", "Coverage", "FOV", "Mount"].map((h) => (
                   <th
                     key={h}
-                    className={`{py-1 px-2 text-left text-[8px] font-semibold uppercase tracking-wider ${UI_SURFACES.textDim} border-b ${UI_SURFACES.borderPanel}}`}
+                    className={`{py-1 px-2 text-left text-[8px] font-semibold uppercase tracking-wider UI_SURFACES.textDim border-b UI_SURFACES.borderPanel}`}
                   >
                     {h}
                   </th>
@@ -71,16 +71,16 @@ export function CameraStatusSummaryPanel() {
                     key={cam.id}
                     onClick={() => selectNode(cam.id)}
                     className={cn(
-                      "cursor-pointer border-b ${UI_SURFACES.borderFaint} transition-colors",
+                      "cursor-pointer border-b UI_SURFACES.borderFaint transition-colors",
                       isSelected
                         ? "bg-blue-500/8"
-                        : "${UI_SURFACES.hoverBgMuted}",
+                        : "UI_SURFACES.hoverBgMuted",
                     )}
                   >
                     <td className="py-1.5 px-2">
                       <span className={cn(
                         "font-medium",
-                        isSelected ? "text-blue-300" : `${UI_SURFACES.textBody}`,
+                        isSelected ? "text-blue-300" : `UI_SURFACES.textBody`,
                       )}>
                         {cam.name}
                       </span>
@@ -108,15 +108,15 @@ export function CameraStatusSummaryPanel() {
                         {QUALITY_SHORT_LABEL[quality as keyof typeof QUALITY_SHORT_LABEL]}
                       </span>
                     </td>
-                    <td className={`py-1.5 px-2 ${UI_SURFACES.textBody}`}>{coverage}</td>
-                    <td className={`py-1.5 px-2 ${UI_SURFACES.textMuted5}`}>{cam.fovHorizontalDeg}°</td>
-                    <td className={`py-1.5 px-2 ${UI_SURFACES.textMuted5} capitalize`}>{cam.mountType}</td>
+                    <td className={`py-1.5 px-2 UI_SURFACES.textBody`}>{coverage}</td>
+                    <td className={`py-1.5 px-2 UI_SURFACES.textMuted5`}>{cam.fovHorizontalDeg}°</td>
+                    <td className={`py-1.5 px-2 UI_SURFACES.textMuted5 capitalize`}>{cam.mountType}</td>
                   </tr>
                 );
               })}
               {scene.cameras.length === 0 && (
                 <tr>
-                  <td colSpan={6} className={`py-6 text-center text-[10px] ${UI_SURFACES.textDim}`}>
+                  <td colSpan={6} className={`py-6 text-center text-[10px] UI_SURFACES.textDim`}>
                     No cameras in scene
                   </td>
                 </tr>
@@ -129,7 +129,7 @@ export function CameraStatusSummaryPanel() {
 
       {/* Right: Coverage Summary */}
       <div className="flex w-[220px] flex-shrink-0 flex-col gap-2 p-2.5 overflow-y-auto">
-        <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textMuted7}`}>
+        <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textMuted7`}>
           Coverage of Total Floorspace
         </div>
 
@@ -147,21 +147,21 @@ export function CameraStatusSummaryPanel() {
             </div>
 
             <div className="grid grid-cols-2 gap-1.5">
-              <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5 text-center`}>
+              <div className={`rounded-lg border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1.5 text-center`}>
                 <div className="text-[15px] font-bold text-green-300">{activeCams}</div>
-                <div className={`text-[8px] uppercase tracking-wide ${UI_SURFACES.textMuted}`}>Active</div>
+                <div className={`text-[8px] uppercase tracking-wide UI_SURFACES.textMuted`}>Active</div>
               </div>
-              <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5 text-center`}>
+              <div className={`rounded-lg border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1.5 text-center`}>
                 <div className="text-[15px] font-bold text-red-300">{offlineCams}</div>
-                <div className={`text-[8px] uppercase tracking-wide ${UI_SURFACES.textMuted}`}>Offline</div>
+                <div className={`text-[8px] uppercase tracking-wide UI_SURFACES.textMuted`}>Offline</div>
               </div>
-              <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5 text-center`}>
+              <div className={`rounded-lg border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1.5 text-center`}>
                 <div className="text-[15px] font-bold text-blue-300">{zonesPass}</div>
-                <div className={`text-[8px] uppercase tracking-wide ${UI_SURFACES.textMuted}`}>Zones ✓</div>
+                <div className={`text-[8px] uppercase tracking-wide UI_SURFACES.textMuted`}>Zones ✓</div>
               </div>
-              <div className={`rounded-lg border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.card} px-2 py-1.5 text-center`}>
-                <div className={`text-[15px] font-bold ${UI_SURFACES.textBody}`}>{zonesTotal}</div>
-                <div className={`text-[8px] uppercase tracking-wide ${UI_SURFACES.textMuted}`}>Total Zones</div>
+              <div className={`rounded-lg border UI_SURFACES.borderSubtle UI_SURFACES.card px-2 py-1.5 text-center`}>
+                <div className={`text-[15px] font-bold UI_SURFACES.textBody`}>{zonesTotal}</div>
+                <div className={`text-[8px] uppercase tracking-wide UI_SURFACES.textMuted`}>Total Zones</div>
               </div>
             </div>
 
@@ -175,7 +175,7 @@ export function CameraStatusSummaryPanel() {
                     : "border-red-500/20 bg-red-500/8",
                 )}
               >
-                <div className={`text-[9px] font-medium ${UI_SURFACES.textBody}`}>{z.label}</div>
+                <div className={`text-[9px] font-medium UI_SURFACES.textBody`}>{z.label}</div>
                 <div
                   className={cn(
                     "text-[8px] font-semibold",
@@ -188,7 +188,7 @@ export function CameraStatusSummaryPanel() {
             ))}
           </>
         ) : (
-          <div className={`flex flex-1 items-center justify-center text-[10px] ${UI_SURFACES.textDim}`}>
+          <div className={`flex flex-1 items-center justify-center text-[10px] UI_SURFACES.textDim`}>
             Run simulation to see metrics
           </div>
         )}

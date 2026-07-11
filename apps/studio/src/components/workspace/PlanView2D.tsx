@@ -182,22 +182,22 @@ export function PlanView2D() {
       ) : null}
 
       {activeTool !== "select" && hoverPoint ? (
-        <div className="pointer-events-none absolute top-3 right-3 flex items-center gap-2 rounded-lg border border-sky-500/30 ${UI_SURFACES.panelDeepAlt}/95 px-3 py-1.5 text-[10px] font-mono text-sky-300 shadow-xl backdrop-blur-md">
+        <div className="pointer-events-none absolute top-3 right-3 flex items-center gap-2 rounded-lg border border-sky-500/30 UI_SURFACES.panelDeepAlt/95 px-3 py-1.5 text-[10px] font-mono text-sky-300 shadow-xl backdrop-blur-md">
           <span className="font-sans font-semibold uppercase tracking-wider text-sky-400">
             {TOOL_LABELS[activeTool] ?? "Place"}
           </span>
-          <span className={`${UI_SURFACES.textSoftMid}`}>·</span>
+          <span className={`UI_SURFACES.textSoftMid`}>·</span>
           <span>Click map to place at [{hoverPoint[0].toFixed(1)}, {hoverPoint[1].toFixed(1)}]</span>
         </div>
       ) : null}
 
       {hoverPoint ? (
-        <div className="pointer-events-none absolute bottom-2 right-2 rounded-md border ${UI_SURFACES.borderDeep} ${UI_SURFACES.bgDeep}/85 px-2 py-1 text-[9px] font-mono ${UI_SURFACES.textMuted4}">
+        <div className="pointer-events-none absolute bottom-2 right-2 rounded-md border UI_SURFACES.borderDeep UI_SURFACES.bgDeep/85 px-2 py-1 text-[9px] font-mono UI_SURFACES.textMuted4">
           X: {hoverPoint[0].toFixed(2)}m · Z: {hoverPoint[1].toFixed(2)}m
         </div>
       ) : null}
 
-      <div className="pointer-events-none absolute bottom-2 left-2 rounded-md border ${UI_SURFACES.borderDeep} ${UI_SURFACES.bgDeep}/85 px-2 py-1 text-[9px] uppercase tracking-[0.14em] ${UI_SURFACES.textSoftDim}">
+      <div className="pointer-events-none absolute bottom-2 left-2 rounded-md border UI_SURFACES.borderDeep UI_SURFACES.bgDeep/85 px-2 py-1 text-[9px] uppercase tracking-[0.14em] UI_SURFACES.textSoftDim">
         2D Plan · {activeTool === "select" ? "select to inspect · right-click for actions" : `placing ${TOOL_LABELS[activeTool] ?? activeTool}`} · drag to pan · scroll to zoom
       </div>
 

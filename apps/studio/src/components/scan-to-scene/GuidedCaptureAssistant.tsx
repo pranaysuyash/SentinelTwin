@@ -280,7 +280,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
             </div>
           </div>
           {onClose ? (
-            <button type="button" onClick={onClose} className={`rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-3 py-1.5 text-xs ${UI_SURFACES.textMuted4} ${UI_SURFACES.hoverBg}`}>
+            <button type="button" onClick={onClose} className={`rounded-lg border UI_SURFACES.borderDark UI_SURFACES.card px-3 py-1.5 text-xs UI_SURFACES.textMuted4 UI_SURFACES.hoverBg`}>
               Close
             </button>
           ) : null}
@@ -298,11 +298,11 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
                 <div key={s} className="flex items-center gap-1 flex-1">
                   <div
                     className={`h-2 flex-1 rounded-full transition-colors ${
-                      isFailed ? "bg-red-500/40" : isDone ? "bg-emerald-500/40" : isActive ? "bg-sky-500/60" : "${UI_SURFACES.borderSubtle}"
+                      isFailed ? "bg-red-500/40" : isDone ? "bg-emerald-500/40" : isActive ? "bg-sky-500/60" : "UI_SURFACES.borderSubtle"
                     }`}
                   />
                   {i < stageOrder.length - 1 ? (
-                    <div className={`h-0.5 flex-1 ${isDone ? "bg-emerald-500/30" : "${UI_SURFACES.borderSubtle}"}`} />
+                    <div className={`h-0.5 flex-1 ${isDone ? "bg-emerald-500/30" : "UI_SURFACES.borderSubtle"}`} />
                   ) : null}
                 </div>
               );
@@ -326,7 +326,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               {CAPTURE_COACHING_TIPS.map((tip, i) => (
-                <div key={i} className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.hoverBgDark} p-3`}>
+                <div key={i} className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.hoverBgDark p-3`}>
                   <div className="flex items-center gap-2">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/12 text-[10px] font-bold text-emerald-200">
                       {i + 1}
@@ -338,7 +338,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
               ))}
             </div>
 
-            <div className={`mt-4 rounded-2xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.hoverBgDark} p-4`}>
+            <div className={`mt-4 rounded-2xl border UI_SURFACES.borderSubtle UI_SURFACES.hoverBgDark p-4`}>
               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-dim)]">Room Dimensions (Optional)</div>
               <div className="mt-2 text-[10px] text-[color:var(--text-muted)]">Providing known dimensions improves scale accuracy.</div>
               <div className="mt-3 grid grid-cols-3 gap-3">
@@ -348,7 +348,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
                     value={widthInput}
                     onChange={(event) => setWidthInput(event.target.value)}
                     placeholder="e.g. 10"
-                    className={`mt-1 w-full rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-3 py-2 text-xs text-white outline-none focus:border-blue-500/50`}
+                    className={`mt-1 w-full rounded-lg border UI_SURFACES.borderDark UI_SURFACES.card px-3 py-2 text-xs text-white outline-none focus:border-blue-500/50`}
                   />
                 </div>
                 <div>
@@ -357,7 +357,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
                     value={depthInput}
                     onChange={(event) => setDepthInput(event.target.value)}
                     placeholder="e.g. 8"
-                    className={`mt-1 w-full rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-3 py-2 text-xs text-white outline-none focus:border-blue-500/50`}
+                    className={`mt-1 w-full rounded-lg border UI_SURFACES.borderDark UI_SURFACES.card px-3 py-2 text-xs text-white outline-none focus:border-blue-500/50`}
                   />
                 </div>
                 <div>
@@ -366,7 +366,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
                     value={heightInput}
                     onChange={(event) => setHeightInput(event.target.value)}
                     placeholder="e.g. 3"
-                    className={`mt-1 w-full rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-3 py-2 text-xs text-white outline-none focus:border-blue-500/50`}
+                    className={`mt-1 w-full rounded-lg border UI_SURFACES.borderDark UI_SURFACES.card px-3 py-2 text-xs text-white outline-none focus:border-blue-500/50`}
                   />
                 </div>
               </div>
@@ -376,14 +376,14 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
                   value={knownRefInput}
                   onChange={(event) => setKnownRefInput(event.target.value)}
                   placeholder="e.g. door=2m"
-                  className={`mt-1 w-full rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-3 py-2 text-xs text-white outline-none focus:border-blue-500/50`}
+                  className={`mt-1 w-full rounded-lg border UI_SURFACES.borderDark UI_SURFACES.card px-3 py-2 text-xs text-white outline-none focus:border-blue-500/50`}
                 />
               </div>
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
               {onClose ? (
-                <button type="button" onClick={onClose} className={`rounded-lg border ${UI_SURFACES.borderDark} px-4 py-2 text-xs ${UI_SURFACES.textMuted4}`}>
+                <button type="button" onClick={onClose} className={`rounded-lg border UI_SURFACES.borderDark px-4 py-2 text-xs UI_SURFACES.textMuted4`}>
                   Cancel
                 </button>
               ) : null}
@@ -418,7 +418,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
               <button
                 type="button"
                 onClick={() => setCoachingOpen(!coachingOpen)}
-                className={`rounded-lg border ${UI_SURFACES.borderDark} px-2 py-1 text-[10px] ${UI_SURFACES.textMuted4}`}
+                className={`rounded-lg border UI_SURFACES.borderDark px-2 py-1 text-[10px] UI_SURFACES.textMuted4`}
               >
                 {coachingOpen ? "Hide Tips" : "Show Tips"}
               </button>
@@ -447,7 +447,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className={`flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-dashed ${UI_SURFACES.borderDark} ${UI_SURFACES.hoverBgDark}/60 px-6 py-8 text-[color:var(--text-muted)] hover:border-sky-400/30 hover:${UI_SURFACES.hoverBgDark}/80`}
+                className={`flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-dashed UI_SURFACES.borderDark UI_SURFACES.hoverBgDark/60 px-6 py-8 text-[color:var(--text-muted)] hover:border-sky-400/30 hover:UI_SURFACES.hoverBgDark/80`}
               >
                 <ImageUp className="h-8 w-8 text-sky-300" />
                 <div className="text-left">
@@ -460,7 +460,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
             {photos.length > 0 ? (
               <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
                 {photos.map((photo) => (
-                  <div key={photo.id} className={`group relative overflow-hidden rounded-xl border ${UI_SURFACES.borderSubtle} bg-black/30`}>
+                  <div key={photo.id} className={`group relative overflow-hidden rounded-xl border UI_SURFACES.borderSubtle bg-black/30`}>
                     {photo.dataUrl ? (
                       <img src={photo.dataUrl} alt={photo.fileName} className="h-20 w-full object-cover" />
                     ) : (
@@ -497,7 +497,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
                     onClick={() => {
                       setPhotos([]);
                     }}
-                    className={`rounded-lg border ${UI_SURFACES.borderDark} px-3 py-1.5 text-xs ${UI_SURFACES.textMuted4}`}
+                    className={`rounded-lg border UI_SURFACES.borderDark px-3 py-1.5 text-xs UI_SURFACES.textMuted4`}
                   >
                     Clear all
                   </button>
@@ -539,7 +539,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
                 const isFailed = status === "failed" || status === "fallback";
                 return (
                   <div key={s} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${
-                    isActive ? "border-sky-400/25 bg-sky-500/8" : isDone ? "border-emerald-400/15 bg-emerald-500/6" : isFailed ? "border-red-400/15 bg-red-500/6" : "${UI_SURFACES.borderSubtle} ${UI_SURFACES.hoverBgDark}/60"
+                    isActive ? "border-sky-400/25 bg-sky-500/8" : isDone ? "border-emerald-400/15 bg-emerald-500/6" : isFailed ? "border-red-400/15 bg-red-500/6" : "UI_SURFACES.borderSubtle UI_SURFACES.hoverBgDark/60"
                   }`}>
                     {isActive ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-300" />
@@ -548,7 +548,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
                     ) : isFailed ? (
                       <TriangleAlert className="h-3.5 w-3.5 text-red-300" />
                     ) : (
-                      <div className={`h-3.5 w-3.5 rounded-full border ${UI_SURFACES.borderDark}`} />
+                      <div className={`h-3.5 w-3.5 rounded-full border UI_SURFACES.borderDark`} />
                     )}
                     <span className={`text-xs ${isActive ? "text-white font-semibold" : "text-[color:var(--text-muted)]"}`}>
                       {RECONSTRUCTION_STAGE_LABELS[s]}
@@ -617,7 +617,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
             )}
 
             {readiness ? (
-              <div className={`mt-3 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.hoverBgDark} p-3`}>
+              <div className={`mt-3 rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.hoverBgDark p-3`}>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-dim)]">Scene Readiness</div>
                 <div className="mt-1 flex items-center gap-2">
                   <span className={`text-sm font-bold ${readiness.ready ? "text-emerald-300" : "text-amber-300"}`}>
@@ -664,7 +664,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
                 <button
                   type="button"
                   onClick={resetCapture}
-                  className={`rounded-lg border ${UI_SURFACES.borderDark} px-4 py-2 text-xs ${UI_SURFACES.textMuted4}`}
+                  className={`rounded-lg border UI_SURFACES.borderDark px-4 py-2 text-xs UI_SURFACES.textMuted4`}
                 >
                   Re-run Pipeline
                 </button>

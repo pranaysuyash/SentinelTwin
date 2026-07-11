@@ -21,11 +21,11 @@ export function RecommendationCard({ recommendation }: { recommendation: Outcome
   };
 
   return (
-    <div className={`rounded-lg border ${UI_SURFACES.borderThin} ${UI_SURFACES.bgDeep} p-2`}>
+    <div className={`rounded-lg border UI_SURFACES.borderThin UI_SURFACES.bgDeep p-2`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className={`text-[11px] font-medium ${UI_SURFACES.textBright}`}>{recommendation.description}</div>
-          <div className={`mt-1 text-[10px] ${UI_SURFACES.textMuted3}`}>
+          <div className={`text-[11px] font-medium UI_SURFACES.textBright`}>{recommendation.description}</div>
+          <div className={`mt-1 text-[10px] UI_SURFACES.textMuted3`}>
             Cost: {recommendation.costCategory}
           </div>
         </div>
@@ -44,29 +44,29 @@ export function RecommendationCard({ recommendation }: { recommendation: Outcome
           {formatVerificationLabel(recommendation.verificationLabel)}
         </span>
         {recommendation.fixesFinding ? (
-          <span className={`${UI_SURFACES.textSoftMuted}`}>
+          <span className={`UI_SURFACES.textSoftMuted`}>
             Fixes: {CAUSE_CATEGORY_PRODUCT_LABELS[recommendation.fixesFinding]}
           </span>
         ) : null}
       </div>
       {recommendation.beforeAfterSummary && (
-        <div className={`mt-1 rounded border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-1 text-[10px] ${UI_SURFACES.textSoftMuted}`}>
+        <div className={`mt-1 rounded border UI_SURFACES.borderSubtle UI_SURFACES.panel px-2 py-1 text-[10px] UI_SURFACES.textSoftMuted`}>
           {recommendation.beforeAfterSummary}
         </div>
       )}
       <div className="mt-2 flex gap-1 text-[10px]">
         {recommendation.verificationLabel === "verified_by_simulation" ? (
           <>
-            <button type="button" onClick={doPreview} className={`rounded border ${UI_SURFACES.borderElevated} px-2 py-1 ${UI_SURFACES.textBlueMuted} ${UI_SURFACES.hoverBg}`}>Preview Fix</button>
-            <button type="button" onClick={() => store.setBottomTab("beforeafter")} className={`rounded border ${UI_SURFACES.borderElevated} px-2 py-1 ${UI_SURFACES.textBlueMuted} ${UI_SURFACES.hoverBg}`}>Compare Fix</button>
+            <button type="button" onClick={doPreview} className={`rounded border UI_SURFACES.borderElevated px-2 py-1 UI_SURFACES.textBlueMuted UI_SURFACES.hoverBg`}>Preview Fix</button>
+            <button type="button" onClick={() => store.setBottomTab("beforeafter")} className={`rounded border UI_SURFACES.borderElevated px-2 py-1 UI_SURFACES.textBlueMuted UI_SURFACES.hoverBg`}>Compare Fix</button>
             <button type="button" onClick={doApply} className="rounded border border-emerald-500/30 px-2 py-1 text-emerald-300 hover:bg-emerald-500/10">Apply Fix</button>
           </>
         ) : recommendation.verificationLabel === "requires_user_input" ? (
-          <span className={`${UI_SURFACES.textSoftDim}`}>Requires manual action (add camera or light)</span>
+          <span className={`UI_SURFACES.textSoftDim`}>Requires manual action (add camera or light)</span>
         ) : (
           <>
-            <button type="button" onClick={doPreview} className={`rounded border ${UI_SURFACES.borderElevated} px-2 py-1 ${UI_SURFACES.textBlueMuted} ${UI_SURFACES.hoverBg}`}>Try This Fix</button>
-            <button type="button" onClick={doApply} className={`rounded border ${UI_SURFACES.borderElevated} px-2 py-1 ${UI_SURFACES.textBlueMuted} ${UI_SURFACES.hoverBg}`}>Apply</button>
+            <button type="button" onClick={doPreview} className={`rounded border UI_SURFACES.borderElevated px-2 py-1 UI_SURFACES.textBlueMuted UI_SURFACES.hoverBg`}>Try This Fix</button>
+            <button type="button" onClick={doApply} className={`rounded border UI_SURFACES.borderElevated px-2 py-1 UI_SURFACES.textBlueMuted UI_SURFACES.hoverBg`}>Apply</button>
           </>
         )}
       </div>

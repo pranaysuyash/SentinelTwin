@@ -62,19 +62,19 @@ export function CameraSpecImport({
   };
 
   return (
-    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5`}>
+    <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2.5`}>
       <div className="mb-2 flex items-center justify-between">
-        <span className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textSoftMid}`}>Spec Import</span>
+        <span className={`text-[10px] font-semibold uppercase tracking-[0.2em] UI_SURFACES.textSoftMid`}>Spec Import</span>
       </div>
       <div className="space-y-2">
         <textarea
           value={rawText}
           onChange={(e) => setRawText(e.target.value)}
           placeholder="Paste JSON or raw spec sheet text (e.g. '4MP Lens: 2.8mm FOV: 110 IR: 30m')"
-          className={`h-16 w-full resize-none rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} p-2 text-[10px] ${UI_SURFACES.textBody4} placeholder:${UI_SURFACES.textMuted} focus:border-blue-500/50 focus:outline-none`}
+          className={`h-16 w-full resize-none rounded-md border UI_SURFACES.borderThin UI_SURFACES.card p-2 text-[10px] UI_SURFACES.textBody4 placeholder:UI_SURFACES.textMuted focus:border-blue-500/50 focus:outline-none`}
         />
         <div className="flex items-center justify-between">
-          <span className={`text-[9px] ${UI_SURFACES.textDimMid}`}>
+          <span className={`text-[9px] UI_SURFACES.textDimMid`}>
             {statusMessage ?? ""}
           </span>
           <button

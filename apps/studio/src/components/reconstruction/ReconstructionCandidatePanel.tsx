@@ -107,7 +107,7 @@ function CandidateCard({
           ? "border-emerald-500/25 bg-emerald-500/6"
           : isRejected
             ? "border-red-500/15 bg-red-500/4 opacity-50"
-            : "${UI_SURFACES.borderSubtle} ${UI_SURFACES.hoverBgDark} hover:${UI_SURFACES.borderDark}"
+            : "UI_SURFACES.borderSubtle UI_SURFACES.hoverBgDark hover:UI_SURFACES.borderDark"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -123,7 +123,7 @@ function CandidateCard({
               <span className={`text-[10px] font-medium ${confidenceColor(candidate.confidence)}`}>
                 {Math.round(candidate.confidence * 100)}%
               </span>
-              <span className={`rounded ${UI_SURFACES.borderSubtle} px-1 py-[1px] text-[9px] font-medium uppercase tracking-wide text-[color:var(--text-dim)]`}>
+              <span className={`rounded UI_SURFACES.borderSubtle px-1 py-[1px] text-[9px] font-medium uppercase tracking-wide text-[color:var(--text-dim)]`}>
                 {sourceLabel(candidate.source)}
               </span>
             </div>
@@ -312,7 +312,7 @@ export function ReconstructionCandidatePanel({
             <button
               type="button"
               onClick={onClose}
-              className={`rounded-lg border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2.5 py-1 text-[11px] ${UI_SURFACES.textMuted4} ${UI_SURFACES.hoverBg}`}
+              className={`rounded-lg border UI_SURFACES.borderDark UI_SURFACES.card px-2.5 py-1 text-[11px] UI_SURFACES.textMuted4 UI_SURFACES.hoverBg`}
             >
               Close
             </button>
@@ -320,22 +320,22 @@ export function ReconstructionCandidatePanel({
         </div>
 
         {/* Summary bar */}
-        <div className={`flex items-center gap-3 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.hoverBgDark} px-3 py-2`}>
+        <div className={`flex items-center gap-3 rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.hoverBgDark px-3 py-2`}>
           <div className="flex items-center gap-1.5 text-[11px]">
             <span className="text-emerald-300 font-medium">{acceptedCount}</span>
             <span className="text-[color:var(--text-muted)]">accepted</span>
           </div>
-          <div className={`h-4 w-px ${UI_SURFACES.borderSubtle}`} />
+          <div className={`h-4 w-px UI_SURFACES.borderSubtle`} />
           <div className="flex items-center gap-1.5 text-[11px]">
             <span className="text-amber-300 font-medium">{pendingCount}</span>
             <span className="text-[color:var(--text-muted)]">pending</span>
           </div>
-          <div className={`h-4 w-px ${UI_SURFACES.borderSubtle}`} />
+          <div className={`h-4 w-px UI_SURFACES.borderSubtle`} />
           <div className="flex items-center gap-1.5 text-[11px]">
             <span className="text-red-300 font-medium">{rejectedCount}</span>
             <span className="text-[color:var(--text-muted)]">rejected</span>
           </div>
-          <div className={`h-4 w-px ${UI_SURFACES.borderSubtle}`} />
+          <div className={`h-4 w-px UI_SURFACES.borderSubtle`} />
           <div className="flex items-center gap-1.5 text-[11px]">
             <span className={`font-medium ${confidenceColor(overallConfidence)}`}>
               {Math.round(overallConfidence * 100)}%
@@ -347,7 +347,7 @@ export function ReconstructionCandidatePanel({
               type="button"
               onClick={() => setShowRejected((v) => !v)}
               className={`flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] transition-colors ${
-                showRejected ? "${UI_SURFACES.borderSubtle} text-[color:var(--text-muted)]" : "text-[color:var(--text-dim)] hover:text-[color:var(--text-muted)]"
+                showRejected ? "UI_SURFACES.borderSubtle text-[color:var(--text-muted)]" : "text-[color:var(--text-dim)] hover:text-[color:var(--text-muted)]"
               }`}
             >
               {showRejected ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
@@ -380,7 +380,7 @@ export function ReconstructionCandidatePanel({
 
         {/* Candidates grouped by kind */}
         {visibleCandidates.length === 0 ? (
-          <div className={`flex flex-col items-center gap-2 rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.hoverBgDark} p-6`}>
+          <div className={`flex flex-col items-center gap-2 rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.hoverBgDark p-6`}>
             <TriangleAlert className="h-6 w-6 text-amber-400" />
             <div className="text-xs text-[color:var(--text-muted)]">
               {session.candidates.length === 0
@@ -435,7 +435,7 @@ export function ReconstructionCandidatePanel({
       </div>
 
       {/* Compile footer */}
-      <div className={`mt-auto border-t ${UI_SURFACES.borderSubtle} ${UI_SURFACES.bgDeep} px-4 py-3`}>
+      <div className={`mt-auto border-t UI_SURFACES.borderSubtle UI_SURFACES.bgDeep px-4 py-3`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-[10px] text-[color:var(--text-muted)]">
             {runLabel ? (

@@ -45,7 +45,7 @@ export function NodeAppearanceSection({
           <button
             type="button"
             onClick={() => onChange(undefined)}
-            className={`rounded px-1.5 py-0.5 text-[9px] ${UI_SURFACES.textDimMid} transition-colors ${UI_SURFACES.hoverTextSoft}`}
+            className={`rounded px-1.5 py-0.5 text-[9px] UI_SURFACES.textDimMid transition-colors UI_SURFACES.hoverTextSoft`}
             title="Reset appearance to the built-in look"
           >
             Reset
@@ -97,7 +97,7 @@ export function NodeAppearanceSection({
           onChange={(value) => patch({ textureScale: value / 100 })}
         />
       ) : null}
-      <div className="pt-1 text-[8px] leading-relaxed ${UI_SURFACES.textMuted}">
+      <div className="pt-1 text-[8px] leading-relaxed UI_SURFACES.textMuted">
         Visual only — coverage simulation is unaffected. Occlusion behavior is
         controlled by the Material section.
       </div>

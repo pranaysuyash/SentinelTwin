@@ -28,8 +28,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
-      <div className={`mb-2 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>
+    <div className={`rounded-xl border UI_SURFACES.borderSubtle UI_SURFACES.panel p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}>
+      <div className={`mb-2 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>
         {icon}
         {title}
         {actions ? <div className="ml-auto flex items-center gap-1">{actions}</div> : null}
@@ -41,9 +41,9 @@ function Section({
 
 function CandidateLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className={`flex items-center justify-between gap-2 rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-      <span className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>{label}</span>
-      <span className={`text-[9px] font-mono ${UI_SURFACES.textBody2}`}>{value}</span>
+    <div className={`flex items-center justify-between gap-2 rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
+      <span className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>{label}</span>
+      <span className={`text-[9px] font-mono UI_SURFACES.textBody2`}>{value}</span>
     </div>
   );
 }
@@ -205,14 +205,14 @@ export function NovelAlgorithmsTab() {
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto p-2">
       <div className="flex items-center gap-2 px-1 py-0.5">
         <TruthBadge label="simulated" />
-        <span className={`text-[9px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>Advanced Risk Algorithms</span>
+        <span className={`text-[9px] uppercase tracking-[0.16em] UI_SURFACES.textDimMid`}>Advanced Risk Algorithms</span>
       </div>
       <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-5">
         <StatCard
           icon={<Sigma className="h-3.5 w-3.5" />}
           label="Coverage Stability"
           value={fragilityPct != null ? `${fragilityPct}%` : "—"}
-          color={fragilityPct == null ? "${UI_SURFACES.textMuted5}" : fragilityPct <= 30 ? "text-emerald-400" : fragilityPct <= 60 ? "text-amber-400" : "text-red-400"}
+          color={fragilityPct == null ? "UI_SURFACES.textMuted5" : fragilityPct <= 30 ? "text-emerald-400" : fragilityPct <= 60 ? "text-amber-400" : "text-red-400"}
         />
         <StatCard
           icon={<ShieldAlert className="h-3.5 w-3.5" />}
@@ -224,7 +224,7 @@ export function NovelAlgorithmsTab() {
           icon={<MapPinned className="h-3.5 w-3.5" />}
           label="Recommended Mounts"
           value={placementOracle ? `${placementOracle.candidateCount}` : "—"}
-          color={bestCandidate ? "text-blue-300" : "${UI_SURFACES.textMuted5}"}
+          color={bestCandidate ? "text-blue-300" : "UI_SURFACES.textMuted5"}
         />
         <StatCard
           icon={<TriangleAlert className="h-3.5 w-3.5" />}
@@ -242,47 +242,47 @@ export function NovelAlgorithmsTab() {
           icon={<Sigma className="h-3.5 w-3.5" />}
           label="Coverage Stability Index"
           value={entropy ? `${entropy.normalizedEntropy.toFixed(2)}` : "—"}
-          color={entropy ? "text-fuchsia-300" : "${UI_SURFACES.textMuted5}"}
+          color={entropy ? "text-fuchsia-300" : "UI_SURFACES.textMuted5"}
         />
         <StatCard
           icon={<Sigma className="h-3.5 w-3.5" />}
           label="Assumption Sensitivity"
           value={uncertainty ? `${uncertainty.sampleCount} runs` : "—"}
-          color={uncertainty ? "text-violet-300" : "${UI_SURFACES.textMuted5}"}
+          color={uncertainty ? "text-violet-300" : "UI_SURFACES.textMuted5"}
         />
         <StatCard
           icon={<BarChart3 className="h-3.5 w-3.5" />}
           label="Operating Posture"
           value={postureVariation ? `${postureVariation.worstProfileLabel ?? "—"} ${postureVariation.worstProfileCoveragePct != null ? `${postureVariation.worstProfileCoveragePct.toFixed(1)}%` : ""}` : "—"}
-          color={postureVariation ? "text-sky-300" : "${UI_SURFACES.textMuted5}"}
+          color={postureVariation ? "text-sky-300" : "UI_SURFACES.textMuted5"}
         />
         <StatCard
           icon={<Fingerprint className="h-3.5 w-3.5" />}
           label="Blind-Spot Pattern"
           value={blindSpotFingerprint ? blindSpotFingerprint.fingerprint : "—"}
-          color={blindSpotFingerprint ? "text-fuchsia-300" : "${UI_SURFACES.textMuted5}"}
+          color={blindSpotFingerprint ? "text-fuchsia-300" : "UI_SURFACES.textMuted5"}
         />
         <StatCard
           icon={<AlertTriangle className="h-3.5 w-3.5" />}
           label="Blind Regions"
           value={blindRegions ? `${blindRegions.length}` : "—"}
-          color={blindRegions.length > 0 ? "text-red-300" : "${UI_SURFACES.textMuted5}"}
+          color={blindRegions.length > 0 ? "text-red-300" : "UI_SURFACES.textMuted5"}
         />
         <StatCard
           icon={<Sparkles className="h-3.5 w-3.5" />}
           label="Reflective Bounce"
           value={reflectiveBounce ? `${reflectiveBounce.affectedCellCount}` : "—"}
-          color={reflectiveBounce?.affectedCellCount ? "text-cyan-300" : "${UI_SURFACES.textMuted5}"}
+          color={reflectiveBounce?.affectedCellCount ? "text-cyan-300" : "UI_SURFACES.textMuted5"}
         />
       </div>
 
       <Section title="Navigator" icon={<MapPinned className="h-3 w-3 text-blue-300" />}>
         <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-2">
-          <div className={`rounded-lg border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} p-2`}>
+          <div className={`rounded-lg border UI_SURFACES.borderFaint UI_SURFACES.bgDeep p-2`}>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>Best placement</div>
-                <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textBody2}`}>
+                <div className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>Best placement</div>
+                <div className={`mt-0.5 text-[10px] UI_SURFACES.textBody2`}>
                   {bestCandidate ? `${bestCandidate.mountType} at ${bestCandidate.position[0].toFixed(1)}, ${bestCandidate.position[2].toFixed(1)}` : "No ranked candidate"}
                 </div>
               </div>
@@ -290,7 +290,7 @@ export function NovelAlgorithmsTab() {
                 {bestCandidate ? bestCandidate.score.toFixed(1) : "—"}
               </Badge>
             </div>
-            <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftMid}`}>
+            <div className={`mt-1 text-[9px] UI_SURFACES.textSoftMid`}>
               {bestCandidate
                 ? `${bestCandidate.estimatedCoverageDeltaPct.toFixed(1)}% coverage gain · ${bestCandidate.estimatedCriticalZoneGain.toFixed(1)} critical-zone gain`
                 : "Run simulation with novel analytics enabled to generate ranked placement candidates."}
@@ -309,11 +309,11 @@ export function NovelAlgorithmsTab() {
             </div>
           </div>
 
-          <div className={`rounded-lg border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} p-2`}>
+          <div className={`rounded-lg border UI_SURFACES.borderFaint UI_SURFACES.bgDeep p-2`}>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>Largest blind region</div>
-                <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textBody2}`}>
+                <div className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>Largest blind region</div>
+                <div className={`mt-0.5 text-[10px] UI_SURFACES.textBody2`}>
                   {largestBlindRegion ? `${largestBlindRegion.severity} · ${largestBlindRegion.areaSqM.toFixed(1)} m²` : "No blind regions"}
                 </div>
               </div>
@@ -331,7 +331,7 @@ export function NovelAlgorithmsTab() {
                 {largestBlindRegion ? largestBlindRegion.classification : "—"}
               </Badge>
             </div>
-            <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftMid}`}>
+            <div className={`mt-1 text-[9px] UI_SURFACES.textSoftMid`}>
               {largestBlindRegion
                 ? largestBlindRegion.description
                 : "The topology view will populate here once the scene produces blind spot regions."}
@@ -350,11 +350,11 @@ export function NovelAlgorithmsTab() {
             </div>
           </div>
 
-          <div className={`rounded-lg border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} p-2`}>
+          <div className={`rounded-lg border UI_SURFACES.borderFaint UI_SURFACES.bgDeep p-2`}>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>Path replay</div>
-                <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textBody2}`}>
+                <div className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>Path replay</div>
+                <div className={`mt-0.5 text-[10px] UI_SURFACES.textBody2`}>
                   {activePath ? activePath.label : "No active path"}
                 </div>
               </div>
@@ -362,7 +362,7 @@ export function NovelAlgorithmsTab() {
                 {timeBudget ? (timeBudget.budgetMet ? "Budget met" : "Budget missed") : "—"}
               </Badge>
             </div>
-            <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftMid}`}>
+            <div className={`mt-1 text-[9px] UI_SURFACES.textSoftMid`}>
               {timeBudget
                 ? `${formatSeconds(timeBudget.firstVisibleTimeS)} to first visible segment · ${formatSeconds(timeBudget.totalDurationS)} total path time`
                 : "Select a path and run simulation to compute an exposure budget."}
@@ -378,11 +378,11 @@ export function NovelAlgorithmsTab() {
             </div>
           </div>
 
-          <div className={`rounded-lg border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} p-2`}>
+          <div className={`rounded-lg border UI_SURFACES.borderFaint UI_SURFACES.bgDeep p-2`}>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>Temporal profile</div>
-                <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textBody2}`}>
+                <div className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>Temporal profile</div>
+                <div className={`mt-0.5 text-[10px] UI_SURFACES.textBody2`}>
                   {temporalProfile ? `${anomalies.length} anomaly windows` : "No temporal profile yet"}
                 </div>
               </div>
@@ -390,7 +390,7 @@ export function NovelAlgorithmsTab() {
                 {temporalProfile ? `${temporalProfile.hoursAnalyzed}h` : "—"}
               </Badge>
             </div>
-            <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftMid}`}>
+            <div className={`mt-1 text-[9px] UI_SURFACES.textSoftMid`}>
               {temporalProfile
                 ? `Worst coverage drop ${Math.abs(temporalProfile.anomalySummary?.worstCoverageDropPct ?? 0).toFixed(1)}% and worst exposure jump ${(temporalProfile.anomalySummary?.worstExposureJump ?? 0).toFixed(1)}.`
                 : "Open the 24-hour profile to inspect schedule-driven vulnerability windows."}
@@ -417,7 +417,7 @@ export function NovelAlgorithmsTab() {
               <CandidateLine label="Robust cells" value={`${fragility.robustCellCount}`} />
             </div>
           ) : (
-            <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>Coverage stability not computed yet.</div>
+            <div className={`text-[9px] UI_SURFACES.textDimMid`}>Coverage stability not computed yet.</div>
           )}
         </Section>
 
@@ -427,7 +427,7 @@ export function NovelAlgorithmsTab() {
               <CandidateLine label="Normalized" value={entropy.normalizedEntropy.toFixed(2)} />
               <CandidateLine label="Raw bits" value={entropy.entropyBits.toFixed(2)} />
               <CandidateLine label="Dominant band" value={`${entropy.dominantQuality} ${entropy.dominantQualityShare.toFixed(1)}%`} />
-              <div className={`text-[9px] ${UI_SURFACES.textSoftBright}`}>
+              <div className={`text-[9px] UI_SURFACES.textSoftBright`}>
                 {entropy.normalizedEntropy < 0.33
                   ? "Coverage is concentrated in a few quality bands, which reads as a more stable layout."
                   : entropy.normalizedEntropy < 0.66
@@ -436,7 +436,7 @@ export function NovelAlgorithmsTab() {
               </div>
             </div>
           ) : (
-            <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>Coverage stability index not computed yet.</div>
+            <div className={`text-[9px] UI_SURFACES.textDimMid`}>Coverage stability index not computed yet.</div>
           )}
         </Section>
 
@@ -445,7 +445,7 @@ export function NovelAlgorithmsTab() {
             <div className="space-y-1.5">
               <CandidateLine label="Backup depth" value={`K=${kRobustness.kRobustness} / ${kRobustness.totalCameras}`} />
               <CandidateLine label="Backup setup" value={kRobustness.isRobust ? "Yes" : "No"} />
-              <div className={`text-[9px] ${UI_SURFACES.textSoftBright}`}>
+              <div className={`text-[9px] UI_SURFACES.textSoftBright`}>
                 {kCriticalSet
                   ? `Critical failure set: ${kCriticalSet.cameraNames.join(", ")} (exposure ${kCriticalSet.exposureScore.toFixed(1)})`
                   : "No single failure set opened a viable route in the tested range."}
@@ -453,22 +453,22 @@ export function NovelAlgorithmsTab() {
               {kRobustness.criticalSets.length > 1 ? (
                 <div className="space-y-1">
                   {kRobustness.criticalSets.slice(0, 3).map((set) => (
-                    <div key={`${set.k}-${set.cameraIds.join("-")}`} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+                    <div key={`${set.k}-${set.cameraIds.join("-")}`} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
                       <div className="flex items-center justify-between gap-2">
-                        <span className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>K={set.k}</span>
+                        <span className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>K={set.k}</span>
                         <Badge variant={set.exposureScore < 3 ? "green" : "gray"}>{set.exposureScore.toFixed(1)}</Badge>
                       </div>
-                      <div className={`mt-1 text-[9px] ${UI_SURFACES.textBody2}`}>
+                      <div className={`mt-1 text-[9px] UI_SURFACES.textBody2`}>
                         {set.cameraNames.join(", ")}
                       </div>
-                      <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textDimMid}`}>{set.waypointCount} waypoints</div>
+                      <div className={`mt-0.5 text-[8px] UI_SURFACES.textDimMid`}>{set.waypointCount} waypoints</div>
                     </div>
                   ))}
                 </div>
               ) : null}
             </div>
           ) : (
-            <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>Backup coverage not computed yet.</div>
+            <div className={`text-[9px] UI_SURFACES.textDimMid`}>Backup coverage not computed yet.</div>
           )}
         </Section>
 
@@ -492,19 +492,19 @@ export function NovelAlgorithmsTab() {
               />
               <CandidateLine label="Estimated coverage gain" value={`${bestCandidate.estimatedCoverageDeltaPct.toFixed(1)}%`} />
               <CandidateLine label="Estimated critical gain" value={`${bestCandidate.estimatedCriticalZoneGain.toFixed(1)}`} />
-              <div className={`text-[9px] ${UI_SURFACES.textSoftBright}`}>
+              <div className={`text-[9px] UI_SURFACES.textSoftBright`}>
                 {bestCandidate.privacyZoneHits.length > 0
                   ? `Privacy exposure warning: ${bestCandidate.privacyZoneHits.join(", ")}`
                   : "No privacy-zone hit in the top candidate."}
               </div>
               <div className="space-y-1">
                 {placementOracle?.candidates.slice(0, 3).map((candidate, index) => (
-                  <div key={`${candidate.mountType}-${candidate.position.join("-")}`} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+                  <div key={`${candidate.mountType}-${candidate.position.join("-")}`} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
                     <div className="flex items-center justify-between">
-                      <span className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>Rank {index + 1}</span>
+                      <span className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>Rank {index + 1}</span>
                       <Badge variant={index === 0 ? "green" : "gray"}>{candidate.score.toFixed(1)}</Badge>
                     </div>
-                    <div className={`mt-1 text-[9px] ${UI_SURFACES.textBody2}`}>
+                    <div className={`mt-1 text-[9px] UI_SURFACES.textBody2`}>
                       {candidate.mountType} at {candidate.position[0].toFixed(1)}, {candidate.position[2].toFixed(1)}
                     </div>
                   </div>
@@ -512,7 +512,7 @@ export function NovelAlgorithmsTab() {
               </div>
             </div>
           ) : (
-            <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>Placement oracle has no ranked candidates yet.</div>
+            <div className={`text-[9px] UI_SURFACES.textDimMid`}>Placement oracle has no ranked candidates yet.</div>
           )}
         </Section>
 
@@ -535,21 +535,21 @@ export function NovelAlgorithmsTab() {
               <CandidateLine label="Worst exposure jump" value={`${(temporalProfile.anomalySummary?.worstExposureJump ?? 0).toFixed(1)}`} />
               <div className="space-y-1">
                 {anomalies.slice(0, 3).map((window) => (
-                  <div key={`${window.startHour}:${window.startMinute}-${window.endHour}:${window.endMinute}`} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+                  <div key={`${window.startHour}:${window.startMinute}-${window.endHour}:${window.endMinute}`} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
                     <div className="flex items-center justify-between gap-2">
-                      <span className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>{window.severity}</span>
+                      <span className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>{window.severity}</span>
                       <Badge variant={window.severity === "high" ? "red" : window.severity === "medium" ? "amber" : "gray"}>{window.anomalyType}</Badge>
                     </div>
-                    <div className={`mt-1 text-[9px] ${UI_SURFACES.textBody2}`}>
+                    <div className={`mt-1 text-[9px] UI_SURFACES.textBody2`}>
                       {window.startHour.toString().padStart(2, "0")}:{window.startMinute.toString().padStart(2, "0")} to {window.endHour.toString().padStart(2, "0")}:{window.endMinute.toString().padStart(2, "0")}
                     </div>
-                    <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>{window.description}</div>
+                    <div className={`mt-0.5 text-[9px] UI_SURFACES.textSoftBright`}>{window.description}</div>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>Temporal profile has not been computed yet.</div>
+            <div className={`text-[9px] UI_SURFACES.textDimMid`}>Temporal profile has not been computed yet.</div>
           )}
         </Section>
       </div>
@@ -573,11 +573,11 @@ export function NovelAlgorithmsTab() {
                   className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                     uncertaintySamples === count
                       ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                      : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
+                      : `UI_SURFACES.borderFaint UI_SURFACES.bgDeep UI_SURFACES.textSoftBright UI_SURFACES.hoverBorder hover:UI_SURFACES.textBody2`
                   }`}
                 >
                   <div className="uppercase tracking-[0.08em]">{count} runs</div>
-                  <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoftMid}`}>
+                  <div className={`mt-0.5 text-[8px] UI_SURFACES.textSoftMid`}>
                     {count <= 8 ? "Fast preview" : count <= 16 ? "Balanced preview" : "Heavier preview"}
                   </div>
                 </button>
@@ -586,14 +586,14 @@ export function NovelAlgorithmsTab() {
 
             <div className="space-y-1.5">
               {uncertainty.zonePassRates.slice(0, 3).map((zone) => (
-                <div key={zone.zoneId} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+                <div key={zone.zoneId} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>{zone.label}</span>
+                    <span className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>{zone.label}</span>
                     <Badge variant={zone.passRate >= 0.8 ? "green" : zone.passRate >= 0.5 ? "amber" : "red"}>
                       {(zone.passRate * 100).toFixed(0)}%
                     </Badge>
                   </div>
-                  <div className={`mt-1 h-1.5 overflow-hidden rounded-full ${UI_SURFACES.card}`}>
+                  <div className={`mt-1 h-1.5 overflow-hidden rounded-full UI_SURFACES.card`}>
                     <div
                       className="h-full rounded-full bg-violet-400"
                       style={{ width: `${Math.max(4, zone.passRate * 100)}%` }}
@@ -603,12 +603,12 @@ export function NovelAlgorithmsTab() {
               ))}
             </div>
 
-            <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>
+            <div className={`text-[9px] UI_SURFACES.textSoftMid`}>
               Monte Carlo samples the current scene with camera installation and spec uncertainty, then reports the spread of coverage and critical-zone pass rates.
             </div>
           </div>
         ) : (
-          <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>Add cameras and critical zones to compute uncertainty.</div>
+          <div className={`text-[9px] UI_SURFACES.textDimMid`}>Add cameras and critical zones to compute uncertainty.</div>
         )}
       </Section>
 
@@ -624,23 +624,23 @@ export function NovelAlgorithmsTab() {
 
             <div className="space-y-1.5">
               {postureVariation.profiles.map((profile) => (
-                <div key={profile.profileId} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+                <div key={profile.profileId} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <div className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>{profile.label}</div>
-                      <div className={`mt-0.5 text-[9px] ${UI_SURFACES.textDimMid}`}>{profile.description} · {profile.targetHeightM.toFixed(2)}m target</div>
+                      <div className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>{profile.label}</div>
+                      <div className={`mt-0.5 text-[9px] UI_SURFACES.textDimMid`}>{profile.description} · {profile.targetHeightM.toFixed(2)}m target</div>
                     </div>
                     <Badge variant={profile.label === postureVariation.worstProfileLabel ? "amber" : "gray"}>
                       {profile.totalCoveragePct.toFixed(1)}%
                     </Badge>
                   </div>
-                  <div className={`mt-1 grid grid-cols-2 gap-1.5 text-[9px] ${UI_SURFACES.textSoftBright} lg:grid-cols-4`}>
-                    <div>Zones: <span className={`${UI_SURFACES.textBody2}`}>{profile.zonesPassing}/{profile.zonesTotal}</span></div>
-                    <div>Recognition: <span className={`${UI_SURFACES.textBody2}`}>{profile.recognitionAreaPct.toFixed(1)}%</span></div>
-                    <div>Identification: <span className={`${UI_SURFACES.textBody2}`}>{profile.identificationAreaPct.toFixed(1)}%</span></div>
-                    <div>Average: <span className={`${UI_SURFACES.textBody2}`}>{profile.averageWalkableQuality.toFixed(2)}</span></div>
+                  <div className={`mt-1 grid grid-cols-2 gap-1.5 text-[9px] UI_SURFACES.textSoftBright lg:grid-cols-4`}>
+                    <div>Zones: <span className={`UI_SURFACES.textBody2`}>{profile.zonesPassing}/{profile.zonesTotal}</span></div>
+                    <div>Recognition: <span className={`UI_SURFACES.textBody2`}>{profile.recognitionAreaPct.toFixed(1)}%</span></div>
+                    <div>Identification: <span className={`UI_SURFACES.textBody2`}>{profile.identificationAreaPct.toFixed(1)}%</span></div>
+                    <div>Average: <span className={`UI_SURFACES.textBody2`}>{profile.averageWalkableQuality.toFixed(2)}</span></div>
                   </div>
-                  <div className={`mt-1 text-[9px] ${UI_SURFACES.textSoftBright}`}>
+                  <div className={`mt-1 text-[9px] UI_SURFACES.textSoftBright`}>
                     {profile.worstZoneLabel
                       ? `Worst zone: ${profile.worstZoneLabel} (${profile.worstZoneStatus ?? "fail"}${profile.worstZoneActualQuality ? ` · ${profile.worstZoneActualQuality}` : ""})`
                       : "No critical zones to compare."}
@@ -649,12 +649,12 @@ export function NovelAlgorithmsTab() {
               ))}
             </div>
 
-            <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>
+            <div className={`text-[9px] UI_SURFACES.textSoftMid`}>
               Posture variation compares the same scene at crouching, seated, child, and standing target heights to show where a setup only works for one body posture.
             </div>
           </div>
         ) : (
-          <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>Add cameras and critical zones to compute posture variation.</div>
+          <div className={`text-[9px] UI_SURFACES.textDimMid`}>Add cameras and critical zones to compute posture variation.</div>
         )}
       </Section>
 
@@ -688,11 +688,11 @@ export function NovelAlgorithmsTab() {
                   className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                     threshold === level
                       ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
-                      : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
+                      : `UI_SURFACES.borderFaint UI_SURFACES.bgDeep UI_SURFACES.textSoftBright UI_SURFACES.hoverBorder hover:UI_SURFACES.textBody2`
                   }`}
                 >
                   <div className="uppercase tracking-[0.08em]">{level}</div>
-                  <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoftMid}`}>
+                  <div className={`mt-0.5 text-[8px] UI_SURFACES.textSoftMid`}>
                     {level === "none" ? "No visibility threshold" : "Set analysis threshold"}
                   </div>
                 </button>
@@ -703,11 +703,11 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   exposureBudgetS === 1
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
+                    : `UI_SURFACES.borderFaint UI_SURFACES.bgDeep UI_SURFACES.textSoftBright UI_SURFACES.hoverBorder hover:UI_SURFACES.textBody2`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">1s budget</div>
-                <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoftMid}`}>Tight crossing window</div>
+                <div className={`mt-0.5 text-[8px] UI_SURFACES.textSoftMid`}>Tight crossing window</div>
               </button>
               <button
                 type="button"
@@ -715,11 +715,11 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   exposureBudgetS === 2
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
+                    : `UI_SURFACES.borderFaint UI_SURFACES.bgDeep UI_SURFACES.textSoftBright UI_SURFACES.hoverBorder hover:UI_SURFACES.textBody2`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">2s budget</div>
-                <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoftMid}`}>Default planning pace</div>
+                <div className={`mt-0.5 text-[8px] UI_SURFACES.textSoftMid`}>Default planning pace</div>
               </button>
               <button
                 type="button"
@@ -727,11 +727,11 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   exposureBudgetS === 3
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
+                    : `UI_SURFACES.borderFaint UI_SURFACES.bgDeep UI_SURFACES.textSoftBright UI_SURFACES.hoverBorder hover:UI_SURFACES.textBody2`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">3s budget</div>
-                <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoftMid}`}>More permissive crossing window</div>
+                <div className={`mt-0.5 text-[8px] UI_SURFACES.textSoftMid`}>More permissive crossing window</div>
               </button>
             </div>
 
@@ -742,11 +742,11 @@ export function NovelAlgorithmsTab() {
               <CandidateLine label="Hidden stretch" value={formatSeconds(timeBudget.hiddenDurationS)} />
             </div>
 
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-2`}>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-2`}>
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <div className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>Selected path</div>
-                  <div className={`mt-0.5 text-[10px] ${UI_SURFACES.textBody2}`}>{activePath?.label ?? "—"}</div>
+                  <div className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>Selected path</div>
+                  <div className={`mt-0.5 text-[10px] UI_SURFACES.textBody2`}>{activePath?.label ?? "—"}</div>
                 </div>
                 <Badge variant={timeBudget.budgetMet ? "green" : "amber"}>
                   {timeBudget.budgetMet ? "Budget met" : "Budget missed"}
@@ -755,37 +755,37 @@ export function NovelAlgorithmsTab() {
               <div className="mt-2 space-y-1.5">
                 {visibleBands.length > 0 ? (
                   visibleBands.slice(0, 3).map((segment, i) => (
-                    <div key={`${segment.startDistanceM}-${segment.endDistanceM}`} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1.5`}>
+                    <div key={`${segment.startDistanceM}-${segment.endDistanceM}`} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1.5`}>
                       <div className="flex items-center justify-between gap-2">
-                        <span className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>
+                        <span className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>
                           Visible segment {i + 1}
                         </span>
-                        <span className={`font-mono text-[9px] ${UI_SURFACES.textBody2}`}>
+                        <span className={`font-mono text-[9px] UI_SURFACES.textBody2`}>
                           {segment.startDistanceM.toFixed(1)}m → {segment.endDistanceM.toFixed(1)}m
                         </span>
                       </div>
-                      <div className={`mt-1 grid grid-cols-2 gap-1.5 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-                        <div>Quality: <span className={`${UI_SURFACES.textBody2}`}>{segment.quality}</span></div>
-                        <div>Duration: <span className={`${UI_SURFACES.textBody2}`}>{formatSeconds(segment.durationS)}</span></div>
-                        <div>Min speed: <span className={`${UI_SURFACES.textBody2}`}>{segment.minSpeedMps != null ? `${segment.minSpeedMps.toFixed(1)} m/s` : "—"}</span></div>
-                        <div>Status: <span className={`${UI_SURFACES.textBody2}`}>{segment.meetsBudget ? "Meets budget" : "Too slow"}</span></div>
+                      <div className={`mt-1 grid grid-cols-2 gap-1.5 text-[9px] UI_SURFACES.textSoftBright`}>
+                        <div>Quality: <span className={`UI_SURFACES.textBody2`}>{segment.quality}</span></div>
+                        <div>Duration: <span className={`UI_SURFACES.textBody2`}>{formatSeconds(segment.durationS)}</span></div>
+                        <div>Min speed: <span className={`UI_SURFACES.textBody2`}>{segment.minSpeedMps != null ? `${segment.minSpeedMps.toFixed(1)} m/s` : "—"}</span></div>
+                        <div>Status: <span className={`UI_SURFACES.textBody2`}>{segment.meetsBudget ? "Meets budget" : "Too slow"}</span></div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.panel} px-2 py-1.5 text-[9px] ${UI_SURFACES.textDimMid}`}>
+                  <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.panel px-2 py-1.5 text-[9px] UI_SURFACES.textDimMid`}>
                     No segments at or above the selected threshold were detected on the active path.
                   </div>
                 )}
               </div>
             </div>
 
-            <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>
+            <div className={`text-[9px] UI_SURFACES.textSoftMid`}>
               Coverage Time Budget answers the path question: how fast must the actor move to keep visible stretches inside the selected exposure budget while traversing the current scene?
             </div>
           </div>
         ) : (
-          <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>Add a path and run simulation to compute a time budget.</div>
+          <div className={`text-[9px] UI_SURFACES.textDimMid`}>Add a path and run simulation to compute a time budget.</div>
         )}
       </Section>
 
@@ -806,11 +806,11 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   uncertaintySamples === 8
                     ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
+                    : `UI_SURFACES.borderFaint UI_SURFACES.bgDeep UI_SURFACES.textSoftBright UI_SURFACES.hoverBorder hover:UI_SURFACES.textBody2`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">8 runs</div>
-                <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoftMid}`}>Fast preview</div>
+                <div className={`mt-0.5 text-[8px] UI_SURFACES.textSoftMid`}>Fast preview</div>
               </button>
               <button
                 type="button"
@@ -818,11 +818,11 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   uncertaintySamples === 12
                     ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
+                    : `UI_SURFACES.borderFaint UI_SURFACES.bgDeep UI_SURFACES.textSoftBright UI_SURFACES.hoverBorder hover:UI_SURFACES.textBody2`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">12 runs</div>
-                <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoftMid}`}>Balanced preview</div>
+                <div className={`mt-0.5 text-[8px] UI_SURFACES.textSoftMid`}>Balanced preview</div>
               </button>
               <button
                 type="button"
@@ -830,11 +830,11 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   uncertaintySamples === 16
                     ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
+                    : `UI_SURFACES.borderFaint UI_SURFACES.bgDeep UI_SURFACES.textSoftBright UI_SURFACES.hoverBorder hover:UI_SURFACES.textBody2`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">16 runs</div>
-                <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoftMid}`}>Sharper bounds</div>
+                <div className={`mt-0.5 text-[8px] UI_SURFACES.textSoftMid`}>Sharper bounds</div>
               </button>
               <button
                 type="button"
@@ -842,24 +842,24 @@ export function NovelAlgorithmsTab() {
                 className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
                   uncertaintySamples === 24
                     ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    : `${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} ${UI_SURFACES.textSoftBright} ${UI_SURFACES.hoverBorder} hover:${UI_SURFACES.textBody2}`
+                    : `UI_SURFACES.borderFaint UI_SURFACES.bgDeep UI_SURFACES.textSoftBright UI_SURFACES.hoverBorder hover:UI_SURFACES.textBody2`
                 }`}
               >
                 <div className="uppercase tracking-[0.08em]">24 runs</div>
-                <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textSoftMid}`}>Heavier preview</div>
+                <div className={`mt-0.5 text-[8px] UI_SURFACES.textSoftMid`}>Heavier preview</div>
               </button>
             </div>
 
             <div className="space-y-1.5">
               {uncertainty.zonePassRates.slice(0, 3).map((zone) => (
-                <div key={zone.zoneId} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1.5`}>
+                <div key={zone.zoneId} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1.5`}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>{zone.label}</span>
+                    <span className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>{zone.label}</span>
                     <Badge variant={zone.passRate >= 0.8 ? "green" : zone.passRate >= 0.5 ? "amber" : "red"}>
                       {(zone.passRate * 100).toFixed(0)}%
                     </Badge>
                   </div>
-                  <div className={`mt-1 h-1.5 overflow-hidden rounded-full ${UI_SURFACES.card}`}>
+                  <div className={`mt-1 h-1.5 overflow-hidden rounded-full UI_SURFACES.card`}>
                     <div
                       className="h-full rounded-full bg-violet-400"
                       style={{ width: `${Math.max(4, zone.passRate * 100)}%` }}
@@ -869,12 +869,12 @@ export function NovelAlgorithmsTab() {
               ))}
             </div>
 
-            <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>
+            <div className={`text-[9px] UI_SURFACES.textSoftMid`}>
               Monte Carlo samples the current scene with camera mounting and spec uncertainty, then reports the spread of coverage and critical-zone pass rates.
             </div>
           </div>
         ) : (
-          <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>Add cameras and critical zones to compute uncertainty.</div>
+          <div className={`text-[9px] UI_SURFACES.textDimMid`}>Add cameras and critical zones to compute uncertainty.</div>
         )}
       </Section>
 
@@ -883,13 +883,13 @@ export function NovelAlgorithmsTab() {
           {occlusion.length > 0 ? (
             <div className="space-y-1.5">
               {occlusion.slice(0, 3).map((entry) => (
-                <div key={entry.zoneId} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
-                  <div className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>{entry.zoneLabel}</div>
+                <div key={entry.zoneId} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
+                  <div className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>{entry.zoneLabel}</div>
                   <div className="mt-1 space-y-0.5">
                     {entry.obstructions.slice(0, 3).map((obstruction) => (
-                      <div key={obstruction.obstructionId} className={`flex items-center justify-between gap-2 text-[9px] ${UI_SURFACES.textBody2}`}>
+                      <div key={obstruction.obstructionId} className={`flex items-center justify-between gap-2 text-[9px] UI_SURFACES.textBody2`}>
                         <span>{obstruction.label}</span>
-                        <span className={`font-mono ${UI_SURFACES.textSoftBright}`}>{Math.round(obstruction.blameFraction * 100)}%</span>
+                        <span className={`font-mono UI_SURFACES.textSoftBright`}>{Math.round(obstruction.blameFraction * 100)}%</span>
                       </div>
                     ))}
                   </div>
@@ -897,7 +897,7 @@ export function NovelAlgorithmsTab() {
               ))}
             </div>
           ) : (
-            <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>No occlusion blame candidates were generated.</div>
+            <div className={`text-[9px] UI_SURFACES.textDimMid`}>No occlusion blame candidates were generated.</div>
           )}
         </Section>
 
@@ -919,17 +919,17 @@ export function NovelAlgorithmsTab() {
           {blindRegions.length > 0 ? (
             <div className="space-y-1.5">
               {blindRegions.slice(0, 3).map((region) => (
-                <div key={region.id} className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-1`}>
+                <div key={region.id} className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`text-[9px] uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>{region.classification}</span>
+                    <span className={`text-[9px] uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>{region.classification}</span>
                     <Badge variant={region.severity === "critical" ? "red" : region.severity === "high" ? "amber" : "gray"}>{region.severity}</Badge>
                   </div>
-                  <div className={`mt-1 text-[9px] ${UI_SURFACES.textBody2}`}>{region.description}</div>
+                  <div className={`mt-1 text-[9px] UI_SURFACES.textBody2`}>{region.description}</div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>No blind regions detected.</div>
+            <div className={`text-[9px] UI_SURFACES.textDimMid`}>No blind regions detected.</div>
           )}
         </Section>
       </div>
@@ -949,13 +949,13 @@ export function NovelAlgorithmsTab() {
               <CandidateLine label="Isolated" value={`${blindSpotFingerprint.isolatedRegionCount}`} />
               <CandidateLine label="Largest region" value={`${blindSpotFingerprint.largestRegionAreaSqM.toFixed(1)} m²`} />
             </div>
-            <div className={`rounded-md border ${UI_SURFACES.borderFaint} ${UI_SURFACES.bgDeep} px-2 py-2 text-[9px] ${UI_SURFACES.textSoftBright}`}>
-              <div className={`uppercase tracking-[0.08em] ${UI_SURFACES.textSoftBright}`}>Signature</div>
-              <div className={`mt-1 ${UI_SURFACES.textBody2}`}>{blindSpotFingerprint.signature}</div>
+            <div className={`rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-2 text-[9px] UI_SURFACES.textSoftBright`}>
+              <div className={`uppercase tracking-[0.08em] UI_SURFACES.textSoftBright`}>Signature</div>
+              <div className={`mt-1 UI_SURFACES.textBody2`}>{blindSpotFingerprint.signature}</div>
             </div>
           </div>
         ) : (
-          <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>Blind spot fingerprint not computed yet.</div>
+          <div className={`text-[9px] UI_SURFACES.textDimMid`}>Blind spot fingerprint not computed yet.</div>
         )}
       </Section>
 
@@ -967,12 +967,12 @@ export function NovelAlgorithmsTab() {
               <CandidateLine label="Affected cells" value={`${reflectiveBounce.affectedCellCount}`} />
               <CandidateLine label="Affected cameras" value={`${reflectiveBounce.affectedCameraCount}`} />
             </div>
-            <div className={`text-[9px] ${UI_SURFACES.textSoftMid}`}>
+            <div className={`text-[9px] UI_SURFACES.textSoftMid`}>
               Reflective windows can act as deterministic mirror proxies when they improve quality on the far side of the reflective surface.
             </div>
           </div>
         ) : (
-          <div className={`text-[9px] ${UI_SURFACES.textDimMid}`}>No reflective bounce candidates were generated.</div>
+          <div className={`text-[9px] UI_SURFACES.textDimMid`}>No reflective bounce candidates were generated.</div>
         )}
       </Section>
     </div>

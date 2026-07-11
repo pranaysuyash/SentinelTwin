@@ -46,14 +46,14 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
   }, [comment.attachedToNodeId, selectNode]);
 
   return (
-    <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeep} p-2.5}`}>
+    <div className={`{rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.panelDeep p-2.5}`}>
       {/* Header */}
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <div className={`flex h-5 w-5 items-center justify-center rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card}`}>
+          <div className={`flex h-5 w-5 items-center justify-center rounded border UI_SURFACES.borderThin UI_SURFACES.card`}>
             <MessageSquare className="h-2.5 w-2.5 text-cyan-400" />
           </div>
-          <span className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textAccent}`}>
+          <span className={`text-[10px] font-semibold uppercase tracking-[0.16em] UI_SURFACES.textAccent`}>
             Comment
           </span>
         </div>
@@ -70,8 +70,8 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
       </div>
 
       {/* Author & Date */}
-      <div className={`mb-1.5 flex items-center justify-between text-[9px] ${UI_SURFACES.textSoftMid}`}>
-        <span className={`font-medium ${UI_SURFACES.textMuted5}`}>{comment.author}</span>
+      <div className={`mb-1.5 flex items-center justify-between text-[9px] UI_SURFACES.textSoftMid`}>
+        <span className={`font-medium UI_SURFACES.textMuted5`}>{comment.author}</span>
         <span>{formattedDate}</span>
       </div>
 
@@ -81,9 +81,9 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
           <button
             type="button"
             onClick={handleAttachedNodeClick}
-            className={`flex items-center gap-1 rounded ${UI_SURFACES.chip} px-1.5 py-0.5 text-[8px] text-blue-300 ${UI_SURFACES.hoverBgDark} transition-colors`}
+            className={`flex items-center gap-1 rounded UI_SURFACES.chip px-1.5 py-0.5 text-[8px] text-blue-300 UI_SURFACES.hoverBgDark transition-colors`}
           >
-            <span className={`${UI_SURFACES.textMuted}`}>Attached to:</span> {getNodeLabel(attachedNode)}
+            <span className={`UI_SURFACES.textMuted`}>Attached to:</span> {getNodeLabel(attachedNode)}
           </button>
         </div>
       )}
@@ -94,7 +94,7 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
           <textarea
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
-            className={`w-full rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-1 text-[10px] ${UI_SURFACES.textBody} outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 resize-none`}
+            className={`w-full rounded border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-1 text-[10px] UI_SURFACES.textBody outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 resize-none`}
             rows={3}
           />
           <div className="flex items-center gap-1.5">
@@ -108,15 +108,15 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
             <button
               type="button"
               onClick={() => { setEditing(false); setEditText(comment.text); }}
-              className={`rounded ${UI_SURFACES.chip} px-2 py-0.5 text-[9px] ${UI_SURFACES.textMuted5} ${UI_SURFACES.hoverText} transition-colors`}
+              className={`rounded UI_SURFACES.chip px-2 py-0.5 text-[9px] UI_SURFACES.textMuted5 UI_SURFACES.hoverText transition-colors`}
             >
               Cancel
             </button>
           </div>
         </div>
       ) : (
-        <div className={`{rounded-lg border ${UI_SURFACES.borderPanel} ${UI_SURFACES.panelDeepAlt} px-2 py-1.5}`}>
-          <p className={`text-[10px] leading-relaxed ${UI_SURFACES.textBody} whitespace-pre-wrap`}>
+        <div className={`{rounded-lg border UI_SURFACES.borderPanel UI_SURFACES.panelDeepAlt px-2 py-1.5}`}>
+          <p className={`text-[10px] leading-relaxed UI_SURFACES.textBody whitespace-pre-wrap`}>
             {comment.text}
           </p>
         </div>
@@ -128,7 +128,7 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className={`flex items-center gap-1 rounded border ${UI_SURFACES.borderThin} ${UI_SURFACES.card} px-2 py-0.5 text-[8px] ${UI_SURFACES.textMuted5} ${UI_SURFACES.hoverText} transition-colors`}
+            className={`flex items-center gap-1 rounded border UI_SURFACES.borderThin UI_SURFACES.card px-2 py-0.5 text-[8px] UI_SURFACES.textMuted5 UI_SURFACES.hoverText transition-colors`}
           >
             Edit
           </button>
@@ -161,7 +161,7 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
       </div>
 
       {/* Position info */}
-      <div className={`mt-1.5 text-[7px] ${UI_SURFACES.textDim}`}>
+      <div className={`mt-1.5 text-[7px] UI_SURFACES.textDim`}>
         Position: ({comment.position[0].toFixed(1)}, {comment.position[1].toFixed(1)}, {comment.position[2].toFixed(1)})
       </div>
     </div>

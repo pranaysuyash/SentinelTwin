@@ -931,7 +931,7 @@ export function CameraWallView() {
                   Bridge Health: {sessionHealth?.totals?.active ?? activeCount} Active · {sessionHealth?.totals?.expired ?? offlineCount} Expired
                 </span>
                 {activePath ? (
-                  <span className="rounded-md border border-[#24527b] ${UI_SURFACES.hoverBgSubtle}/60 px-2 py-0.5 text-[#93c5fd]">
+                  <span className="rounded-md border ${UI_SURFACES.borderInfoDark} ${UI_SURFACES.hoverBgSubtle}/60 px-2 py-0.5 ${UI_SURFACES.textInfoLight}">
                     Route {activePath.label}
                   </span>
                 ) : (
@@ -970,7 +970,7 @@ export function CameraWallView() {
                 Selected {selectedCamera?.name ?? "None"}
               </span>
               {activePath ? (
-                <span className="rounded-md border border-[#24527b] ${UI_SURFACES.hoverBgSubtle}/60 px-2 py-0.5 text-[#93c5fd]">
+                <span className="rounded-md border ${UI_SURFACES.borderInfoDark} ${UI_SURFACES.hoverBgSubtle}/60 px-2 py-0.5 ${UI_SURFACES.textInfoLight}">
                   Route Context {activePath.label}
                 </span>
               ) : (

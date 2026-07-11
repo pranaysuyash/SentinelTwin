@@ -217,7 +217,7 @@ Each tone provides these variants (using `success` as example):
 
 | Variant | Tailwind Class | Intensity |
 |---------|---------------|-----------|
-| `raw` | `#22c55e` | Raw hex value (for CSS-in-JS style props, not a Tailwind class) |
+| `raw` | `#22c55e` | Raw hex for CSS-in-JS style props |
 | `text` | `text-emerald-300` | Standard text |
 | `textBright` | `text-emerald-400` | Brighter text (icons, emphasis) |
 | `textDim` | `text-emerald-200` | Dimmer text |

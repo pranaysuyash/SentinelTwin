@@ -365,7 +365,7 @@ export function SettingsView() {
                   <button
                     type="button"
                     onClick={entry.action}
-                    className={`mt-3 inline-flex items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderElevated} ${UI_SURFACES.card} px-2.5 py-1.5 text-[10px] text-[#cfe0ff] transition-colors hover:border-sky-400/30 hover:text-white`}
+                    className={`mt-3 inline-flex items-center gap-1.5 rounded-lg border ${UI_SURFACES.borderElevated} ${UI_SURFACES.card} px-2.5 py-1.5 text-[10px] ${UI_SURFACES.textBluePale} transition-colors hover:border-sky-400/30 hover:text-white`}
                     data-testid={`settings-deeplink-${entry.id}`}
                   >
                     {entry.cta}

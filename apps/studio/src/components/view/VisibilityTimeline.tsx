@@ -315,7 +315,7 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
             Events: <span className={`${UI_SURFACES.textSoftBright} font-mono`}>{pathResult.timeline.length}</span>
           </span>
           <span>
-            t: <span className="text-[#8bc0ff] font-mono">{safeCurrentTime.toFixed(1)}s</span>
+            t: <span className="${UI_SURFACES.textInfoLight} font-mono">{safeCurrentTime.toFixed(1)}s</span>
           </span>
         </div>
       )}

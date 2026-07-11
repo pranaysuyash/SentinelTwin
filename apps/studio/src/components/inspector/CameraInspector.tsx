@@ -1805,7 +1805,7 @@ export function CameraInspector() {
                       </div>
                       <ul className="space-y-0.5">
                         {installabilityResult.warnings.map((w, index) => (
-                          <li key={`w-${index}`} className="flex items-start gap-1 text-[8px] text-[#b8b8b8]">
+                          <li key={`w-${index}`} className="flex items-start gap-1 text-[8px] ${UI_SURFACES.textGray}">
                             <span className="mt-0.5 text-amber-400">•</span>
                             {w}
                           </li>
@@ -1822,7 +1822,7 @@ export function CameraInspector() {
                       </div>
                       <ul className="space-y-0.5">
                         {installabilityResult.suggestions.map((s, index) => (
-                          <li key={`s-${index}`} className="flex items-start gap-1 text-[8px] text-[#b8b8b8]">
+                          <li key={`s-${index}`} className="flex items-start gap-1 text-[8px] ${UI_SURFACES.textGray}">
                             <span className="mt-0.5 text-blue-400">→</span>
                             {s}
                           </li>
@@ -2169,7 +2169,7 @@ export function CameraInspector() {
                               <div key={entry.name} className={`rounded-md border ${UI_SURFACES.borderDeep} ${UI_SURFACES.card} px-2 py-1.5`}>
                                 <div className="flex items-center justify-between gap-2 text-[10px]">
                                   <span className={`truncate ${UI_SURFACES.textBody}`}>{entry.name}</span>
-                                  <span className="font-semibold text-[#93c5fd]">{QUALITY_LABEL[entry.quality]}</span>
+                                  <span className="font-semibold ${UI_SURFACES.textInfoLight}">{QUALITY_LABEL[entry.quality]}</span>
                                 </div>
                               </div>
                             ))}

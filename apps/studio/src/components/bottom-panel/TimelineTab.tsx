@@ -267,7 +267,7 @@ export function TimelineTab() {
             onClick={handlePlayPause}
             className={cn(
               "flex h-7 w-7 items-center justify-center rounded-full transition-colors",
-              pathReplay.playing ? "bg-[#60a5fa] text-white" : "${UI_SURFACES.hoverBg} text-[#93c5fd]",
+              pathReplay.playing ? "bg-[#60a5fa] text-white" : "${UI_SURFACES.hoverBg} ${UI_SURFACES.textInfoLight}",
             )}
             title={pathReplay.playing ? "Pause" : "Play"}
           >
@@ -332,7 +332,7 @@ export function TimelineTab() {
               onClick={() => setPathReplaySpeed(speed)}
               className={cn(
                 "rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors",
-                pathReplay.speed === speed ? "${UI_SURFACES.hoverBg} text-[#93c5fd]" : `${UI_SURFACES.textMuted} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverTextSoft}`,
+                pathReplay.speed === speed ? "${UI_SURFACES.hoverBg} ${UI_SURFACES.textInfoLight}" : `${UI_SURFACES.textMuted} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverTextSoft}`,
               )}
             >
               {speed}x
@@ -343,7 +343,7 @@ export function TimelineTab() {
             onClick={() => setPathReplayFollowActor(!pathReplayFollowActor)}
             className={cn(
               "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors",
-              pathReplayFollowActor ? "${UI_SURFACES.hoverBg} text-[#93c5fd]" : `${UI_SURFACES.textMuted} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverTextSoft}`,
+              pathReplayFollowActor ? "${UI_SURFACES.hoverBg} ${UI_SURFACES.textInfoLight}" : `${UI_SURFACES.textMuted} ${UI_SURFACES.hoverBgMuted} ${UI_SURFACES.hoverTextSoft}`,
             )}
             title="Follow actor"
           >
@@ -446,7 +446,7 @@ export function TimelineTab() {
                 <div className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textAccent}`}>Current Event</div>
                 {currentEvent ? (
                   <div className={`mt-1 flex flex-wrap items-center gap-1.5 text-[10px] ${UI_SURFACES.textBody3}`}>
-                    <span className="font-mono text-[#93c5fd]">{currentEvent.timeS.toFixed(1)}s</span>
+                    <span className="font-mono ${UI_SURFACES.textInfoLight}">{currentEvent.timeS.toFixed(1)}s</span>
                     <span>•</span>
                     <span>{currentEvent.cameraId ? camerasById[currentEvent.cameraId] ?? currentEvent.cameraId : "No camera"}</span>
                     <span>•</span>

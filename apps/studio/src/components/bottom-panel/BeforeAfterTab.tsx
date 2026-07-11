@@ -229,7 +229,7 @@ function BeforeAfterTabContent() {
           </select>
         </label>
         <label className={`flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] ${UI_SURFACES.textDimMid}`}>
-          <span className="min-w-[48px] text-[#d2f5db]">After</span>
+          <span className="min-w-[48px] ${UI_SURFACES.textGreenLight}">After</span>
           <select
             value={validAfterId ?? ""}
             onChange={(event) => setAfterSnapshotId(event.target.value)}

@@ -356,7 +356,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
             <span className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${aiDraftModelAvailable ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200" : "border-amber-400/20 bg-amber-500/10 text-amber-200"}`}>
               {aiDraftModeLabel}
             </span>
-            <span className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep} px-2 py-0.5 text-[9px] text-[#c4d5ff]`}>
+            <span className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep} px-2 py-0.5 text-[9px] ${UI_SURFACES.textBlueSoft}`}>
               {currentAiProvider.providerLabel}
             </span>
             <span
@@ -442,7 +442,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                     <div className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${UI_SURFACES.textSoftBright}`}>Workspace comparison</div>
                     <div className="mt-0.5 text-[10px] ${UI_SURFACES.textMuted3}">What changes if you apply this draft?</div>
                   </div>
-                  <span className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-[#c4d5ff]`}>
+                  <span className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${UI_SURFACES.textBlueSoft}`}>
                     Current vs Draft
                   </span>
                 </div>
@@ -484,7 +484,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                 <button
                   type="button"
                   onClick={() => setAiDraftJsonVisible((v) => !v)}
-                  className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff]`}
+                  className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textBlueSoft}`}
                 >
                   {aiDraftJsonVisible ? "Hide Data" : "Show Data"}
                 </button>
@@ -495,7 +495,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                     setAiDraftJsonEditable((e) => !e);
                     setAiDraftJsonError(null);
                   }}
-                  className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff]`}
+                  className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textBlueSoft}`}
                 >
                   {aiDraftJsonEditable ? "Lock Data" : "Edit Data"}
                 </button>
@@ -507,7 +507,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                     setAiDraftCopyNotice(copied ? "Draft JSON copied to clipboard." : "Clipboard unavailable.");
                   }}
                   disabled={!aiDraftSceneJson}
-                  className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff] disabled:cursor-not-allowed disabled:opacity-60`}
+                  className={`rounded-full border ${UI_SURFACES.borderDark} ${UI_SURFACES.card} px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${UI_SURFACES.textBlueSoft} disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   Copy Data
                 </button>

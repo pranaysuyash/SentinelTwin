@@ -147,7 +147,7 @@ export function LiveFeedHUD({
 
       {/* Top-Right Spec Badge */}
       <div className="absolute right-3 top-3 z-30 flex flex-col items-end gap-0.5 pointer-events-auto">
-        <span className={`rounded border ${UI_SURFACES.border} ${UI_SURFACES.panel}/90 px-2 py-0.5 text-[9px] font-semibold text-[#93c5fd] shadow-sm`}>
+        <span className={`rounded border ${UI_SURFACES.border} ${UI_SURFACES.panel}/90 px-2 py-0.5 text-[9px] font-semibold ${UI_SURFACES.textInfoLight} shadow-sm`}>
           {cam.resolutionMP}MP · {cam.fovHorizontalDeg}°
         </span>
         <span className="font-mono text-[8px] text-white/70 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
@@ -231,7 +231,7 @@ export function LiveFeedHUD({
               <div className="flex justify-between"><span>Recognition</span><span className={"font-mono " + QUALITY_TEXT_COLOR.recognition}>{ranges.recognition.toFixed(1)}m</span></div>
               <div className="flex justify-between"><span>Identification</span><span className={"font-mono " + QUALITY_TEXT_COLOR.identification}>{ranges.identification.toFixed(1)}m</span></div>
             </div>
-            {targetType ? <div className="mt-1 border-t ${UI_SURFACES.borderElevated} pt-1 text-[8px] uppercase tracking-wide text-[#7a94c7]">Target: {formatTargetTypeLabel(targetType)}</div> : null}
+            {targetType ? <div className="mt-1 border-t ${UI_SURFACES.borderElevated} pt-1 text-[8px] uppercase tracking-wide ${UI_SURFACES.textBlueDim}">Target: {formatTargetTypeLabel(targetType)}</div> : null}
             <div className="text-[8px] ${UI_SURFACES.textMuted3}">Mode: {modeLabel(mode)}</div>
           </div>
         ) : null}

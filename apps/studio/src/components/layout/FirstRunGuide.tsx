@@ -92,7 +92,7 @@ export default function FirstRunGuide({ onClose, onOpenHelp }: { onClose: () => 
             Don&apos;t show this guide again on startup
           </label>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={onOpenHelp} className={`rounded border ${UI_SURFACES.borderElevated} px-3 py-1.5 text-[11px] text-[#cfe0ff] ${UI_SURFACES.hoverBgDark}`}>Open Help</button>
+            <button type="button" onClick={onOpenHelp} className={`rounded border ${UI_SURFACES.borderElevated} px-3 py-1.5 text-[11px] ${UI_SURFACES.textBluePale} ${UI_SURFACES.hoverBgDark}`}>Open Help</button>
             <button
               type="button"
               onClick={handleStart}

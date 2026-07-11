@@ -1998,7 +1998,7 @@ function HeatmapCellExplainabilityCard() {
               {evaluation.reasonCodes.length > 0 ? (
                 <div className="mt-1 flex flex-wrap gap-1">
                   {evaluation.reasonCodes.slice(0, 4).map((reasonCode) => (
-                    <span key={reasonCode} className="rounded border ${UI_SURFACES.borderElevated} ${UI_SURFACES.hoverBg} px-1 py-0.5 text-[8px] text-[#9dc3ff]">
+                    <span key={reasonCode} className="rounded border ${UI_SURFACES.borderElevated} ${UI_SURFACES.hoverBg} px-1 py-0.5 text-[8px] ${UI_SURFACES.textBlueMid}">
                       {formatReasonCode(reasonCode)}
                     </span>
                   ))}
@@ -2223,7 +2223,7 @@ export function WorkspaceCanvas() {
                   Click here to activate the camera tool
                   <br />
                   or press{" "}
-                  <kbd className="rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} px-1 py-0.5 font-mono text-[8px] text-[#7a9bcc]">
+                  <kbd className="rounded border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} px-1 py-0.5 font-mono text-[8px] ${UI_SURFACES.textBlueDim}">
                     C
                   </kbd>
                 </p>

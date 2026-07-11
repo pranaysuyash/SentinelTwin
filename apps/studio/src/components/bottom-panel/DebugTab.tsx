@@ -1562,7 +1562,7 @@ export function DebugTab() {
                       {evaluation.reasonCodes.length > 0 ? (
                         <div className="mt-1 flex flex-wrap gap-1">
                           {evaluation.reasonCodes.slice(0, 3).map((reasonCode) => (
-                            <span key={reasonCode} className="rounded border ${UI_SURFACES.borderElevated} ${UI_SURFACES.hoverBg} px-1 py-0.5 text-[8px] text-[#9dc3ff]">
+                            <span key={reasonCode} className="rounded border ${UI_SURFACES.borderElevated} ${UI_SURFACES.hoverBg} px-1 py-0.5 text-[8px] ${UI_SURFACES.textBlueMid}">
                               {formatReasonCode(reasonCode)}
                             </span>
                           ))}

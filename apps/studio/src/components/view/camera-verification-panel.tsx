@@ -144,7 +144,7 @@ export function VerificationPanel({
                 type="button"
                 disabled={!canResample || extractionInProgress}
                 onClick={onResampleVideoFrame}
-                className="rounded bg-[#14304a] px-2 py-1 text-[8px] text-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded ${UI_SURFACES.bgDarkBlue} px-2 py-1 text-[8px] text-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Extract frame at selected time
               </button>
@@ -208,8 +208,8 @@ export function VerificationPanel({
         <div className="flex gap-1">
           <button type="button" onClick={() => onModeChange("overlay")} className={`rounded px-2 py-1 ${mode === "overlay" ? "bg-cyan-500/30 text-cyan-200" : "${UI_SURFACES.hoverBg} ${UI_SURFACES.textMuted3}"}`}>Overlay</button>
           <button type="button" onClick={() => onModeChange("split")} className={`rounded px-2 py-1 ${mode === "split" ? "bg-cyan-500/30 text-cyan-200" : "${UI_SURFACES.hoverBg} ${UI_SURFACES.textMuted3}"}`}>Split</button>
-          <button type="button" onClick={onSaveSnapshot} className="rounded bg-[#14304a] px-2 py-1 text-cyan-200">Save</button>
-          <button type="button" onClick={onClear} className="rounded bg-[#2b1a20] px-2 py-1 text-rose-200">Clear</button>
+          <button type="button" onClick={onSaveSnapshot} className="rounded ${UI_SURFACES.bgDarkBlue} px-2 py-1 text-cyan-200">Save</button>
+          <button type="button" onClick={onClear} className="rounded ${UI_SURFACES.bgDarkRed} px-2 py-1 text-rose-200">Clear</button>
         </div>
         {snapshots.length ? (
           <div className={`rounded-lg border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} p-2`}>
@@ -229,7 +229,7 @@ export function VerificationPanel({
                     <button
                       type="button"
                       onClick={() => onDeleteSnapshot(snapshot.id)}
-                      className="rounded bg-[#2b1a20] px-1 py-0.5 text-[8px] text-rose-200"
+                      className="rounded ${UI_SURFACES.bgDarkRed} px-1 py-0.5 text-[8px] text-rose-200"
                     >
                       Del
                     </button>
@@ -245,7 +245,7 @@ export function VerificationPanel({
         <div className={`rounded-lg border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} px-2 py-1.5`}>
           <div className={`flex items-center justify-between ${UI_SURFACES.textSoftBright}`}>
             <span>Alignment Quality</span>
-            <span className="font-mono text-[#d4e6ff]">{alignmentScore !== null ? `${Math.round(alignmentScore)}/100` : "N/A"}</span>
+            <span className="font-mono ${UI_SURFACES.textBluePale}">{alignmentScore !== null ? `${Math.round(alignmentScore)}/100` : "N/A"}</span>
           </div>
           <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textMuted4}`}>
             {alignmentLabel ? `${alignmentLabel} match (planning aid only, non-forensic).` : "Upload a reference frame to compute mismatch quality."}
@@ -258,7 +258,7 @@ export function VerificationPanel({
         <div className={`rounded-lg border ${UI_SURFACES.borderStrong} ${UI_SURFACES.hoverBgSubtle} px-2 py-1.5`}>
           <div className={`flex items-center justify-between ${UI_SURFACES.textSoftBright}`}>
             <span>Alignment Assist</span>
-            <span className="font-mono text-[#d4e6ff]">{alignmentMethod === "auto" ? "AUTO" : alignmentMethod === "manual" ? "MANUAL" : "IDLE"}</span>
+            <span className="font-mono ${UI_SURFACES.textBluePale}">{alignmentMethod === "auto" ? "AUTO" : alignmentMethod === "manual" ? "MANUAL" : "IDLE"}</span>
           </div>
           <div className={`mt-0.5 text-[8px] ${UI_SURFACES.textMuted4}`}>
             {alignmentMethod === "auto"
@@ -298,7 +298,7 @@ export function VerificationPanel({
             <button type="button" onClick={() => onNudge(0, 4)} className={`rounded ${UI_SURFACES.hoverBg} px-1.5 py-1 ${UI_SURFACES.textBody}`}>▼</button>
           </div>
           <div className="flex gap-1">
-            <button type="button" disabled={!canAutoAlign} onClick={onAutoAlign} className="rounded bg-[#13354a] px-2 py-1 text-[#8ce3ff] disabled:cursor-not-allowed disabled:opacity-50">Auto align</button>
+            <button type="button" disabled={!canAutoAlign} onClick={onAutoAlign} className="rounded ${UI_SURFACES.bgDarkBlue} px-2 py-1 text-[#8ce3ff] disabled:cursor-not-allowed disabled:opacity-50">Auto align</button>
             <button type="button" onClick={onResetAlign} className="rounded ${UI_SURFACES.borderDeep} px-2 py-1 text-[#9dd6ff]">Reset align</button>
           </div>
         </div>

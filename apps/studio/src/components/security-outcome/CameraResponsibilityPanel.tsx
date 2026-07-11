@@ -23,7 +23,7 @@ export function CameraResponsibilityPanel({ cameraFindings }: { cameraFindings: 
               <div className={`text-[11px] font-medium ${UI_SURFACES.textBright}`}>{camera.cameraName}</div>
               <button type="button"
                 onClick={() => { selectNode(camera.cameraId); setViewMode("camera_view"); setWorkspacePreset("coverage"); }}
-                className={`rounded border ${UI_SURFACES.borderElevated} px-2 py-1 text-[10px] text-[#bcd3ff] ${UI_SURFACES.hoverBg}`}
+                className={`rounded border ${UI_SURFACES.borderElevated} px-2 py-1 text-[10px] ${UI_SURFACES.textBlueMuted} ${UI_SURFACES.hoverBg}`}
               >View Camera</button>
             </div>
             <div className={`mt-1 text-[10px] ${UI_SURFACES.textNear} italic`}>{camera.roleSummary}</div>

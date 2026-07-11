@@ -148,7 +148,7 @@ function NorthIndicator() {
     <div className={`rounded-xl border ${UI_SURFACES.borderSubtle} ${UI_SURFACES.panel} px-2 py-2 text-center`}>
       <div className={`text-[8px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>North</div>
       <div className={`mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-full border ${UI_SURFACES.border} ${UI_SURFACES.bgDeep}`}>
-        <ChevronUp className="h-4 w-4 text-[#93c5fd]" />
+        <ChevronUp className="h-4 w-4 ${UI_SURFACES.textInfoLight}" />
       </div>
     </div>
   );
@@ -180,7 +180,7 @@ function MiniMapCollapsed({
     >
       <div className="flex items-center gap-2">
         <div className={`flex h-7 w-7 items-center justify-center rounded-lg border ${UI_SURFACES.border} ${UI_SURFACES.card}`}>
-          <Map className="h-3.5 w-3.5 text-[#93c5fd]" />
+          <Map className="h-3.5 w-3.5 ${UI_SURFACES.textInfoLight}" />
         </div>
         <div>
           <div className={`text-[9px] uppercase tracking-[0.18em] ${UI_SURFACES.textDimMid}`}>MiniMap - Collapsed</div>

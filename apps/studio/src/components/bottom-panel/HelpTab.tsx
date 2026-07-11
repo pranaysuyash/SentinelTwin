@@ -170,7 +170,7 @@ export function HelpTab() {
                 type="button"
                 onClick={() => setShowFirstRunGuide(true)}
                 data-testid="help-show-first-run-guide"
-                className={`rounded border ${UI_SURFACES.borderElevated} px-2 py-1 text-[10px] text-[#cfe0ff] ${UI_SURFACES.hoverBgDark}`}
+                className={`rounded border ${UI_SURFACES.borderElevated} px-2 py-1 text-[10px] ${UI_SURFACES.textBluePale} ${UI_SURFACES.hoverBgDark}`}
                 title="Clear the dismissed flag so the next session shows the first-run guide"
               >
                 Show First-Run Guide Again

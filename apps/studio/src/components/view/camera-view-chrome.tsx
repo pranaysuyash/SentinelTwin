@@ -260,13 +260,13 @@ export function DoriInsightCard({
       <div className={`mt-1 text-[8px] uppercase tracking-[0.16em] ${UI_SURFACES.textMuted3}`}>
         {requiredQuality.toUpperCase()} REQUIRED · {statusLabel}
       </div>
-      <div className="mt-1 border-t ${UI_SURFACES.borderElevated} pt-1 text-[8px] uppercase tracking-wide text-[#7a94c7]">
+      <div className="mt-1 border-t ${UI_SURFACES.borderElevated} pt-1 text-[8px] uppercase tracking-wide ${UI_SURFACES.textBlueDim}">
         Target: {formatTargetTypeLabel(targetType)}
       </div>
       <div className={`mt-2 space-y-1.5 text-[10px] ${UI_SURFACES.textBody2}`}>
         <div className="flex items-center justify-between gap-2">
           <span className={`${UI_SURFACES.textSoftMid}`}>Current Quality</span>
-          <span className="rounded ${UI_SURFACES.hoverBg} px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#93c5fd]">
+          <span className="rounded ${UI_SURFACES.hoverBg} px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${UI_SURFACES.textInfoLight}">
             {currentQuality}
           </span>
         </div>

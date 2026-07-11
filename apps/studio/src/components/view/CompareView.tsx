@@ -1388,7 +1388,7 @@ export function CompareView() {
                 </select>
               </label>
               <label className={`flex items-center gap-1.5 rounded-md border ${UI_SURFACES.borderThin} ${UI_SURFACES.panelDeepAlt} px-2 py-1`}>
-                <span className="text-[#d2f5db]">Camera B</span>
+                <span className="${UI_SURFACES.textGreenLight}">Camera B</span>
                 <select
                   value={validCameraBId ?? ""}
                   onChange={(event) => setCameraComparisonBId(event.target.value)}

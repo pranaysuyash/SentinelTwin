@@ -514,7 +514,7 @@ function ReplayCollisionMarkers({
         </lineSegments>
       )}
       <SceneHtml position={[firstCollision.rawPosition[0], 0.55, firstCollision.rawPosition[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-        <div className={`rounded-md border border-[#f97316]/50 bg-black/80 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#fdba74]`}>
+        <div className={`rounded-md border border-[#f97316]/50 bg-black/80 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textWarningLight}`}>
           Collision corrected
         </div>
       </SceneHtml>
@@ -909,7 +909,7 @@ function InfoOverlay({
 
       {collisionCount > 0 && (
         <div className="mb-2 rounded-lg border border-[#f97316]/30 bg-[#451a03]/40 px-2 py-1.5">
-          <div className="text-[7px] font-semibold uppercase tracking-[0.16em] text-[#fdba74]">Collision guard</div>
+          <div className="text-[7px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textWarningLight}">Collision guard</div>
           <div className="mt-0.5 text-[9px] text-[#fed7aa]">
             {collisionCount} path sample{collisionCount === 1 ? "" : "s"} corrected away from
             {firstCollisionLabel ? ` ${firstCollisionLabel}` : " an obstruction"}

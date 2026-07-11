@@ -387,9 +387,9 @@ bun tools/hex-drift-detect.ts --update
 
 | Metric | Value |
 |--------|-------|
-| `UI_SURFACES` tokens | 53 |
+| `UI_SURFACES` tokens | 69 |
 | `UI_SURFACES_RAW` entries | 53 (typed as `Record<keyof typeof UI_SURFACES, string>`) |
-| `UI_TONES` tones × variants | 6 × 14 = 84 class fragments + 6 raw hex values |
+| `UI_TONES` tones × variants | 6 × 15 = 90 class fragments + 6 raw hex values |
 | `TYPE_SCALE` tiers | 8 |
 | Total `UI_SURFACES` usages | ~7,497 |
 | Total `UI_SURFACES_RAW` usages | ~38 |

@@ -49,6 +49,7 @@ import type { SupportIngestHistoryRecord } from "@/lib/support-ingest-history";
 import type { TrustAuditReport } from "@/lib/truth-audit";
 import { OPERATIONAL_EVIDENCE_STORAGE_KEY, useStudioStore } from "@/store/studio-store";
 import { DebugControlsSection } from "./debug-tab/DebugControlsSection";
+import { EvidenceJournalSection } from "./debug-tab/EvidenceJournalSection";
 import { DEBUG_TOGGLE_LABELS } from "@/store/slices/core/debug-toggles-slice";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
 
@@ -56,11 +57,6 @@ type TrustAuditPayload = TrustAuditReport & {
   formatted: string;
 };
 
-const OVERLAY_DENSITY_OPTIONS = [
-  { value: "all", label: "All" },
-  { value: "compact", label: "Compact" },
-  { value: "minimal", label: "Minimal" },
-] as const;
 
 function formatReasonCode(reasonCode: string): string {
   if (reasonCode.startsWith("REFLECTIVE_WINDOW:")) {
@@ -1185,144 +1181,43 @@ export function DebugTab() {
   return (
     <div className="flex h-full gap-4 overflow-y-auto px-3 py-2">
       <div className="min-w-[240px] space-y-2.5">
-        <Section title="Debug Controls" icon={<Sparkles className="h-3 w-3 text-emerald-400" />}>
-          <div className="flex flex-wrap gap-1.5">
-            <PillButton active={showDebugOverlays} onClick={() => setShowDebugOverlays(!showDebugOverlays)}>
-              Debug Overlays {showDebugOverlays ? "On" : "Off"}
-            </PillButton>
-            <PillButton active={autoRecompute} onClick={toggleAutoRecompute}>
-              Auto Recompute {autoRecompute ? "On" : "Off"}
-            </PillButton>
-            <PillButton active={false} onClick={downloadDiagnosticBundle}>
-              Download Bundle
-            </PillButton>
-            <PillButton active={false} onClick={downloadRuntimeTruthBundle}>
-              Download Runtime Truth
-            </PillButton>
-            <PillButton active={false} onClick={downloadIncidentBundle}>
-              Download Incident Bundle
-            </PillButton>
-            <PillButton active={false} onClick={downloadSupportBundle}>
-              Download Support Bundle
-            </PillButton>
-            <PillButton active={false} onClick={downloadReportEvidenceBundle}>
-              Download Evidence Bundle
-            </PillButton>
-            <PillButton active={false} onClick={downloadOperationalEvidenceArchive}>
-              Download Archive
-            </PillButton>
-            <PillButton active={false} onClick={shareArchiveHandoffLink}>
-              Share Archive
-            </PillButton>
-            <PillButton active={false} onClick={copyArchiveHandoffLink}>
-              Copy Archive Link
-            </PillButton>
-            <PillButton active={false} onClick={openArchiveHandoffLink}>
-              Open Archive Link
-            </PillButton>
-            <PillButton active={false} onClick={() => archiveInputRef.current?.click()}>
-              Restore Archive
-            </PillButton>
-            <PillButton active={false} onClick={applyPendingArchive}>
-              Apply Archive
-            </PillButton>
-            <PillButton active={false} onClick={runTrustAudit}>
-              {trustAuditLoading ? "Running Audit..." : "Run Trust Audit"}
-            </PillButton>
-            <PillButton active={false} onClick={runModelEval}>
-              {modelEvalLoading ? "Running Eval..." : "Run Eval Suite"}
-            </PillButton>
-            <PillButton active={false} onClick={clearModelEvalHistory}>
-              Clear Eval History
-            </PillButton>
-            <PillButton active={false} onClick={captureExternalLog}>
-              Capture External Log
-            </PillButton>
-            <PillButton active={false} onClick={clearExternalLogEntries}>
-              Clear External Logs
-            </PillButton>
-            <PillButton active={false} onClick={sendSupportBundleToIngest}>
-              {supportIngestLoading ? "Sending Ingest..." : "Send to Ingest"}
-            </PillButton>
-            <PillButton active={false} onClick={restoreLatestArchiveCheckpoint}>
-              Restore Latest Checkpoint
-            </PillButton>
-            <PillButton active={false} onClick={() => publishCurrentScene()}>
-              Publish Scene
-            </PillButton>
-          </div>
-          <input
-            ref={archiveInputRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={handleArchiveFileChange}
-          />
-          {pendingArchive ? (
-            <div className={`{mt-2 rounded-md border UI_SURFACES.borderPanel UI_SURFACES.bgDeep px-3 py-2}`}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <div className={`text-[9px] font-semibold uppercase tracking-[0.14em] UI_SURFACES.textMuted7`}>Archive Merge Preflight</div>
-                  <div className={`mt-1 text-[10px] UI_SURFACES.textSoftDim`}>
-                    {pendingArchive.scene.name || "Untitled Scene"} · {pendingArchive.scene.source} · exported {pendingArchive.exportedAt}
-                  </div>
-                </div>
-                <div className={`text-[10px] UI_SURFACES.textBody2`}>
-                  {pendingArchiveComparison?.readiness?.status ?? "pending"}
-                </div>
-              </div>
-              {pendingArchiveComparison?.readiness ? (
-                <>
-                  <div className={`{mt-2 rounded-md border UI_SURFACES.borderPanel UI_SURFACES.panel px-3 py-2 text-[10px] UI_SURFACES.textBody2}`}>
-                    {pendingArchiveComparison.readiness.recommendation}
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    <PillButton active={false} onClick={applyPendingArchive}>
-                      {pendingArchiveComparison.readiness.status === "unrelated" || pendingArchiveComparison.readiness.status === "fast_forward_right"
-                        ? "Archive Blocked"
-                        : pendingArchiveActionLabel}
-                    </PillButton>
-                    <PillButton active={false} onClick={() => setPendingArchive(null)}>
-                      Clear Archive
-                    </PillButton>
-                  </div>
-                </>
-              ) : null}
-              {pendingArchiveError ? (
-                <div className="mt-2 text-[10px] text-rose-300">{pendingArchiveError}</div>
-              ) : null}
-            </div>
-          ) : null}
-          <div className="mt-2">
-            <div className={`mb-1 text-[8px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Overlay Density</div>
-            <div className="flex gap-1">
-              {OVERLAY_DENSITY_OPTIONS.map((option) => (
-                <PillButton
-                  key={option.value}
-                  active={overlayDensity === option.value}
-                  onClick={() => setOverlayDensity(option.value)}
-                >
-                  {option.label}
-                </PillButton>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-2">
-            <div className={`mb-1 text-[8px] font-semibold uppercase tracking-[0.18em] UI_SURFACES.textDimMid`}>Archive Branch</div>
-            <div className="flex gap-1">
-              {(["draft", "recovered", "published"] as const).map((branch) => (
-                <PillButton
-                  key={branch}
-                  active={archiveRestoreBranch === branch}
-                  onClick={() => setArchiveRestoreBranch(branch)}
-                >
-                  {branch}
-                </PillButton>
-              ))}
-            </div>
-          </div>
-        </Section>
+        <DebugControlsSection
+          showDebugOverlays={showDebugOverlays}
+          setShowDebugOverlays={setShowDebugOverlays}
+          autoRecompute={autoRecompute}
+          toggleAutoRecompute={toggleAutoRecompute}
+          overlayDensity={overlayDensity}
+          setOverlayDensity={setOverlayDensity}
+          archiveRestoreBranch={archiveRestoreBranch}
+          setArchiveRestoreBranch={setArchiveRestoreBranch}
+          downloadDiagnosticBundle={downloadDiagnosticBundle}
+          downloadRuntimeTruthBundle={downloadRuntimeTruthBundle}
+          downloadSupportBundle={downloadSupportBundle}
+          downloadIncidentBundle={downloadIncidentBundle}
+          downloadReportEvidenceBundle={downloadReportEvidenceBundle}
+          downloadOperationalEvidenceArchive={downloadOperationalEvidenceArchive}
+          shareArchiveHandoffLink={shareArchiveHandoffLink}
+          copyArchiveHandoffLink={copyArchiveHandoffLink}
+          openArchiveHandoffLink={openArchiveHandoffLink}
+          applyPendingArchive={applyPendingArchive}
+          clearPendingArchive={() => setPendingArchive(null)}
+          restoreLatestArchiveCheckpoint={restoreLatestArchiveCheckpoint}
+          publishCurrentScene={publishCurrentScene}
+          runTrustAudit={runTrustAudit}
+          trustAuditLoading={trustAuditLoading}
+          runModelEval={runModelEval}
+          modelEvalLoading={modelEvalLoading}
+          clearModelEvalHistory={clearModelEvalHistory}
+          captureExternalLog={captureExternalLog}
+          clearExternalLogEntries={clearExternalLogEntries}
+          sendSupportBundleToIngest={sendSupportBundleToIngest}
+          supportIngestLoading={supportIngestLoading}
+          handleArchiveFileChange={handleArchiveFileChange}
+          pendingArchive={pendingArchive}
+          pendingArchiveComparison={pendingArchiveComparison}
+          pendingArchiveError={pendingArchiveError}
+          pendingArchiveActionLabel={pendingArchiveActionLabel}
+        />
 
         <Section
           title="Debug Toggles (spec §11.6)"
@@ -1408,6 +1303,12 @@ export function DebugTab() {
           </div>
         </Section>
 
+        <EvidenceJournalSection
+          journalEntries={journalEntries}
+          journalAppendCount={journalAppendCount}
+          journalMergeCount={journalMergeCount}
+          journalReplaceCount={journalReplaceCount}
+        />
         <Section title="Live Stats" icon={<BadgeInfo className="h-3 w-3 text-sky-400" />}>
           <div className="space-y-1.5 text-[9px]">
             <div className={`flex items-center justify-between rounded-md border UI_SURFACES.borderFaint UI_SURFACES.bgDeep px-2 py-1`}>

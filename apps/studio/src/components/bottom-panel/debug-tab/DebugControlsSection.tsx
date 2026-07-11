@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { Sparkles } from "lucide-react";
 import type { OperationalEvidenceArchive } from "@/lib/operational-evidence-archive";
 import { UI_SURFACES } from "@/lib/studio-surface-tokens";
+import type { OverlayDensity } from "@/store/slices/core/layout-slice";
 import { OVERLAY_DENSITY_OPTIONS, Section, PillButton } from "./shared";
 
 export interface DebugControlsSectionProps {
@@ -11,8 +12,8 @@ export interface DebugControlsSectionProps {
   setShowDebugOverlays: (v: boolean) => void;
   autoRecompute: boolean;
   toggleAutoRecompute: () => void;
-  overlayDensity: string;
-  setOverlayDensity: (v: string) => void;
+  overlayDensity: OverlayDensity;
+  setOverlayDensity: (density: OverlayDensity) => void;
   archiveRestoreBranch: "draft" | "recovered" | "published";
   setArchiveRestoreBranch: (v: "draft" | "recovered" | "published") => void;
   downloadDiagnosticBundle: () => void;

@@ -63,7 +63,7 @@ export const UI_SURFACES = {
 // hardcoded hex. These match the Tailwind class values in UI_SURFACES above.
 // See DESIGN_TOKENS.md for scope boundary: UI_SURFACES_RAW is for chrome/
 // UI only — canvas geometry uses MAP_COLORS.
-export const UI_SURFACES_RAW: Record<string, string> = {
+export const UI_SURFACES_RAW: Record<keyof typeof UI_SURFACES, string> = {
   // Backgrounds
   page: "#07090d",
   panel: "#0b0f17",
@@ -73,6 +73,7 @@ export const UI_SURFACES_RAW: Record<string, string> = {
   panelMuted: "#0b0f17",
   card: "#111521",
   cardStrong: "#0e1422",
+  // NOTE: Tailwind class is bg-black/40 (40% opacity) — opacity lost in raw hex
   cardMuted: "#000000",
   chip: "#1a1d26",
   bgDeep: "#0f141f",
@@ -111,5 +112,16 @@ export const UI_SURFACES_RAW: Record<string, string> = {
   textNearAlt: "#c0c8da",
   textBright: "#edf2ff",
   textAccent: "#7dd3fc",
+  // Hover states (raw hex for CSS-in-JS — these are Tailwind class fragments,
+  // so the raw hex below is the base color without the hover: prefix)
+  hoverBg: "#1a2333",
+  hoverBgSubtle: "#101725",
+  hoverBgMuted: "#171c2b",
+  hoverBgDark: "#1e2235",
+  hoverBorder: "#2a3045",
+  hoverBorderBright: "#3b4a69",
+  hoverBorderSubtle: "#32384d",
+  hoverText: "#ffffff",
+  hoverTextSoft: "#9da8c0",
 };
 

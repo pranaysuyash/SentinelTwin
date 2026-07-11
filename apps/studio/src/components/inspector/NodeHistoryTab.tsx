@@ -58,7 +58,7 @@ export function NodeHistoryTab({ nodeId }: { nodeId: string }) {
              <button
                 type="button"
                 onClick={() => handleRestore(event.id, event.title)}
-                className={`flex items-center gap-1 text-[10px] ${UI_SURFACES.textAccent} hover:text-[#93c5fd] transition-colors`}
+                className={`flex items-center gap-1 text-[10px] ${UI_SURFACES.textAccent} hover:${UI_SURFACES.textInfoLight} transition-colors`}
               >
                 <RotateCcw className="w-3 h-3" />
                 Restore Scene to This Point

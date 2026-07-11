@@ -1316,7 +1316,7 @@ export function StudioDashboardHome({
                   <div className="absolute bottom-3 left-3 z-20 w-[220px] rounded-xl border ${UI_SURFACES.borderDark} ${UI_SURFACES.bgDeep}/90 px-3 py-2 text-[10px] ${UI_SURFACES.textBody}">
                     <div className={`text-[9px] font-semibold uppercase tracking-[0.2em] ${UI_SURFACES.textMuted3}`}>Coverage (PPM)</div>
                     <div className="mt-1 grid grid-cols-[12px_1fr] items-center gap-x-2 gap-y-1">
-                      <span className="h-2.5 w-2.5 rounded-sm bg-[#38bdf8]" />
+                      <span className="h-2.5 w-2.5 rounded-sm ${UI_SURFACES.bgInfoLight}" />
                       <span>250+ Identification</span>
                       <span className="h-2.5 w-2.5 rounded-sm bg-[#22c55e]" />
                       <span>125-250 Recognition</span>

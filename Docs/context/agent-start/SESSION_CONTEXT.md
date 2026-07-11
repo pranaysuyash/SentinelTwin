@@ -1,6 +1,6 @@
 # Session Context
 
-- Generated: 2026-07-11T04:17:17Z
+- Generated: 2026-07-11T04:22:28Z
 - Project: `SentinelTwin`
 - Provider: `local`
 - Model: `BAAI/bge-m3`
@@ -17,30 +17,7 @@
 
 ## Project-Focused Retrieval
 
-### Architecture Decisions
-- Collection: `projects_proj_sentineltwin`
-- Query: `architecture decisions for SentinelTwin`
-_Fast mode (--skip-index): retrieval skipped to keep startup non-blocking. Run `/Users/pranay/Projects/agent-start --project SentinelTwin` for full retrieval, or set `AGENT_START_SKIP_INDEX_RETRIEVE=1` if you want retrieval with skip-index._
-
-### Project Management Workflow
-- Collection: `projects_proj_sentineltwin`
-- Query: `project management workflow for SentinelTwin`
-_Fast mode (--skip-index): retrieval skipped to keep startup non-blocking. Run `/Users/pranay/Projects/agent-start --project SentinelTwin` for full retrieval, or set `AGENT_START_SKIP_INDEX_RETRIEVE=1` if you want retrieval with skip-index._
-
-### Known Issues and Worklogs
-- Collection: `projects_proj_sentineltwin`
-- Query: `known issues and worklog for SentinelTwin`
-_Fast mode (--skip-index): retrieval skipped to keep startup non-blocking. Run `/Users/pranay/Projects/agent-start --project SentinelTwin` for full retrieval, or set `AGENT_START_SKIP_INDEX_RETRIEVE=1` if you want retrieval with skip-index._
-
-### Prompts and Guidelines
-- Collection: `projects_proj_sentineltwin`
-- Query: `prompts and guidelines for SentinelTwin`
-_Fast mode (--skip-index): retrieval skipped to keep startup non-blocking. Run `/Users/pranay/Projects/agent-start --project SentinelTwin` for full retrieval, or set `AGENT_START_SKIP_INDEX_RETRIEVE=1` if you want retrieval with skip-index._
-
-### System Learning Graph
-- Collection: `projects_proj_sentineltwin`
-- Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph for SentinelTwin`
-_Fast mode (--skip-index): retrieval skipped to keep startup non-blocking. Run `/Users/pranay/Projects/agent-start --project SentinelTwin` for full retrieval, or set `AGENT_START_SKIP_INDEX_RETRIEVE=1` if you want retrieval with skip-index._
+> NOTE: Project collection is temporarily locked by another index/search process; using shared workspace context for this run.
 
 ## Shared Cross-Project Retrieval
 

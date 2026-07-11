@@ -876,7 +876,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                   <button
                     type="button"
                     onClick={() => setGuidedStep((current) => Math.min(current + 1, 9))}
-                    className="flex h-12 items-center gap-2 rounded-xl bg-[#2563eb] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#2b6df0]"
+                    className="flex h-12 items-center gap-2 rounded-xl ${UI_SURFACES.bgInfo} px-5 text-[15px] font-medium text-white transition-colors hover:${UI_SURFACES.bgInfoMid}"
                   >
                     <span>{nextLabel}</span>
                     <ArrowRight className="h-4 w-4" />
@@ -966,7 +966,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                       {photoSlots.map((photo, index) =>
                         photo ? (
                           <div key={photo.id} className="group relative overflow-hidden rounded-[14px] border border-white/8 ${UI_SURFACES.hoverBgSubtle}">
-                            <div className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-[#2563eb] text-[12px] font-medium text-white">
+                            <div className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full ${UI_SURFACES.bgInfo} text-[12px] font-medium text-white">
                               {index + 1}
                             </div>
                             <button
@@ -1082,7 +1082,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                       setGuidedStep((current) => Math.min(current + 1, 9));
                     }
                   }}
-                  className="flex h-11 items-center gap-2 rounded-xl bg-[#2563eb] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#2b6df0]"
+                  className="flex h-11 items-center gap-2 rounded-xl ${UI_SURFACES.bgInfo} px-5 text-[15px] font-medium text-white transition-colors hover:${UI_SURFACES.bgInfoMid}"
                 >
                   <span>{nextLabel}</span>
                   <ArrowRight className="h-4 w-4" />

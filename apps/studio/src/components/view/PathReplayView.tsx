@@ -514,7 +514,7 @@ function ReplayCollisionMarkers({
         </lineSegments>
       )}
       <SceneHtml position={[firstCollision.rawPosition[0], 0.55, firstCollision.rawPosition[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-        <div className={`rounded-md border border-[#f97316]/50 bg-black/80 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textWarningLight}`}>
+        <div className={`rounded-md border ${UI_SURFACES.borderWarning}/50 bg-black/80 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textWarningLight}`}>
           Collision corrected
         </div>
       </SceneHtml>
@@ -574,7 +574,7 @@ function PlaybackControls({
           step={0.05}
           value={currentTime}
           onChange={(e) => onSeek(parseFloat(e.target.value))}
-          className="relative h-1.5 w-full cursor-pointer appearance-none rounded-full bg-transparent [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#38bdf8] [&::-webkit-slider-thumb]:shadow-[0_0_12px_rgba(56,189,248,0.8)] [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150 [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:active:scale-90"
+          className="relative h-1.5 w-full cursor-pointer appearance-none rounded-full bg-transparent [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:${UI_SURFACES.bgInfoLight} [&::-webkit-slider-thumb]:shadow-[0_0_12px_rgba(56,189,248,0.8)] [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150 [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:active:scale-90"
           style={{
             background: `linear-gradient(to right, #38bdf8 ${progress * 100}%, #1f2536 ${progress * 100}%)`,
           }}
@@ -908,7 +908,7 @@ function InfoOverlay({
       </div>
 
       {collisionCount > 0 && (
-        <div className="mb-2 rounded-lg border border-[#f97316]/30 bg-[#451a03]/40 px-2 py-1.5">
+        <div className="mb-2 rounded-lg border ${UI_SURFACES.borderWarning}/30 bg-[#451a03]/40 px-2 py-1.5">
           <div className="text-[7px] font-semibold uppercase tracking-[0.16em] ${UI_SURFACES.textWarningLight}">Collision guard</div>
           <div className="mt-0.5 text-[9px] text-[#fed7aa]">
             {collisionCount} path sample{collisionCount === 1 ? "" : "s"} corrected away from

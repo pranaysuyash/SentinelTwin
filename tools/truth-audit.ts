@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+// Must run from apps/studio/ — paths are relative to apps/studio/src/. See D-035.
+// cd apps/studio && npx tsx ../../tools/truth-audit.ts
 
 import { auditTrustSurfaces, formatTrustAuditReport } from "../apps/studio/src/lib/truth-audit";
 

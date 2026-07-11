@@ -5445,3 +5445,23 @@ Model event and temporary site deployments as an `eventConfig` on SecurityScene 
 - `temporal.ts` gains event phase transitions, `getActiveEventPhase`, and crowd scaling in `patchSceneForTimeSlice`.
 - `scene-slice.ts` gains `updateEventConfig` store action.
 - `EventConfigPanel.tsx` inspector panel with full phase lifecycle editor, wired into `ScheduleEditor.tsx` alongside crowd profiles.
+
+### D-035: Truth Audit Path Resolution (2026-07-11)
+
+**Decision:** The truth audit tool (`tools/truth-audit.ts`) must be run from `apps/studio/` directory, not the project root.
+
+**Rationale:** The audit surfaces in `apps/studio/src/lib/truth-audit.ts` use file paths relative to `apps/studio/` (e.g., `src/components/bottom-panel/MetricsTab.tsx`). When run from the project root, `readFileSync` resolves against the root, causing all files to fail with "missing_file" errors.
+
+**Correct invocation:**
+```bash
+cd apps/studio && npx tsx ../../tools/truth-audit.ts
+```
+
+**Incorrect invocation (causes 58 false failures):**
+```bash
+npx tsx tools/truth-audit.ts  # FROM PROJECT ROOT — FAILS
+```
+
+**Impact:** 58 false "issues" were reported when running from the wrong directory. All 59 surfaces pass when run correctly.
+
+**Status:** Resolved. Addendum to `TOOLS.md` recommended.
